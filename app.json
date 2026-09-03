@@ -8,7 +8,7 @@
       "package": "io.github.yingjiedev.audiora",
       "adaptiveIcon": {
         "foregroundImage": "./assets/app-icon-foreground.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#00000000"
       }
     },
     "ios": {
