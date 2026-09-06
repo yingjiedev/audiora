@@ -250,7 +250,6 @@ function ContinueListening(props: {
 
 function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
     const { musics } = props;
-    const colors = useColors();
     const { t } = useI18N();
 
     if (!musics.length) {
