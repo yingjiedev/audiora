@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     },
     quickItem: {
         width: rpx(164),
-        height: rpx(218),
+        height: rpx(164),
         borderRadius: rpx(20),
         borderWidth: 0,
         alignItems: "center",
@@ -1008,16 +1008,16 @@ const styles = StyleSheet.create({
         marginRight: rpx(10),
     },
     quickArtwork: {
-        width: rpx(88),
-        height: rpx(88),
+        width: rpx(80),
+        height: rpx(80),
     },
     quickText: {
-        marginTop: rpx(16),
+        marginTop: rpx(8),
         maxWidth: rpx(150),
         textAlign: "center",
     },
     quickSubtitle: {
-        marginTop: rpx(6),
+        marginTop: rpx(4),
         textAlign: "center",
     },
     discoveryPreviewContainer: {
