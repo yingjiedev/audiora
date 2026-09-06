@@ -1,10 +1,9 @@
 import React, { Component, ReactNode, useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Image, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
 import DeviceInfo from "react-native-device-info";
 import Theme from "@/core/theme";
 import type { CustomizedColors } from "@/hooks/useColors";
 import rpx, { fontRpx } from "@/utils/rpx";
-import { ImgAsset } from "@/constants/assetsConst";
 import { fontSizeConst, fontWeightConst } from "@/constants/uiConst";
 import openUrl from "@/utils/openUrl";
 import { crashLog, devLog } from "@/utils/log";
@@ -320,41 +319,6 @@ function ErrorFallback({ error, errorInfo }: ErrorFallbackProps) {
                             </Text>
                         </View>
 
-                        <View
-                            style={[
-                                styles.feedbackItem,
-                                { backgroundColor: card, borderColor: divider },
-                            ]}>
-                            <Text
-                                style={[
-                                    styles.feedbackLabel,
-                                    {
-                                        color: text,
-                                        fontSize: fontSizeConst.content,
-                                        fontWeight: fontWeightConst.medium,
-                                    },
-                                ]}>
-                                💬 微信公众号【一只猫头猫】:
-                            </Text>
-                            <View style={styles.qrCodeContainer}>
-                                <Image
-                                    source={ImgAsset.wechatChannel}
-                                    style={styles.qrCode}
-                                    resizeMode="contain"
-                                />
-                                <Text
-                                    style={[
-                                        styles.qrCodeHint,
-                                        {
-                                            color: textSecondary,
-                                            fontSize:
-                                                fontSizeConst.description,
-                                        },
-                                    ]}>
-                                    扫描二维码关注公众号反馈
-                                </Text>
-                            </View>
-                        </View>
                     </View>
                 </View>
             </ScrollView>
@@ -461,18 +425,6 @@ const styles = StyleSheet.create({
     },
     link: {
         lineHeight: fontRpx(36),
-    },
-    qrCodeContainer: {
-        alignItems: "center",
-        gap: rpx(16),
-    },
-    qrCode: {
-        width: rpx(300),
-        height: rpx(300),
-        borderRadius: rpx(12),
-    },
-    qrCodeHint: {
-        textAlign: "center",
     },
     bottomTip: {
         alignItems: "center",
