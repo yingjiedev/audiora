@@ -378,14 +378,14 @@ function QuickAccess(props: {
                         />
                         <ThemeText
                             numberOfLines={1}
-                            fontSize="description"
+                            fontSize="tag"
                             fontWeight="semibold"
                             style={styles.quickText}>
                             {item.title}
                         </ThemeText>
                         <ThemeText
                             numberOfLines={1}
-                            fontSize="tag"
+                            fontSize="caption"
                             fontColor="textSecondary"
                             style={styles.quickSubtitle}>
                             {item.subtitle}
@@ -1008,16 +1008,16 @@ const styles = StyleSheet.create({
         marginRight: rpx(10),
     },
     quickArtwork: {
-        width: rpx(80),
-        height: rpx(80),
+        width: rpx(84),
+        height: rpx(84),
     },
     quickText: {
-        marginTop: rpx(8),
+        marginTop: rpx(6),
         maxWidth: rpx(150),
         textAlign: "center",
     },
     quickSubtitle: {
-        marginTop: rpx(4),
+        marginTop: rpx(2),
         textAlign: "center",
     },
     discoveryPreviewContainer: {
