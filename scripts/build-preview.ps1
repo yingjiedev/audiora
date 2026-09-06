@@ -150,8 +150,17 @@ try {
     )
 
     if ($Abi -ne "all") {
-        $gradleArguments += "-PbuildAbi=$Abi"
+        $gradleArguments += @(
+            "-PbuildAbi=$Abi",
+            "-PreactNativeArchitectures=$Abi"
+        )
     }
+
+    $gradleArguments += @(
+        "--max-workers=1",
+        "--no-configuration-cache",
+        "--console=plain"
+    )
 
     if (($env:OS -eq "Windows_NT") -and -not $SkipNdkWorkaround) {
         $temporaryGradleInitScriptPath = Join-Path ([System.IO.Path]::GetTempPath()) "audiora-ndk-workaround-$([guid]::NewGuid()).gradle"
