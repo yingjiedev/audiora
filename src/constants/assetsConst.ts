@@ -5,6 +5,7 @@ export const ImgAsset = {
     logo: require("@/assets/imgs/logo.png"),
     author: require("@/assets/imgs/author.jpg"),
     logoTransparent: require("@/assets/imgs/logo-transparent.png"),
+    settingsRibbonBackground: require("@/assets/imgs/settings-ribbon-background.png"),
     homeHero: require("@/assets/imgs/home-hero-mountain.png"),
     quickLocal: require("@/assets/imgs/quick-local-v2.png"),
     quickHistory: require("@/assets/imgs/quick-history-v2.png"),

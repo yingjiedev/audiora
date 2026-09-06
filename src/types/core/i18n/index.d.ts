@@ -63,6 +63,17 @@ export interface ILanguageData {
     "sidebar.backToDesktop": string; // 返回桌面
     "sidebar.exitApp": string; // 退出应用
     "sidebar.languageSettings": string; // 语言设置
+    "settingsOverview.tagline": string;
+    "settingsOverview.generalDescription": string;
+    "settingsOverview.sourceDescription": string;
+    "settingsOverview.localDescription": string;
+    "settingsOverview.themeDescription": string;
+    "settingsOverview.permissionDescription": string;
+    "settingsOverview.backupDescription": string;
+    "settingsOverview.languageDescription": string;
+    "settingsOverview.aboutDescription": string;
+    "settingsOverview.footerLine1": string;
+    "settingsOverview.footerLine2": string;
 
     // 检查更新相关
     "checkUpdate.error.latestVersion": string; // 当前已是最新版本
