@@ -198,20 +198,24 @@ function Home({ onPlay }: { onPlay: (track: PreviewTrack) => void }) {
                     ))}
                 </ScrollView>
 
-                <SectionHeading title="继续聆听" />
-                <Pressable style={styles.continueCard} onPress={() => onPlay(tracks[0])}>
-                    <Artwork source={tracks[0].artwork} style={styles.continueCover} />
-                    <View style={styles.continueInfo}>
-                        <Text style={styles.continueTitle}>{tracks[0].title}</Text>
-                        <Text style={styles.continueArtist}>Lenka</Text>
-                    </View>
-                    <View style={styles.smallPlay}>
-                        <Icon name="play" size={13} color="#FFFFFF" />
-                    </View>
-                    <Icon name="playlist" size={19} color="#62708D" />
-                </Pressable>
             </ScrollView>
         </>
+    );
+}
+
+function PersistentMiniPlayer({ onPlay }: { onPlay: (track: PreviewTrack) => void }) {
+    return (
+        <Pressable style={styles.persistentPlayer} onPress={() => onPlay(tracks[0])}>
+            <Artwork source={tracks[0].artwork} style={styles.continueCover} />
+            <View style={styles.continueInfo}>
+                <Text style={styles.continueTitle}>{tracks[0].title}</Text>
+                <Text style={styles.continueArtist}>Lenka</Text>
+            </View>
+            <View style={styles.smallPlay}>
+                <Icon name="play" size={13} color="#FFFFFF" />
+            </View>
+            <Icon name="playlist" size={19} color="#62708D" />
+        </Pressable>
     );
 }
 
@@ -277,6 +281,7 @@ export default function WebPreview() {
                 ) : (
                     <>
                         {tab === "home" ? <Home onPlay={setPlaying} /> : <SecondaryScreen tab={tab} />}
+                        <PersistentMiniPlayer onPlay={setPlaying} />
                         <View style={styles.tabBar}>
                             {tabs.map(item => {
                                 const active = item.key === tab;
@@ -328,7 +333,7 @@ const styles = StyleSheet.create({
     searchBar: { height: 32, marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 11, borderRadius: 16, flexDirection: "row", alignItems: "center", backgroundColor: "#F3F6FC" },
     searchInput: { flex: 1, height: 32, paddingHorizontal: 8, paddingVertical: 0, borderWidth: 0, fontSize: 10, color: "#17213E" },
     scroll: { flex: 1 },
-    homeContent: { paddingHorizontal: 16, paddingBottom: 82 },
+    homeContent: { paddingHorizontal: 16, paddingBottom: 142 },
     hero: { width: "100%", aspectRatio: 2.5, justifyContent: "center", overflow: "hidden", borderRadius: 15 },
     heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,34,91,0.08)" },
     heroCopy: { marginLeft: 20 },
@@ -353,7 +358,7 @@ const styles = StyleSheet.create({
     platformIcon: { width: 33, height: 33, borderRadius: 10, alignItems: "center", justifyContent: "center" },
     platformTitle: { width: 76, marginTop: 4, fontSize: 9, fontWeight: "700", textAlign: "center", color: "#17213E" },
     platformSubtitle: { marginTop: 1, fontSize: 8, color: "#8A96AD" },
-    continueCard: { height: 56, marginBottom: 4, paddingHorizontal: 8, borderRadius: 13, flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", boxShadow: "0 5px 18px rgba(49,72,118,0.11)" as never },
+    persistentPlayer: { position: "absolute", right: 16, bottom: 72, left: 16, zIndex: 2, height: 56, paddingHorizontal: 8, borderRadius: 13, flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", boxShadow: "0 5px 18px rgba(49,72,118,0.11)" as never },
     continueCover: { width: 42, height: 42, borderRadius: 8, backgroundColor: "#EEF2F8" },
     continueInfo: { flex: 1, marginLeft: 10 },
     continueTitle: { fontSize: 11, fontWeight: "700", color: "#17213E" },
@@ -363,7 +368,7 @@ const styles = StyleSheet.create({
     tabItem: { flex: 1, alignItems: "center", gap: 3 },
     tabLabel: { fontSize: 9, fontWeight: "600", color: "#8491AD" },
     tabLabelActive: { color: "#2867FF", fontWeight: "800" },
-    secondaryContent: { paddingHorizontal: 16, paddingBottom: 86 },
+    secondaryContent: { paddingHorizontal: 16, paddingBottom: 142 },
     secondaryTitle: { marginTop: 12, marginBottom: 18, fontSize: 22, fontWeight: "800", color: "#17213E" },
     settingsPlatforms: { marginTop: 6 },
     settingRow: { height: 59, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#E7EBF2" },
