@@ -30,31 +30,31 @@ export const lightTheme = {
     colors: {
         ..._DefaultTheme.colors,
         background: "transparent",
-        text: "#191815",
-        textSecondary: Color("#191815").alpha(0.62).toString(),
-        primary: "#D94B32",
-        pageBackground: "#F3F0E9",
-        shadow: "#201D18",
-        appBar: "#F3F0E9",
-        appBarText: "#191815",
-        musicBar: "#FAF7F0",
-        musicBarText: "#191815",
-        divider: "rgba(25,24,21,0.13)",
-        border: "rgba(25,24,21,0.14)",
-        listActive: "rgba(25,24,21,0.08)", // 使用文本颜色的半透明
-        mask: "rgba(25,24,21,0.24)",
-        backdrop: "#E9E4DA",
-        surface: "#ECE7DD",
-        surfaceElevated: "#FAF7F0",
-        accentWarm: "#D94B32",
-        accentCool: "#3F899B",
-        tabBar: "#E9E4DA",
-        placeholder: "#E4DED3",
-        success: "#08A34C",
-        danger: "#FC5F5F",
-        info: "#0A95C8",
-        card: "#EAE4D9",
-        notification: "#E9E4DA",
+        text: "#10172D",
+        textSecondary: Color("#485574").alpha(0.78).toString(),
+        primary: "#3867F4",
+        pageBackground: "#F6F9FF",
+        shadow: "#2D4A78",
+        appBar: "#F6F9FF",
+        appBarText: "#10172D",
+        musicBar: "#FFFFFF",
+        musicBarText: "#10172D",
+        divider: "rgba(45,67,105,0.10)",
+        border: "rgba(75,103,148,0.12)",
+        listActive: "rgba(56,103,244,0.10)",
+        mask: "rgba(16,23,45,0.22)",
+        backdrop: "#EEF4FF",
+        surface: "#EEF4FF",
+        surfaceElevated: "#FFFFFF",
+        accentWarm: "#B26EF3",
+        accentCool: "#00AEEA",
+        tabBar: "#F1F6FF",
+        placeholder: "#E9F0FC",
+        success: "#08B99B",
+        danger: "#FF4F7B",
+        info: "#3B82F6",
+        card: "#FFFFFF",
+        notification: "#EEF4FF",
     },
 };
 
@@ -65,31 +65,31 @@ export const darkTheme = {
     colors: {
         ..._DarkTheme.colors,
         background: "transparent",
-        text: "#F5F2EB",
-        textSecondary: Color("#F5F2EB").alpha(0.64).toString(),
-        primary: "#6C9BFF",
-        pageBackground: "#12101A",
+        text: "#F7FAFF",
+        textSecondary: Color("#C1CCE0").alpha(0.72).toString(),
+        primary: "#6D8DFF",
+        pageBackground: "#090F1F",
         shadow: "#000000",
-        appBar: "#12101A",
-        appBarText: "#F5F2EB",
-        musicBar: "#1F1A29",
-        musicBarText: "#F8F5EE",
-        divider: "rgba(245,242,235,0.11)",
-        border: "rgba(245,242,235,0.12)",
-        listActive: "rgba(245,242,235,0.10)", // 使用文本颜色的半透明
+        appBar: "#090F1F",
+        appBarText: "#F7FAFF",
+        musicBar: "#131D34",
+        musicBarText: "#F7FAFF",
+        divider: "rgba(204,220,255,0.10)",
+        border: "rgba(204,220,255,0.12)",
+        listActive: "rgba(109,141,255,0.15)",
         mask: "rgba(10,8,14,0.82)",
-        backdrop: "#1E1826",
-        surface: "#1E1926",
-        surfaceElevated: "#262030",
-        accentWarm: "#FF9A6C",
-        accentCool: "#54A5B8",
-        tabBar: "#1E1826",
-        placeholder: "#262030",
-        success: "#08A34C",
-        danger: "#FC5F5F",
-        info: "#0A95C8",
-        card: "#211B2B",
-        notification: "#1E1826",
+        backdrop: "#111A2E",
+        surface: "#111A2E",
+        surfaceElevated: "#192541",
+        accentWarm: "#B878FF",
+        accentCool: "#25C7F4",
+        tabBar: "#111A2E",
+        placeholder: "#17233D",
+        success: "#20D2B0",
+        danger: "#FF648B",
+        info: "#58A6FF",
+        card: "#121D33",
+        notification: "#111A2E",
     },
 };
 
@@ -355,9 +355,9 @@ function syncCardSurfaceColors(
 }
 
 function setup() {
-    // 全新安装的默认主题用浅色（米白+红），不跟系统时也回落到浅色
+    // 全新安装的默认主题使用清爽的浅色方案，不跟系统时也回落到浅色
     const configuredTheme = Config.getConfig("theme.selectedTheme") ?? "p-light";
-    const followSystem = Config.getConfig("theme.followSystem");
+    const followSystem = Config.getConfig("theme.followSystem") ?? true;
     const systemTheme = followSystem ? Appearance.getColorScheme() : null;
     const currentTheme =
         systemTheme === "light"
@@ -591,7 +591,7 @@ function setColors(colors: Partial<CustomizedColors>) {
     const mergedColors = {
         ...(isCustomTheme
             ? // 自定义主题：以当前主题色为基底，别让深色主题预设渗进来
-              baseColors
+            baseColors
             : darkTheme.colors),
         ...(persistedColors ?? {}),
         ...colorsWithListActive,

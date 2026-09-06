@@ -15,14 +15,16 @@ import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
 import Icon from "@/components/base/icon.tsx";
 import { iconSizeConst } from "@/constants/uiConst";
+import Color from "color";
+import { radius, spacing } from "@/constants/designSystem";
 
 /** Single control: ring + icon share the same box and stay concentric. */
-const PLAY_RADIUS = rpx(28);
+const PLAY_RADIUS = rpx(38);
 const PLAY_STROKE = rpx(3);
 const PLAY_SIZE = PLAY_RADIUS * 2;
-const PLAY_ICON_SIZE = iconSizeConst.normal;
-const PLAYLIST_ICON_SIZE = rpx(48);
-const BAR_HEIGHT = rpx(112);
+const PLAY_ICON_SIZE = iconSizeConst.light;
+const PLAYLIST_ICON_SIZE = rpx(42);
+const BAR_HEIGHT = rpx(108);
 
 function CircularPlayBtn() {
     const progress = useProgress();
@@ -33,6 +35,9 @@ function CircularPlayBtn() {
     const progressValue = progress?.duration
         ? Math.min(100, Math.max(0, (100 * progress.position) / progress.duration))
         : 0;
+    const buttonForeground = Color(colors.primary).isDark()
+        ? "#FFFFFF"
+        : "#10172D";
 
     return (
         <Pressable
@@ -46,7 +51,7 @@ function CircularPlayBtn() {
                     await TrackPlayer.pause();
                 }
             }}
-            style={style.playBtn}>
+            style={[style.playBtn, { backgroundColor: colors.primary }]}>
             {/* Layer 1: progress ring — same box, same center */}
             <View style={style.playLayer} pointerEvents="none">
                 <CircularProgressBase
@@ -56,8 +61,8 @@ function CircularPlayBtn() {
                     value={progressValue}
                     duration={100}
                     radius={PLAY_RADIUS}
-                    activeStrokeColor={colors.primary}
-                    inActiveStrokeColor={colors.textSecondary}
+                    activeStrokeColor={buttonForeground}
+                    inActiveStrokeColor={buttonForeground}
                 />
             </View>
             {/* Layer 2: icon — same box, same center (not a sibling in flow) */}
@@ -65,7 +70,7 @@ function CircularPlayBtn() {
                 <Icon
                     name={isPaused ? "play" : "pause"}
                     size={PLAY_ICON_SIZE}
-                    color={colors.musicBarText}
+                    color={buttonForeground}
                     style={isPaused ? style.playIconNudge : undefined}
                 />
             </View>
@@ -120,17 +125,19 @@ function MusicBar() {
                         <MusicInfo musicItem={musicItem} />
                         <View style={style.actionGroup}>
                             <CircularPlayBtn />
-                            <Icon
-                                accessible
+                            <Pressable
+                                accessibilityRole="button"
                                 accessibilityLabel="播放列表"
-                                name="playlist"
-                                size={PLAYLIST_ICON_SIZE}
+                                style={style.actionButton}
                                 onPress={() => {
                                     showPanel("PlayList");
-                                }}
-                                color={colors.musicBarText}
-                                style={style.actionIcon}
-                            />
+                                }}>
+                                <Icon
+                                    name="playlist"
+                                    size={PLAYLIST_ICON_SIZE}
+                                    color={colors.musicBarText}
+                                />
+                            </Pressable>
                         </View>
                     </View>
                 </View>
@@ -143,12 +150,12 @@ export default memo(MusicBar, () => true);
 
 const style = StyleSheet.create({
     wrapperOuter: {
-        marginBottom: rpx(12),
-        borderRadius: rpx(24),
-        shadowOffset: { width: 0, height: rpx(8) },
-        shadowOpacity: 0.18,
-        shadowRadius: rpx(16),
-        elevation: 8,
+        marginBottom: spacing.sm,
+        borderRadius: radius.lg,
+        shadowOffset: { width: 0, height: rpx(6) },
+        shadowOpacity: 0.12,
+        shadowRadius: rpx(14),
+        elevation: 5,
         backgroundColor: "transparent",
     },
     wrapperInner: {
@@ -156,9 +163,9 @@ const style = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         borderWidth: StyleSheet.hairlineWidth,
-        borderRadius: rpx(24),
+        borderRadius: radius.lg,
         overflow: "hidden",
-        paddingRight: rpx(16),
+        paddingRight: spacing.xs,
     },
     actionGroup: {
         height: "100%",
@@ -166,7 +173,7 @@ const style = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        paddingLeft: rpx(4),
+        paddingLeft: rpx(2),
     },
     /**
      * One fixed square. Both ring and icon are absolute-filled layers so they
@@ -176,6 +183,7 @@ const style = StyleSheet.create({
         width: PLAY_SIZE,
         height: PLAY_SIZE,
         position: "relative",
+        borderRadius: PLAY_RADIUS,
     },
     playLayer: {
         position: "absolute",
@@ -190,7 +198,11 @@ const style = StyleSheet.create({
         // Play triangle reads slightly left-of-center optically.
         marginLeft: rpx(2),
     },
-    actionIcon: {
-        marginLeft: rpx(18),
+    actionButton: {
+        width: rpx(76),
+        height: rpx(88),
+        marginLeft: rpx(8),
+        alignItems: "center",
+        justifyContent: "center",
     },
 });

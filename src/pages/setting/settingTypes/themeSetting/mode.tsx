@@ -10,7 +10,7 @@ import { useI18N } from "@/core/i18n";
 
 export default function Mode() {
     const { t } = useI18N();
-    const mode = useAppConfig("theme.followSystem") ?? false;
+    const mode = useAppConfig("theme.followSystem") ?? true;
     return (
         <View>
             <ThemeText

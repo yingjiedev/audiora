@@ -11,7 +11,7 @@ export default function CoverStyle() {
     const { t } = useI18N();
     const coverStyle = useAppConfig("theme.coverStyle") ?? "square";
     const musicDetailCoverStyle =
-        useAppConfig("theme.musicDetailCoverStyle") ?? "classic";
+        useAppConfig("theme.musicDetailCoverStyle") ?? "immersive";
     const colors = useColors();
     const isSquareImmersive =
         coverStyle === "square" && musicDetailCoverStyle === "immersive";

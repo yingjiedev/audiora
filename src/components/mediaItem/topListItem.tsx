@@ -7,6 +7,16 @@ import ThemeText from "@/components/base/themeText";
 import useColors from "@/hooks/useColors";
 import rpx, { fontRpx } from "@/utils/rpx";
 import Color from "color";
+import LinearGradient from "react-native-linear-gradient";
+import Icon from "@/components/base/icon.tsx";
+import { radius, topListGradients } from "@/constants/designSystem";
+
+function getGradientIndex(title?: string) {
+    return Array.from(title ?? "").reduce(
+        (value, char) => value + char.charCodeAt(0),
+        0,
+    ) % topListGradients.length;
+}
 
 interface ITopListResultsProps {
     pluginHash: string;
@@ -19,7 +29,10 @@ export default function TopListItem(props: ITopListResultsProps) {
     const { pluginHash, topListItem, rank, style } = props;
     const navigate = useNavigate();
     const colors = useColors();
-    const rankBackgroundColor = Color(colors.background).alpha(0.86).toString();
+    const rankBackgroundColor = Color(colors.surfaceElevated ?? colors.card)
+        .alpha(0.9)
+        .toString();
+    const gradient = topListGradients[getGradientIndex(topListItem.title)];
 
     return (
         <Pressable
@@ -32,18 +45,38 @@ export default function TopListItem(props: ITopListResultsProps) {
             style={({ pressed }) => [
                 styles.wrapper,
                 {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
                     opacity: pressed ? 0.88 : 1,
                 },
                 style,
             ]}>
             <View style={styles.coverFrame}>
-                <FastImage
-                    style={styles.cover}
-                    source={topListItem?.coverImg}
-                    placeholderSource={ImgAsset.albumDefault}
-                />
+                {topListItem?.coverImg ? (
+                    <FastImage
+                        style={styles.cover}
+                        source={topListItem.coverImg}
+                        placeholderSource={ImgAsset.albumDefault}
+                    />
+                ) : (
+                    <LinearGradient
+                        colors={[...gradient]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[styles.cover, styles.generatedCover]}>
+                        <Icon
+                            name="musical-note"
+                            size={rpx(64)}
+                            color="rgba(255,255,255,0.92)"
+                        />
+                        <ThemeText
+                            numberOfLines={2}
+                            fontSize="subTitle"
+                            fontWeight="bold"
+                            color="#FFFFFF"
+                            style={styles.generatedTitle}>
+                            {topListItem.title}
+                        </ThemeText>
+                    </LinearGradient>
+                )}
                 <View
                     style={[
                         styles.coverShade,
@@ -88,14 +121,13 @@ export default function TopListItem(props: ITopListResultsProps) {
 const styles = StyleSheet.create({
     wrapper: {
         width: "100%",
-        borderRadius: rpx(20),
-        borderWidth: StyleSheet.hairlineWidth,
-        overflow: "hidden",
+        borderRadius: radius.lg,
     },
     coverFrame: {
         width: "100%",
         aspectRatio: 1,
         position: "relative",
+        borderRadius: radius.lg,
         overflow: "hidden",
     },
     cover: {
@@ -103,12 +135,16 @@ const styles = StyleSheet.create({
         height: "100%",
     },
     coverShade: {
-        ...StyleSheet.absoluteFillObject,
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
     },
     content: {
-        paddingHorizontal: rpx(12),
-        paddingTop: rpx(10),
-        paddingBottom: rpx(12),
+        paddingHorizontal: rpx(4),
+        paddingTop: rpx(12),
+        paddingBottom: rpx(8),
     },
     title: {
         lineHeight: fontRpx(28),
@@ -124,5 +160,14 @@ const styles = StyleSheet.create({
         borderWidth: StyleSheet.hairlineWidth,
         alignItems: "center",
         justifyContent: "center",
+    },
+    generatedCover: {
+        alignItems: "center",
+        justifyContent: "center",
+        padding: rpx(16),
+    },
+    generatedTitle: {
+        marginTop: rpx(16),
+        textAlign: "center",
     },
 });

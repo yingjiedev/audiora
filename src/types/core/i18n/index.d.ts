@@ -88,6 +88,8 @@ export interface ILanguageData {
     "home.viewAll": string;
     "home.recentListening": string;
     "home.quickAccess": string;
+    "home.recommend": string;
+    "home.notifications.a11y": string;
     "home.discovery": string;
     "home.myMusic": string;
     "home.scanLocal": string;
