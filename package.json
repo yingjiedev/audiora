@@ -18,6 +18,7 @@
     "commit-lint": "commitlint --edit",
     "connect-mumu": "adb kill-server & adb connect localhost:7555",
     "build-android": "npm run typecheck:runtime && node ./scripts/generate-build-info.js && cd .\\android\\ && .\\gradlew assembleRelease",
+    "build-preview": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build-preview.ps1",
     "generate-assets": "node ./generator/generate-assets.mjs",
     "generate-build-info": "node ./scripts/generate-build-info.js",
     "postinstall": "node ./scripts/patch-react-native-track-player.js && node ./scripts/patch-use-latest-callback.js && node ./scripts/patch-react-native-tab-view.js",
