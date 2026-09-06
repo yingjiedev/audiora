@@ -25,7 +25,7 @@ const heroBackgroundStyle = {
     backgroundSize: "100% 100%",
 } as never;
 
-type TabKey = "home" | "library" | "music" | "settings";
+type TabKey = "home" | "library" | "music" | "settings" | "recommendations";
 
 interface PreviewTrack {
     id: string;
@@ -61,7 +61,7 @@ const quickEntries: Array<{
     artwork: ImageSourcePropType;
     color: string;
 }> = [
-    { title: "本地音乐", subtitle: "961 首", artwork: quickLocalArtwork, color: "#F0FCFA" },
+    { title: "推荐歌单", subtitle: "发现好音乐", artwork: quickLocalArtwork, color: "#F0FCFA" },
     { title: "最近播放", subtitle: "28 首", artwork: quickHistoryArtwork, color: "#F4F6FF" },
     { title: "我喜欢", subtitle: "56 首", artwork: quickFavoriteArtwork, color: "#FFF7F9" },
     { title: "文件夹导入", subtitle: "扫描音乐", artwork: quickFolderArtwork, color: "#F2FBFF" },
@@ -131,7 +131,12 @@ function PlatformCards() {
     );
 }
 
-function Home({ onPlay }: { onPlay: (track: PreviewTrack) => void }) {
+function Home(props: {
+    onPlay: (track: PreviewTrack) => void;
+    onTimingClose: () => void;
+    onOpenRecommendations: () => void;
+}) {
+    const { onPlay, onTimingClose, onOpenRecommendations } = props;
     const [feed, setFeed] = useState<"recommend" | "discover">("recommend");
     return (
         <>
@@ -146,7 +151,10 @@ function Home({ onPlay }: { onPlay: (track: PreviewTrack) => void }) {
                         {feed === "discover" ? <View style={styles.feedIndicator} /> : null}
                     </Pressable>
                 </View>
-                <Pressable style={styles.iconButton}>
+                <Pressable
+                    accessibilityLabel="定时关闭"
+                    style={styles.iconButton}
+                    onPress={onTimingClose}>
                     <Icon name="alarm-outline" size={20} color="#17213E" />
                 </Pressable>
             </View>
@@ -177,7 +185,10 @@ function Home({ onPlay }: { onPlay: (track: PreviewTrack) => void }) {
 
                 <View style={styles.quickGrid}>
                     {quickEntries.map(item => (
-                        <Pressable key={item.title} style={[styles.quickCard, { backgroundColor: item.color }]}>
+                        <Pressable
+                            key={item.title}
+                            style={[styles.quickCard, { backgroundColor: item.color }]}
+                            onPress={item.title === "推荐歌单" ? onOpenRecommendations : undefined}>
                             <Image source={item.artwork} style={styles.quickArtwork} resizeMode="contain" />
                             <View>
                                 <Text style={styles.quickTitle}>{item.title}</Text>
@@ -203,6 +214,28 @@ function Home({ onPlay }: { onPlay: (track: PreviewTrack) => void }) {
     );
 }
 
+function TimingClosePreview({ onClose }: { onClose: () => void }) {
+    return (
+        <View style={styles.timingMask}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+            <View style={styles.timingSheet}>
+                <Text style={styles.timingTitle}>定时关闭</Text>
+                <Text style={styles.timingDescription}>选择停止播放的时间</Text>
+                <View style={styles.timingOptions}>
+                    {[10, 20, 30, 45, 60].map(minutes => (
+                        <Pressable key={minutes} style={styles.timingOption} onPress={onClose}>
+                            <Text style={styles.timingOptionText}>{minutes} 分钟</Text>
+                        </Pressable>
+                    ))}
+                </View>
+                <Pressable style={styles.timingCancel} onPress={onClose}>
+                    <Text style={styles.timingCancelText}>取消</Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+}
+
 function PersistentMiniPlayer({ onPlay }: { onPlay: (track: PreviewTrack) => void }) {
     return (
         <Pressable style={styles.persistentPlayer} onPress={() => onPlay(tracks[0])}>
@@ -220,10 +253,18 @@ function PersistentMiniPlayer({ onPlay }: { onPlay: (track: PreviewTrack) => voi
 }
 
 function SecondaryScreen({ tab }: { tab: Exclude<TabKey, "home"> }) {
-    const title = tab === "library" ? "音乐库" : tab === "music" ? "我的音乐" : "设置";
+    const title = tab === "library"
+        ? "音乐库"
+        : tab === "music"
+            ? "我的音乐"
+            : tab === "recommendations"
+                ? "推荐歌单"
+                : "设置";
     const rows = tab === "settings"
         ? ["通用设置", "音乐源管理", "本地音乐扫描", "主题设置", "权限管理", "关于 Audiora"]
-        : ["本地音乐", "最近播放", "我的歌单", "已接入的平台"];
+        : tab === "recommendations"
+            ? ["每日推荐", "新歌速递", "为你精选", "热门榜单"]
+            : ["本地音乐", "最近播放", "我的歌单", "已接入的平台"];
     return (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.secondaryContent}>
             <Text style={styles.secondaryTitle}>{title}</Text>
@@ -272,6 +313,7 @@ function Player({ track, onClose }: { track: PreviewTrack; onClose: () => void }
 export default function WebPreview() {
     const [tab, setTab] = useState<TabKey>("home");
     const [playing, setPlaying] = useState<PreviewTrack | null>(null);
+    const [showTimingClose, setShowTimingClose] = useState(false);
     return (
         <View style={styles.stage}>
             <View style={styles.phone}>
@@ -280,7 +322,13 @@ export default function WebPreview() {
                     <Player track={playing} onClose={() => setPlaying(null)} />
                 ) : (
                     <>
-                        {tab === "home" ? <Home onPlay={setPlaying} /> : <SecondaryScreen tab={tab} />}
+                        {tab === "home" ? (
+                            <Home
+                                onPlay={setPlaying}
+                                onTimingClose={() => setShowTimingClose(true)}
+                                onOpenRecommendations={() => setTab("recommendations")}
+                            />
+                        ) : <SecondaryScreen tab={tab} />}
                         <PersistentMiniPlayer onPlay={setPlaying} />
                         <View style={styles.tabBar}>
                             {tabs.map(item => {
@@ -293,6 +341,9 @@ export default function WebPreview() {
                                 );
                             })}
                         </View>
+                        {showTimingClose ? (
+                            <TimingClosePreview onClose={() => setShowTimingClose(false)} />
+                        ) : null}
                     </>
                 )}
             </View>
@@ -385,4 +436,13 @@ const styles = StyleSheet.create({
     progressValue: { width: "54%", height: 3, borderRadius: 2, backgroundColor: "#FFFFFF" },
     playerControls: { width: 230, marginTop: 35, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     pauseButton: { width: 62, height: 62, borderRadius: 31, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
+    timingMask: { ...StyleSheet.absoluteFillObject, zIndex: 5, justifyContent: "flex-end", backgroundColor: "rgba(12, 22, 46, 0.34)" },
+    timingSheet: { padding: 20, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: "#FFFFFF" },
+    timingTitle: { fontSize: 18, fontWeight: "800", color: "#17213E" },
+    timingDescription: { marginTop: 4, fontSize: 11, color: "#7E8AA2" },
+    timingOptions: { marginTop: 16, flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    timingOption: { width: "30%", height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#F1F5FF" },
+    timingOptionText: { fontSize: 10, fontWeight: "700", color: "#386CFF" },
+    timingCancel: { height: 38, marginTop: 16, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#F5F7FB" },
+    timingCancelText: { fontSize: 12, fontWeight: "700", color: "#65718A" },
 });

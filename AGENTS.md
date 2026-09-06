@@ -15,6 +15,7 @@ Tests are colocated with their subjects as `*.test.ts` or `*.test.tsx`; some uti
 - `npm test` runs the Jest suite; use `npm test -- --runInBand path/to/file.test.ts` for a focused run.
 - `npm run lint` runs ESLint over `src/` and fixes supported issues.
 - `npm run build-android` generates build metadata and produces the release APK.
+- `npm run build-preview` generates a uniquely versioned Android preview APK, verifies its metadata and signature, and cleans up temporary build settings. Use `npm run build-preview -- -Abi all` for all Android ABIs.
 - `npm run generate-assets` regenerates `src/components/base/icon.tsx` after SVG icon changes.
 
 ## Coding Style & Naming Conventions

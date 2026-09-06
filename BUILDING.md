@@ -1,13 +1,13 @@
 # Android 本地测试包构建
 
-本页用于构建可安装的 Android Release 测试 APK。它适用于 Windows + PowerShell，并固定产出 `arm64-v8a` 包。
+本页用于构建可安装的 Android Release 测试 APK。推荐使用仓库自带的 PowerShell 脚本自动完成版本号、构建、校验和清理。
 
 ## 构建前准备
 
 - 使用 JDK 17、Android SDK（项目当前使用 Build Tools 36.0.0、NDK 27.1.12297006）和 Node.js。
-- 在**独立的构建工作树**中操作，不能在含有未提交改动的主工作树中改版本或生成构建信息。
+- 在**独立的构建工作树**中操作，不能在含有未提交改动的主工作树中生成构建信息。
 - Windows 下将工作树放在短路径、未启用 EFS 加密的目录，例如 `C:\a`。React Native 原生依赖的 CMake 构建路径很深；过长路径或加密目录可能导致构建失败。
-- 每个可安装测试包都必须使用新的 `versionName` 和递增的 Android `versionCode`。这些仅用于测试的改动不得提交。
+- 每个可安装测试包都必须使用新的 `versionName` 和递增的 Android `versionCode`。脚本会自动生成并通过 Gradle 参数传入，不会改写需要提交的版本文件。
 
 示例：从要测试的提交创建一个短路径工作树。
 
@@ -16,42 +16,66 @@ git worktree add --detach C:\a <commit>
 Set-Location C:\a
 ```
 
-## 构建步骤
+## 自动构建（推荐）
 
-1. 安装锁定依赖。`postinstall` 会自动应用本项目需要的 React Native 兼容补丁。
+在仓库根目录执行：
 
-   ```powershell
-   npm ci --no-audit --no-fund
-   ```
+```powershell
+npm run build-preview
+```
 
-2. 在该临时工作树中更新 `package.json` 的 `version`，并在 `android/app/build.gradle` 中将 `appVersionCode` 递增。例如：`0.1.0-test.1` 和 `400035`。随后生成此次构建信息：
+默认生成 `arm64-v8a` APK。脚本会自动：
 
-   ```powershell
-   node scripts/generate-build-info.js
-   ```
+- 按当前 `package.json` 版本生成唯一的预览 `versionName` 和 Android `versionCode`。
+- 在依赖缺失时执行 `npm ci`（也可以显式传入 `-InstallDependencies`）。
+- 生成构建信息并调用 Gradle Release 构建。
+- 在 Windows 上临时处理 NDK 文件属性问题。
+- 使用 `aapt2`、`apksigner` 和 SHA-256 校验实际 APK。
+- 结束时恢复构建信息并删除临时 SDK/Gradle 配置。
 
-3. 配置 Android SDK 环境变量并只构建 arm64。`-PreactNativeArchitectures=arm64-v8a` 会限制 React Native 的原生依赖；`--max-workers=1` 避免 Windows 下多个 CMake/Ninja 任务同时重写生成文件。
+构建所有 ABI：
 
-   ```powershell
-   $env:ANDROID_HOME = 'C:\Users\<username>\AppData\Local\Android\Sdk'
-   $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
-   Set-Location .\android
-   .\gradlew.bat :app:assembleRelease `
-     -PbuildAbi=arm64-v8a `
-     -PreactNativeArchitectures=arm64-v8a `
-     --max-workers=1 `
-     --no-configuration-cache `
-     --no-daemon `
-     --console=plain
-   ```
+```powershell
+npm run build-preview -- -Abi all
+```
 
-4. APK 位于：
+强制重新安装依赖：
 
-   ```text
-   android/app/build/outputs/apk/release/Audiora-v<version>-arm64-v8a-release.apk
-   ```
+```powershell
+npm run build-preview -- -InstallDependencies
+```
 
-5. 测试完成后，用临时工作树中原有的值恢复 `package.json`、`android/app/build.gradle` 和 `src/constants/buildInfo.ts`。不要提交版本号、构建时间或任何 Gradle 产物。
+如自动发现失败，可以先设置 SDK 路径：
+
+```powershell
+$env:ANDROID_SDK_ROOT = 'C:\Users\<username>\AppData\Local\Android\Sdk'
+npm run build-preview
+```
+
+## 手动 Gradle 构建（备用）
+
+仅在调试脚本本身时使用手动流程。不要直接编辑版本文件来区分测试包；请通过 Gradle 参数传入版本：
+
+```powershell
+Set-Location .\android
+.\gradlew.bat :app:assembleRelease `
+  -PappVersion=0.1.4-preview.example `
+  -PappVersionCode=400038 `
+  -PbuildAbi=arm64-v8a `
+  -PreactNativeArchitectures=arm64-v8a `
+  --max-workers=1 `
+  --no-configuration-cache `
+  --no-daemon `
+  --console=plain
+```
+
+APK 位于：
+
+```text
+android/app/build/outputs/apk/release/Audiora-v<version>-arm64-v8a-release.apk
+```
+
+手动流程完成后不要提交版本号、构建时间或任何 Gradle 产物。
 
 ## APK 验证
 
@@ -59,8 +83,8 @@ Set-Location C:\a
 
 ```powershell
 $apk = 'C:\a\android\app\build\outputs\apk\release\Audiora-v<version>-arm64-v8a-release.apk'
-$aapt = "$env:ANDROID_HOME\build-tools\36.0.0\aapt.exe"
-$apksigner = "$env:ANDROID_HOME\build-tools\36.0.0\apksigner.bat"
+$aapt = "$env:ANDROID_SDK_ROOT\build-tools\36.0.0\aapt2.exe"
+$apksigner = "$env:ANDROID_SDK_ROOT\build-tools\36.0.0\apksigner.bat"
 
 & $aapt dump badging $apk
 & $aapt list $apk | Select-String '^lib/'

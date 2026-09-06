@@ -69,7 +69,6 @@ export default function HomeOverview() {
             showsVerticalScrollIndicator={false}>
             <HomeHero />
             <QuickAccess
-                localMusicCount={data.localMusicCount}
                 historyCount={data.historyCount}
                 favoriteCount={data.favoriteSheet?.worksNum ?? 0}
                 favoriteSheetId={data.favoriteSheet?.id}
@@ -250,7 +249,6 @@ function ContinueListening(props: {
 
 function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
     const { musics } = props;
-    const colors = useColors();
     const { t } = useI18N();
 
     if (!musics.length) {
@@ -299,12 +297,11 @@ function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
 }
 
 function QuickAccess(props: {
-    localMusicCount: number;
     historyCount: number;
     favoriteCount: number;
     favoriteSheetId?: string;
 }) {
-    const { localMusicCount, historyCount, favoriteCount, favoriteSheetId } = props;
+    const { historyCount, favoriteCount, favoriteSheetId } = props;
     const { t } = useI18N();
     const navigate = useNavigate();
 
@@ -317,12 +314,12 @@ function QuickAccess(props: {
         action: () => void;
     }[] = [
         {
-            key: "local",
+            key: "recommend",
             artwork: ImgAsset.quickLocal,
-            title: t("home.localMusic"),
-            subtitle: t("home.songCount", { count: localMusicCount }),
+            title: t("home.recommendSheet"),
+            subtitle: t("home.discovery"),
             accent: "#00CDAA",
-            action: () => navigate(ROUTE_PATH.LOCAL),
+            action: () => navigate(ROUTE_PATH.RECOMMEND_SHEETS),
         },
         {
             key: "history",
