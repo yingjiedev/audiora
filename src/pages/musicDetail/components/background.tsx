@@ -75,6 +75,16 @@ export default function Background(props: IBackgroundProps) {
                 resizeMode="cover"
                 source={artworkSource}
             />
+            <LinearGradient
+                colors={[
+                    "rgba(0,221,181,0.16)",
+                    "rgba(59,130,246,0.18)",
+                    "rgba(99,102,241,0.34)",
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={style.ambientTint}
+            />
             {shouldRenderImmersiveCover ? (
                 <Image
                     fadeDuration={0}
@@ -175,6 +185,16 @@ export default function Background(props: IBackgroundProps) {
                     </MaskedView>
                 </View>
             ) : null}
+            <LinearGradient
+                pointerEvents="none"
+                colors={[
+                    "rgba(5,12,28,0.06)",
+                    "rgba(5,12,28,0.18)",
+                    "rgba(5,12,28,0.72)",
+                ]}
+                locations={[0, 0.52, 1]}
+                style={style.readabilityFade}
+            />
         </>
     );
 }
@@ -198,13 +218,31 @@ const style = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        opacity: 0.5,
+        opacity: 0.68,
     },
     immersiveBaseBlur: {
         opacity: 0.5,
     },
+    ambientTint: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+    },
+    readabilityFade: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+    },
     immersiveLayer: {
-        ...StyleSheet.absoluteFillObject,
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
         alignItems: "center",
     },
     immersiveArtworkMask: {

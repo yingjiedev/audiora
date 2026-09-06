@@ -11,13 +11,14 @@ import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import Color from "color";
 import React, { ReactNode, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { DimensionValue } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import type { DimensionValue, ImageSourcePropType } from "react-native";
 import type { Plugin } from "@/core/pluginManager";
 import useHomeDiscovery, {
     IHomeDiscoveryPreview,
 } from "./useHomeDiscovery";
 import useHomeOverview from "./useHomeOverview";
+import HomeHero from "../HomeHero";
 
 function formatTime(value?: number) {
     const seconds = Math.max(0, Math.floor(value ?? 0));
@@ -66,16 +67,22 @@ export default function HomeOverview() {
             style={styles.wrapper}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}>
+            <HomeHero />
+            <QuickAccess
+                localMusicCount={data.localMusicCount}
+                historyCount={data.historyCount}
+                favoriteCount={data.favoriteSheet?.worksNum ?? 0}
+                favoriteSheetId={data.favoriteSheet?.id}
+            />
             <Discovery
                 topListPlugins={data.topListPlugins}
                 preview={discoveryPreview}
             />
+            <RecentListening musics={data.recentMusics} />
             <ContinueListening
                 currentMusic={data.currentMusic}
                 featuredMusic={data.featuredMusic}
             />
-            <RecentListening musics={data.recentMusics} />
-            <QuickAccess />
             <MyMusic
                 favoriteSheet={data.favoriteSheet}
                 userSheets={data.userSheets}
@@ -243,7 +250,6 @@ function ContinueListening(props: {
 
 function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
     const { musics } = props;
-    const colors = useColors();
     const { t } = useI18N();
 
     if (!musics.length) {
@@ -291,81 +297,64 @@ function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
     );
 }
 
-function QuickAccess() {
-    const colors = useColors();
+function QuickAccess(props: {
+    localMusicCount: number;
+    historyCount: number;
+    favoriteCount: number;
+    favoriteSheetId?: string;
+}) {
+    const { localMusicCount, historyCount, favoriteCount, favoriteSheetId } = props;
     const { t } = useI18N();
     const navigate = useNavigate();
 
     const quickItems: {
         key: string;
-        icon: IIconName;
+        artwork: ImageSourcePropType;
         title: string;
+        subtitle: string;
         accent: string;
         action: () => void;
     }[] = [
         {
-            key: "history",
-            icon: "clock-outline",
-            title: t("home.playHistory"),
-            accent: "#64A7FF",
-            action: () => navigate(ROUTE_PATH.HISTORY),
-        },
-        {
             key: "local",
-            icon: "folder-music-outline",
+            artwork: ImgAsset.quickLocal,
             title: t("home.localMusic"),
-            accent: "#8EDB7C",
+            subtitle: t("home.songCount", { count: localMusicCount }),
+            accent: "#00CDAA",
             action: () => navigate(ROUTE_PATH.LOCAL),
         },
         {
-            key: "download",
-            icon: "arrow-down-tray",
-            title: t("common.download"),
-            accent: "#70D7D7",
-            action: () => navigate(ROUTE_PATH.DOWNLOADING),
+            key: "history",
+            artwork: ImgAsset.quickHistory,
+            title: t("home.playHistory"),
+            subtitle: t("home.songCount", { count: historyCount }),
+            accent: "#4D70F5",
+            action: () => navigate(ROUTE_PATH.HISTORY),
         },
         {
-            key: "topList",
-            icon: "trophy",
-            title: t("home.topList"),
-            accent: "#E5A1C6",
-            action: () => navigate(ROUTE_PATH.TOP_LIST),
+            key: "favorite",
+            artwork: ImgAsset.quickFavorite,
+            title: t("home.favoriteSheet"),
+            subtitle: t("home.songCount", { count: favoriteCount }),
+            accent: "#FF567D",
+            action: () => {
+                if (favoriteSheetId) {
+                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: favoriteSheetId });
+                }
+            },
         },
         {
-            key: "recommend",
-            icon: "fire-outline",
-            title: t("home.recommendSheet"),
-            accent: "#FF8E7D",
-            action: () => navigate(ROUTE_PATH.RECOMMEND_SHEETS),
-        },
-        {
-            key: "import",
-            icon: "inbox-arrow-down",
-            title: t("home.import.short"),
-            accent: "#A88BFF",
-            action: () => showPanel("ImportMusicSheet"),
-        },
-        {
-            key: "sourceManage",
-            icon: "cog-8-tooth",
-            title: t("home.manageSources.short"),
-            accent: "#F4B85F",
-            action: () =>
-                navigate(ROUTE_PATH.SETTING, {
-                    type: "plugin",
-                }),
-        },
-        {
-            key: "playById",
-            icon: "identification",
-            title: t("home.playById.short"),
-            accent: "#A2B3C7",
-            action: () => showPanel("PlayById"),
+            key: "folderImport",
+            artwork: ImgAsset.quickFolder,
+            title: t("home.importPlaylist.a11y"),
+            subtitle: t("home.scanLocal"),
+            accent: "#00A9EE",
+            action: () => navigate(ROUTE_PATH.LOCAL),
         },
     ];
 
     return (
-        <Section title={t("home.quickAccess")}>
+        <View style={styles.quickSection}>
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -376,39 +365,35 @@ function QuickAccess() {
                         style={[
                             styles.quickItem,
                             {
-                                backgroundColor: colors.card,
-                                borderColor: Color(colors.text)
-                                    .alpha(0.06)
+                                backgroundColor: Color(item.accent)
+                                    .alpha(0.055)
                                     .toString(),
                             },
                         ]}
                         onPress={item.action}>
-                        <View
-                            style={[
-                                styles.quickIconBox,
-                                {
-                                    backgroundColor: Color(item.accent)
-                                        .alpha(0.16)
-                                        .toString(),
-                                },
-                            ]}>
-                            <Icon
-                                name={item.icon}
-                                color={item.accent}
-                                size={rpx(32)}
-                            />
-                        </View>
+                        <Image
+                            source={item.artwork}
+                            style={styles.quickArtwork}
+                            resizeMode="contain"
+                        />
                         <ThemeText
                             numberOfLines={1}
-                            fontSize="description"
+                            fontSize="tag"
                             fontWeight="semibold"
                             style={styles.quickText}>
                             {item.title}
                         </ThemeText>
+                        <ThemeText
+                            numberOfLines={1}
+                            fontSize="caption"
+                            fontColor="textSecondary"
+                            style={styles.quickSubtitle}>
+                            {item.subtitle}
+                        </ThemeText>
                     </Pressable>
                 ))}
             </ScrollView>
-        </Section>
+        </View>
     );
 }
 
@@ -862,6 +847,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     contentContainer: {
+        paddingTop: rpx(2),
         paddingBottom: rpx(36),
     },
     section: {
@@ -892,17 +878,22 @@ const styles = StyleSheet.create({
     },
     continueCard: {
         marginHorizontal: rpx(24),
-        minHeight: rpx(156),
-        borderRadius: rpx(18),
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: rpx(18),
+        minHeight: rpx(176),
+        borderRadius: rpx(24),
+        borderWidth: 0,
+        padding: rpx(20),
         flexDirection: "row",
         alignItems: "center",
+        shadowColor: "#2D4A78",
+        shadowOffset: { width: 0, height: rpx(8) },
+        shadowOpacity: 0.1,
+        shadowRadius: rpx(18),
+        elevation: 4,
     },
     continueCover: {
-        width: rpx(116),
-        height: rpx(116),
-        borderRadius: rpx(14),
+        width: rpx(132),
+        height: rpx(132),
+        borderRadius: rpx(20),
     },
     continueContent: {
         flex: 1,
@@ -1004,25 +995,30 @@ const styles = StyleSheet.create({
     quickContainer: {
         paddingHorizontal: rpx(24),
     },
-    quickItem: {
-        width: rpx(136),
-        height: rpx(112),
-        borderRadius: rpx(18),
-        borderWidth: StyleSheet.hairlineWidth,
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: rpx(14),
+    quickSection: {
+        marginTop: rpx(20),
     },
-    quickIconBox: {
-        width: rpx(52),
-        height: rpx(52),
-        borderRadius: rpx(16),
+    quickItem: {
+        width: rpx(164),
+        height: rpx(164),
+        borderRadius: rpx(20),
+        borderWidth: 0,
         alignItems: "center",
         justifyContent: "center",
+        marginRight: rpx(10),
+    },
+    quickArtwork: {
+        width: rpx(84),
+        height: rpx(84),
     },
     quickText: {
-        marginTop: rpx(12),
-        maxWidth: rpx(112),
+        marginTop: rpx(6),
+        maxWidth: rpx(150),
+        textAlign: "center",
+    },
+    quickSubtitle: {
+        marginTop: rpx(2),
+        textAlign: "center",
     },
     discoveryPreviewContainer: {
         paddingHorizontal: rpx(24),
@@ -1030,7 +1026,7 @@ const styles = StyleSheet.create({
     discoveryPreviewCard: {
         width: rpx(232),
         minHeight: rpx(318),
-        borderRadius: rpx(18),
+        borderRadius: rpx(22),
         padding: rpx(14),
         marginRight: rpx(14),
     },
@@ -1103,7 +1099,7 @@ const styles = StyleSheet.create({
     },
     myMusicList: {
         marginHorizontal: rpx(24),
-        borderRadius: rpx(18),
+        borderRadius: rpx(22),
         overflow: "hidden",
     },
     myMusicRow: {

@@ -50,7 +50,7 @@ export default function AlbumCover(props: IProps) {
     const safeAreaInsets = useSafeAreaInsets();
     const coverStyle = useAppConfig("theme.coverStyle") ?? "square";
     const musicDetailCoverStyle =
-        useAppConfig("theme.musicDetailCoverStyle") ?? "classic";
+        useAppConfig("theme.musicDetailCoverStyle") ?? "immersive";
     const musicState = useMusicState();
     const isPlaying = musicState === MusicState.Playing;
     const isCircle = coverStyle === "circle";
@@ -261,14 +261,14 @@ export default function AlbumCover(props: IProps) {
             return {
                 width: size,
                 height: size,
-                borderRadius: isCircle ? size / 2 : rpx(16),
+                borderRadius: isCircle ? size / 2 : rpx(24),
             };
         } else {
             const size = isCircle ? rpx(285) : rpx(260);
             return {
                 width: size,
                 height: size,
-                borderRadius: isCircle ? size / 2 : rpx(12),
+                borderRadius: isCircle ? size / 2 : rpx(20),
             };
         }
     }, [orientation, isCircle]);
@@ -308,6 +308,7 @@ export default function AlbumCover(props: IProps) {
                             collapsable={false}
                             style={[
                                 styles.horizontalCoverWrapper,
+                                !isCircle ? styles.coverShadow : null,
                                 isCircle ? { transform: [{ rotate: spin }] } : null,
                             ]}>
                             <FastImage
@@ -369,11 +370,12 @@ export default function AlbumCover(props: IProps) {
                 <GestureDetector gesture={combineGesture}>
                     <Animated.View
                         collapsable={false}
-                        style={
+                        style={[
+                            !isCircle ? styles.coverShadow : null,
                             isCircle
                                 ? { transform: [{ rotate: spin }] }
-                                : undefined
-                        }>
+                                : undefined,
+                        ]}>
                         <FastImage
                             key={displayArtwork ?? "default"}
                             style={artworkStyle}
@@ -421,6 +423,14 @@ const styles = {
     },
     horizontalOperations: {
         paddingHorizontal: rpx(12),
+    },
+    coverShadow: {
+        borderRadius: rpx(24),
+        shadowColor: "#07132C",
+        shadowOffset: { width: 0, height: rpx(16) },
+        shadowOpacity: 0.34,
+        shadowRadius: rpx(24),
+        elevation: 12,
     },
     hidden: {
         display: "none" as const,
