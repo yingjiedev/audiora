@@ -41,17 +41,40 @@ function Invoke-RequiredCommand {
 }
 
 function Get-AndroidSdkPath {
-    $candidates = @(@(
-        $env:ANDROID_SDK_ROOT,
-        $env:ANDROID_HOME,
-        (Join-Path $env:LOCALAPPDATA "Android\Sdk")
-    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
+    param([string]$LocalPropertiesPath)
 
-    if ($candidates.Count -eq 0) {
-        throw "Android SDK not found. Set ANDROID_SDK_ROOT or ANDROID_HOME."
+    $candidates = @()
+    if ($LocalPropertiesPath -and (Test-Path -LiteralPath $LocalPropertiesPath)) {
+        $sdkLine = Get-Content -LiteralPath $LocalPropertiesPath | Where-Object { $_ -match "^sdk\.dir=" } | Select-Object -First 1
+        if ($sdkLine) {
+            $sdkValue = ($sdkLine -split "=", 2)[1].Trim()
+            $candidates += ($sdkValue -replace "\\\\", "\")
+        }
     }
 
-    return (Resolve-Path -LiteralPath $candidates[0]).Path
+    $candidates += $env:ANDROID_SDK_ROOT
+    $candidates += $env:ANDROID_HOME
+
+    $localAppData = @(
+        $env:LOCALAPPDATA,
+        [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+    ) | Where-Object { $_ } | Select-Object -First 1
+    if ($localAppData) {
+        $candidates += (Join-Path $localAppData "Android\Sdk")
+    }
+
+    if ($env:USERPROFILE) {
+        $candidates += (Join-Path $env:USERPROFILE "AppData\Local\Android\Sdk")
+    }
+
+    $candidates += (Join-Path $env:ProgramFiles "Android\Sdk")
+    $candidates += (Join-Path ${env:ProgramFiles(x86)} "Android\Sdk")
+
+    foreach ($candidate in @($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Container) })) {
+        return (Get-Item -LiteralPath $candidate).FullName
+    }
+
+    throw "Android SDK not found. Set ANDROID_SDK_ROOT or ANDROID_HOME, or add sdk.dir to android/local.properties."
 }
 
 function Write-LocalProperties {
@@ -99,7 +122,7 @@ if ($VersionCode -gt 2147483647) {
     throw "versionCode exceeds the Android limit: $VersionCode"
 }
 
-$sdkPath = Get-AndroidSdkPath
+$sdkPath = Get-AndroidSdkPath -LocalPropertiesPath $localPropertiesPath
 $hadLocalProperties = Test-Path -LiteralPath $localPropertiesPath
 $originalLocalProperties = if ($hadLocalProperties) { [System.IO.File]::ReadAllText($localPropertiesPath) } else { $null }
 $hadBuildInfo = Test-Path -LiteralPath $buildInfoPath
