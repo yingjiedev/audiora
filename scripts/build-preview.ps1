@@ -86,7 +86,7 @@ if ($PreviewVersion -notmatch "^[0-9A-Za-z][0-9A-Za-z.+_-]*$") {
 
 if ($VersionCode -le 0) {
     $gradleText = Get-Content -LiteralPath $buildGradlePath -Raw
-    $match = [regex]::Match($gradleText, "def appVersionCode\s*=\s*\(?\s*(\d+)")
+    $match = [regex]::Match($gradleText, "def appVersionCode\s*=\s*[^\r\n]*?(\d+)")
     if (-not $match.Success) {
         throw "Unable to read the base versionCode from android/app/build.gradle."
     }
