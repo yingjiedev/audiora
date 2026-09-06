@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     searchInput: { flex: 1, height: 32, paddingHorizontal: 8, paddingVertical: 0, borderWidth: 0, fontSize: 10, color: "#17213E" },
     scroll: { flex: 1 },
     homeContent: { paddingHorizontal: 16, paddingBottom: 82 },
-    hero: { width: "80%", alignSelf: "center", aspectRatio: 2, justifyContent: "center", overflow: "hidden", borderRadius: 15 },
+    hero: { width: "100%", aspectRatio: 2.5, justifyContent: "center", overflow: "hidden", borderRadius: 15 },
     heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,34,91,0.08)" },
     heroCopy: { marginLeft: 20 },
     heroTitle: { fontSize: 22, lineHeight: 27, fontWeight: "800", color: "#FFFFFF", textShadowColor: "rgba(12,31,84,0.24)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
