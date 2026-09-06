@@ -15,7 +15,7 @@ import PluginManager from "@/core/pluginManager";
 import Theme from "@/core/theme";
 import TrackPlayer from "@/core/trackPlayer";
 import { checkAndCreateDir } from "@/utils/fileUtils";
-import { appendStartupBreadcrumb, crashLog, flushStartupBreadcrumbs, markStartupSession, trace, devLog } from "@/utils/log";
+import { appendStartupBreadcrumb, crashLog, errorLog, flushStartupBreadcrumbs, markStartupSession, trace, devLog } from "@/utils/log";
 import { IPerfLogger, perfLogger } from "@/utils/perfLogger";
 import PersistStatus from "@/utils/persistStatus";
 import Toast from "@/utils/toast";
