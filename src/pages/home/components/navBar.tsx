@@ -5,6 +5,7 @@ import { ROUTE_PATH } from "@/core/router";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import { useNavigation } from "@react-navigation/native";
+import { showPanel } from "@/components/panels/usePanel";
 import Color from "color";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -41,9 +42,9 @@ export default function NavBar() {
                     </Pressable>
                 </View>
                 <Pressable
-                    accessibilityLabel={t("home.notifications.a11y")}
+                    accessibilityLabel={t("sidebar.scheduleClose")}
                     style={styles.roundButton}
-                    onPress={() => navigation.openDrawer()}>
+                    onPress={() => showPanel("TimingClose")}>
                     <Icon name="alarm-outline" size={rpx(38)} color={colors.text} />
                 </Pressable>
             </View>

@@ -16,6 +16,7 @@ import useOrientation from "@/hooks/useOrientation";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Config from "@/core/appConfig";
 import rpx from "@/utils/rpx";
+import HomeBottomNavigation from "./components/HomeBottomNavigation";
 
 const PORTRAIT_DRAWER_MAX_WIDTH = 420;
 const LANDSCAPE_DRAWER_MAX_WIDTH = 440;
@@ -36,7 +37,7 @@ function Home() {
     }, [navigate]);
 
     return (
-        <SafeAreaView edges={["top", "bottom"]} style={styles.appWrapper}>
+        <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
             <HorizontalSafeAreaView style={globalStyle.flex1}>
                 <>
@@ -49,6 +50,7 @@ function Home() {
                 </>
             </HorizontalSafeAreaView>
             <MusicBar />
+            {orientation === "vertical" && <HomeBottomNavigation />}
         </SafeAreaView>
     );
 }
