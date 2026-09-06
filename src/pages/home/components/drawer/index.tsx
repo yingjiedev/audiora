@@ -117,8 +117,8 @@ function HomeDrawer(props: any) {
         {
             accent: colors.info ?? colors.primary,
             icon: "cog-8-tooth",
-            title: t("sidebar.basicSettings"),
-            onPress: () => navigateToSetting("basic"),
+            title: t("common.setting"),
+            onPress: () => navigateToSetting("overview"),
         },
         {
             accent: colors.primary,
