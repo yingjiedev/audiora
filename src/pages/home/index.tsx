@@ -15,11 +15,12 @@ import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Config from "@/core/appConfig";
 import HomeBottomNavigation from "./components/HomeBottomNavigation";
 import MyMusicOverview from "./components/MyMusicOverview";
+import MusicLibraryOverview from "./components/MusicLibraryOverview";
 
 function Home() {
     const orientation = useOrientation();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<"home" | "mine">("home");
+    const [activeTab, setActiveTab] = useState<"home" | "library" | "mine">("home");
     
     useEffect(() => {
         // 检查是否需要在启动后打开播放详情页
@@ -35,8 +36,10 @@ function Home() {
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
             <HorizontalSafeAreaView style={globalStyle.flex1}>
-                {activeTab === "mine" && orientation === "vertical" ? (
+                {orientation === "vertical" && activeTab === "mine" ? (
                     <MyMusicOverview />
+                ) : orientation === "vertical" && activeTab === "library" ? (
+                    <MusicLibraryOverview />
                 ) : (
                     <>
                         <NavBar />
@@ -53,6 +56,7 @@ function Home() {
                 <HomeBottomNavigation
                     activeTab={activeTab}
                     onSelectHome={() => setActiveTab("home")}
+                    onSelectLibrary={() => setActiveTab("library")}
                     onSelectMine={() => setActiveTab("mine")}
                 />
             )}

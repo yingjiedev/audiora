@@ -84,6 +84,24 @@ function Write-LocalProperties {
     [System.IO.File]::WriteAllText($Path, "sdk.dir=$sdkValue`r`n", [System.Text.UTF8Encoding]::new($false))
 }
 
+function Get-Sha256Hash {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $getFileHash = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+    if ($getFileHash) {
+        return (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash
+    }
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        return ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace("-", "")
+    } finally {
+        $stream.Dispose()
+        $sha256.Dispose()
+    }
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $androidRoot = Join-Path $repoRoot "android"
 $packageJsonPath = Join-Path $repoRoot "package.json"
@@ -253,7 +271,7 @@ gradle.allprojects { project ->
         } else {
             foreach ($apk in $apkFiles) {
                 Write-Host "`nAPK: $($apk.FullName)" -ForegroundColor Green
-                Write-Host "SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $apk.FullName).Hash)"
+                Write-Host "SHA-256: $(Get-Sha256Hash -Path $apk.FullName)"
                 & $aapt2Candidates[0].FullName dump badging $apk.FullName | Select-String "package:|native-code:"
 
                 $apksignerPath = Join-Path $aapt2Candidates[0].Directory.FullName "apksigner.bat"

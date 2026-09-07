@@ -1,5 +1,5 @@
 export const ImgAsset = {
-    albumDefault: require("@/assets/imgs/album-default.jpeg"),
+    albumDefault: require("@/assets/imgs/album-default.png"),
     addBackground: require("@/assets/imgs/add-image.png"),
     add: require("@/assets/imgs/add.png"),
     logo: require("@/assets/imgs/logo.png"),
