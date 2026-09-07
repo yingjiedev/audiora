@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, useWindowDimensions } from "react-native";
 
 import NavBar from "./components/navBar";
@@ -17,6 +17,7 @@ import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Config from "@/core/appConfig";
 import rpx from "@/utils/rpx";
 import HomeBottomNavigation from "./components/HomeBottomNavigation";
+import MyMusicOverview from "./components/MyMusicOverview";
 
 const PORTRAIT_DRAWER_MAX_WIDTH = 420;
 const LANDSCAPE_DRAWER_MAX_WIDTH = 440;
@@ -25,6 +26,7 @@ const DRAWER_MIN_WIDTH = 320;
 function Home() {
     const orientation = useOrientation();
     const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<"home" | "mine">("home");
     
     useEffect(() => {
         // 检查是否需要在启动后打开播放详情页
@@ -40,17 +42,27 @@ function Home() {
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
             <HorizontalSafeAreaView style={globalStyle.flex1}>
-                <>
-                    <NavBar />
-                    {orientation === "vertical" ? (
-                        <HomeBody />
-                    ) : (
-                        <HomeBodyHorizontal />
-                    )}
-                </>
+                {activeTab === "mine" && orientation === "vertical" ? (
+                    <MyMusicOverview />
+                ) : (
+                    <>
+                        <NavBar />
+                        {orientation === "vertical" ? (
+                            <HomeBody />
+                        ) : (
+                            <HomeBodyHorizontal />
+                        )}
+                    </>
+                )}
             </HorizontalSafeAreaView>
             <MusicBar />
-            {orientation === "vertical" && <HomeBottomNavigation />}
+            {orientation === "vertical" && (
+                <HomeBottomNavigation
+                    activeTab={activeTab}
+                    onSelectHome={() => setActiveTab("home")}
+                    onSelectMine={() => setActiveTab("mine")}
+                />
+            )}
         </SafeAreaView>
     );
 }
