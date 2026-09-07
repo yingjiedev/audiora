@@ -1,10 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, useWindowDimensions } from "react-native";
+import React, { useEffect, useState } from "react";
+import { StyleSheet } from "react-native";
 
 import NavBar from "./components/navBar";
 import MusicBar from "@/components/musicBar";
-import { createDrawerNavigator } from "@react-navigation/drawer";
-import HomeDrawer from "./components/drawer";
 import { SafeAreaView } from "react-native-safe-area-context";
 import StatusBar from "@/components/base/statusBar";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
@@ -15,13 +13,8 @@ import HomeBodyHorizontal from "./components/homeBodyHorizontal";
 import useOrientation from "@/hooks/useOrientation";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Config from "@/core/appConfig";
-import rpx from "@/utils/rpx";
 import HomeBottomNavigation from "./components/HomeBottomNavigation";
 import MyMusicOverview from "./components/MyMusicOverview";
-
-const PORTRAIT_DRAWER_MAX_WIDTH = 420;
-const LANDSCAPE_DRAWER_MAX_WIDTH = 440;
-const DRAWER_MIN_WIDTH = 320;
 
 function Home() {
     const orientation = useOrientation();
@@ -91,61 +84,8 @@ function HomeStatusBar() {
 //     );
 // }
 
-const LeftDrawer = createDrawerNavigator();
-
-// Extract drawer content component to avoid nested component warning
-const DrawerContent = (props: any) => <HomeDrawer {...props} />;
-
 export default function App() {
-    const orientation = useOrientation();
-    const { width } = useWindowDimensions();
-    // 订阅主题，配色或「表面不透明度」变了要重算抽屉底色
-    const theme = Theme.useTheme();
-    const drawerWidth = useMemo(() => {
-        if (orientation === "horizontal") {
-            return Math.max(
-                DRAWER_MIN_WIDTH,
-                Math.min(width * 0.56, LANDSCAPE_DRAWER_MAX_WIDTH),
-            );
-        }
-
-        return Math.max(
-            DRAWER_MIN_WIDTH,
-            Math.min(width * 0.82, PORTRAIT_DRAWER_MAX_WIDTH),
-        );
-    }, [orientation, width]);
-
-    const drawerStyle = useMemo(
-        () => ({
-            width: drawerWidth,
-            // 原先这里只设宽度，底色由导航库取 colors.card。设了壁纸时那是
-            // rgba(0,0,0,0.22)，抽屉滑出的过程里右缘就是一条从 22% 黑突变到
-            // 全透明的硬直线，看着不像一层面板。补足够不透明的底、右缘加圆角、
-            // 再配一道向右的阴影，让边界有个软过渡。
-            backgroundColor: Theme.getDrawerSurfaceColor(),
-            borderTopRightRadius: rpx(28),
-            borderBottomRightRadius: rpx(28),
-            // Android 走 elevation，iOS 走 shadow*，两边都给
-            elevation: 16,
-            shadowColor: "#000000",
-            shadowOffset: { width: rpx(8), height: 0 },
-            shadowOpacity: 0.3,
-            shadowRadius: rpx(18),
-        }),
-        [drawerWidth, theme],
-    );
-
-    return (
-        <LeftDrawer.Navigator
-            screenOptions={{
-                headerShown: false,
-                drawerStyle,
-            }}
-            initialRouteName="HOME-MAIN"
-            drawerContent={DrawerContent}>
-            <LeftDrawer.Screen name="HOME-MAIN" component={Home} />
-        </LeftDrawer.Navigator>
-    );
+    return <Home />;
 }
 
 const styles = StyleSheet.create({
