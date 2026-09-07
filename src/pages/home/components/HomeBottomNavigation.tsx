@@ -11,7 +11,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface INavigationItem {
-    key: "home" | "library" | "music" | "settings";
+    key: "home" | "library" | "mine";
     icon: IIconName;
     title: string;
     onPress: () => void;
@@ -21,7 +21,12 @@ interface INavigationItem {
  * Main navigation stays in the home shell so the mini player sits directly
  * above it, while each destination keeps using the existing stack routes.
  */
-export default function HomeBottomNavigation() {
+export default function HomeBottomNavigation(props: {
+    activeTab: "home" | "mine";
+    onSelectHome: () => void;
+    onSelectMine: () => void;
+}) {
+    const { activeTab, onSelectHome, onSelectMine } = props;
     const colors = useColors();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
@@ -32,7 +37,7 @@ export default function HomeBottomNavigation() {
             key: "home",
             icon: "home-outline",
             title: t("home.home"),
-            onPress: () => undefined,
+            onPress: onSelectHome,
         },
         {
             key: "library",
@@ -41,19 +46,10 @@ export default function HomeBottomNavigation() {
             onPress: () => navigation.navigate(ROUTE_PATH.LOCAL),
         },
         {
-            key: "music",
-            icon: "heart-outline",
-            title: t("home.myMusic"),
-            onPress: () =>
-                navigation.navigate(ROUTE_PATH.SHEET_BROWSER, {
-                    sheetType: "local",
-                }),
-        },
-        {
-            key: "settings",
-            icon: "cog-8-tooth",
-            title: t("common.setting"),
-            onPress: () => navigation.openDrawer(),
+            key: "mine",
+            icon: "user",
+            title: t("home.mine"),
+            onPress: onSelectMine,
         },
     ];
 
@@ -68,7 +64,7 @@ export default function HomeBottomNavigation() {
                 },
             ]}>
             {items.map(item => {
-                const selected = item.key === "home";
+                const selected = item.key === activeTab;
                 const color = selected ? colors.primary : colors.textSecondary;
 
                 return (
