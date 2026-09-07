@@ -2,10 +2,8 @@ import Icon, { IIconName } from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
 import { spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
-import { ROUTE_PATH } from "@/core/router";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
-import { useNavigation } from "@react-navigation/native";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,16 +17,16 @@ interface INavigationItem {
 
 /**
  * Main navigation stays in the home shell so the mini player sits directly
- * above it, while each destination keeps using the existing stack routes.
+ * above it and each primary destination keeps its bottom navigation visible.
  */
 export default function HomeBottomNavigation(props: {
-    activeTab: "home" | "mine";
+    activeTab: "home" | "library" | "mine";
     onSelectHome: () => void;
+    onSelectLibrary: () => void;
     onSelectMine: () => void;
 }) {
-    const { activeTab, onSelectHome, onSelectMine } = props;
+    const { activeTab, onSelectHome, onSelectLibrary, onSelectMine } = props;
     const colors = useColors();
-    const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const { t } = useI18N();
 
@@ -43,7 +41,7 @@ export default function HomeBottomNavigation(props: {
             key: "library",
             icon: "album-outline",
             title: t("home.musicLibrary"),
-            onPress: () => navigation.navigate(ROUTE_PATH.LOCAL),
+            onPress: onSelectLibrary,
         },
         {
             key: "mine",

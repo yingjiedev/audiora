@@ -12,7 +12,7 @@ import {
 
 import Icon, { IIconName } from "@/components/base/icon";
 
-const defaultCover = require("@/assets/imgs/album-default.jpeg");
+const defaultCover = require("@/assets/imgs/album-default.png");
 const heroArtwork = require("@/assets/imgs/home-hero-mountain.png");
 const quickLocalArtwork = require("@/assets/imgs/quick-local-v2.png");
 const quickHistoryArtwork = require("@/assets/imgs/quick-history-v2.png");
