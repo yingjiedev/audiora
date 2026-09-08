@@ -28,11 +28,6 @@ async function stopPlayback() {
 
 function onCurrentTrackEnd() {
     isWaitingForCurrentTrackEnd = false;
-    // The player advances its queue in the same event cycle. Deferring one tick
-    // ensures we pause the newly-active track instead of racing that transition.
-    setTimeout(() => {
-        void stopPlayback();
-    }, 0);
 }
 
 function clearBackgroundTimer() {
@@ -42,12 +37,23 @@ function clearBackgroundTimer() {
     }
 }
 
+function cancelWaitingForCurrentTrackEnd() {
+    if (!isWaitingForCurrentTrackEnd) {
+        return;
+    }
+
+    TrackPlayer.off(TrackPlayerEvents.PlayEnd, onCurrentTrackEnd);
+    TrackPlayer.cancelPauseAfterCurrentTrack();
+    isWaitingForCurrentTrackEnd = false;
+}
+
 function stopAfterCurrentTrack() {
     if (isWaitingForCurrentTrackEnd) {
         return;
     }
 
     isWaitingForCurrentTrackEnd = true;
+    TrackPlayer.pauseAfterCurrentTrack();
     TrackPlayer.once(TrackPlayerEvents.PlayEnd, onCurrentTrackEnd);
 }
 
@@ -89,6 +95,7 @@ function armBackgroundTimer(deadline: number) {
 function setScheduleClose(deadline: number | null) {
     const store = getDefaultStore();
     clearBackgroundTimer();
+    cancelWaitingForCurrentTrackEnd();
     store.set(deadlineAtom, deadline);
 
     if (deadline && deadline > Date.now()) {
@@ -114,9 +121,8 @@ function restoreScheduleClose() {
 }
 
 function setCloseAfterPlayEnd(closeAfterPlayEnd: boolean) {
-    if (!closeAfterPlayEnd && isWaitingForCurrentTrackEnd) {
-        TrackPlayer.off(TrackPlayerEvents.PlayEnd, onCurrentTrackEnd);
-        isWaitingForCurrentTrackEnd = false;
+    if (!closeAfterPlayEnd) {
+        cancelWaitingForCurrentTrackEnd();
     }
     getDefaultStore().set(closeAfterPlayEndAtom, closeAfterPlayEnd);
     PersistStatus.set("app.scheduleCloseAfterPlayEnd", closeAfterPlayEnd);
@@ -130,8 +136,6 @@ AppState.addEventListener("change", nextState => {
         restoreScheduleClose();
     }
 });
-
-restoreScheduleClose();
 
 function useScheduleCloseCountDown() {
     const deadline = useAtomValue(deadlineAtom);

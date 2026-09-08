@@ -4,6 +4,8 @@ jest.mock("@/core/trackPlayer", () => ({
         pause: jest.fn(async () => undefined),
         once: jest.fn(),
         off: jest.fn(),
+        pauseAfterCurrentTrack: jest.fn(),
+        cancelPauseAfterCurrentTrack: jest.fn(),
     },
 }));
 
@@ -72,7 +74,7 @@ describe("scheduleClose", () => {
         );
     });
 
-    it("waits for the current track before pausing when requested", async () => {
+    it("asks the player to pause at the current track end when requested", () => {
         setCloseAfterPlayEnd(true);
         setScheduleClose(now + 60_000);
         const timerCalls = (BackgroundTimer.setTimeout as jest.Mock).mock.calls;
@@ -85,11 +87,8 @@ describe("scheduleClose", () => {
             TrackPlayerEvents.PlayEnd,
             expect.any(Function),
         );
-        const onPlayEnd = (TrackPlayer.once as jest.Mock).mock.calls[0][1];
-        onPlayEnd();
-        await new Promise(resolve => setTimeout(resolve, 0));
-
-        expect(TrackPlayer.pause).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.pauseAfterCurrentTrack).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.pause).not.toHaveBeenCalled();
     });
 
     it("clears the persisted deadline when cancelled", () => {
@@ -101,5 +100,22 @@ describe("scheduleClose", () => {
             undefined,
         );
         expect(BackgroundTimer.clearTimeout).toHaveBeenCalled();
+    });
+
+    it("cancels a pending close-after-track request when the schedule changes", () => {
+        setCloseAfterPlayEnd(true);
+        setScheduleClose(now + 60_000);
+        const timerCalls = (BackgroundTimer.setTimeout as jest.Mock).mock.calls;
+        const callback = timerCalls[timerCalls.length - 1][0];
+
+        Date.now = jest.fn(() => now + 60_000);
+        callback();
+        setScheduleClose(now + 30_000);
+
+        expect(TrackPlayer.cancelPauseAfterCurrentTrack).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.off).toHaveBeenCalledWith(
+            TrackPlayerEvents.PlayEnd,
+            expect.any(Function),
+        );
     });
 });
