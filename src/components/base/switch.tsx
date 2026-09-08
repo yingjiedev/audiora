@@ -16,14 +16,30 @@ import Animated, {
 import { timingConfig } from "@/constants/commonConst";
 
 interface ISwitchProps extends SwitchProps {
+    activeTrackColor?: string;
     disabled?: boolean;
+    inactiveTrackColor?: string;
+    thumbColor?: string;
+    thumbSize?: number;
+    trackHeight?: number;
+    trackWidth?: number;
 }
 
-const fixedWidth = rpx(40);
-
 export default function ThemeSwitch(props: ISwitchProps) {
-    const { value, onValueChange, disabled } = props;
+    const {
+        activeTrackColor,
+        disabled,
+        inactiveTrackColor,
+        onValueChange,
+        thumbColor: customThumbColor,
+        thumbSize = rpx(34),
+        trackHeight = rpx(40),
+        trackWidth = rpx(80),
+        value,
+    } = props;
     const colors = useColors();
+    const thumbInset = (trackHeight - thumbSize) / 2;
+    const thumbTravelDistance = trackWidth - thumbSize - thumbInset * 2;
 
     const sharedValue = useSharedValue(value ? 1 : 0);
 
@@ -33,10 +49,14 @@ export default function ThemeSwitch(props: ISwitchProps) {
 
     // 圆点颜色按轨道底色取对比色：主色偏浅（如白色）时
     // 白色圆点会跟轨道糊成一团，改用深色圆点
-    const trackColor = value ? colors.primary : colors.textSecondary;
-    let thumbColor = "#FFFFFF";
+    const trackColor = value
+        ? activeTrackColor ?? colors.primary
+        : inactiveTrackColor ?? colors.textSecondary;
+    let thumbColor = customThumbColor ?? "#FFFFFF";
     try {
-        thumbColor = Color(trackColor).isDark() ? "#FFFFFF" : "#1B1B1B";
+        if (!customThumbColor) {
+            thumbColor = Color(trackColor).isDark() ? "#FFFFFF" : "#1B1B1B";
+        }
     } catch {
         // 非法色值保持白点
     }
@@ -46,7 +66,7 @@ export default function ThemeSwitch(props: ISwitchProps) {
             transform: [
                 {
                     translateX: withTiming(
-                        sharedValue.value * fixedWidth,
+                        sharedValue.value * thumbTravelDistance,
                         timingConfig.animationNormal,
                     ),
                 },
@@ -66,11 +86,24 @@ export default function ThemeSwitch(props: ISwitchProps) {
                     styles.container,
                     {
                         backgroundColor: trackColor,
+                        borderRadius: trackHeight / 2,
+                        height: trackHeight,
+                        width: trackWidth,
                     },
                     props?.style,
                 ]}>
                 <Animated.View
-                    style={[styles.thumb, thumbStyle, { backgroundColor: thumbColor }]}
+                    style={[
+                        styles.thumb,
+                        thumbStyle,
+                        {
+                            backgroundColor: thumbColor,
+                            borderRadius: thumbSize / 2,
+                            height: thumbSize,
+                            left: thumbInset,
+                            width: thumbSize,
+                        },
+                    ]}
                 />
             </View>
         </TouchableWithoutFeedback>
@@ -79,15 +112,8 @@ export default function ThemeSwitch(props: ISwitchProps) {
 
 const styles = StyleSheet.create({
     container: {
-        width: rpx(80),
-        height: rpx(40),
-        borderRadius: rpx(40),
         justifyContent: "center",
     },
     thumb: {
-        width: rpx(34),
-        height: rpx(34),
-        borderRadius: rpx(17),
-        left: rpx(3),
     },
 });

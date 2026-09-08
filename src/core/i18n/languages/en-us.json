@@ -582,6 +582,8 @@
     "panel.timingClose.customize": "Customize",
     "panel.timingClose.cancelScheduleClose": "Cancel Scheduled Close",
     "panel.timingClose.closeAfterPlay": "Close after playing current song",
+    "panel.timingClose.closeAfterPlayHint": "Automatically close after the current song ends",
+    "panel.timingClose.start": "Start timer",
     "panel.playRate.title": "Playback Speed",
     "panel.sheetTags.title": "Playlist Categories",
     "repeatMode.SHUFFLE": "Shuffle",

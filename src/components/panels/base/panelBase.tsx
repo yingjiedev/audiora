@@ -38,6 +38,7 @@ const timingConfig = {
 interface IPanelBaseProps {
     keyboardAvoidBehavior?: "height" | "padding" | "position" | "none";
     height?: number;
+    maskColor?: string;
     // 定位方式
     positionMethod?: "top" | "bottom";
     renderBody: (loading: boolean) => React.ReactNode;
@@ -57,6 +58,7 @@ export default function (props: IPanelBaseProps) {
         height = vh(60),
         renderBody,
         keyboardAvoidBehavior,
+        maskColor,
         positionMethod = "bottom",
     } = props;
     const keyboardAvoidMode =
@@ -268,7 +270,7 @@ export default function (props: IPanelBaseProps) {
                     onPress={closePanel}>
                     <Animated.View
                         collapsable={false}
-                        style={[style.mask, maskAnimated]}
+                        style={[style.mask, { backgroundColor: maskColor ?? "#000" }, maskAnimated]}
                     />
                 </TouchableWithoutFeedback>
 

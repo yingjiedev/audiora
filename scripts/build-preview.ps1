@@ -37,7 +37,12 @@ function Invoke-RequiredCommand {
     )
 
     Push-Location $WorkingDirectory
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
+        # PowerShell 7 surfaces native stderr as ErrorRecord objects. npm and
+        # Gradle emit warnings on stderr even when they exit successfully, so
+        # keep stderr redirected to the log without treating it as a throw.
+        $ErrorActionPreference = "Continue"
         try {
             & $FilePath @Arguments > $LogPath 2>&1
             $exitCode = $LASTEXITCODE
@@ -57,6 +62,7 @@ function Invoke-RequiredCommand {
             throw "Command failed (exit code $exitCode): $FilePath"
         }
     } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         Pop-Location
     }
 }

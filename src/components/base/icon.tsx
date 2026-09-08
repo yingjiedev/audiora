@@ -50,6 +50,7 @@ import LinkIcon from "@/assets/icons/link.svg";
 import LyricIcon from "@/assets/icons/lyric.svg";
 import MagnifyingGlassIcon from "@/assets/icons/magnifying-glass.svg";
 import MinusIcon from "@/assets/icons/minus.svg";
+import MoonOutlineIcon from "@/assets/icons/moon-outline.svg";
 import MotionPlayIcon from "@/assets/icons/motion-play.svg";
 import MusicalNoteIcon from "@/assets/icons/musical-note.svg";
 import PauseCircleOutlineIcon from "@/assets/icons/pause-circle-outline.svg";
@@ -73,6 +74,7 @@ import SkipLeftIcon from "@/assets/icons/skip-left.svg";
 import SkipRightIcon from "@/assets/icons/skip-right.svg";
 import SortOutlineIcon from "@/assets/icons/sort-outline.svg";
 import StrategyIcon from "@/assets/icons/strategy.svg";
+import SunOutlineIcon from "@/assets/icons/sun-outline.svg";
 import TShirtOutlineIcon from "@/assets/icons/t-shirt-outline.svg";
 import TranslationIcon from "@/assets/icons/translation.svg";
 import TrashOutlineIcon from "@/assets/icons/trash-outline.svg";
@@ -80,7 +82,7 @@ import TrophyIcon from "@/assets/icons/trophy.svg";
 import UserIcon from "@/assets/icons/user.svg";
 import XMarkIcon from "@/assets/icons/x-mark.svg";
 
-export type IIconName = "alarm-outline" | "album-outline" | "align-center" | "align-left" | "align-right" | "archive-box-x-mark" | "arrow-down-tray" | "arrow-left" | "arrow-long-left" | "arrow-path" | "arrow-right-end-on-rectangle" | "arrow-up-tray" | "arrow-uturn-left" | "arrows-left-right" | "bars-3" | "bookmark-square" | "chat-bubble-oval-left-ellipsis" | "check-circle-outline" | "check-circle" | "check" | "circle-stack" | "clock-outline" | "code-bracket-square" | "cog-8-tooth" | "crosshair" | "document-outline" | "ellipsis-vertical" | "exclamation-circle" | "fire-outline" | "fire" | "folder-music-outline" | "folder-outline" | "folder-plus" | "font-size" | "hand-thumb-up" | "heart-outline" | "heart" | "home-outline" | "id" | "identification" | "inbox-arrow-down" | "information-circle" | "javascript" | "language" | "link-slash" | "link" | "lyric" | "magnifying-glass" | "minus" | "motion-play" | "musical-note" | "pause-circle-outline" | "pause" | "pencil-outline" | "pencil-square" | "play-circle-outline" | "play-circle" | "play" | "playlist" | "plus" | "power-outline" | "quality-button" | "question-mark-circle" | "repeat-song-1" | "repeat-song" | "share" | "shield-keyhole-outline" | "shuffle" | "skip-left" | "skip-right" | "sort-outline" | "strategy" | "t-shirt-outline" | "translation" | "trash-outline" | "trophy" | "user" | "x-mark";
+export type IIconName = "alarm-outline" | "album-outline" | "align-center" | "align-left" | "align-right" | "archive-box-x-mark" | "arrow-down-tray" | "arrow-left" | "arrow-long-left" | "arrow-path" | "arrow-right-end-on-rectangle" | "arrow-up-tray" | "arrow-uturn-left" | "arrows-left-right" | "bars-3" | "bookmark-square" | "chat-bubble-oval-left-ellipsis" | "check-circle-outline" | "check-circle" | "check" | "circle-stack" | "clock-outline" | "code-bracket-square" | "cog-8-tooth" | "crosshair" | "document-outline" | "ellipsis-vertical" | "exclamation-circle" | "fire-outline" | "fire" | "folder-music-outline" | "folder-outline" | "folder-plus" | "font-size" | "hand-thumb-up" | "heart-outline" | "heart" | "home-outline" | "id" | "identification" | "inbox-arrow-down" | "information-circle" | "javascript" | "language" | "link-slash" | "link" | "lyric" | "magnifying-glass" | "minus" | "moon-outline" | "motion-play" | "musical-note" | "pause-circle-outline" | "pause" | "pencil-outline" | "pencil-square" | "play-circle-outline" | "play-circle" | "play" | "playlist" | "plus" | "power-outline" | "quality-button" | "question-mark-circle" | "repeat-song-1" | "repeat-song" | "share" | "shield-keyhole-outline" | "shuffle" | "skip-left" | "skip-right" | "sort-outline" | "strategy" | "sun-outline" | "t-shirt-outline" | "translation" | "trash-outline" | "trophy" | "user" | "x-mark";
 
 interface IProps extends SvgProps {
     /** 图标名称 */
@@ -139,6 +141,7 @@ const iconMap = {
     "lyric": LyricIcon,
     "magnifying-glass": MagnifyingGlassIcon,
     "minus": MinusIcon,
+    "moon-outline": MoonOutlineIcon,
     "motion-play": MotionPlayIcon,
     "musical-note": MusicalNoteIcon,
     "pause-circle-outline": PauseCircleOutlineIcon,
@@ -162,6 +165,7 @@ const iconMap = {
     "skip-right": SkipRightIcon,
     "sort-outline": SortOutlineIcon,
     "strategy": StrategyIcon,
+    "sun-outline": SunOutlineIcon,
     "t-shirt-outline": TShirtOutlineIcon,
     "translation": TranslationIcon,
     "trash-outline": TrashOutlineIcon,

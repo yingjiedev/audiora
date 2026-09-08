@@ -652,6 +652,8 @@ export interface ILanguageData {
     "panel.timingClose.customize": string; // 自定义
     "panel.timingClose.cancelScheduleClose": string; // 取消定时关闭
     "panel.timingClose.closeAfterPlay": string; // 播放完歌曲再关闭
+    "panel.timingClose.closeAfterPlayHint": string; // 当前歌曲播放完毕后自动关闭
+    "panel.timingClose.start": string; // 开始计时
 
     // 面板相关 - 播放速度
     "panel.playRate.title": string; // 播放速度
