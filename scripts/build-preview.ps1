@@ -102,6 +102,21 @@ function Get-Sha256Hash {
     }
 }
 
+function Get-NextPatchVersion {
+    param([Parameter(Mandatory = $true)][string]$Version)
+
+    $match = [regex]::Match(
+        $Version,
+        "^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+    )
+    if (-not $match.Success) {
+        throw "Unsupported base version: $Version. Expected semantic version x.y.z."
+    }
+
+    $nextPatch = ([long]$match.Groups["patch"].Value) + 1
+    return "{0}.{1}.{2}" -f $match.Groups["major"].Value, $match.Groups["minor"].Value, $nextPatch
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $androidRoot = Join-Path $repoRoot "android"
 $packageJsonPath = Join-Path $repoRoot "package.json"
@@ -118,7 +133,8 @@ $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
 $baseVersion = [string]$packageJson.version
 
 if ([string]::IsNullOrWhiteSpace($PreviewVersion)) {
-    $PreviewVersion = "$baseVersion-preview.$(Get-Date -Format 'yyyyMMdd.HHmmss')"
+    $patchVersion = Get-NextPatchVersion -Version $baseVersion
+    $PreviewVersion = "$patchVersion-preview.$(Get-Date -Format 'yyyyMMdd.HHmmss')"
 }
 
 if ($PreviewVersion -notmatch "^[0-9A-Za-z][0-9A-Za-z.+_-]*$") {
