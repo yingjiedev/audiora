@@ -13,7 +13,11 @@ param(
     [switch]$InstallDependencies,
     [switch]$SkipBuildInfo,
     [switch]$SkipVerification,
-    [switch]$SkipNdkWorkaround
+    [switch]$SkipNdkWorkaround,
+    [ValidateRange(1, 365)]
+    [int]$LogRetentionDays = 7,
+    [ValidateRange(1, 100)]
+    [int]$ErrorTailLines = 20
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,15 +29,32 @@ function Invoke-RequiredCommand {
         [Parameter(Mandatory = $true)]
         [string[]]$Arguments,
         [Parameter(Mandatory = $true)]
-        [string]$WorkingDirectory
+        [string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$LogPath,
+        [Parameter(Mandatory = $true)]
+        [int]$ErrorTailLines
     )
 
-    Write-Host "> $FilePath $($Arguments -join ' ')" -ForegroundColor DarkGray
     Push-Location $WorkingDirectory
     try {
-        & $FilePath @Arguments
-        if ($LASTEXITCODE -ne 0) {
-            throw "Command failed (exit code $LASTEXITCODE): $FilePath"
+        try {
+            & $FilePath @Arguments > $LogPath 2>&1
+            $exitCode = $LASTEXITCODE
+        } catch {
+            ($_ | Out-String) | Out-File -LiteralPath $LogPath -Encoding utf8
+            $exitCode = 1
+        }
+
+        if ($exitCode -ne 0) {
+            Write-Host "Build step failed: $FilePath (exit code $exitCode)" -ForegroundColor Red
+            Write-Host "Last $ErrorTailLines log lines from ${LogPath}:" -ForegroundColor DarkGray
+            if (Test-Path -LiteralPath $LogPath) {
+                Get-Content -LiteralPath $LogPath -Tail $ErrorTailLines | ForEach-Object {
+                    Write-Host $_ -ForegroundColor Red
+                }
+            }
+            throw "Command failed (exit code $exitCode): $FilePath"
         }
     } finally {
         Pop-Location
@@ -102,6 +123,21 @@ function Get-Sha256Hash {
     }
 }
 
+function Get-NextPatchVersion {
+    param([Parameter(Mandatory = $true)][string]$Version)
+
+    $match = [regex]::Match(
+        $Version,
+        "^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+    )
+    if (-not $match.Success) {
+        throw "Unsupported base version: $Version. Expected semantic version x.y.z."
+    }
+
+    $nextPatch = ([long]$match.Groups["patch"].Value) + 1
+    return "{0}.{1}.{2}" -f $match.Groups["major"].Value, $match.Groups["minor"].Value, $nextPatch
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $androidRoot = Join-Path $repoRoot "android"
 $packageJsonPath = Join-Path $repoRoot "package.json"
@@ -109,6 +145,19 @@ $buildGradlePath = Join-Path $androidRoot "app\build.gradle"
 $buildInfoPath = Join-Path $repoRoot "src\constants\buildInfo.ts"
 $localPropertiesPath = Join-Path $androidRoot "local.properties"
 $releaseDirectory = Join-Path $androidRoot "app\build\outputs\apk\release"
+$logRoot = Join-Path ([System.IO.Path]::GetTempPath()) "audiora-build-preview-logs"
+$logDirectory = Join-Path $logRoot ("{0}-{1}" -f (Get-Date -Format "yyyyMMdd-HHmmss"), ([guid]::NewGuid().ToString("N").Substring(0, 8)))
+
+if (Test-Path -LiteralPath $logRoot) {
+    $logCutoff = (Get-Date).AddDays(-$LogRetentionDays)
+    Get-ChildItem -LiteralPath $logRoot -Directory -Force |
+        Where-Object { $_.LastWriteTime -lt $logCutoff } |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+} else {
+    New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
+}
+New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+Write-Host "Build logs: $logDirectory" -ForegroundColor DarkGray
 
 if (-not (Test-Path -LiteralPath (Join-Path $repoRoot "package-lock.json"))) {
     throw "package-lock.json not found; npm ci cannot be used."
@@ -118,7 +167,8 @@ $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
 $baseVersion = [string]$packageJson.version
 
 if ([string]::IsNullOrWhiteSpace($PreviewVersion)) {
-    $PreviewVersion = "$baseVersion-preview.$(Get-Date -Format 'yyyyMMdd.HHmmss')"
+    $patchVersion = Get-NextPatchVersion -Version $baseVersion
+    $PreviewVersion = "$patchVersion-preview.$(Get-Date -Format 'yyyyMMdd.HHmmss')"
 }
 
 if ($PreviewVersion -notmatch "^[0-9A-Za-z][0-9A-Za-z.+_-]*$") {
@@ -153,11 +203,13 @@ try {
     }
 
     if ($InstallDependencies -or -not (Test-Path -LiteralPath (Join-Path $repoRoot "node_modules"))) {
-        Invoke-RequiredCommand -FilePath "npm.cmd" -Arguments @("ci") -WorkingDirectory $repoRoot
+        Invoke-RequiredCommand -FilePath "npm.cmd" -Arguments @("ci") -WorkingDirectory $repoRoot `
+            -LogPath (Join-Path $logDirectory "npm-ci.log") -ErrorTailLines $ErrorTailLines
     }
 
     if (-not $SkipBuildInfo) {
-        Invoke-RequiredCommand -FilePath "node.exe" -Arguments @("./scripts/generate-build-info.js") -WorkingDirectory $repoRoot
+        Invoke-RequiredCommand -FilePath "node.exe" -Arguments @("./scripts/generate-build-info.js") -WorkingDirectory $repoRoot `
+            -LogPath (Join-Path $logDirectory "generate-build-info.log") -ErrorTailLines $ErrorTailLines
     }
 
     $gradleArguments = @(
@@ -252,7 +304,8 @@ gradle.allprojects { project ->
         $gradleArguments += "-Dorg.gradle.java.home=$env:JAVA_HOME"
     }
 
-    Invoke-RequiredCommand -FilePath ".\gradlew.bat" -Arguments $gradleArguments -WorkingDirectory $androidRoot
+    Invoke-RequiredCommand -FilePath ".\gradlew.bat" -Arguments $gradleArguments -WorkingDirectory $androidRoot `
+        -LogPath (Join-Path $logDirectory "gradle.log") -ErrorTailLines $ErrorTailLines
 
     $apkPattern = if ($Abi -eq "all") {
         "Audiora-v$PreviewVersion-*-release.apk"
