@@ -46,6 +46,7 @@ export default function TimingClose() {
 
     const scheduleClose = () => {
         setScheduleClose(Date.now() + selectedMinutes * 60000);
+        hidePanel();
     };
 
     const chooseCustomTime = () => {
