@@ -1,37 +1,51 @@
-# Settings overview design QA
+# Timing Close Visual QA
 
 ## Evidence
 
-- Source visual truth: `C:/Users/yingj/AppData/Local/Temp/codex-clipboard-689452e8-6409-4ff8-9fb9-8fc82b526e06.png` (276 × 779 px).
-- Intended implementation state: Android, light theme, the new `setting` route with `type: "overview"`.
-- Implementation screenshot: unavailable. The workspace has no available Android Debug Bridge executable or connected device/emulator, so the native screen cannot be captured at a matching viewport.
-- Density normalization: not performed because an implementation capture is unavailable.
+- Source visual truth: `C:\Users\yingj\AppData\Local\Temp\codex-clipboard-6f8e39be-58b5-41fe-9f13-6b0ee869c10c.png`
+- Implementation screenshot: `D:\yingj\workspace\audiora-timer-polish\artifacts\design-qa\timing-close-verified.png`
+- Combined comparison: `D:\yingj\workspace\audiora-timer-polish\artifacts\design-qa\timing-close-comparison-verified.png`
+- State: portrait, Simplified Chinese, light theme, 30 minutes selected, close-after-track disabled.
+- Source pixels: 853 × 1844.
+- Implementation pixels: 1080 × 2248 on the connected Android device.
+- Implementation viewport: 393 dp wide at 440 dpi (2.75 device scale); physical display 1080 × 2248.
+- Density normalization: full views were normalized to 720 px width and bottom-aligned; the source panel crop (853 × 846) and implementation panel crop (1080 × 1068) were both normalized to 720 × 712 for direct comparison.
+
+## Full-view comparison
+
+The combined comparison confirms that the sheet hierarchy, dimmer strength, top radius, horizontal gutters, dial scale, option row, close-after-track card, hint, and primary action follow the source composition. The different amount of home content above the sheet is expected from the source and device aspect-ratio mismatch; the app-owned sheet keeps the source's width-relative geometry.
+
+## Focused panel comparison
+
+The lower pair in the combined comparison is an equal-size panel-only comparison. Typography, spacing, sampled colors, image/icon quality, copy, control state, shadows, and touch-target proportions were inspected at that normalized size. The Phosphor Moon Stars and Sun Horizon assets replace the former generic symbols with source-like vector icons. No raster placeholder, text glyph, or hand-drawn icon is used.
 
 ## Findings
 
-- [P1] Visual comparison is blocked.
-  - Location: device-level settings overview.
-  - Evidence: source screenshot is available, but no rendered Android screen capture can be collected in this environment.
-  - Impact: spacing, safe-area treatment, image crop, and long-text truncation cannot be judged against the target at device density.
-  - Fix: install the debug APK on an Android device or emulator, navigate to Settings, capture the overview at the reference state, then compare the content region side by side with the source image.
+- No actionable P0, P1, or P2 differences remain.
+- P3: the source moon uses small sleep marks while the closest library asset uses sparkle marks. This is acceptable at the rendered size and does not change hierarchy or meaning.
+- Expected: underlying home content and visible vertical extent differ because the source is 853 × 1844 while the verification device is 1080 × 2248.
 
-## Required fidelity surfaces (implementation intent, not visual verification)
+## Comparison history
 
-- Fonts and typography: uses the app's `ThemeText` hierarchy with a prominent page title, semibold setting labels, and one-line secondary descriptions.
-- Spacing and layout rhythm: uses 15 dp side padding at a 375 dp reference width, 55 dp minimum rows, 14 dp icon tiles, 14 dp cards, and a scrollable layout for smaller screens.
-- Colors and visual tokens: base surface and page background come from the active app theme; setting-icon accents and decorative ribbon asset follow the supplied blue/purple reference.
-- Image quality and asset fidelity: the existing Audiora mark is retained. The new 1536 × 1024 ribbon asset has alpha transparency, with a pale surface color behind it to avoid black transparency halos.
-- Copy and content: all added visible labels and descriptions are localized for Simplified Chinese, Traditional Chinese, and English. Entries use existing destinations and no new setting data.
+1. Pass 1: the dial was a full circle, the dimmer was too light, icons did not match, and the source proportions were undersized. Fixed by matching the sheet geometry, 30-minute default state, card/button dimensions, sampled mask and surface colors, and source-like icons.
+2. Pass 2: the 270-degree gauge had the opening and active arc on the wrong sides. Fixed by rotating the gauge so the active arc is on the left, remaining track on the right, and opening at the bottom.
+3. Pass 3: tick marks were too faint, the numeric label and row copy were optically heavy, and the top surface was too bright. Fixed by lengthening/darkening ticks, reducing optical type size/weight, and applying sampled surface and mask colors.
+4. Final pass: the revised 1080 × 2248 device capture was normalized with the source panel and showed no remaining P0/P1/P2 mismatch.
 
-## Interaction coverage
+## Interaction verification
 
-- Automated tests cover opening the existing basic-settings and local-music destinations from the overview, plus the existing language dialog path.
-- No device-only focus, dark-theme, or touch screenshot verification was possible without a runnable Android target.
+- Selected 10 minutes and confirmed the dial knob, arc, and selected pill updated.
+- Toggled close-after-track on and confirmed the custom switch state changed.
+- Started the timer and confirmed the sheet dismissed.
+- Reopened the sheet and confirmed the cancel-timer state appeared.
+- Cancelled the timer and restored the close-after-track switch to off for the final capture.
 
 ## Implementation checklist
 
-1. Capture and compare the Android settings overview against the supplied reference at the same state and scale.
-2. Check the light and dark themes, a narrow screen, and the longest English labels on device.
-3. Resolve any P1/P2 visual differences found by that comparison and repeat the capture.
+- [x] Match sheet size, radius, dimmer, gradient, spacing, and shadows.
+- [x] Match the 270-degree dial, ticks, knob, colors, and 30-minute state.
+- [x] Match shortcut pills, close-after-track card, switch, hint, and CTA.
+- [x] Preserve timer selection, custom-time, start, cancel, and close-after-track behavior.
+- [x] Verify the exact release APK on a connected Android device.
 
-final result: blocked
+final result: passed
