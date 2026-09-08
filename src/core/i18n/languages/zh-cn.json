@@ -582,6 +582,8 @@
     "panel.timingClose.customize": "自定义",
     "panel.timingClose.cancelScheduleClose": "取消定时关闭",
     "panel.timingClose.closeAfterPlay": "播放完歌曲再关闭",
+    "panel.timingClose.closeAfterPlayHint": "当前歌曲播放完毕后自动关闭",
+    "panel.timingClose.start": "开始计时",
     "panel.playRate.title": "播放速度",
     "panel.sheetTags.title": "歌单类别",
     "repeatMode.SHUFFLE": "随机播放",

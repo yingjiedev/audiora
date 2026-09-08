@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import Color from "color";
+import { CircularProgressBase } from "react-native-circular-progress-indicator";
 import rpx, { fontRpx } from "@/utils/rpx";
 import ThemeText from "@/components/base/themeText";
 import Icon from "@/components/base/icon";
@@ -13,21 +13,12 @@ import {
     useCloseAfterPlayEnd,
     useScheduleCloseCountDown,
 } from "@/utils/scheduleClose";
-import timeformat from "@/utils/timeformat";
 import PanelBase from "../base/panelBase";
 import { hidePanel } from "../usePanel";
 import { useI18N } from "@/core/i18n";
 import { showDialog } from "@/components/dialogs/useDialog";
 
 const shortCutTimes = [10, 20, 30, 45, 60] as const;
-
-function makeTint(color: string, alpha: number) {
-    try {
-        return Color(color).alpha(alpha).toString();
-    } catch {
-        return color;
-    }
-}
 
 export default function TimingClose() {
     const closeAfterPlay = useCloseAfterPlayEnd();
@@ -40,11 +31,10 @@ export default function TimingClose() {
     const activeMinutes = isCountingDown
         ? Math.max(1, Math.ceil(countDown / 60))
         : selectedMinutes;
-    const primaryTint = makeTint(colors.primary, 0.12);
-    const primarySoftTint = makeTint(colors.primary, 0.06);
-    const borderTint = makeTint(colors.primary, 0.24);
+    const isCustomTime = !shortCutTimes.includes(selectedMinutes as typeof shortCutTimes[number]);
+    const activeStroke = colors.accentCool ?? colors.primary;
 
-    const scheduleClose = () => {
+    const startSchedule = () => {
         setScheduleClose(Date.now() + selectedMinutes * 60000);
         hidePanel();
     };
@@ -57,82 +47,71 @@ export default function TimingClose() {
         });
     };
 
+    const cancelSchedule = () => {
+        setScheduleClose(null);
+        hidePanel();
+    };
+
     return (
         <PanelBase
             keyboardAvoidBehavior="none"
             positionMethod="top"
-            height={rpx(660)}
+            height={rpx(680)}
             renderBody={() => (
-                <View
-                    style={[
-                        styles.sheet,
-                        { backgroundColor: colors.backdrop },
-                    ]}>
+                <View style={[styles.sheet, { backgroundColor: colors.backdrop }]}>
                     <LinearGradient
-                        colors={[colors.accentCool ?? colors.primary, colors.primary]}
+                        colors={[activeStroke, colors.primary]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.handle}
                     />
 
-                    <View style={styles.heading}>
-                        <View
-                            style={[
-                                styles.iconBadge,
-                                { backgroundColor: primaryTint },
-                            ]}>
-                            <Icon
-                                name="clock-outline"
-                                size={rpx(38)}
-                                color={colors.primary}
-                            />
-                        </View>
-                        <View style={styles.headingCopy}>
-                            <ThemeText
-                                style={styles.title}
-                                fontWeight="bold"
-                                fontSize="title">
-                                {t("sidebar.scheduleClose")}
-                            </ThemeText>
-                            <ThemeText
-                                style={styles.subtitle}
-                                fontColor="textSecondary"
-                                fontSize="subTitle">
-                                {isCountingDown
-                                    ? t("panel.timingClose.countdown", {
-                                        time: timeformat(countDown),
-                                    })
-                                    : t("panel.timingClose.customize")}
-                            </ThemeText>
-                        </View>
-                    </View>
+                    <ThemeText style={styles.title} fontWeight="bold">
+                        {t("sidebar.scheduleClose")}
+                    </ThemeText>
 
-                    <View style={styles.timePickerArea}>
-                        <View
-                            style={[
-                                styles.timeRing,
-                                {
-                                    borderColor: borderTint,
-                                    backgroundColor: primarySoftTint,
-                                },
-                            ]}>
+                    <View style={styles.dialArea}>
+                        <Icon
+                            name="clock-outline"
+                            size={rpx(42)}
+                            color={colors.textSecondary}
+                            style={styles.sleepIcon}
+                        />
+                        <CircularProgressBase
+                            activeStrokeColor={activeStroke}
+                            activeStrokeSecondaryColor={colors.primary}
+                            activeStrokeWidth={rpx(7)}
+                            clockwise
+                            dashedStrokeConfig={{ count: 56, width: rpx(2) }}
+                            duration={180}
+                            inActiveStrokeColor={colors.border}
+                            inActiveStrokeOpacity={0.72}
+                            inActiveStrokeWidth={rpx(2)}
+                            maxValue={60}
+                            radius={rpx(92)}
+                            rotation={-138}
+                            strokeLinecap="round"
+                            value={Math.min(activeMinutes, 60)}>
                             <View
                                 style={[
-                                    styles.timeRingInner,
-                                    { backgroundColor: colors.surfaceElevated },
+                                    styles.dialCenter,
+                                    { backgroundColor: colors.backdrop },
                                 ]}>
-                                <ThemeText
-                                    style={styles.activeTime}
-                                    fontWeight="bold">
+                                <ThemeText style={styles.activeTime} fontWeight="bold">
                                     {activeMinutes}
                                 </ThemeText>
-                                <ThemeText
-                                    style={styles.minuteLabel}
-                                    fontColor="textSecondary">
+                                <ThemeText style={styles.minuteLabel} fontColor="textSecondary">
                                     {t("dialog.setScheduleCloseTime.unit")}
                                 </ThemeText>
                             </View>
-                        </View>
+                        </CircularProgressBase>
+                        <View style={[styles.dialKnob, { backgroundColor: activeStroke }]} />
+                        <Icon
+                            name="power-outline"
+                            size={rpx(42)}
+                            color={colors.textSecondary}
+                            style={styles.wakeIcon}
+                        />
                     </View>
 
                     <View style={styles.timeOptions}>
@@ -150,33 +129,22 @@ export default function TimingClose() {
                                     style={styles.timeOptionTouch}>
                                     {isSelected ? (
                                         <LinearGradient
-                                            colors={[
-                                                colors.accentCool ?? colors.primary,
-                                                colors.primary,
-                                            ]}
+                                            colors={[activeStroke, colors.primary]}
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 1 }}
                                             style={styles.timeOptionSelected}>
-                                            <ThemeText
-                                                style={styles.timeOptionText}
-                                                color="#FFFFFF"
-                                                fontWeight="semibold">
-                                                {time}
+                                            <ThemeText style={styles.timeOptionText} color="#FFFFFF" fontWeight="semibold">
+                                                {time} {t("dialog.setScheduleCloseTime.unit")}
                                             </ThemeText>
                                         </LinearGradient>
                                     ) : (
                                         <View
                                             style={[
                                                 styles.timeOption,
-                                                {
-                                                    backgroundColor: colors.surfaceElevated,
-                                                    borderColor: colors.border,
-                                                },
+                                                { backgroundColor: colors.surfaceElevated },
                                             ]}>
-                                            <ThemeText
-                                                style={styles.timeOptionText}
-                                                fontWeight="semibold">
-                                                {time}
+                                            <ThemeText style={styles.timeOptionText} fontColor="textSecondary" fontWeight="medium">
+                                                {time} {t("dialog.setScheduleCloseTime.unit")}
                                             </ThemeText>
                                         </View>
                                     )}
@@ -186,108 +154,70 @@ export default function TimingClose() {
                         <TouchableOpacity
                             activeOpacity={0.76}
                             accessibilityRole="button"
+                            accessibilityState={{ selected: isCustomTime }}
                             accessibilityLabel={t("panel.timingClose.customize")}
                             onPress={chooseCustomTime}
-                            style={styles.timeOptionTouch}>
+                            style={styles.customTimeTouch}>
                             <View
                                 style={[
                                     styles.customTimeOption,
                                     {
-                                        backgroundColor: colors.surfaceElevated,
-                                        borderColor: colors.border,
+                                        borderColor: isCustomTime ? activeStroke : colors.border,
+                                        backgroundColor: isCustomTime ? activeStroke : colors.surfaceElevated,
                                     },
                                 ]}>
-                                <Icon
-                                    name="plus"
-                                    size={rpx(26)}
-                                    color={colors.primary}
-                                />
                                 <ThemeText
-                                    style={styles.customTimeText}
-                                    fontColor="primary"
-                                    fontWeight="semibold">
+                                    style={styles.timeOptionText}
+                                    color={isCustomTime ? "#FFFFFF" : colors.primary}
+                                    fontWeight="medium">
                                     {t("panel.timingClose.customize")}
                                 </ThemeText>
                             </View>
                         </TouchableOpacity>
                     </View>
 
-                    <View
-                        style={[
-                            styles.closeAfterPlayRow,
-                            {
-                                backgroundColor: colors.surfaceElevated,
-                                borderColor: colors.border,
-                            },
-                        ]}>
+                    <View style={styles.closeAfterSection}>
                         <View
                             style={[
-                                styles.musicIconBadge,
-                                { backgroundColor: primaryTint },
+                                styles.closeAfterPlayRow,
+                                {
+                                    backgroundColor: colors.surfaceElevated,
+                                    borderColor: colors.border,
+                                },
                             ]}>
-                            <Icon
-                                name="musical-note"
-                                size={rpx(32)}
-                                color={colors.primary}
+                            <ThemeText style={styles.closeAfterPlayText} fontWeight="semibold">
+                                {t("panel.timingClose.closeAfterPlay")}
+                            </ThemeText>
+                            <ThemeSwitch
+                                value={closeAfterPlay}
+                                onValueChange={setCloseAfterPlayEnd}
                             />
                         </View>
-                        <ThemeText
-                            style={styles.closeAfterPlayText}
-                            fontWeight="medium">
-                            {t("panel.timingClose.closeAfterPlay")}
+                        <ThemeText style={styles.closeAfterHint} fontColor="textSecondary">
+                            {t("panel.timingClose.closeAfterPlayHint")}
                         </ThemeText>
-                        <ThemeSwitch
-                            value={closeAfterPlay}
-                            onValueChange={setCloseAfterPlayEnd}
-                        />
                     </View>
 
-                    {isCountingDown ? (
-                        <TouchableOpacity
-                            style={[styles.cancelSchedule, { borderColor: borderTint }]}
-                            activeOpacity={0.7}
-                            onPress={() => setScheduleClose(null)}>
-                            <Icon
-                                name="x-mark"
-                                size={rpx(24)}
-                                color={colors.primary}
-                            />
-                            <ThemeText
-                                style={styles.cancelScheduleText}
-                                fontColor="primary"
-                                fontWeight="medium">
-                                {t("panel.timingClose.cancelScheduleClose")}
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={isCountingDown
+                            ? t("panel.timingClose.cancelScheduleClose")
+                            : t("panel.timingClose.start")}
+                        onPress={isCountingDown ? cancelSchedule : startSchedule}
+                        style={styles.primaryActionTouch}>
+                        <LinearGradient
+                            colors={[activeStroke, colors.primary]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.primaryAction}>
+                            <ThemeText color="#FFFFFF" fontWeight="semibold">
+                                {isCountingDown
+                                    ? t("panel.timingClose.cancelScheduleClose")
+                                    : t("panel.timingClose.start")}
                             </ThemeText>
-                        </TouchableOpacity>
-                    ) : null}
-
-                    <View style={styles.actions}>
-                        <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={hidePanel}
-                            style={styles.dismissButton}>
-                            <ThemeText fontColor="textSecondary" fontWeight="medium">
-                                {t("common.cancel")}
-                            </ThemeText>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={scheduleClose}
-                            style={styles.primaryActionTouch}>
-                            <LinearGradient
-                                colors={[
-                                    colors.accentCool ?? colors.primary,
-                                    colors.primary,
-                                ]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.primaryAction}>
-                                <ThemeText color="#FFFFFF" fontWeight="semibold">
-                                    {t("common.confirm")}
-                                </ThemeText>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
                 </View>
             )}
         />
@@ -299,7 +229,7 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: rpx(30),
         paddingTop: rpx(18),
-        paddingBottom: rpx(28),
+        paddingBottom: rpx(30),
     },
     handle: {
         alignSelf: "center",
@@ -307,145 +237,119 @@ const styles = StyleSheet.create({
         height: rpx(8),
         width: rpx(60),
     },
-    heading: {
-        alignItems: "center",
-        flexDirection: "row",
+    title: {
+        alignSelf: "center",
+        fontSize: fontRpx(30),
+        lineHeight: fontRpx(42),
         marginTop: rpx(22),
     },
-    iconBadge: {
+    dialArea: {
         alignItems: "center",
-        borderRadius: rpx(36),
-        height: rpx(72),
+        flexDirection: "row",
+        height: rpx(218),
         justifyContent: "center",
-        width: rpx(72),
+        marginTop: rpx(6),
     },
-    headingCopy: {
-        marginLeft: rpx(16),
-    },
-    title: {
-        lineHeight: fontRpx(40),
-    },
-    subtitle: {
-        marginTop: rpx(2),
-    },
-    timePickerArea: {
+    dialCenter: {
         alignItems: "center",
-        marginTop: rpx(16),
-    },
-    timeRing: {
-        alignItems: "center",
-        borderRadius: rpx(106),
-        borderWidth: rpx(8),
-        height: rpx(212),
+        borderRadius: rpx(76),
+        height: rpx(152),
         justifyContent: "center",
-        width: rpx(212),
-    },
-    timeRingInner: {
-        alignItems: "center",
-        borderRadius: rpx(88),
-        height: rpx(172),
-        justifyContent: "center",
-        width: rpx(172),
+        width: rpx(152),
     },
     activeTime: {
-        fontSize: fontRpx(66),
-        lineHeight: fontRpx(74),
+        fontSize: fontRpx(56),
+        lineHeight: fontRpx(66),
     },
     minuteLabel: {
-        fontSize: fontRpx(24),
+        fontSize: fontRpx(20),
         marginTop: rpx(-2),
+    },
+    sleepIcon: {
+        marginRight: rpx(22),
+        opacity: 0.48,
+    },
+    wakeIcon: {
+        marginLeft: rpx(22),
+        opacity: 0.48,
+    },
+    dialKnob: {
+        borderColor: "#FFFFFF",
+        borderRadius: rpx(13),
+        borderWidth: rpx(3),
+        height: rpx(26),
+        left: "50%",
+        marginLeft: rpx(-13),
+        position: "absolute",
+        top: rpx(10),
+        width: rpx(26),
     },
     timeOptions: {
         flexDirection: "row",
-        gap: rpx(10),
-        marginTop: rpx(20),
+        gap: rpx(8),
+        marginTop: rpx(6),
         width: "100%",
     },
     timeOptionTouch: {
         flex: 1,
         minWidth: 0,
     },
+    customTimeTouch: {
+        width: rpx(88),
+    },
     timeOption: {
         alignItems: "center",
-        borderRadius: rpx(20),
-        borderWidth: StyleSheet.hairlineWidth,
-        height: rpx(72),
+        borderRadius: rpx(22),
+        height: rpx(52),
         justifyContent: "center",
     },
     timeOptionSelected: {
         alignItems: "center",
-        borderRadius: rpx(20),
-        height: rpx(72),
+        borderRadius: rpx(22),
+        height: rpx(52),
         justifyContent: "center",
-    },
-    timeOptionText: {
-        fontSize: fontRpx(26),
     },
     customTimeOption: {
         alignItems: "center",
-        borderRadius: rpx(20),
+        borderRadius: rpx(22),
         borderWidth: StyleSheet.hairlineWidth,
-        height: rpx(72),
+        height: rpx(52),
         justifyContent: "center",
     },
-    customTimeText: {
+    timeOptionText: {
         fontSize: fontRpx(18),
-        marginTop: rpx(1),
+    },
+    closeAfterSection: {
+        marginTop: rpx(22),
     },
     closeAfterPlayRow: {
         alignItems: "center",
-        borderRadius: rpx(24),
+        borderRadius: rpx(20),
         borderWidth: StyleSheet.hairlineWidth,
         flexDirection: "row",
-        marginTop: rpx(22),
-        minHeight: rpx(88),
+        height: rpx(76),
         paddingHorizontal: rpx(18),
-    },
-    musicIconBadge: {
-        alignItems: "center",
-        borderRadius: rpx(24),
-        height: rpx(48),
-        justifyContent: "center",
-        width: rpx(48),
     },
     closeAfterPlayText: {
         flex: 1,
-        fontSize: fontRpx(26),
-        marginLeft: rpx(14),
+        fontSize: fontRpx(24),
     },
-    cancelSchedule: {
-        alignItems: "center",
-        alignSelf: "center",
-        borderRadius: rpx(24),
-        borderWidth: StyleSheet.hairlineWidth,
-        flexDirection: "row",
-        marginTop: rpx(14),
-        paddingHorizontal: rpx(20),
-        paddingVertical: rpx(10),
-    },
-    cancelScheduleText: {
-        fontSize: fontRpx(22),
-        marginLeft: rpx(6),
-    },
-    actions: {
-        alignItems: "center",
-        flexDirection: "row",
-        marginTop: "auto",
-    },
-    dismissButton: {
-        alignItems: "center",
-        height: rpx(76),
-        justifyContent: "center",
-        marginRight: rpx(16),
-        width: rpx(132),
+    closeAfterHint: {
+        fontSize: fontRpx(16),
+        marginLeft: rpx(18),
+        marginTop: rpx(10),
     },
     primaryActionTouch: {
-        flex: 1,
+        marginTop: "auto",
     },
     primaryAction: {
         alignItems: "center",
         borderRadius: rpx(38),
         height: rpx(76),
         justifyContent: "center",
+        shadowColor: "#7D8DFF",
+        shadowOffset: { width: 0, height: rpx(8) },
+        shadowOpacity: 0.22,
+        shadowRadius: rpx(12),
     },
 });
