@@ -15,7 +15,7 @@ Tests are colocated with their subjects as `*.test.ts` or `*.test.tsx`; some uti
 - `npm test` runs the Jest suite; use `npm test -- --runInBand path/to/file.test.ts` for a focused run.
 - `npm run lint` runs ESLint over `src/` and fixes supported issues.
 - `npm run build-android` generates build metadata and produces the release APK.
-- `npm run build-preview` increments the base semantic version's patch number, generates a uniquely versioned Android preview APK, verifies its metadata and signature, and cleans up temporary build settings. For example, `0.1.9` becomes `0.1.10-preview.<timestamp>`. Use `npm run build-preview -- -Abi all` for all Android ABIs.
+- `npm run build-preview` increments the base semantic version's patch number, generates a uniquely versioned Android preview APK, verifies its metadata and signature, and cleans up temporary build settings. For example, `0.1.9` becomes `0.1.10-preview.<timestamp>`. Build output is stored under `%TEMP%\audiora-build-preview-logs`; successful builds show only the summary, failed commands show the last 20 lines, and runs remove log sessions older than 7 days. Use `npm run build-preview -- -Abi all` for all Android ABIs.
 - `npm run generate-assets` regenerates `src/components/base/icon.tsx` after SVG icon changes.
 
 ## Coding Style & Naming Conventions
