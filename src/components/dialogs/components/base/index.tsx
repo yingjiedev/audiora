@@ -3,6 +3,7 @@ import {
     BackHandler,
     Dimensions,
     Keyboard,
+    Modal,
     NativeEventSubscription,
     Platform,
     StyleProp,
@@ -126,7 +127,7 @@ function Dialog(props: IDialogProps) {
             keyboardShowListener.remove();
             keyboardHideListener.remove();
         };
-    }, [onDismiss, sharedShowValue, keyboardHeight]);
+    }, [onDismiss, sharedShowValue, keyboardHeight, keyboardAvoidMode]);
 
     const containerStyle = useAnimatedStyle(() => {
         return {
@@ -154,39 +155,47 @@ function Dialog(props: IDialogProps) {
     });
 
     return (
-        <View style={styles.backContainer}>
-            <TouchableWithoutFeedback
-                style={styles.container}
-                onPress={onDismiss}>
-                <Animated.View style={[styles.container, containerStyle]} />
-            </TouchableWithoutFeedback>
-            <Animated.View
-                style={[
-                    styles.dialogContainer,
-                    dialogContainerStyle,
-                    containerStyle,
-                    scaleAnimationStyle,
-                    {
-                        // 弹窗必须是不透明底：设壁纸时 surfaceElevated 会变成
-                        // rgba(0,0,0,0.30)，透出壁纸导致正文看不清
-                        backgroundColor: Theme.getDialogSurfaceColor(),
-                        // Custom wallpaper: no dark outer ring (border + elevation).
-                        borderWidth: hasCustomBackground
-                            ? 0
-                            : StyleSheet.hairlineWidth,
-                        borderColor: hasCustomBackground
-                            ? "transparent"
-                            : colors.border,
-                        shadowColor: hasCustomBackground
-                            ? "transparent"
-                            : colors.shadow,
-                        shadowOpacity: hasCustomBackground ? 0 : 0.5,
-                        elevation: hasCustomBackground ? 0 : 5,
-                    },
-                ]}>
-                {children}
-            </Animated.View>
-        </View>
+        <Modal
+            visible
+            transparent
+            animationType="none"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={onDismiss}>
+            <View style={styles.backContainer}>
+                <TouchableWithoutFeedback
+                    style={styles.container}
+                    onPress={onDismiss}>
+                    <Animated.View style={[styles.container, containerStyle]} />
+                </TouchableWithoutFeedback>
+                <Animated.View
+                    style={[
+                        styles.dialogContainer,
+                        dialogContainerStyle,
+                        containerStyle,
+                        scaleAnimationStyle,
+                        {
+                            // 弹窗必须是不透明底：设壁纸时 surfaceElevated 会变成
+                            // rgba(0,0,0,0.30)，透出壁纸导致正文看不清
+                            backgroundColor: Theme.getDialogSurfaceColor(),
+                            // Custom wallpaper: no dark outer ring (border + elevation).
+                            borderWidth: hasCustomBackground
+                                ? 0
+                                : StyleSheet.hairlineWidth,
+                            borderColor: hasCustomBackground
+                                ? "transparent"
+                                : colors.border,
+                            shadowColor: hasCustomBackground
+                                ? "transparent"
+                                : colors.shadow,
+                            shadowOpacity: hasCustomBackground ? 0 : 0.5,
+                            elevation: hasCustomBackground ? 0 : 5,
+                        },
+                    ]}>
+                    {children}
+                </Animated.View>
+            </View>
+        </Modal>
     );
 }
 

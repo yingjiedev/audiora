@@ -35,7 +35,7 @@ export default function TimingClose() {
     const activeStroke = "#5B84F7";
     const activeStrokeEnd = "#A274EA";
     const dialRadius = rpx(114);
-    const dialKnobSize = rpx(26);
+    const dialKnobSize = rpx(28);
     const dialKnobAngle = (
         (Math.min(activeMinutes, 60) / dialMaximum) * 360 + dialStartAngle
     ) * (Math.PI / 180);
@@ -72,7 +72,7 @@ export default function TimingClose() {
             height={rpx(740)}
             renderBody={() => (
                 <LinearGradient
-                    colors={["#F3F5FD", "#EFF3FC"]}
+                    colors={["#FAFBFF", "#F5F8FF"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                     style={styles.sheet}>
@@ -88,20 +88,28 @@ export default function TimingClose() {
                     </ThemeText>
 
                     <View style={styles.dialArea}>
-                        <Icon
-                            name="moon-outline"
-                            size={rpx(48)}
-                            color="#C6CEE4"
-                            style={styles.sleepIcon}
-                        />
+                        <View style={styles.sleepIconGroup}>
+                            <Icon
+                                name="moon-outline"
+                                size={rpx(52)}
+                                color="#BCC6DE"
+                                style={styles.sleepIcon}
+                            />
+                            <Icon
+                                name="zzz"
+                                size={rpx(22)}
+                                color="#BCC6DE"
+                                style={styles.sleepMarks}
+                            />
+                        </View>
                         <View style={styles.dialStack}>
                             <View style={styles.dialLayer} pointerEvents="none">
                                 <CircularProgressBase
-                                    activeStrokeColor="#E7EBF6"
-                                    activeStrokeWidth={rpx(6)}
+                                    activeStrokeColor="#E1E6F2"
+                                    activeStrokeWidth={rpx(7)}
                                     duration={0}
                                     inActiveStrokeColor="transparent"
-                                    inActiveStrokeWidth={rpx(6)}
+                                    inActiveStrokeWidth={rpx(7)}
                                     maxValue={dialMaximum}
                                     radius={dialRadius}
                                     rotation={225}
@@ -113,11 +121,11 @@ export default function TimingClose() {
                                 <CircularProgressBase
                                     activeStrokeColor={activeStroke}
                                     activeStrokeSecondaryColor={activeStrokeEnd}
-                                    activeStrokeWidth={rpx(6)}
+                                    activeStrokeWidth={rpx(7)}
                                     clockwise
                                     duration={220}
                                     inActiveStrokeColor="transparent"
-                                    inActiveStrokeWidth={rpx(6)}
+                                    inActiveStrokeWidth={rpx(7)}
                                     maxValue={dialMaximum}
                                     radius={dialRadius}
                                     rotation={225}
@@ -127,12 +135,12 @@ export default function TimingClose() {
                             </View>
                             <View style={styles.dialTickLayer} pointerEvents="none">
                                 <CircularProgressBase
-                                    activeStrokeColor="#CBD4EA"
-                                    activeStrokeWidth={rpx(4)}
-                                    dashedStrokeConfig={{ count: 60, width: rpx(1.25) }}
+                                    activeStrokeColor="#BEC8DF"
+                                    activeStrokeWidth={rpx(5)}
+                                    dashedStrokeConfig={{ count: 60, width: rpx(1.4) }}
                                     duration={0}
                                     inActiveStrokeColor="transparent"
-                                    inActiveStrokeWidth={rpx(4)}
+                                    inActiveStrokeWidth={rpx(5)}
                                     maxValue={dialMaximum}
                                     radius={rpx(100)}
                                     rotation={225}
@@ -141,7 +149,7 @@ export default function TimingClose() {
                                 />
                             </View>
                             <View style={styles.dialCenter}>
-                                <ThemeText style={styles.activeTime} fontWeight="bold">
+                                <ThemeText style={styles.activeTime} fontWeight="semibold">
                                     {activeMinutes}
                                 </ThemeText>
                                 <ThemeText style={styles.minuteLabel} fontColor="textSecondary">
@@ -157,8 +165,8 @@ export default function TimingClose() {
                         </View>
                         <Icon
                             name="sun-outline"
-                            size={rpx(48)}
-                            color="#C6CEE4"
+                            size={rpx(56)}
+                            color="#BCC6DE"
                             style={styles.wakeIcon}
                         />
                     </View>
@@ -187,12 +195,8 @@ export default function TimingClose() {
                                             </ThemeText>
                                         </LinearGradient>
                                     ) : (
-                                        <View
-                                            style={[
-                                                styles.timeOption,
-                                                { backgroundColor: "#F1F4FC" },
-                                            ]}>
-                                            <ThemeText style={styles.timeOptionText} fontColor="textSecondary" fontWeight="medium">
+                                        <View style={styles.timeOption}>
+                                            <ThemeText style={styles.timeOptionText} color="#4E566B" fontWeight="medium">
                                                 {time} {t("dialog.setScheduleCloseTime.unit")}
                                             </ThemeText>
                                         </View>
@@ -212,7 +216,7 @@ export default function TimingClose() {
                                     styles.customTimeOption,
                                     {
                                         borderColor: isCustomTime ? activeStroke : "#A58FFC",
-                                        backgroundColor: isCustomTime ? activeStroke : "#F8F9FF",
+                                        backgroundColor: isCustomTime ? activeStroke : "transparent",
                                     },
                                 ]}>
                                 <ThemeText
@@ -282,9 +286,9 @@ export default function TimingClose() {
 const styles = StyleSheet.create({
     sheet: {
         flex: 1,
-        paddingHorizontal: rpx(36),
+        paddingHorizontal: rpx(38),
         paddingTop: rpx(18),
-        paddingBottom: rpx(36),
+        paddingBottom: rpx(42),
     },
     handle: {
         alignSelf: "center",
@@ -296,15 +300,15 @@ const styles = StyleSheet.create({
         alignSelf: "center",
         fontSize: fontRpx(30),
         lineHeight: fontRpx(42),
-        marginTop: rpx(22),
+        marginTop: rpx(26),
     },
     dialArea: {
         alignItems: "center",
         flexDirection: "row",
-        height: rpx(250),
+        height: rpx(248),
         justifyContent: "space-between",
         marginTop: rpx(4),
-        paddingHorizontal: rpx(120),
+        paddingHorizontal: rpx(102),
     },
     dialCenter: {
         alignItems: "center",
@@ -316,6 +320,7 @@ const styles = StyleSheet.create({
     dialStack: {
         height: rpx(228),
         position: "relative",
+        transform: [{ translateY: rpx(12) }],
         width: rpx(228),
     },
     dialLayer: {
@@ -329,32 +334,46 @@ const styles = StyleSheet.create({
         top: rpx(14),
     },
     activeTime: {
-        fontSize: fontRpx(52),
-        lineHeight: fontRpx(62),
+        fontSize: fontRpx(54),
+        lineHeight: fontRpx(64),
     },
     minuteLabel: {
-        fontSize: fontRpx(20),
-        lineHeight: fontRpx(28),
+        fontSize: fontRpx(22),
+        lineHeight: fontRpx(30),
         marginTop: 0,
     },
+    sleepIconGroup: {
+        height: rpx(56),
+        position: "relative",
+        width: rpx(62),
+    },
     sleepIcon: {
-        opacity: 0.82,
+        bottom: 0,
+        left: 0,
+        opacity: 0.9,
+        position: "absolute",
+    },
+    sleepMarks: {
+        opacity: 0.9,
+        position: "absolute",
+        right: 0,
+        top: 0,
     },
     wakeIcon: {
-        opacity: 0.82,
+        opacity: 0.9,
     },
     dialKnob: {
         borderColor: "#EFF2FF",
-        borderRadius: rpx(13),
+        borderRadius: rpx(14),
         borderWidth: rpx(2),
-        height: rpx(26),
+        height: rpx(28),
         position: "absolute",
-        width: rpx(26),
+        width: rpx(28),
     },
     timeOptions: {
         flexDirection: "row",
         gap: rpx(8),
-        marginTop: rpx(24),
+        marginTop: rpx(20),
         width: "100%",
     },
     timeOptionTouch: {
@@ -375,6 +394,7 @@ const styles = StyleSheet.create({
         borderRadius: rpx(26),
         height: rpx(52),
         justifyContent: "center",
+        marginHorizontal: rpx(4),
     },
     customTimeOption: {
         alignItems: "center",
@@ -384,10 +404,10 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     timeOptionText: {
-        fontSize: fontRpx(18),
+        fontSize: fontRpx(20),
     },
     closeAfterSection: {
-        marginTop: rpx(22),
+        marginTop: rpx(35),
     },
     closeAfterPlayRow: {
         alignItems: "center",
@@ -422,9 +442,9 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         shadowColor: "#8291F8",
         shadowOffset: { width: 0, height: rpx(8) },
-        shadowOpacity: 0.22,
-        shadowRadius: rpx(12),
-        elevation: 5,
+        shadowOpacity: 0.3,
+        shadowRadius: rpx(18),
+        elevation: 8,
     },
     primaryActionText: {
         fontSize: fontRpx(30),
