@@ -36,9 +36,11 @@ const timingConfig = {
 };
 
 interface IPanelBaseProps {
+    borderTopRadius?: number;
     keyboardAvoidBehavior?: "height" | "padding" | "position" | "none";
     height?: number;
     maskColor?: string;
+    maskOpacity?: number;
     // 定位方式
     positionMethod?: "top" | "bottom";
     renderBody: (loading: boolean) => React.ReactNode;
@@ -55,10 +57,12 @@ interface IPanelBaseProps {
  */
 export default function (props: IPanelBaseProps) {
     const {
+        borderTopRadius,
         height = vh(60),
         renderBody,
         keyboardAvoidBehavior,
         maskColor,
+        maskOpacity = 0.5,
         positionMethod = "bottom",
     } = props;
     const keyboardAvoidMode =
@@ -219,8 +223,8 @@ export default function (props: IPanelBaseProps) {
         // Keep the mask opaque for hit testing and animate only its opacity.
         // This is the same structure used by Dialog and avoids stacking a
         // static 0.5 opacity with an animated value.
-        opacity: snapPoint.value * 0.5,
-    }));
+        opacity: snapPoint.value * maskOpacity,
+    }), [maskOpacity]);
 
     const mountPanel = useCallback(() => {
         setLoading(false);
@@ -287,6 +291,8 @@ export default function (props: IPanelBaseProps) {
                             : verticalPositionStyle,
                         {
                             backgroundColor: colors.backdrop,
+                            borderTopLeftRadius: borderTopRadius,
+                            borderTopRightRadius: borderTopRadius,
                         },
                         panelAnimated,
                     ]}>
