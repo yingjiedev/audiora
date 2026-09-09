@@ -34,10 +34,15 @@ import Color from "color";
 interface IDialogProps {
     onDismiss?: () => void;
     children?: ReactNode;
+    containerStyle?: StyleProp<ViewStyle>;
 }
 
 function Dialog(props: IDialogProps) {
-    const { children, onDismiss } = props;
+    const {
+        children,
+        containerStyle: customContainerStyle,
+        onDismiss,
+    } = props;
 
     const sharedShowValue = useSharedValue(0);
     const keyboardHeight = useSharedValue(0);
@@ -191,6 +196,7 @@ function Dialog(props: IDialogProps) {
                             shadowOpacity: hasCustomBackground ? 0 : 0.5,
                             elevation: hasCustomBackground ? 0 : 5,
                         },
+                        customContainerStyle,
                     ]}>
                     {children}
                 </Animated.View>
