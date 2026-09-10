@@ -12,6 +12,7 @@ import Theme, {
     DEFAULT_BACKGROUND_BLUR,
     DEFAULT_BACKGROUND_OPACITY,
 } from "@/core/theme";
+import { derivePrimaryColor } from "@/utils/themePalette";
 import { CustomizedColors } from "@/hooks/useColors";
 import {
     pickBackgroundImage,
@@ -74,65 +75,11 @@ export default function Body() {
             // 候选色全部收集，以 dominant（主导色）为基准挑：
             // Palette 对深色图的量化可能抠出只占极小面积的暖色 vibrant
             // （蓝黑图出橙色就是它），色相偏离主导色太多的候选强降权
-            const candidates = [colors.primary, colors.vibrant, colors.average]
-                .filter(Boolean)
-                .map(cl => Color(cl));
-            const dom = candidates[0];
-            let base: Color;
-            if (
-                dom &&
-                dom.saturation() >= 0.15 &&
-                dom.lightness() >= 0.05 &&
-                dom.lightness() <= 0.85
-            ) {
-                const domHue = dom.hue();
-                base = candidates
-                    .map(c => {
-                        let score = c.saturation();
-                        const l = c.lightness();
-                        if (l > 0.85 || l < 0.05) {
-                            score *= 0.3;
-                        }
-                        const dh = Math.min(
-                            Math.abs(c.hue() - domHue),
-                            360 - Math.abs(c.hue() - domHue),
-                        );
-                        if (dh > 40) {
-                            score *= 0.4;
-                        }
-                        return { c, score };
-                    })
-                    .sort((a, b) => b.score - a.score)[0].c;
-            } else {
-                // dominant 本身接近黑/白/灰（色相不可信），用中性白保持黑白调
-                base =
-                    candidates.find(
-                        c => c.saturation() >= 0.2 && c.lightness() > 0.15,
-                    ) ?? Color(customThemeDefaultPrimary);
-            }
-
-            // 归一化：饱和度太低（灰白）提饱和，亮度太亮（白）/太黑收进
-            // 中间区间，保证主色在深浅底色上都看得清，不会出现纯白主色
-            let normalizedPrimary: string;
-            try {
-                let c = base;
-                if (c.saturation() < 0.2) {
-                    // 灰白图保持黑白调，只把亮度收进可读区间，不提饱和
-                    // （提饱和会借 hue=0 变成粉色）
-                    c = Color(customThemeDefaultPrimary).lightness(
-                        Math.min(Math.max(c.lightness(), 0.4), 0.6),
-                    );
-                }
-                const lightness = c.lightness();
-                if (lightness > 0.72) {
-                    c = c.lightness(0.62);
-                } else if (lightness < 0.32) {
-                    c = c.lightness(0.42);
-                }
-                normalizedPrimary = c.toString();
-            } catch {
-                normalizedPrimary = customThemeDefaultPrimary;
-            }
+            // 亮度/饱和度单位都是 0~100（color@4 约定），阈值错配会静默出错
+            const primaryHex = derivePrimaryColor(
+                [colors.primary, colors.vibrant, colors.average],
+                { fallbackPrimary: customThemeDefaultPrimary },
+            );
 
             const neutralMusicBar = Color(darkTheme.colors.musicBar)
                 .alpha(0.92)
@@ -140,9 +87,9 @@ export default function Body() {
 
             themeColors = {
                 ...customBackgroundSurfaceColors,
-                primary: normalizedPrimary,
+                primary: primaryHex,
                 musicBar: neutralMusicBar,
-                tabBar: Color(normalizedPrimary).alpha(0.2).toString(),
+                tabBar: Color(primaryHex).alpha(0.2).toString(),
             };
         } catch (e) {
             // 取色失败不挡换背景：背景照设，配色退回黑白默认
