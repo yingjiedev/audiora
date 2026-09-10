@@ -48,7 +48,7 @@ static def getVersion() {
 }
 
 def appVersion = findProperty("appVersion") ?: getVersion()
-def appVersionCode = (findProperty("appVersionCode") ?: 400034).toInteger()
+def appVersionCode = (findProperty("appVersionCode") ?: 1789007812).toInteger()
 
 android {
     ndkVersion rootProject.ext.ndkVersion
