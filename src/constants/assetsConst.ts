@@ -1,11 +1,16 @@
 export const ImgAsset = {
-    albumDefault: require("@/assets/imgs/album-default.jpeg"),
+    albumDefault: require("@/assets/imgs/album-default.png"),
     addBackground: require("@/assets/imgs/add-image.png"),
     add: require("@/assets/imgs/add.png"),
     logo: require("@/assets/imgs/logo.png"),
     author: require("@/assets/imgs/author.jpg"),
     logoTransparent: require("@/assets/imgs/logo-transparent.png"),
-    wechatChannel: require("@/assets/imgs/wechat_channel.jpg"),
+    settingsRibbonBackground: require("@/assets/imgs/settings-ribbon-background.png"),
+    homeHero: require("@/assets/imgs/home-hero-mountain.png"),
+    quickLocal: require("@/assets/imgs/quick-local-v2.png"),
+    quickHistory: require("@/assets/imgs/quick-history-v2.png"),
+    quickFavorite: require("@/assets/imgs/quick-favorite-v2.png"),
+    quickFolder: require("@/assets/imgs/quick-folder-v2.png"),
     // 音质按钮现在通过 Icon 组件系统使用
     rate: {
         50: require("@/assets/imgs/50x.png"),

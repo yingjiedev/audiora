@@ -15,9 +15,10 @@ import PluginManager from "@/core/pluginManager";
 import Theme from "@/core/theme";
 import TrackPlayer from "@/core/trackPlayer";
 import { checkAndCreateDir } from "@/utils/fileUtils";
-import { appendStartupBreadcrumb, crashLog, flushStartupBreadcrumbs, markStartupSession, trace, devLog } from "@/utils/log";
+import { appendStartupBreadcrumb, crashLog, errorLog, flushStartupBreadcrumbs, markStartupSession, trace, devLog } from "@/utils/log";
 import { IPerfLogger, perfLogger } from "@/utils/perfLogger";
 import PersistStatus from "@/utils/persistStatus";
+import { restoreScheduleClose } from "@/utils/scheduleClose";
 import Toast from "@/utils/toast";
 import * as SplashScreen from "expo-splash-screen";
 import { Linking, Platform } from "react-native";
@@ -240,6 +241,8 @@ export async function initTrackPlayer(logger?: IPerfLogger) {
     await TrackPlayer.setupTrackPlayer();
     trace("播放列表初始化完成");
     logger?.mark("播放列表初始化完成");
+
+    restoreScheduleClose();
 
     await lyricManager.setup();
 

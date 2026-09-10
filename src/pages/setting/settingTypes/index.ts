@@ -5,6 +5,7 @@ import BackupSetting from "./backupSetting";
 import BasicSetting from "./basicSetting";
 import PluginSetting from "./pluginSetting";
 import ThemeSetting from "./themeSetting";
+import SettingsOverview from "./settingsOverview";
 
 const settingTypes: Record<
     string,
@@ -15,6 +16,12 @@ const settingTypes: Record<
         i18nKey: string;
     }
 > = {
+    overview: {
+        title: "设置",
+        i18nKey: "common.setting",
+        component: SettingsOverview,
+        showNav: false,
+    },
     basic: {
         title: "基本设置",
         i18nKey: "sidebar.basicSettings",

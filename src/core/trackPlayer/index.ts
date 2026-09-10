@@ -86,6 +86,8 @@ class TrackPlayer extends EventEmitter<{
     private currentIndex = -1;
     // 音乐播放器服务是否启动
     private serviceInited = false;
+    // 由定时关闭使用：本曲自然播放到结尾时暂停，不让播放器自动切到下一曲。
+    private pauseAfterCurrentTrackEnd = false;
     private videoSuspension: {
         musicItem: IMusic.IMusicItem | null;
         wasPlaying: boolean;
@@ -301,8 +303,17 @@ class TrackPlayer extends EventEmitter<{
                         evt.lastIndex === 0 &&
                         evt.track?.url === TrackPlayer.fakeAudioUrl
                     ) {
+                        const shouldPause = this.pauseAfterCurrentTrackEnd;
+
+                        // This request is consumed by the current natural track end.
+                        // A later timer can request it again for the next track.
+                        this.pauseAfterCurrentTrackEnd = false;
                         trace("queue reached fake next track");
                         this.emit(TrackPlayerEvents.PlayEnd);
+                        if (shouldPause) {
+                            await ReactNativeTrackPlayer.pause();
+                            return;
+                        }
                         if (
                             this.repeatMode ===
                             MusicRepeatMode.SINGLE
@@ -899,6 +910,14 @@ class TrackPlayer extends EventEmitter<{
 
     async pause(): Promise<void> {
         await ReactNativeTrackPlayer.pause();
+    }
+
+    pauseAfterCurrentTrack(): void {
+        this.pauseAfterCurrentTrackEnd = true;
+    }
+
+    cancelPauseAfterCurrentTrack(): void {
+        this.pauseAfterCurrentTrackEnd = false;
     }
 
     async suspendForVideo(): Promise<void> {

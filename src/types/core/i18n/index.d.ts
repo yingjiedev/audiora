@@ -63,6 +63,17 @@ export interface ILanguageData {
     "sidebar.backToDesktop": string; // 返回桌面
     "sidebar.exitApp": string; // 退出应用
     "sidebar.languageSettings": string; // 语言设置
+    "settingsOverview.tagline": string;
+    "settingsOverview.generalDescription": string;
+    "settingsOverview.sourceDescription": string;
+    "settingsOverview.localDescription": string;
+    "settingsOverview.themeDescription": string;
+    "settingsOverview.permissionDescription": string;
+    "settingsOverview.backupDescription": string;
+    "settingsOverview.languageDescription": string;
+    "settingsOverview.aboutDescription": string;
+    "settingsOverview.footerLine1": string;
+    "settingsOverview.footerLine2": string;
 
     // 检查更新相关
     "checkUpdate.error.latestVersion": string; // 当前已是最新版本
@@ -88,6 +99,10 @@ export interface ILanguageData {
     "home.viewAll": string;
     "home.recentListening": string;
     "home.quickAccess": string;
+    "home.recommend": string;
+    "home.home": string;
+    "home.musicLibrary": string;
+    "home.notifications.a11y": string;
     "home.discovery": string;
     "home.myMusic": string;
     "home.scanLocal": string;
@@ -637,6 +652,8 @@ export interface ILanguageData {
     "panel.timingClose.customize": string; // 自定义
     "panel.timingClose.cancelScheduleClose": string; // 取消定时关闭
     "panel.timingClose.closeAfterPlay": string; // 播放完歌曲再关闭
+    "panel.timingClose.closeAfterPlayHint": string; // 当前歌曲播放完毕后自动关闭
+    "panel.timingClose.start": string; // 开始计时
 
     // 面板相关 - 播放速度
     "panel.playRate.title": string; // 播放速度

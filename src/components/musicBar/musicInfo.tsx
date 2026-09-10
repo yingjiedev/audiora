@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
         position: "absolute",
     },
     containerPadding: {
-        paddingLeft: rpx(24),
-        paddingRight: rpx(12),
+        paddingLeft: rpx(16),
+        paddingRight: rpx(8),
     },
     textWrapper: {
         flex: 1,
@@ -109,10 +109,10 @@ const styles = StyleSheet.create({
         minWidth: 0,
     },
     artworkImg: {
-        width: rpx(76),
-        height: rpx(76),
-        borderRadius: rpx(16),
-        marginRight: rpx(18),
+        width: rpx(74),
+        height: rpx(74),
+        borderRadius: rpx(18),
+        marginRight: rpx(14),
         flexShrink: 0,
     },
     artist: {

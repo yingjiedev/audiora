@@ -6,7 +6,7 @@ on:
             version:
                 description: 'Version to build (e.g., v0.6.48)'
                 required: true
-                default: 'v0.6.48'
+                default: 'v0.2.0'
                 type: string
     push:
         tags:
@@ -14,6 +14,7 @@ on:
 
 permissions:
     contents: write
+    pull-requests: read
 
 jobs:
     build-ios:
@@ -24,6 +25,8 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
@@ -126,6 +129,38 @@ jobs:
                   path: ios/build/Build/Products/Release-iphoneos/*.ipa
                   retention-days: 30
 
+            - name: Determine release channel
+              id: release-channel
+              if: startsWith(github.ref, 'refs/tags/')
+              env:
+                  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  git fetch --no-tags origin "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
+
+                  IS_MERGED=false
+                  if git merge-base --is-ancestor "${GITHUB_SHA}" "refs/remotes/origin/${DEFAULT_BRANCH}"; then
+                    IS_MERGED=true
+                  else
+                    ASSOCIATED_PULLS=$(curl --fail --silent --show-error \
+                      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                      -H "Accept: application/vnd.github+json" \
+                      -H "X-GitHub-Api-Version: 2022-11-28" \
+                      "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")
+                    if jq -e --arg branch "${DEFAULT_BRANCH}" \
+                      'any(.[]; .merged_at != null and .base.ref == $branch)' \
+                      <<< "${ASSOCIATED_PULLS}" >/dev/null; then
+                      IS_MERGED=true
+                    fi
+                  fi
+
+                  if [[ "${IS_MERGED}" == "true" ]]; then
+                    echo "prerelease=false" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "prerelease=true" >> "$GITHUB_OUTPUT"
+                  fi
+
             - name: Upload to Release
               if: startsWith(github.ref, 'refs/tags/')
               uses: softprops/action-gh-release@v1
@@ -133,4 +168,5 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   tag_name: ${{ github.ref_name }}
+                  prerelease: ${{ steps.release-channel.outputs.prerelease }}
                   files: ios/build/Build/Products/Release-iphoneos/*.ipa

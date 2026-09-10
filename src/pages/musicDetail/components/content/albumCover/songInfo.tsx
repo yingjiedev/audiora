@@ -199,16 +199,16 @@ export default function SongInfo(props: ISongInfoProps) {
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: rpx(24),
+        paddingVertical: rpx(18),
         alignItems: "flex-start",
-        marginTop: rpx(20),
+        marginTop: rpx(14),
     },
     titleRow: {
         flexDirection: "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
         width: "100%",
-        marginBottom: rpx(20),
+        marginBottom: rpx(12),
     },
     titleRowHorizontal: {
         alignItems: "center",
@@ -216,8 +216,8 @@ const styles = StyleSheet.create({
     },
     title: {
         color: "white",
-        fontSize: fontSizeConst.title,
-        fontWeight: fontWeightConst.semibold,
+        fontSize: fontSizeConst.appbar,
+        fontWeight: fontWeightConst.bold,
         includeFontPadding: false,
         textAlign: "left",
         flex: 1,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     },
     artist: {
         color: "white",
-        fontSize: fontSizeConst.subTitle,
+        fontSize: fontSizeConst.content,
         includeFontPadding: false,
         textAlign: "left",
         opacity: 0.9,
@@ -246,15 +246,16 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     tagBg: {
-        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        backgroundColor: "rgba(255, 255, 255, 0.16)",
         marginLeft: rpx(12),
+        borderRadius: rpx(999),
     },
     tagText: {
         color: "white",
     },
     album: {
         color: "white",
-        fontSize: fontSizeConst.content,
+        fontSize: fontSizeConst.description,
         includeFontPadding: false,
         textAlign: "left",
         opacity: 0.7,
@@ -269,8 +270,8 @@ const styles = StyleSheet.create({
     },
     immersiveContainer: {
         marginTop: 0,
-        paddingTop: rpx(10),
-        paddingBottom: rpx(18),
+        paddingTop: rpx(8),
+        paddingBottom: rpx(14),
     },
     immersiveTitle: {
         fontSize: fontSizeConst.hero,

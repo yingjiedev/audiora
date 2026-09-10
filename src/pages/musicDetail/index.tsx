@@ -24,7 +24,7 @@ export default function MusicDetail() {
     const showAlbumCover = tab === "album" || isHorizontal;
     const coverStyle = useAppConfig("theme.coverStyle") ?? "square";
     const musicDetailCoverStyle =
-        useAppConfig("theme.musicDetailCoverStyle") ?? "classic";
+        useAppConfig("theme.musicDetailCoverStyle") ?? "immersive";
     const immersiveCoverEnabled =
         !isHorizontal &&
         coverStyle === "square" &&

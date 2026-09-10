@@ -150,6 +150,12 @@ export interface ITrackPlayer extends IInjectable, EventEmitter<{
      */
     pause(): Promise<void>;
 
+    /** 当前歌曲自然播放结束时暂停，且不自动切换到下一首。 */
+    pauseAfterCurrentTrack(): void;
+
+    /** 取消“当前歌曲结束后暂停”的请求。 */
+    cancelPauseAfterCurrentTrack(): void;
+
     /** 暂停音频，为 MV 播放让出音频通道。 */
     suspendForVideo(): Promise<void>;
 

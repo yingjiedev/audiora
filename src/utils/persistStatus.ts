@@ -34,6 +34,10 @@ interface IPersistStatus {
     "app.pluginUpdateTime": number;
     /** 缓存的定时关闭自定义时间（分钟） */
     "app.scheduleCloseTime": number;
+    /** 定时关闭的截止时间戳 */
+    "app.scheduleCloseDeadline": number;
+    /** 定时关闭到点后是否等待当前歌曲播放完毕 */
+    "app.scheduleCloseAfterPlayEnd": boolean;
     /** 歌词-是否启用翻译 */
     "lyric.showTranslation": boolean;
     /** 歌词-是否启用罗马音 */
