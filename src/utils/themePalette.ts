@@ -71,7 +71,7 @@ function hueDistance(a: number, b: number): number {
  * - 否则主导色接近黑/白/灰，色相不可信 → 退而找第一个有彩色的候选
  * - 都找不到 → 回落中性白
  */
-function selectBaseColor(candidates: Color[], fallback: string): Color {
+function selectBaseColor(candidates: Color[], fallback: Color): Color {
     const dominant = candidates[0];
     const dominantLightness = dominant.lightness();
 
@@ -110,8 +110,7 @@ function selectBaseColor(candidates: Color[], fallback: string): Color {
                 c.saturationl() >= MIN_USABLE_SATURATION &&
                 c.lightness() > MIN_USABLE_LIGHTNESS,
         ) ??
-        safeColor(fallback) ??
-        Color(NEUTRAL_FALLBACK_PRIMARY)
+        fallback
     );
 }
 
@@ -120,7 +119,7 @@ function selectBaseColor(candidates: Color[], fallback: string): Color {
  * - 灰白图保持黑白调，只把亮度收进可读区间（提饱和会借 hue=0 变成粉色）
  * - 过亮/过暗收进中间区间，保证主色在深浅底色上都看得清
  */
-function normalizePrimary(base: Color, fallback: string): Color {
+function normalizePrimary(base: Color, fallback: Color): Color {
     let result = base;
 
     if (result.saturationl() < MIN_USABLE_SATURATION) {
@@ -128,8 +127,7 @@ function normalizePrimary(base: Color, fallback: string): Color {
             Math.max(result.lightness(), NEUTRAL_LIGHTNESS_MIN),
             NEUTRAL_LIGHTNESS_MAX,
         );
-        result = (safeColor(fallback) ?? Color(NEUTRAL_FALLBACK_PRIMARY))
-            .lightness(clampedLightness);
+        result = fallback.lightness(clampedLightness);
     }
 
     const lightness = result.lightness();

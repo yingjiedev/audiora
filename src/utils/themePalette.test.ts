@@ -84,6 +84,17 @@ describe("derivePrimaryColor", () => {
             ).toBe("#123456");
         });
 
+        it("灰度候选使用调用方指定的回落色", () => {
+            const result = derivePrimaryColor(["#808080"], {
+                fallbackPrimary: "#345678",
+            });
+
+            expect(hslOf(result).hue).toBeCloseTo(
+                hslOf("#345678").hue,
+                0,
+            );
+        });
+
         it("回落色本身非法时兜底到中性白而不是抛异常", () => {
             expect(
                 derivePrimaryColor([], { fallbackPrimary: "bogus" }),
