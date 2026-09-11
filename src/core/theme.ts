@@ -115,6 +115,11 @@ export const customThemeDefaultPrimary = "#F2F2F2";
 /** 深色主题的旧默认主色（橙），用于旧配置迁移判定 */
 const LEGACY_DARK_PRIMARY = "#FF7650";
 
+/** 预设主题（浅色 / 深色）的 id；其余 id 一律视为自定义主题 */
+export function isPresetThemeId(themeId?: string | null) {
+    return themeId === "p-light" || themeId === "p-dark";
+}
+
 /**
  * 弹窗/抽屉/全屏面板在壁纸模式下的回落底色。
  * 自定义主题必须回落到中性黑灰，不能用深色主题预设——
@@ -124,7 +129,7 @@ function getOpaqueSurfaceFallback(
     key: "card" | "surfaceElevated" | "pageBackground",
 ): string {
     const theme = themeStore.getValue();
-    if (theme.id !== "p-light" && theme.id !== "p-dark") {
+    if (!isPresetThemeId(theme.id)) {
         return (customThemeDefaultColors[key] ?? "#1D1D1D") as string;
     }
     return (theme.dark ? darkTheme.colors : lightTheme.colors)[key] as string;
@@ -162,6 +167,27 @@ export const customBackgroundSurfaceColors: Partial<CustomizedColors> = {
 
 const themeStore = new GlobalState(ensureNavigationFonts(darkTheme));
 const backgroundStore = new GlobalState<IBackgroundInfo | null>(null);
+
+/**
+ * 当前生效的背景。
+ *
+ * 自定义背景（壁纸）只属于「自定义背景」主题：切回浅色/深色模式后必须立即
+ * 停用，否则壁纸会盖住所选模式的默认底色与卡片观感（issue #44）。
+ * 这里只做「是否生效」判定，不动 backgroundStore / theme.background 里的 url，
+ * 所以切回自定义主题时同一张图会被原样复用，不需要重新选图。
+ *
+ * 没有 url（用户只调过模糊/透明度，或已清除背景图）同样算不生效。
+ * 传参版本便于在非组件环境（启动、持久化逻辑）里求值。
+ */
+export function resolveActiveBackground(
+    themeId: string | undefined | null,
+    background: IBackgroundInfo | null | undefined,
+): IBackgroundInfo | null {
+    if (isPresetThemeId(themeId) || !background?.url) {
+        return null;
+    }
+    return background;
+}
 
 /** 背景默认模糊度 */
 export const DEFAULT_BACKGROUND_BLUR = 20;
@@ -586,8 +612,7 @@ function setColors(colors: Partial<CustomizedColors>) {
         colorsWithListActive.listActive = Color(colors.primary).alpha(0.12).toString();
     }
 
-    const isCustomTheme =
-        currentTheme.id !== "p-light" && currentTheme.id !== "p-dark";
+    const isCustomTheme = !isPresetThemeId(currentTheme.id);
     const mergedColors = {
         ...(isCustomTheme
             ? // 自定义主题：以当前主题色为基底，别让深色主题预设渗进来
@@ -772,8 +797,20 @@ const Theme = {
     getOpaquePageBackgroundColor,
     useTheme: themeStore.useValue,
     getTheme: themeStore.getValue,
+    /** 已配置的背景，不看主题模式——设置页回显、清除背景图都要用它 */
     useBackground: backgroundStore.useValue,
     getBackground: backgroundStore.getValue,
+    /** 当前真正生效的壁纸；浅色/深色模式下、或没配背景图时为 null */
+    useActiveBackground: () => {
+        const theme = themeStore.useValue();
+        const background = backgroundStore.useValue();
+        return resolveActiveBackground(theme?.id, background);
+    },
+    getActiveBackground: () =>
+        resolveActiveBackground(
+            themeStore.getValue()?.id,
+            backgroundStore.getValue(),
+        ),
     configableColorKey,
 };
 

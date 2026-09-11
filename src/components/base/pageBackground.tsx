@@ -4,12 +4,13 @@ import Theme from "@/core/theme";
 import CustomBackground from "./customBackground";
 
 function PageBackground() {
-    const background = Theme.useBackground();
+    const background = Theme.useActiveBackground();
     const colors = useColors();
 
-    // 壁纸不再限定「自定义主题」：预设主题的 pageBackground 是不透明底色，
-    // 壁纸叠在它上面观感正确，而 useHasCustomBackground 一直按「有壁纸就算」判断，
-    // 之前限定主题会导致边框阴影已按壁纸调整、壁纸本身却不显示。
+    // 自定义背景只属于「自定义背景」主题：切到浅色/深色模式后必须停用，
+    // 改按所选模式显示预设底色。这里用 useActiveBackground 而不是 useBackground，
+    // 是为了和 useHasCustomBackground（控制边框/阴影）保持同一套语义——
+    // 否则会出现「壁纸停了、卡片却还是无边框无投影」的半吊子状态（issue #44）。
     return (
         <CustomBackground
             url={background?.url}
