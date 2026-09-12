@@ -1,13 +1,13 @@
 {
-  "version": "0.2.0",
+  "version": "0.2.4",
   "changeLog": [
-    "【界面】统一蓝紫色设计体系、主题 Token、间距、圆角、字号与图标表现",
-    "【首页】重构 Hero、推荐/发现导航、快捷入口与继续聆听",
-    "【体验】优化 Mini Player、全屏播放器、底部导航与设置入口",
-    "【音乐库】完善“我的/音乐库”、设置总览与定时关闭面板",
-    "【修复】修复播放后首页崩溃及未定义运行时引用等稳定性问题"
+    "【体积】Android Release 开启 R8 并移除未使用依赖，arm64 APK 由约 37.2 MB 降至约 29.5 MB",
+    "【歌单】新增歌单导入并优化播放体验",
+    "【歌词】同步所有播放进度跳转，改善歌词定位",
+    "【主题】修复自定义主题取色及切换明暗模式后的背景状态",
+    "【Android】修复图片裁剪工具栏触摸响应"
   ],
   "download": [
-    "https://github.com/yingjiedev/audiora/releases/download/v0.2.0/Audiora-v0.2.0-arm64-v8a-release.apk"
+    "https://github.com/yingjiedev/audiora/releases/download/v0.2.4/Audiora-v0.2.4-arm64-v8a-release.apk"
   ]
 }
