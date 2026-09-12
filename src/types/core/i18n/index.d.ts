@@ -575,6 +575,25 @@ export interface ILanguageData {
     "panel.importMusicSheet.importing": string; // 正在导入中
     "panel.importMusicSheet.fallbackTitle": string; // 导入歌单兜底标题
     "panel.importMusicSheet.invalidLink": string; // 链接有误或目标歌单为空
+    "panel.mergeImportMusicSheet.entry": string; // 合并导入多个歌单入口
+    "panel.mergeImportMusicSheet.entryDescription": string; // 入口描述
+    "panel.mergeImportMusicSheet.title": string; // 合并导入歌单标题
+    "panel.mergeImportMusicSheet.merge": string; // 开始合并按钮
+    "panel.mergeImportMusicSheet.merging": string; // 合并中
+    "panel.mergeImportMusicSheet.priorityHint": string; // 优先级说明
+    "panel.mergeImportMusicSheet.selectPlugin": string; // 选择音源插件
+    "panel.mergeImportMusicSheet.linkPlaceholder": string; // 链接占位提示
+    "panel.mergeImportMusicSheet.addSource": string; // 添加音源
+    "panel.mergeImportMusicSheet.removeSource": string; // 删除音源
+    "panel.mergeImportMusicSheet.moveUp": string; // 上移音源
+    "panel.mergeImportMusicSheet.moveDown": string; // 下移音源
+    "panel.mergeImportMusicSheet.needTwoSources": string; // 至少两个音源提示
+    "panel.mergeImportMusicSheet.sourceFailed": string; // 单音源失败提示
+    "panel.mergeImportMusicSheet.mergeFailed": string; // 合并失败提示
+    "panel.mergeImportMusicSheet.previewTitle": string; // 合并预览标题
+    "panel.mergeImportMusicSheet.sourceStatLine": string; // 单音源统计行
+    "panel.mergeImportMusicSheet.totalLine": string; // 合并总数
+    "panel.mergeImportMusicSheet.defaultSheetName": string; // 新歌单默认名
 
     // 面板相关 - 音乐项歌词选项
     "panel.musicItemLyricOptions.author": string; // 作者
@@ -619,6 +638,7 @@ export interface ILanguageData {
     "panel.musicItemOptions.timingClose": string; // 定时关闭
     "panel.musicItemOptions.clearPluginCache": string; // 清除插件缓存
     "panel.musicItemOptions.cacheCleared": string; // 缓存已清除
+    "panel.musicItemOptions.refreshSourceFailed": string; // 缓存已清除，但当前歌曲音源刷新失败
     "panel.musicItemOptions.deleteFailed": string; // 删除失败
     "panel.musicItemOptions.redownload": string; // 重新下载
 

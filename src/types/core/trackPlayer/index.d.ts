@@ -180,6 +180,12 @@ export interface ITrackPlayer extends IInjectable, EventEmitter<{
     changeQuality(newQuality: IMusic.IQualityKey): Promise<boolean>;
 
     /**
+     * Fetches a fresh source for the current song while retaining playback
+     * position, quality, and whether playback is paused.
+     */
+    refreshCurrentMusicSource(musicItem: IMusic.IMusicItem): Promise<boolean>;
+
+    /**
      * 获取当前播放进度
      * @returns 包含播放位置和总时长的对象
      */

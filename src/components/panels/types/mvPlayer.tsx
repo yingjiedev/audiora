@@ -14,17 +14,25 @@ import Video, { type VideoRef } from "react-native-video";
 import * as NavigationBar from "expo-navigation-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import PanelFullscreen from "../base/panelFullscreen";
-import { hidePanel } from "../usePanel";
+import { hideMvPlayer } from "@/components/mvPlayer/useMvPlayer";
 import TrackPlayer from "@/core/trackPlayer";
 import pluginManager from "@/core/pluginManager";
 import Toast from "@/utils/toast";
 import { useI18N } from "@/core/i18n";
 import rpx from "@/utils/rpx";
 import Icon from "@/components/base/icon";
+import {
+    formatVideoQualityDetails,
+    getVideoQualityLabel,
+    mergeVideoQualityOptions,
+    videoSourceQualityOption,
+    type VideoQualityOption,
+} from "@/utils/videoQuality";
 
 interface IMvPlayerProps {
     musicItem: IMusic.IMusicItem;
     initialSource?: IPlugin.IVideoSourceResult;
+    onClosed?: () => void;
 }
 
 interface IVideoSource {
@@ -32,8 +40,6 @@ interface IVideoSource {
     headers?: Record<string, string>;
     backupUrls?: string[];
 }
-
-type VideoQualityOption = IPlugin.IVideoQualityOption;
 
 function getVideoHeaders(source: IPlugin.IVideoSourceResult) {
     const headers = { ...(source.headers ?? {}) };
@@ -44,103 +50,6 @@ function getVideoHeaders(source: IPlugin.IVideoSourceResult) {
         headers[userAgentKey ?? "User-Agent"] = source.userAgent;
     }
     return Object.keys(headers).length > 0 ? headers : undefined;
-}
-
-function normalizeQualityOption(
-    option: string | VideoQualityOption,
-): VideoQualityOption | null {
-    if (typeof option === "string") {
-        const key = option.trim();
-        return key ? { key, label: key } : null;
-    }
-    const key = option.key?.trim();
-    return key ? { ...option, key } : null;
-}
-
-function qualityHeight(option: VideoQualityOption) {
-    return (
-        option.height ??
-        Number.parseInt(
-            option.key.match(/(?:^|[^0-9])(\d{3,4})p?/i)?.[1] ?? "0",
-            10,
-        )
-    );
-}
-
-function mergeQualityOptions(
-    ...groups: Array<Array<string | VideoQualityOption> | undefined>
-) {
-    const merged = new Map<string, VideoQualityOption>();
-    groups.flatMap(group => group ?? []).forEach(raw => {
-        const option = normalizeQualityOption(raw);
-        if (!option) return;
-        const previous = merged.get(option.key);
-        merged.set(option.key, { ...previous, ...option });
-    });
-    return [...merged.values()].sort((left, right) => {
-        return (
-            qualityHeight(right) - qualityHeight(left) ||
-            (right.width ?? 0) - (left.width ?? 0) ||
-            (right.bitrate ?? 0) - (left.bitrate ?? 0) ||
-            right.key.localeCompare(left.key)
-        );
-    });
-}
-
-function sourceQualityOption(
-    source: IPlugin.IVideoSourceResult,
-    fallbackKey?: string,
-) {
-    const key = source.videoQuality || fallbackKey;
-    if (!key) return undefined;
-    return {
-        key,
-        label: source.videoQuality || fallbackKey,
-        width: source.width,
-        height: source.height,
-        bitrate: source.bitrate,
-        size: source.size,
-        codec: source.codec,
-        mimeType: source.mimeType,
-        dynamicRange: source.dynamicRange,
-    } satisfies VideoQualityOption;
-}
-
-function getQualityLabel(option: VideoQualityOption) {
-    return option.label || (option.height ? `${option.height}p` : option.key);
-}
-
-function formatQualityDetails(option: VideoQualityOption) {
-    const details: string[] = [];
-    if (option.width && option.height) {
-        details.push(`${option.width}x${option.height}`);
-    } else if (option.height) {
-        details.push(`${option.height}p`);
-    }
-    if (option.bitrate) {
-        details.push(formatBitrate(option.bitrate));
-    }
-    if (option.size !== undefined && option.size !== null && option.size !== "") {
-        details.push(formatFileSize(option.size));
-    }
-    if (option.codec) details.push(option.codec);
-    return details.join(" · ");
-}
-
-function formatBitrate(value: number) {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} Mbps`;
-    if (value >= 1_000) return `${Math.round(value / 1_000)} kbps`;
-    return `${value} bps`;
-}
-
-function formatFileSize(value: number | string) {
-    if (typeof value === "string") return value;
-    if (value >= 1024 * 1024 * 1024) {
-        return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-    }
-    if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-    if (value >= 1024) return `${Math.round(value / 1024)} KB`;
-    return `${value} B`;
 }
 
 function lockVideoOrientation(width?: number, height?: number) {
@@ -197,7 +106,11 @@ function restoreSystemBars() {
     }
 }
 
-export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
+export default function MvPlayer({
+    musicItem,
+    initialSource,
+    onClosed,
+}: IMvPlayerProps) {
     const { t } = useI18N();
     const [source, setSource] = useState<IVideoSource | null>(null);
     const [quality, setQuality] = useState("");
@@ -255,7 +168,7 @@ export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
             }
 
             const declaredQualities = plugin?.instance?.supportedVideoQualities;
-            const declaredOptions = mergeQualityOptions(declaredQualities);
+            const declaredOptions = mergeVideoQualityOptions(declaredQualities);
             const initialQuality =
                 musicItem.videoQuality ||
                 declaredOptions[0]?.key ||
@@ -271,11 +184,11 @@ export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
             }
 
             setQualityOptions(
-                mergeQualityOptions(
+                mergeVideoQualityOptions(
                     declaredQualities,
                     result.availableVideoQualities,
-                    sourceQualityOption(result, initialQuality) && [
-                        sourceQualityOption(result, initialQuality)!,
+                    videoSourceQualityOption(result, initialQuality) && [
+                        videoSourceQualityOption(result, initialQuality)!,
                     ],
                     musicItem.videoQuality ? [musicItem.videoQuality] : undefined,
                 ),
@@ -334,11 +247,11 @@ export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
                 throw new Error(t("panel.mvPlayer.sourceUnavailable"));
             }
             setQualityOptions(current =>
-                mergeQualityOptions(
+                mergeVideoQualityOptions(
                     current,
                     result.availableVideoQualities,
-                    sourceQualityOption(result, nextQuality) && [
-                        sourceQualityOption(result, nextQuality)!,
+                    videoSourceQualityOption(result, nextQuality) && [
+                        videoSourceQualityOption(result, nextQuality)!,
                     ],
                 ),
             );
@@ -377,72 +290,74 @@ export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
         <PanelFullscreen
             hasMask
             animationType="Scale"
-            containerStyle={styles.container}>
+            containerStyle={styles.container}
+            fullscreenTapHandler={showControls}
+            fullscreenTapDisabled={controlsVisible || error}
+            closeEventName="hideMvPlayer"
+            onClosed={onClosed}>
             <View style={styles.stage}>
-                {source ? (
-                    <Video
-                        ref={videoRef}
-                        key={`${source.uri}:${quality}:${sourceVersion}`}
-                        source={{ uri: source.uri, headers: source.headers }}
-                        style={styles.video}
-                        pointerEvents="none"
-                        paused={paused}
-                        useTextureView
-                        resizeMode="contain"
-                        onLoadStart={() => setLoading(true)}
-                        onLoad={data => {
-                            setDuration(data.duration || 0);
-                            lockVideoOrientation(
-                                data.naturalSize?.width,
-                                data.naturalSize?.height,
-                            );
-                            if (pendingSeekRef.current !== null) {
-                                videoRef.current?.seek(pendingSeekRef.current);
-                                pendingSeekRef.current = null;
-                            }
-                            setLoading(false);
-                        }}
-                        onProgress={data => setPosition(data.currentTime)}
-                        onBuffer={({ isBuffering }) => setLoading(isBuffering)}
-                        onEnd={() => {
-                            setPaused(true);
-                            showControls();
-                        }}
-                        onError={() => {
-                            if (source.backupUrls?.[backupIndex]) {
-                                setSource(current =>
-                                    current
-                                        ? {
-                                            ...current,
-                                            uri: source.backupUrls![
-                                                backupIndex
-                                            ],
-                                        }
-                                        : current,
+                <View pointerEvents="none" style={styles.videoLayer}>
+                    {source ? (
+                        <Video
+                            ref={videoRef}
+                            key={`${source.uri}:${quality}:${sourceVersion}`}
+                            source={{ uri: source.uri, headers: source.headers }}
+                            style={styles.video}
+                            pointerEvents="none"
+                            controls={false}
+                            focusable={false}
+                            paused={paused}
+                            useTextureView
+                            resizeMode="contain"
+                            onLoadStart={() => setLoading(true)}
+                            onLoad={data => {
+                                setDuration(data.duration || 0);
+                                lockVideoOrientation(
+                                    data.naturalSize?.width,
+                                    data.naturalSize?.height,
                                 );
-                                setSourceVersion(version => version + 1);
-                                setBackupIndex(index => index + 1);
-                                setLoading(true);
-                                return;
+                                if (pendingSeekRef.current !== null) {
+                                    videoRef.current?.seek(
+                                        pendingSeekRef.current,
+                                    );
+                                    pendingSeekRef.current = null;
+                                }
+                                setLoading(false);
+                            }}
+                            onProgress={data => setPosition(data.currentTime)}
+                            onBuffer={({ isBuffering }) =>
+                                setLoading(isBuffering)
                             }
-                            setLoading(false);
-                            setError(true);
-                        }}
-                    />
-                ) : null}
-
-                {!controlsVisible ? (
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={paused ? "播放视频" : "显示播放器控件"}
-                        onPress={showControls}
-                        // Mount the full-screen wake surface only while the
-                        // controls are hidden. This keeps it out of Android's
-                        // hit-test tree while sliders and buttons are shown.
-                        style={styles.tapSurface}
-                    />
-                ) : null}
-                <View pointerEvents="box-none" style={styles.overlay}>
+                            onEnd={() => {
+                                setPaused(true);
+                                showControls();
+                            }}
+                            onError={() => {
+                                if (source.backupUrls?.[backupIndex]) {
+                                    setSource(current =>
+                                        current
+                                            ? {
+                                                ...current,
+                                                uri: source.backupUrls![
+                                                    backupIndex
+                                                ],
+                                            }
+                                            : current,
+                                    );
+                                    setSourceVersion(version => version + 1);
+                                    setBackupIndex(index => index + 1);
+                                    setLoading(true);
+                                    return;
+                                }
+                                setLoading(false);
+                                setError(true);
+                            }}
+                        />
+                    ) : null}
+                </View>
+                <View
+                    pointerEvents={controlsVisible ? "box-none" : "none"}
+                    style={styles.overlay}>
                     {controlsVisible ? (
                         <>
                             <View style={styles.header}>
@@ -457,7 +372,7 @@ export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
                                 <Pressable
                                     accessibilityRole="button"
                                     accessibilityLabel={t("panel.mvPlayer.close")}
-                                    onPress={hidePanel}
+                                    onPress={hideMvPlayer}
                                     style={styles.closeButton}>
                                     <Text style={styles.closeText}>×</Text>
                                 </Pressable>
@@ -523,7 +438,7 @@ export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
                                                 }}
                                                 style={styles.qualityButton}>
                                                 <Text style={styles.qualityText}>
-                                                    {getQualityLabel(
+                                                    {getVideoQualityLabel(
                                                         qualityOptions.find(
                                                             item => item.key === quality,
                                                         ) ?? { key: quality, label: quality },
@@ -546,11 +461,11 @@ export default function MvPlayer({ musicItem, initialSource }: IMvPlayerProps) {
                                                                     styles.qualityItemActive,
                                                             ]}>
                                                             <Text style={styles.qualityItemText}>
-                                                                {getQualityLabel(option)}
+                                                                {getVideoQualityLabel(option)}
                                                             </Text>
-                                                            {formatQualityDetails(option) ? (
+                                                            {formatVideoQualityDetails(option) ? (
                                                                 <Text style={styles.qualityDetailsText}>
-                                                                    {formatQualityDetails(option)}
+                                                                    {formatVideoQualityDetails(option)}
                                                                 </Text>
                                                             ) : null}
                                                         </Pressable>
@@ -613,14 +528,14 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
     },
-    tapSurface: {
+    videoLayer: {
         ...StyleSheet.absoluteFillObject,
-        zIndex: 1,
+        zIndex: 0,
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: "space-between",
-        zIndex: 2,
+        zIndex: 1,
     },
     header: {
         flexDirection: "row",

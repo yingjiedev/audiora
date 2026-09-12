@@ -4,6 +4,7 @@ import {
     DeviceEventEmitter,
     Modal,
     NativeEventSubscription,
+    Pressable,
     StyleSheet,
     TouchableWithoutFeedback,
     View,
@@ -36,6 +37,10 @@ interface IPanelFullScreenProps {
     children?: React.ReactNode;
     containerStyle?: ViewStyle;
     animationType?: "SlideToTop" | "Scale";
+    fullscreenTapHandler?: () => void;
+    fullscreenTapDisabled?: boolean;
+    closeEventName?: string;
+    onClosed?: () => void;
 }
 
 /**
@@ -49,6 +54,10 @@ export default function (props: IPanelFullScreenProps) {
         containerStyle,
         children,
         animationType = "SlideToTop",
+        fullscreenTapHandler,
+        fullscreenTapDisabled,
+        closeEventName = "hidePanel",
+        onClosed,
     } = props;
     const snapPoint = useSharedValue(0);
 
@@ -73,11 +82,15 @@ export default function (props: IPanelFullScreenProps) {
             callbacks.forEach(cb => cb?.());
             return;
         }
+        if (onClosed) {
+            onClosed();
+            return;
+        }
         panelInfoStore.setValue({
             name: null,
             payload: null,
         });
-    }, []);
+    }, [onClosed]);
 
     const closePanel = useCallback(() => {
         if (closingRef.current) {
@@ -110,7 +123,7 @@ export default function (props: IPanelFullScreenProps) {
         );
 
         const listenerSubscription = DeviceEventEmitter.addListener(
-            "hidePanel",
+            closeEventName,
             (callback?: () => void) => {
                 if (callback) {
                     hideCallbackRef.current.push(callback);
@@ -199,6 +212,17 @@ export default function (props: IPanelFullScreenProps) {
                     {!hasMask ? <PageBackground /> : null}
                     {children}
                 </Animated.View>
+                {fullscreenTapHandler ? (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="显示播放器控件"
+                        onPress={fullscreenTapHandler}
+                        pointerEvents={
+                            fullscreenTapDisabled ? "none" : "auto"
+                        }
+                        style={style.fullscreenTapLayer}
+                    />
+                ) : null}
             </View>
         </Modal>
     );
@@ -236,5 +260,17 @@ const style = StyleSheet.create({
         zIndex: 1,
         elevation: 16,
         flexDirection: "column",
+    },
+    fullscreenTapLayer: {
+        position: "absolute",
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 2,
+        elevation: 32,
+        backgroundColor: "transparent",
     },
 });

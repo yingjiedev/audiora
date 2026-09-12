@@ -40,6 +40,7 @@ import pluginManager from "@/core/pluginManager";
 import { musicItemHasQualitySizes } from "@/utils/qualities";
 import { canPlayMusicVideo } from "@/utils/musicVideo";
 import * as ScreenOrientation from "expo-screen-orientation";
+import { showMvPlayer } from "@/components/mvPlayer/useMvPlayer";
 
 interface IMusicItemOptionsProps {
     /** 歌曲信息 */
@@ -172,7 +173,7 @@ export default function MusicItemOptions(props: IMusicItemOptionsProps) {
                             () => undefined,
                         );
                     }
-                    showPanel("MvPlayer", { musicItem, initialSource });
+                    showMvPlayer({ musicItem, initialSource });
                 } catch (reason) {
                     hidePanel();
                     Toast.warn(
@@ -496,9 +497,18 @@ export default function MusicItemOptions(props: IMusicItemOptionsProps) {
         {
             icon: "archive-box-x-mark",
             title: t("panel.musicItemOptions.clearPluginCache"),
-            onPress: () => {
+            onPress: async () => {
                 mediaCache.removeMediaCache(musicItem);
-                Toast.success(t("panel.musicItemOptions.cacheCleared"));
+                const refreshed =
+                    await TrackPlayer.refreshCurrentMusicSource(musicItem);
+                if (refreshed) {
+                    Toast.success(t("panel.musicItemOptions.cacheCleared"));
+                    hidePanel();
+                } else {
+                    Toast.warn(
+                        t("panel.musicItemOptions.refreshSourceFailed"),
+                    );
+                }
             },
         },
     ];
