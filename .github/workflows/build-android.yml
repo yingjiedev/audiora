@@ -156,7 +156,9 @@ jobs:
                     --quiet \
                     || echo "⚠️  Pre-build completed with warnings"
 
-            # 🔐 设置签名证书：配了 secret 就用 secret，没配就当场生成自签证书
+            # 🔐 设置签名证书：配了 secret 就用 secret。
+            # tag 发版构建缺少 secret 直接失败，禁止降级为临时自签证书（issue #3）；
+            # 手动触发的验证构建允许当场生成自签证书兜底。
             - name: Setup keystore
               env:
                   KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
@@ -171,14 +173,24 @@ jobs:
                   KEYSTORE_PATH="$TEMP_DIR/release.keystore"
                   KEYSTORE_PROPS="$TEMP_DIR/keystore.properties"
 
+                  # 是否为 tag 发版构建
+                  IS_RELEASE_TAG=false
+                  if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+                    IS_RELEASE_TAG=true
+                  fi
+
                   if [[ -n "$KEYSTORE_FILE" && -n "$KEYSTORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
                     echo "🔐 使用仓库 secret 中的签名证书"
                     printf '%s' "$KEYSTORE_FILE" | base64 -d > "$KEYSTORE_PATH"
                     STORE_PASSWORD="$KEYSTORE_PASSWORD"
                     ALIAS="$KEY_ALIAS"
                     ALIAS_PASSWORD="$KEY_PASSWORD"
+                  elif [[ "$IS_RELEASE_TAG" == "true" ]]; then
+                    echo "❌ 正式发版构建（tag $GITHUB_REF_NAME）缺少签名 secrets：KEYSTORE_FILE / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD"
+                    echo "❌ 禁止降级为临时自签证书——每次构建签名都不同，发布后用户将无法覆盖更新。"
+                    exit 1
                   else
-                    echo "⚠️  未配置签名 secret，改用当场生成的自签证书"
+                    echo "⚠️  未配置签名 secret，改用当场生成的自签证书（仅限验证构建）"
                     echo "⚠️  自签证书与官方包签名不同，安装前必须先卸载旧版本"
                     STORE_PASSWORD="musicfree"
                     ALIAS="musicfree"
@@ -294,6 +306,53 @@ jobs:
                   ANDROID_COMPILE_SDK: '34'
                   ANDROID_BUILD_TOOLS: '34.0.0'
                   ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+
+            # 🔍 产物签名校验：任何 Release APK 都不得使用仓库内 debug.keystore 签名（issue #3）
+            - name: Verify APK signing
+              run: |
+                  set -e
+                  APK_DIR="android/app/build/outputs/apk/release"
+
+                  # debug.keystore 在仓库内，其证书指纹是固定值
+                  DEBUG_FINGERPRINT=$(keytool -list -v \
+                    -keystore android/app/debug.keystore \
+                    -storepass android -alias androiddebugkey 2>/dev/null \
+                    | grep "SHA256:" | head -n 1 | sed 's/.*SHA256:[[:space:]]*//' | tr -d ': ' | tr 'A-F' 'a-f')
+
+                  if [[ -z "$DEBUG_FINGERPRINT" ]]; then
+                    echo "❌ 无法读取 android/app/debug.keystore 的证书指纹，校验无法进行"
+                    exit 1
+                  fi
+                  echo "🔑 debug.keystore 指纹: $DEBUG_FINGERPRINT"
+
+                  APKSIGNER=$(ls "$ANDROID_SDK_ROOT"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
+                  if [[ -z "$APKSIGNER" ]]; then
+                    echo "❌ 未找到 apksigner"
+                    exit 1
+                  fi
+
+                  FAILED=0
+                  shopt -s nullglob
+                  for apk in "$APK_DIR"/*.apk; do
+                    CERT_FINGERPRINT=$("$APKSIGNER" verify --print-certs "$apk" \
+                      | grep "Signer #1 certificate SHA-256 digest" \
+                      | sed 's/.*digest:[[:space:]]*//' | tr -d ': ' | tr 'A-F' 'a-f')
+                    echo "🧾 $(basename "$apk")"
+                    echo "   signer SHA-256: $CERT_FINGERPRINT"
+                    if [[ -z "$CERT_FINGERPRINT" ]]; then
+                      echo "❌ 无法读取签名证书指纹"
+                      FAILED=1
+                    elif [[ "$CERT_FINGERPRINT" == "$DEBUG_FINGERPRINT" ]]; then
+                      echo "❌ 该 APK 使用了仓库内 debug.keystore 签名，禁止发布"
+                      FAILED=1
+                    fi
+                  done
+                  shopt -u nullglob
+
+                  if [[ "$FAILED" -ne 0 ]]; then
+                    exit 1
+                  fi
+                  echo "✅ 签名校验通过：无 APK 使用 debug.keystore 签名"
 
             # 📤 上传构建产物
             - name: Upload All APKs as artifacts
