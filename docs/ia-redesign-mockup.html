@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="YIakHjsNlTIfWgAON5JXrI">
+<head data-page-node-id="l2YPVTa7RbHNhkpEjWJq0A">
+<meta charset="utf-8" data-page-node-id="vY7zCuGSbUZqnH2PWL1JgT">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="8WvqS18NlG6mfjahbQq8H8">
+<title>Audiora 信息架构重构方案</title>
+<style>
+:root{
+  --primary:#4D70F5; --primary-soft:#EEF2FF;
+  --page:#F4F6FB; --card:#FFFFFF;
+  --text:#141B2E; --text2:#6B7793; --text3:#9AA4BC;
+  --line:rgba(20,27,46,.07); --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--page); color:var(--text);
+  padding:40px 32px 60px; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:24px;font-weight:600;letter-spacing:-.01em}
+.sub{font-size:13px;color:var(--text2);margin-top:8px;line-height:1.7}
+.hr{height:1px;background:var(--line);margin:32px 0}
+
+h2{font-size:15px;font-weight:600;margin-bottom:6px}
+.h2sub{font-size:12.5px;color:var(--text2);margin-bottom:18px;line-height:1.6}
+
+.screens{display:flex;gap:22px;flex-wrap:wrap}
+.phone{
+  width:270px;flex:0 0 270px;background:var(--card);
+  border:.5px solid var(--line);border-radius:26px;
+  overflow:hidden;box-shadow:0 1px 3px rgba(20,27,46,.05);
+}
+.status{display:flex;justify-content:space-between;padding:10px 18px 4px;font-size:10px;color:var(--text3);font-weight:500}
+.appbar{padding:8px 18px 12px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.appbar-row{display:flex;align-items:center;justify-content:space-between}
+.dot-actions{display:flex;gap:14px}
+.ico{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--text3);opacity:.75}
+
+.searchbar{
+  margin:0 14px 14px;height:36px;border-radius:18px;background:var(--primary-soft);
+  display:flex;align-items:center;padding:0 13px;gap:8px;
+  font-size:12px;color:var(--text3);
+}
+.hero{
+  margin:0 14px 14px;height:104px;border-radius:16px;
+  background:linear-gradient(120deg,#5B72FF,#8B6CF0 55%,#B96CE0);
+  padding:16px 18px;display:flex;flex-direction:column;justify-content:center;position:relative;
+}
+.hero-t{color:#fff;font-size:17px;font-weight:600;line-height:1.35}
+.hero-s{color:rgba(255,255,255,.82);font-size:10.5px;margin-top:7px;letter-spacing:.03em}
+.hero-play{
+  position:absolute;right:15px;bottom:15px;width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;
+}
+.hero-play::after{content:"";border-left:9px solid #5B72FF;border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:3px}
+
+.sec{margin:16px 14px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.sec-t{font-size:14px;font-weight:600}
+.sec-more{font-size:11px;color:var(--primary);font-weight:500}
+
+.rowlist{background:var(--card);border:.5px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.row{display:flex;align-items:center;padding:11px 13px;gap:11px;border-bottom:.5px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 32px}
+.row-body{flex:1;min-width:0}
+.row-t{font-size:12.5px;font-weight:500}
+.row-s{font-size:10.5px;color:var(--text2);margin-top:3px}
+.chev{width:6px;height:6px;border-top:1.5px solid var(--text3);border-right:1.5px solid var(--text3);transform:rotate(45deg);flex:0 0 6px}
+.badge-star{font-size:9px;font-weight:600;color:var(--primary);background:var(--primary-soft);padding:2px 6px;border-radius:6px}
+
+.cards{display:flex;gap:10px}
+.mini{flex:1;background:var(--card);border:.5px solid var(--line);border-radius:12px;padding:9px}
+.cover{height:74px;border-radius:8px;background:linear-gradient(135deg,#2B3350,#5C6790);margin-bottom:8px;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,rgba(255,255,255,.18),transparent 60%)}
+.tag{display:inline-block;font-size:9px;color:var(--primary);background:var(--primary-soft);padding:2px 6px;border-radius:5px;margin-bottom:6px}
+.mini-t{font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-s{font-size:9.5px;color:var(--text2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.continue{
+  background:var(--card);border:.5px solid var(--line);border-radius:var(--radius);
+  padding:12px;display:flex;align-items:center;gap:12px;
+}
+.c-cover{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#3A4266,#6C7BA8);flex:0 0 48px}
+.c-body{flex:1;min-width:0}
+.c-t{font-size:12.5px;font-weight:500}
+.c-s{font-size:10.5px;color:var(--text2);margin-top:3px}
+.c-bar{height:3px;border-radius:2px;background:rgba(20,27,46,.1);margin-top:8px;overflow:hidden}
+.c-fill{height:100%;width:38%;background:var(--primary);border-radius:2px}
+.c-btn{width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;flex:0 0 30px}
+.c-btn::after{content:"";border-left:8px solid #fff;border-top:5.5px solid transparent;border-bottom:5.5px solid transparent;margin-left:2px}
+
+.tabbar{
+  display:flex;border-top:.5px solid var(--line);background:var(--card);margin-top:auto;
+}
+.tab{flex:1;padding:9px 0 12px;text-align:center;font-size:10px;color:var(--text3)}
+.tab.on{color:var(--primary);font-weight:600}
+.tab-i{width:19px;height:19px;border-radius:5px;border:1.5px solid currentColor;margin:0 auto 4px;opacity:.85}
+
+.legend{display:flex;gap:26px;flex-wrap:wrap;margin-top:30px}
+.lg{display:flex;gap:9px;align-items:flex-start;max-width:300px}
+.lg-mark{width:16px;height:16px;border-radius:5px;flex:0 0 16px;margin-top:2px}
+.lg-t{font-size:12.5px;font-weight:500}
+.lg-s{font-size:11.5px;color:var(--text2);line-height:1.6;margin-top:3px}
+</style>
+</head>
+<body data-page-node-id="jqsxrljtINoiWWC27xMlxs">
+<div class="wrap" data-page-node-id="YnfOztvulr03VIAocc9h8I">
+
+  <h1 data-page-node-id="44ityixk6bBxX3y1RVY7Md">Audiora 信息架构重构</h1>
+  <div class="sub" data-page-node-id="d3SWIWjZfPyhAhTrrDLIwG">
+    上方为当前三 Tab 结构，下方为重构后的三 Tab 结构；设置保留在「我的」右上角，不单独开 Tab。<br data-page-node-id="NP3GgQDZqFoWGWykI6jnsd">
+    目标：按用户意图划分、每个功能只保留一个权威入口、暴露已实现但无入口的能力。
+  </div>
+
+  <div class="hr" data-page-node-id="evMfhxyHNN3G5yqMA4RWal"></div>
+
+  <h2 data-page-node-id="HNCBv4MXLmYmv3MRv9IWxW">重构前 · 首页（当前）</h2>
+  <div class="h2sub" data-page-node-id="N0a2JAuzFpCNsrkhzvXGq6">4 个「我的资产」快捷卡片占据首屏约 164rpx；「发现」榜单与音乐库榜单重复；「继续播放」被挤到屏幕下方需滚动才能看到。</div>
+
+  <div class="screens" data-page-node-id="DUphbRtN576goZzMogXeKh">
+    <div class="phone" data-page-node-id="93CKyhxCmuqGhgPElu9XzX">
+      <div class="status" data-page-node-id="qaDuuJo3JwlRNWN5WpDMCT"><span data-page-node-id="WiPARkdiuGy1z1izhx8nnM">23:06</span><span data-page-node-id="eRWFGW9JVHiXG6m2Eml0pC">5G &nbsp; 45</span></div>
+      <div class="appbar" data-page-node-id="Z0q8ggLkwc1DOa1vARZNtl"><div class="appbar-row" data-page-node-id="sVsaEGKDN2M0ncVr2xFWZ2"><span data-page-node-id="E6iLbV7Fz7QBTFn0wd6cWL">推荐</span><div class="dot-actions" data-page-node-id="Rj7c5YOOsOjCcuryuOvpKN"><span class="ico" data-page-node-id="13AAxsLKdDRIqcT6WqOewD"></span><span class="ico" data-page-node-id="xdmqgPXmuM7cWiP1F39YAy"></span></div></div></div>
+      <div class="searchbar" data-page-node-id="lU15C4Fp5MIPLjdNErHHww"><span class="ico" style="width:13px;height:13px" data-page-node-id="X1bO5Gc5rjsDGJ2KpOFwIK"></span>点击这里开始搜索</div>
+      <div class="hero" data-page-node-id="xhqtuFkwMSV6bOzl1TypnQ">
+        <div class="hero-t" data-page-node-id="vw6TLmvW4SkQFkEgcPNv1l">让音乐<br data-page-node-id="dSk4X5VUgZoxNECsZ6NsyH">去更远的地方</div>
+        <div class="hero-s" data-page-node-id="Lab1aIV62SAr363Jc2BlKD">本地 · 平台 · 无限发现</div>
+        <div class="hero-play" data-page-node-id="cU6v5hC8TEKqTCY2iTUdSr"></div>
+      </div>
+
+      <div class="sec" data-page-node-id="N2cC0zC2ME7eceEHqI4k51">
+        <div class="cards" data-page-node-id="BaXvWgxYGnkZqYUpDyXkid">
+          <div class="mini" data-page-node-id="NFWlqqnLKoe2K9nb4xHoax"><div class="cover" style="height:40px" data-page-node-id="sQA2qp73D56cDtqmfrNG1A"></div><div class="mini-t" data-page-node-id="25fTD8AD4R5o4AH2noz9UN">推荐歌单</div><div class="mini-s" data-page-node-id="jpZEtCoaHkPAetNWjGFq0B">发现</div></div>
+          <div class="mini" data-page-node-id="0rHxV6gD5lS4HV7xTEwAnI"><div class="cover" style="height:40px;background:linear-gradient(135deg,#2E3A6B,#6674C4)" data-page-node-id="Wt41cpyUKVJCWlQTED9Yo2"></div><div class="mini-t" data-page-node-id="2auXMKpSlKLri6txASG1uG">播放历史</div><div class="mini-s" data-page-node-id="rZVxGiUWTnDHP868ZecFsj">11 首</div></div>
+          <div class="mini" data-page-node-id="mNyBPcHYhSRHLExTdZlGBU"><div class="cover" style="height:40px;background:linear-gradient(135deg,#7A2E4E,#C45C7E)" data-page-node-id="PH6iEwje1WDDIRpoT6fuhF"></div><div class="mini-t" data-page-node-id="qzvqS0UChDcAj4fr6kChCY">我喜欢</div><div class="mini-s" data-page-node-id="RxawdueKgJqQsLDAIXzaEn">13 首</div></div>
+          <div class="mini" data-page-node-id="59CCEKGdHzPN1ocYQ3cng2"><div class="cover" style="height:40px;background:linear-gradient(135deg,#1E5C7A,#4CA0C4)" data-page-node-id="4A8ONOXwsQWhQhOhIhcDTk"></div><div class="mini-t" data-page-node-id="ASejYdv9MSUyTBPVmaf52a">导入歌单</div><div class="mini-s" data-page-node-id="1RjZaaF8xPMOEMr1BZgyF0">扫描本地</div></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="FrhzX5HbtyPUU85OZbF66N">
+        <div class="sec-head" data-page-node-id="NQ01k8F9kKklSDOjF74cI2"><span class="sec-t" data-page-node-id="Oo213pYi9fti2b3X6HWFtW">发现</span><span class="sec-more" data-page-node-id="cbBkiHAcav2ih5UsTsVEaT">查看 →</span></div>
+        <div class="cards" data-page-node-id="E5oxbINMaMeiDExFAS5COo">
+          <div class="mini" data-page-node-id="mSD3eBrj31cGUHiQIAQViO"><div class="cover" data-page-node-id="nrhhopdFYEQfvbDJraHMzC"></div><span class="tag" data-page-node-id="fEAUIwo6ZBNG9lQj2SURvx">榜单</span><div class="mini-t" data-page-node-id="lILDnbTF8nZcUVezPXvwp4">飙升榜</div><div class="mini-s" data-page-node-id="MaTAr7yCgaBhsCnAAp3lFC">1.榜单定义：QQ音…</div></div>
+          <div class="mini" data-page-node-id="tRTaRt9CzgRdbjjHXJVUx2"><div class="cover" data-page-node-id="zaYTUaVyQOLJP1xsKzgPA4"></div><span class="tag" data-page-node-id="NuHEkgRCiEfPlzYV9FDnH5">榜单</span><div class="mini-t" data-page-node-id="ihrwQZz57MFGvaSTG3PDYa">热歌榜</div><div class="mini-s" data-page-node-id="YdP5MaBEeDyR1BwBRzEW6E">1.榜单定义：QQ音…</div></div>
+          <div class="mini" data-page-node-id="PUSxhh9TdphV9WjZPTPPKk"><div class="cover" data-page-node-id="FmMCxxyhOBiUSp3f7LEByR"></div><span class="tag" data-page-node-id="bpHRBsgQbLpJdglbINl8Fh">榜单</span><div class="mini-t" data-page-node-id="3qECRSw87vv7Jg0oplDRJF">新歌榜</div><div class="mini-s" data-page-node-id="6l3yqgGhgGrUwTBmrqEOYG">1.榜单定义：QQ音…</div></div>
+        </div>
+      </div>
+
+      <div class="sec" style="margin-bottom:20px" data-page-node-id="hkCyd7Sayqkm0NpHwbvdjm">
+        <div class="sec-head" style="margin-bottom:8px" data-page-node-id="gIpVDqvvzF2lIrm39A7Ai0"><span class="sec-t" style="font-size:12.5px" data-page-node-id="scQXdD71PHYVrwBUIxmkio">最近播放</span></div>
+        <div class="rowlist" data-page-node-id="eJMtb2pkxIKwWeLmbpaON1">
+          <div class="row" data-page-node-id="rjv9qxLJHWEWZErXtw1fVH"><div class="row-ico" style="background:#EAF0FF" data-page-node-id="OQ9nWyklCPLBDhg5DUhilg"></div><div class="row-body" data-page-node-id="tHXRLjHVtsi8xTEsoL7fzF"><div class="row-t" data-page-node-id="e400nvVJgaRQae1It3P2l0">寻屿</div><div class="row-s" data-page-node-id="fPEnylknEImWGRClqOjKUR">阿YueYue · 元力…</div></div></div>
+          <div class="row" data-page-node-id="LSK78lb1HjAKCcLVXhUFxz"><div class="row-ico" style="background:#F0EAFF" data-page-node-id="aFlp4IALMCei47sgXAxUDL"></div><div class="row-body" data-page-node-id="SiTibAz02w1t1Iwi0s0hJm"><div class="row-t" data-page-node-id="6b7ZbO5cMBuEAQ9n4Tqlfg">疑心病</div><div class="row-s" data-page-node-id="FRkrKX0pZv0ve1xx7GhBDf">任然 · 元力QQ</div></div></div>
+        </div>
+      </div>
+
+      <div class="tabbar" data-page-node-id="C7PlynCFnLC1UmaJym20Dg">
+        <div class="tab on" data-page-node-id="gcB8g3JxbtVU2Fp4rWSJjZ"><div class="tab-i" data-page-node-id="9zX1QdfCbyACXaC5m3b8aD"></div>首页</div>
+        <div class="tab" data-page-node-id="wcrxVuPCm0v0i7a42vMFtJ"><div class="tab-i" data-page-node-id="UrjBBCXvAOYybzXW0SGpkt"></div>音乐库</div>
+        <div class="tab" data-page-node-id="LiHSVZnnVVtNzyq4ReYFUu"><div class="tab-i" data-page-node-id="XnBcVD4dQozlKpZ5mnyH7J"></div>我的</div>
+      </div>
+    </div>
+
+    <div class="phone" data-page-node-id="gnoT4UIeUngEgx37nihG3r">
+      <div class="status" data-page-node-id="LAH4pzFLUhStiI0sduwqDG"><span data-page-node-id="V2kmkZjfd1Ncok3umiMkMP">23:06</span><span data-page-node-id="ppgBTdzFuodhjpEtuRgzMF">5G &nbsp; 45</span></div>
+      <div class="appbar" data-page-node-id="YHUv5Uud60Ra0VofeomSyf"><div class="appbar-row" data-page-node-id="T9kkuwMkbfgGt1zqTgYIjT"><span data-page-node-id="aVNPhgMZKuhWFQLFIrdMKH">音乐库</span><div class="dot-actions" data-page-node-id="TIFLmHMXq5amL5Gld43CPv"><span class="ico" style="border-radius:3px" data-page-node-id="YuBDADD4KZLu7vS0kekchh"></span></div></div></div>
+      <div style="display:flex;gap:20px;padding:2px 18px 14px;font-size:12.5px;border-bottom:.5px solid var(--line)" data-page-node-id="byIRLxnbYDOciwn3p0D8yC">
+        <span style="color:var(--primary);font-weight:600;border-bottom:2px solid var(--primary);padding-bottom:5px" data-page-node-id="FKKiJ4WjofBpOeAbbTWsSF">榜单</span>
+        <span style="color:var(--text2)" data-page-node-id="aOG7oZeuhu2ictCP5SV21L">本地音乐</span>
+        <span style="color:var(--text2)" data-page-node-id="jKkmenuIWfSLt0PyajyK9H">在线音乐</span>
+      </div>
+      <div class="sec" data-page-node-id="hqnB8xX47j3gLr5GroVNUC">
+        <div class="rowlist" data-page-node-id="iWAhHHzsrck2EXh36GHedk">
+          <div class="row" data-page-node-id="eMz4paKmGFq84zamQkCmaH"><div class="row-ico" style="background:#FFF4E0" data-page-node-id="MBbQPJn0satti33Dm2PTYH"></div><div class="row-body" data-page-node-id="ZRJS4WM8NPr8i3AuFCwhUh"><div class="row-t" data-page-node-id="pcylQWcPjwEZBYNHDwweR9">热门榜单</div><div class="row-s" data-page-node-id="KrFRUjCkQ2p8voPxxLfLPJ">已接入 1 个可用榜单音乐源</div></div><span style="font-size:11px;color:var(--primary)" data-page-node-id="cYBALy6kbsfYcwuuWjAumY">管理</span></div>
+        </div>
+      </div>
+      <div class="sec" data-page-node-id="ZalcE6LjCVEtj8xzXZ36eJ">
+        <div class="sec-head" data-page-node-id="ZhXD8eLotlwurGGCm3Xyti"><span class="sec-t" data-page-node-id="iHhcMYXOFLOK8GmjDr5C7H">巅峰榜</span><span style="font-size:10.5px;color:var(--text2);background:var(--page);padding:2px 8px;border-radius:8px" data-page-node-id="JH6csREY4bKBkY4du8oV2S">6</span></div>
+        <div class="cards" data-page-node-id="MtxHvbWEnPrzEedbeAsCvv">
+          <div class="mini" data-page-node-id="Bpk1lqnmpcRevjvP4nZPmF"><div class="cover" data-page-node-id="tpKEf7zZfL3bUa6mbmEfAG"></div><div class="mini-t" data-page-node-id="LI3QjpEEL0Y6vDwx0XOVAz">飙升榜</div></div>
+          <div class="mini" data-page-node-id="MHj7Qtjl62sFijf8oDGteN"><div class="cover" data-page-node-id="DuieAXKySrqaRDcJljEcEK"></div><div class="mini-t" data-page-node-id="W3LVaQXGP4XKVuqd7zRT6F">热歌榜</div></div>
+          <div class="mini" data-page-node-id="qnkry3jd76hAogtCEh21GN"><div class="cover" data-page-node-id="aEiHaQUMOLkAE9cq6X9eUP"></div><div class="mini-t" data-page-node-id="bkc1oVfra7pMGRtNrhNOIK">新歌榜</div></div>
+        </div>
+      </div>
+      <div class="sec" data-page-node-id="rLnLNlZ4s3yROuBtEfUQQn">
+        <div class="sec-head" data-page-node-id="Ow0V7uFPrJARvZYHLRoXz1"><span class="sec-t" data-page-node-id="LfrWGEnNp3i7fRWR6K03a0">地区榜</span><span style="font-size:10.5px;color:var(--text2);background:var(--page);padding:2px 8px;border-radius:8px" data-page-node-id="qnVZsDSkjJHCLbNetFPsRX">9</span></div>
+        <div class="cards" data-page-node-id="wVjU49tUktkaqBoctITVzB">
+          <div class="mini" data-page-node-id="ZOfmogiIrsdjpbEJS2T15V"><div class="cover" style="background:linear-gradient(135deg,#3A4A7A,#7B8CC4)" data-page-node-id="7n26crXaFFX6iNBh9ZoSgj"></div><div class="mini-t" data-page-node-id="zWGCFXQsZs5po7rlu0cG3d">内地榜</div></div>
+          <div class="mini" data-page-node-id="GeUBLgGDEhL5Pp0KC0Gwk7"><div class="cover" style="background:linear-gradient(135deg,#4A4A5A,#8A8AA0)" data-page-node-id="z2XLCEhsc0CXJ77MhRYPA7"></div><div class="mini-t" data-page-node-id="GjaoTi61PDpGRw2gfQuE7q">香港地区榜</div></div>
+          <div class="mini" data-page-node-id="J0tmRCjb9AYq30ynI69VvQ"><div class="cover" style="background:linear-gradient(135deg,#4A4256,#928AA8)" data-page-node-id="pkTAqxRoh7TZgi7vurNqGb"></div><div class="mini-t" data-page-node-id="3kGHYLOsktgTYEJEDWCT7h">台湾地区榜</div></div>
+        </div>
+      </div>
+      <div class="tabbar" style="margin-top:auto" data-page-node-id="OMiW9mowz9cv7PZdh5mf7r">
+        <div class="tab" data-page-node-id="WAPX3xsXopvG8jIcth5nvq"><div class="tab-i" data-page-node-id="dtNAIHc3ZexcZpk4AkDB7y"></div>首页</div>
+        <div class="tab on" data-page-node-id="8u24bRIfAcAlJLw6E5yOtZ"><div class="tab-i" data-page-node-id="whI50ASbOvH0Bbb7ndCwnk"></div>音乐库</div>
+        <div class="tab" data-page-node-id="4VeDq1A8RIX4siAYokqA81"><div class="tab-i" data-page-node-id="YDDWnZMLklGEdCZfdK5fWg"></div>我的</div>
+      </div>
+    </div>
+
+    <div class="phone" data-page-node-id="RarWEjFBDt1EQ9Aj3aGcmw">
+      <div class="status" data-page-node-id="VwBZatmJR5xYSh7F5VySAP"><span data-page-node-id="9inKGpNpWyxam7koCugH8z">23:06</span><span data-page-node-id="KNrXaBBJhZMvtMD2BMz0tO">5G &nbsp; 45</span></div>
+      <div class="appbar" data-page-node-id="reEtwlQVfHLNJ1YSHGoLea"><div class="appbar-row" data-page-node-id="Zs7VxICbulTzpLkEy3uap7"><span data-page-node-id="nIUiOP2MJicPyFkLTWPAtD">我的</span><div class="dot-actions" data-page-node-id="3rb7tRASaMTC06SqmcwgRs"><span class="ico" style="border-radius:3px" data-page-node-id="jUNUGwlEmRLLAKcQkz8Iri"></span><span class="ico" data-page-node-id="eISJ7OwK8ME6RABvSGlW0C"></span></div></div></div>
+      <div class="sec" style="margin-top:0" data-page-node-id="tHGpW9opyIvcQewJDqyizp">
+        <div class="rowlist" data-page-node-id="DZjPs3VFUBvUNmEbNzuEfg">
+          <div class="row" data-page-node-id="cFsxUC8XCRw7VfB39JxZRa"><div class="row-ico" style="background:#EEF2FF" data-page-node-id="I9aWlgILBSunPT7sM2AK0g"></div><div class="row-body" data-page-node-id="mpdioTt5frIR3GcAaH5S8d"><div class="row-t" data-page-node-id="Py31Wha0Q0FeCfaDGFjLbe">Audiora</div><div class="row-s" data-page-node-id="uyFVH9snfW0ilHq8ivtvkT">把喜欢的音乐留在这里</div></div><span class="chev" data-page-node-id="3YzaC9h1qT35HKoNehA02P"></span></div>
+        </div>
+      </div>
+      <div class="sec" data-page-node-id="bnVBPKygGPCSB9uxuBOiKf">
+        <div class="cards" style="flex-wrap:wrap;gap:10px" data-page-node-id="a7bZrSaZKpDuohMbrECCYC">
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#FFF1F4" data-page-node-id="dfZHH0t0cqbPTZCeesvLOV"><div class="mini-t" data-page-node-id="G6mClCyR9wezwK9JnH3pnZ">我喜欢</div><div class="mini-s" data-page-node-id="JO9Ahak4vzkKcItzk4wL4r">13 首</div></div>
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#F0F4FF" data-page-node-id="lNOBGPNT9y9E2u8JgNw5Rt"><div class="mini-t" data-page-node-id="ArpFFI6SMf3pi6dMaoD15C">播放历史</div><div class="mini-s" data-page-node-id="3WdSZmvOQWcqOAFYtDNf5q">11 首</div></div>
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#EDFAF6" data-page-node-id="Bw4nEBF79il4fHu0DEuMjX"><div class="mini-t" data-page-node-id="rRUVzXpiraLAXwZp7QGss9">本地音乐</div><div class="mini-s" data-page-node-id="g8JhMnwqmxhP3btCZWIDnt">19 首</div></div>
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#FFF7E8" data-page-node-id="xD7AcSooyjWWLOS7A6D4GX"><div class="mini-t" data-page-node-id="VASRIxtM7glRCOsmFV6jGH">收藏歌单</div><div class="mini-s" data-page-node-id="GdHBObffExzGEEdAEpZFms">0 个</div></div>
+        </div>
+      </div>
+      <div class="sec" data-page-node-id="bbWrWNWHIddu8X5rpfz8Sd">
+        <div class="sec-head" data-page-node-id="6FxFpAV1BIRrV2XdWRvHQl"><span class="sec-t" data-page-node-id="VyHMcbhiNz4SBt4hCi23Xl">我的歌单</span><span class="sec-more" data-page-node-id="2kvX1e6tAkNqBfiYwHOQtX">查看全部 →</span></div>
+        <div class="rowlist" data-page-node-id="6vBKW7HOvnR0fhAdCKkc5u">
+          <div class="row" data-page-node-id="4pzs0iA76uLY7hkvtlLApM"><div class="row-ico" style="background:linear-gradient(135deg,#7A2E4E,#C45C7E)" data-page-node-id="XlByM8kR6Hh8psqM9SKW9x"></div><div class="row-body" data-page-node-id="Zuo5zHYGeVZHwX3BZp5uIr"><div class="row-t" data-page-node-id="MvlpCxovd4THiK0jDEo9j0">我喜欢</div><div class="row-s" data-page-node-id="EVkgaIhaVMWqmTcjuiueYD">13 首</div></div><span class="chev" data-page-node-id="f9nA8hHTNrsoZHNuxpROjo"></span></div>
+        </div>
+      </div>
+      <div class="tabbar" style="margin-top:auto" data-page-node-id="K0Ijez6Ji7blhktMChDJNW">
+        <div class="tab" data-page-node-id="M34YJjHi1TRVf0RpHnGIK7"><div class="tab-i" data-page-node-id="hTY40ASCUGOGOkbM3s5q1W"></div>首页</div>
+        <div class="tab" data-page-node-id="RmX30xRWd1Gq1xGJ9FnBeI"><div class="tab-i" data-page-node-id="7hGIsAwOR3CCUrZjH68XZD"></div>音乐库</div>
+        <div class="tab on" data-page-node-id="IbfhtFAjFU4qldSHoo67ij"><div class="tab-i" data-page-node-id="LARoZ0Hg6h5Ojiwtkj82HE"></div>我的</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hr" data-page-node-id="roOnmD27m4N2ymoqMFmk2D"></div>
+
+  <h2 data-page-node-id="TRAgAAjSL5yk1YZIwXKATE">重构后 · 新旧对比</h2>
+  <div class="h2sub" data-page-node-id="ibMTvT1WJr7sb5PVJBWaux">「首页」剥离资产入口、聚焦内容发现；「音乐库」收敛为本地文件 + 在线音源管理中心；设置保留在「我的」右上角；「我的」接收下载管理与备份恢复。</div>
+
+  <div class="screens" data-page-node-id="hXHfbyEkpY0dGEYnHYzlBS">
+    <div class="phone" data-page-node-id="20tzCIa62RUyxngkHo8mCR">
+      <div class="status" data-page-node-id="eAx8f1gLlHwe4X8XFaQkhV"><span data-page-node-id="uDMsHYx9eYclqpmN9TloGG">23:06</span><span data-page-node-id="qwlsoAzloRPnTN4e10F8qA">5G &nbsp; 45</span></div>
+      <div class="appbar" data-page-node-id="MMHtHDAJfUt2V0CdZux6Iq"><div class="appbar-row" data-page-node-id="GI7Eh1ml5nISHFjPjY9mhA"><span data-page-node-id="fA95dzbgoziVVGPIAIJygU">首页</span><div class="dot-actions" data-page-node-id="VlBX50Qu9PAb5HVEhuQ7lB"><span class="ico" data-page-node-id="WScqziJIF9Ys9jRrOPmmX0"></span><span class="ico" style="border-radius:3px" data-page-node-id="M3BtzQBTqenHb8ThDDMu9g"></span></div></div></div>
+      <div class="searchbar" data-page-node-id="5HsCoYlvDYzOSrF62BIlO4"><span class="ico" style="width:13px;height:13px" data-page-node-id="v3Vc2BPJ5qYwsumaSTg0pA"></span>搜索歌曲、歌手、歌单</div>
+      <div class="hero" data-page-node-id="FNKXMiI9AqKsJzZ81C4kMK">
+        <div class="hero-t" data-page-node-id="sDjF5j06ghS10c0KOlfppH">让音乐<br data-page-node-id="IF9y8cm8m19OFx9YA5Genr">去更远的地方</div>
+        <div class="hero-s" data-page-node-id="Ytxrp6i9OoqUoELNwZqOAr">本地 · 平台 · 无限发现</div>
+        <div class="hero-play" data-page-node-id="Zx4pqsomIFQDV0UQ4FlRAr"></div>
+      </div>
+
+      <div class="sec" data-page-node-id="20PmBrFVlAXEcYoRMRBDtp">
+        <div class="continue" data-page-node-id="SwyP4YtNdF2qURgQRhcjBq">
+          <div class="c-cover" data-page-node-id="6aCjX98EutrO9s0J4DSa5n"></div>
+          <div class="c-body" data-page-node-id="hM0jYlAgWFRace2nSiSB0T">
+            <div class="c-t" data-page-node-id="Fl9kuLwhjIOoMdaXTbGgOX">独家记忆</div>
+            <div class="c-s" data-page-node-id="jI35ng4JaATlfdsi5EK412">陈小春</div>
+            <div class="c-bar" data-page-node-id="W4cIjldYFOmFxtEhaMMYlx"><div class="c-fill" data-page-node-id="XbHo9C8RkRPbNbQvfW0kae"></div></div>
+          </div>
+          <div class="c-btn" data-page-node-id="MW0WbS2pqBKtERByrfpjXO"></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="N9GBhMpe00h2vPcNlDJ689">
+        <div class="sec-head" data-page-node-id="2qrjgknnFeD55lOQp3i4MO"><span class="sec-t" data-page-node-id="ONd9gGCFp4jsXwiCPDFO2C">推荐歌单</span><span class="sec-more" data-page-node-id="GlzJlnoexGigapUiSHf415">查看 →</span></div>
+        <div class="cards" data-page-node-id="G3Dz2mXQbMHtUx48xOB9SA">
+          <div class="mini" data-page-node-id="c6Ch0DsLjJ3ROw54M7XpN6"><div class="cover" data-page-node-id="lGlMZDPtGGufCg8txNIjp0"></div><div class="mini-t" data-page-node-id="o2H2d7vK6yZhLbdRpcHvnP">每日推荐</div><div class="mini-s" data-page-node-id="YCSTs091rok2kE1PfWjp8D">为你精选</div></div>
+          <div class="mini" data-page-node-id="3ndFB70K3GmjkaLpIKf5ez"><div class="cover" style="background:linear-gradient(135deg,#2E4060,#5C7BA8)" data-page-node-id="JxF44ehuUfTUTPF8swPnWT"></div><div class="mini-t" data-page-node-id="e5jqOBttvAqF6g4nreIuJ4">深夜电台</div><div class="mini-s" data-page-node-id="zmOUjMr8Q0nEL8wI2sCqtg">安静时刻</div></div>
+          <div class="mini" data-page-node-id="BOcc6CYAgFkIKKmzV2x5ko"><div class="cover" style="background:linear-gradient(135deg,#5A2E4E,#A85C8E)" data-page-node-id="T1oEsYRW0BL12qcqJvH9Lt"></div><div class="mini-t" data-page-node-id="yTydcXlXvCV63MRyZCM07h">华语新声</div><div class="mini-s" data-page-node-id="O19SrNReaDtLPqAGTiNNM6">本周上新</div></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="6zbFmFcCEt5yJSqjXP5cC7">
+        <div class="sec-head" data-page-node-id="FZ8O7CaxjiP6ZTRISQBaZu"><span class="sec-t" data-page-node-id="yEN8a7tCoDsCQvpCJeeReM">榜单</span><span class="sec-more" data-page-node-id="fXVCKH00iudbNzh3mQQZ8z">查看 →</span></div>
+        <div class="cards" data-page-node-id="JqPnTNWRh7DgaG1BN5kJPB">
+          <div class="mini" data-page-node-id="wmkRThcAhca5TxeNrm49uN"><div class="cover" data-page-node-id="wEEiflm3Q2OkbpqXL8uKAm"></div><span class="tag" data-page-node-id="HEMXcyDBm6NKP8pmIqcp7e">榜单</span><div class="mini-t" data-page-node-id="MSG4Y0aYZFAkqc9wVuaUyg">飙升榜</div></div>
+          <div class="mini" data-page-node-id="k099oAVCP6fCgUA4tUpFoW"><div class="cover" data-page-node-id="dW9umAoCKsrWiXroZHAEsc"></div><span class="tag" data-page-node-id="8o4YGIgaewHTqc0LGZFDZb">榜单</span><div class="mini-t" data-page-node-id="uREs1JFdfiD3nEIHE6dVit">热歌榜</div></div>
+          <div class="mini" data-page-node-id="fdVYGHSOIUooa8M0YTANTG"><div class="cover" data-page-node-id="gXDrckjrGsP6Zk6T3rHmjy"></div><span class="tag" data-page-node-id="ytUHWcwWXnpZXDAYoO8l71">榜单</span><div class="mini-t" data-page-node-id="U0p7Mjxwsy2DgAG0fbuDTn">新歌榜</div></div>
+        </div>
+      </div>
+
+      <div class="sec" style="margin-bottom:20px" data-page-node-id="gEKrbf9oo2RkFdtTPxB0Ce">
+        <div class="sec-head" style="margin-bottom:8px" data-page-node-id="aJY24BIXpILusZYU9dloZC"><span class="sec-t" style="font-size:12.5px" data-page-node-id="xIQfMBAR1NxLNHGc3KoW3g">最近播放</span></div>
+        <div class="rowlist" data-page-node-id="gJaGOCLcMu4wiTauLyzYqk">
+          <div class="row" data-page-node-id="IMZ7nuLE67KEksNT8XA1sG"><div class="row-ico" style="background:#EAF0FF" data-page-node-id="7EzFWrGzGlzDB6l8TmC0zz"></div><div class="row-body" data-page-node-id="Ja3lRFVS1LXFRWFUOBTa3z"><div class="row-t" data-page-node-id="He9c1hv7joygCxGucnVDK6">寻屿</div><div class="row-s" data-page-node-id="BZlfnsWV9CwcliB2fzaw7H">阿YueYue · 元力…</div></div></div>
+        </div>
+      </div>
+
+      <div class="tabbar" data-page-node-id="D1WJZDeBnICi6XGOrgMeOR">
+        <div class="tab on" data-page-node-id="QNszmq6SHEj4OBJXp4Zjru"><div class="tab-i" data-page-node-id="BELMuOOXbIBAijVL0NjYqe"></div>首页</div>
+        <div class="tab" data-page-node-id="UYWe6toKcc9beptOPr3xkp"><div class="tab-i" data-page-node-id="iQvyLvjhcYx7kF8yzgSqA0"></div>音乐库</div>
+        <div class="tab" data-page-node-id="qsP4wnxcp6o4Ti1zjH0BCH"><div class="tab-i" data-page-node-id="yHv7EW4Hc1LDDfF2S4HmOo"></div>我的</div>
+      </div>
+    </div>
+
+    <div class="phone" data-page-node-id="libPhone001">
+      <div class="status" data-page-node-id="libStatus001"><span data-page-node-id="libTime001">23:06</span><span data-page-node-id="libSignal001">5G &nbsp; 45</span></div>
+      <div class="appbar" data-page-node-id="libAppbar001"><div class="appbar-row" data-page-node-id="libAppbarRow001"><span data-page-node-id="libTitle001">音乐库</span><div class="dot-actions" data-page-node-id="libActions001"><span class="ico" style="border-radius:3px" data-page-node-id="libSearch001"></span></div></div></div>
+      <div style="display:flex;gap:20px;padding:2px 18px 14px;font-size:12.5px;border-bottom:.5px solid var(--line)" data-page-node-id="libSubTabs001">
+        <span style="color:var(--text2)" data-page-node-id="libSubTabRank001">榜单</span>
+        <span style="color:var(--primary);font-weight:600;border-bottom:2px solid var(--primary);padding-bottom:5px" data-page-node-id="libSubTabLocal001">本地音乐</span>
+        <span style="color:var(--text2)" data-page-node-id="libSubTabOnline001">在线音乐</span>
+      </div>
+
+      <div class="sec" style="margin-top:0" data-page-node-id="libQuickSec001">
+        <div class="cards" style="flex-wrap:wrap;gap:10px" data-page-node-id="libQuickCards001">
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#F0F4FF" data-page-node-id="libQAll001"><div class="mini-t" data-page-node-id="libQAllT001">全部歌曲</div><div class="mini-s" data-page-node-id="libQAllS001">127 首</div></div>
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#EDFAF6" data-page-node-id="libQArtist001"><div class="mini-t" data-page-node-id="libQArtistT001">艺术家</div><div class="mini-s" data-page-node-id="libQArtistS001">34 位</div></div>
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#FFF7E8" data-page-node-id="libQAlbum001"><div class="mini-t" data-page-node-id="libQAlbumT001">专辑</div><div class="mini-s" data-page-node-id="libQAlbumS001">56 张</div></div>
+          <div class="mini" style="flex:0 0 calc(50% - 5px);background:#FFF0F3" data-page-node-id="libQFolder001"><div class="mini-t" data-page-node-id="libQFolderT001">文件夹</div><div class="mini-s" data-page-node-id="libQFolderS001">12 个</div></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="libSourceSec001">
+        <div class="sec-head" data-page-node-id="libSourceHead001"><span class="sec-t" data-page-node-id="libSourceTitle001">在线音乐源</span><span class="sec-more" data-page-node-id="libSourceMore001">管理 →</span></div>
+        <div class="rowlist" data-page-node-id="libSourceList001">
+          <div class="row" data-page-node-id="libSrcRow1001"><div class="row-ico" style="background:#EEF2FF" data-page-node-id="libSrcIco1001"></div><div class="row-body" data-page-node-id="libSrcBody1001"><div class="row-t" data-page-node-id="libSrcT1001">元力音乐</div><div class="row-s" data-page-node-id="libSrcS1001">已启用 · 榜单 / 搜索 / 歌单</div></div><span class="chev" data-page-node-id="libSrcChev1001"></span></div>
+          <div class="row" data-page-node-id="libSrcRow2001"><div class="row-ico" style="background:#F5F0FF" data-page-node-id="libSrcIco2001"></div><div class="row-body" data-page-node-id="libSrcBody2001"><div class="row-t" data-page-node-id="libSrcT2001">本地源</div><div class="row-s" data-page-node-id="libSrcS2001">设备内音频文件</div></div><span class="chev" data-page-node-id="libSrcChev2001"></span></div>
+        </div>
+      </div>
+
+      <div class="tabbar" style="margin-top:auto" data-page-node-id="libTabbar001">
+        <div class="tab" data-page-node-id="libTabHome001"><div class="tab-i" data-page-node-id="libTabHomeIco001"></div>首页</div>
+        <div class="tab on" data-page-node-id="libTabLibrary001"><div class="tab-i" data-page-node-id="libTabLibraryIco001"></div>音乐库</div>
+        <div class="tab" data-page-node-id="libTabMine001"><div class="tab-i" data-page-node-id="libTabMineIco001"></div>我的</div>
+      </div>
+    </div>
+
+    <div class="phone" data-page-node-id="iHVA0ECNq2TAVjTFtFVuso">
+      <div class="status" data-page-node-id="TDUbp81pLmFWcICxGZHWH6"><span data-page-node-id="UqWjFQXyZhaOqQI1UDqTTp">23:06</span><span data-page-node-id="2azkGv8LIUNQU5VTIgG3Rk">5G &nbsp; 45</span></div>
+      <div class="appbar" data-page-node-id="XQJQo972KemS7KC7VP1BKB"><div class="appbar-row" data-page-node-id="gE9ughs6PlCD0sW3SDYgCQ"><span data-page-node-id="ttTQBNQyfSgRP6FKNLN4yb">我的</span><div class="dot-actions" data-page-node-id="JdAH6V213iMowzAXryCl0v"><span class="ico" data-page-node-id="bYv4az87Ut1ThNFFyjJvbR"></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.75"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></div></div></div>
+
+      <div class="sec" style="margin-top:0" data-page-node-id="AK1dAWvfTq9l2Tl52nBVPI">
+        <div class="sec-head" data-page-node-id="wj3GZO8MrEFaN04Tl23BYH"><span class="sec-t" data-page-node-id="F53VKAZvI06ydaaAQ9sxyr">我的音乐</span></div>
+        <div class="rowlist" data-page-node-id="YsjuDzwff6iLxpqtcDiUPO">
+          <div class="row" data-page-node-id="T1mZdcgekFFJJTO2KX4MD3"><div class="row-ico" style="background:#FFF0F3" data-page-node-id="cyHZbhOIH3QXFEY8mzwxXp"></div><div class="row-body" data-page-node-id="dKMb7skY0TrRafW4SzI4zp"><div class="row-t" data-page-node-id="pp8PG7jUsRAxyi7yv5ieiG">我喜欢</div><div class="row-s" data-page-node-id="vqk07Ql6NeWQuCuE63jaqY">13 首</div></div><span class="chev" data-page-node-id="BNBAM78Ot94ws7IYs3MlG1"></span></div>
+          <div class="row" data-page-node-id="sma5wGm2gnkFEZKFBFxMCQ"><div class="row-ico" style="background:#F0F4FF" data-page-node-id="Y24hFj1NmZ9DTF4ck4k7FB"></div><div class="row-body" data-page-node-id="fCpkEFM91k4vcRHCZD4Ykp"><div class="row-t" data-page-node-id="ymBfFWiLpn8PNiDlrI1py8">播放历史</div><div class="row-s" data-page-node-id="Eo7qkzk0yjiETVtE0pAcpc">11 首</div></div><span class="chev" data-page-node-id="VmsqZHfgRpQIaWRorE8FLz"></span></div>
+          <div class="row" data-page-node-id="ZX1Hffzl7LEBPs8nhsgYzP"><div class="row-ico" style="background:#F5F0FF" data-page-node-id="fKs1rPAbnHgX4SYjxDWjpI"></div><div class="row-body" data-page-node-id="mGzTOuQ6HOQ3WMBuRE9qjY"><div class="row-t" data-page-node-id="eIKr1gHwC4h9pOb5tbWFGn">我的歌单</div><div class="row-s" data-page-node-id="WJSAiUxx6m4Q8gqHsbLIdX">2 个</div></div><span class="chev" data-page-node-id="taMKqD0xvTgcXnvDnO5k9N"></span></div>
+          <div class="row" data-page-node-id="460jb43cOYgBtUq0xqInal"><div class="row-ico" style="background:#EDFAF6" data-page-node-id="iOmFCflhb0EMPe1N3irDkU"></div><div class="row-body" data-page-node-id="gJAxHZ6gbSuiCSHk3qtPK7"><div class="row-t" data-page-node-id="2GdCBwjPT4ecDgu0p79pqm">收藏歌单</div><div class="row-s" data-page-node-id="NvObAUrKszzeIt7SefA0CP">0 个</div></div><span class="chev" data-page-node-id="FtuaW6IHzHQdTgcLfW6zW2"></span></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="aHWAMqxB7m2DPVmWDjKvYG">
+        <div class="sec-head" data-page-node-id="Uw8nk6PF6yZ77QRBy0kOGw"><span class="sec-t" data-page-node-id="wvm6mgQPkSMCVspF6XcjEM">下载与数据</span></div>
+        <div class="rowlist" data-page-node-id="4BVgP5QwTewHLNFjwtWbb1">
+          <div class="row" data-page-node-id="Rlf6b9FdnBSdZ1Zb8oKJgl"><div class="row-ico" style="background:#EAF2FF" data-page-node-id="jsMlFzCDD0yrwvWcCZLAlm"></div><div class="row-body" data-page-node-id="eC2GFDPB0Rng0eS9swMXJa"><div class="row-t" data-page-node-id="t6wMW2u6Vklha0m8vNnv0e">下载管理</div><div class="row-s" data-page-node-id="GkYUUc7cLGOFKuEb2DCoUX">2 个任务进行中</div></div><span class="badge-star" data-page-node-id="268n80IBoPwHzBNnyoZVz0">新</span><span class="chev" data-page-node-id="ryGAhovW30zovQUoXyLt1G"></span></div>
+          <div class="row" data-page-node-id="Hp3E3hxBUELSd2H6SssG78"><div class="row-ico" style="background:#EAFBF5" data-page-node-id="u9KiyQAj9u7z7oFkYHBCXj"></div><div class="row-body" data-page-node-id="6zRfKB5HBpxQCm3uY3TG86"><div class="row-t" data-page-node-id="BjCNR0IRj3OZWJQPiTdpaW">备份与恢复</div><div class="row-s" data-page-node-id="UAxhUWrwbWW4EDQ9M6lCCu">导出歌单与设置</div></div><span class="chev" data-page-node-id="9eNDst5lC6aUaAEmHn9FPf"></span></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="eV7S9crInz1YywL6BKMmHF">
+        <div class="sec-head" style="margin-bottom:8px" data-page-node-id="HInbKz3kwk6s57hihDIyXx"><span class="sec-t" style="font-size:12.5px" data-page-node-id="zqskmenc70j0wMmce5tRPA">我的歌单</span><span class="sec-more" data-page-node-id="BwyzKlmgLzVh7aUwCKCJ61">查看全部 →</span></div>
+        <div class="rowlist" data-page-node-id="tiNIbQ8pDy2vD36AtByG6Z">
+          <div class="row" data-page-node-id="SgflwKCfYcBxIcCUxFLN1E"><div class="row-ico" style="background:linear-gradient(135deg,#7A2E4E,#C45C7E)" data-page-node-id="8kl4ouw84ecDypwHwyj7Ok"></div><div class="row-body" data-page-node-id="VCCWvti0ngUdOHHLjrZtOZ"><div class="row-t" data-page-node-id="hLNEres5zSDET4OhgKgdmE">我喜欢</div><div class="row-s" data-page-node-id="NGiTamhWX2MpTIkhPHg8Kw">13 首</div></div><span class="chev" data-page-node-id="jPSAeeFQzqVfn0CJyikwGP"></span></div>
+        </div>
+      </div>
+
+      <div class="tabbar" style="margin-top:auto" data-page-node-id="HKW0yj8uayEaH0dwryZa5e">
+        <div class="tab" data-page-node-id="lHjT49GH2JK8Ia6NMddUGY"><div class="tab-i" data-page-node-id="jVMEh8RbyD5z44u8Y14DVT"></div>首页</div>
+        <div class="tab" data-page-node-id="g2aS7Yq2FdjX74Kvt6EmRr"><div class="tab-i" data-page-node-id="1hWhGQdFz1LvQutU3Dq9ad"></div>音乐库</div>
+        <div class="tab on" data-page-node-id="ocxP2VNmAcWalAqvbR5ucw"><div class="tab-i" data-page-node-id="eitiIFK0GVckaWjEpHXzr1"></div>我的</div>
+      </div>
+    </div>
+
+    <div class="phone" data-page-node-id="h5sjk66cbans3Rn7GKIXQP">
+      <div class="status" data-page-node-id="shxUZjpbT6d6CfiTcBDrIa"><span data-page-node-id="YTHznZs7VY4OQfIN2IS0AH">23:06</span><span data-page-node-id="U6yzDOXHwomPGZl71vDHl0">5G &nbsp; 45</span></div>
+      <div class="appbar" data-page-node-id="rrHGPkQJyIzfznNeNAG50q"><div class="appbar-row" data-page-node-id="nVJtFLLr1AepCI6twcl0Ov"><span data-page-node-id="MG91ugVMQ5Cekn9XqTujk3">设置</span><div class="dot-actions" data-page-node-id="6mCHttUXGzHmxKXLFFzNtS"><span class="ico" style="border-radius:3px" data-page-node-id="vDAvDLFCDSzeWAWsb5LA0u"></span></div></div></div>
+
+      <div class="sec" style="margin-top:0" data-page-node-id="dJDrwWCEJbYnLgukizAAvu">
+        <div class="sec-head" data-page-node-id="hn8ks8NCpU0k82KkVeQZT0"><span class="sec-t" data-page-node-id="zJtDAH241tODfCjqZXs7li">播放与下载</span></div>
+        <div class="rowlist" data-page-node-id="UHkaXNPpvoUCNxGl6BOCJq">
+          <div class="row" data-page-node-id="7U6ofZ5bifME7TmOZ4I7r3"><div class="row-ico" style="background:#EEF2FF" data-page-node-id="REZT3WlxtmC3akrI5NsvmU"></div><div class="row-body" data-page-node-id="aioEqgmHlZbnq8bUuSlcgO"><div class="row-t" data-page-node-id="wuVsuUUFcM4OcxHBw6gADr">播放</div><div class="row-s" data-page-node-id="KS4m2BosWsvyacpT970nBo">音质、打断处理、启动行为</div></div><span class="chev" data-page-node-id="2as56VBkrCrJrfyuUKUdIw"></span></div>
+          <div class="row" data-page-node-id="CdzBi8tcYsXkFdwy9VzE8G"><div class="row-ico" style="background:#EAF2FF" data-page-node-id="gK2GMiD0ceo9BVK3ESoPaJ"></div><div class="row-body" data-page-node-id="FVfEmhsal6Nw4ebaoCM7ew"><div class="row-t" data-page-node-id="IuzYCKPkJwgq6GntBvQWcd">下载</div><div class="row-s" data-page-node-id="7gTvreppDBRjHrcmqCZvV8">路径、并发数、默认音质</div></div><span class="chev" data-page-node-id="dVXBpcP9cXxuUGyyRsgDpU"></span></div>
+          <div class="row" data-page-node-id="isEwZu1rnyGHsj4o1GiwkZ"><div class="row-ico" style="background:#F5F0FF" data-page-node-id="DYdz271eQaDaDihzoMXVDl"></div><div class="row-body" data-page-node-id="R2arUJAqR48NFkpccOI680"><div class="row-t" data-page-node-id="imXrxv7GlMdIWPYVRgktYM">歌词</div><div class="row-s" data-page-node-id="HQXTa8nh5cfGzCBdaKvrkP">桌面歌词、逐字、翻译</div></div><span class="chev" data-page-node-id="ydoEW3WbyPyerQ6hM3IpQy"></span></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="SFEV3ZF1wzsKzBHYaucVGA">
+        <div class="sec-head" data-page-node-id="cAsthZ7MKY6QvB7llApfKL"><span class="sec-t" data-page-node-id="nInNtjEzfCzHA8nAtmVsCq">外观与数据</span></div>
+        <div class="rowlist" data-page-node-id="RToFZv86tiaU7GT2HDlFHS">
+          <div class="row" data-page-node-id="KagnLvEaIr3hFOTtpqjTT7"><div class="row-ico" style="background:#FFF2E8" data-page-node-id="SW0N4XrIDxEmwLzjN7anRs"></div><div class="row-body" data-page-node-id="vrV38AB8YetcUCiX6EiMBD"><div class="row-t" data-page-node-id="DlYashK62W0aqzrh05Zfod">外观与主题</div><div class="row-s" data-page-node-id="yRRvNhNEyrY74lFpPcFwI2">浅色/深色、首页布局、字体</div></div><span class="chev" data-page-node-id="AVIPazcekkpUtUaTB2B6gw"></span></div>
+          <div class="row" data-page-node-id="94UtYvRYEMCT5XyCfz12KG"><div class="row-ico" style="background:#EDFAF6" data-page-node-id="WrGmPcG6QX5CwiFQ9lnFTD"></div><div class="row-body" data-page-node-id="dGKNF9HqtmwFjz4AFrn8FE"><div class="row-t" data-page-node-id="jRrvH47AgKRG4R5DjJpqk0">存储与缓存</div><div class="row-s" data-page-node-id="HxeAWVlwhBjij3iKByo7Ib">清理音乐 / 歌词 / 图片缓存</div></div><span class="chev" data-page-node-id="vVuhxgDgGx18AYkO2TiakS"></span></div>
+          <div class="row" data-page-node-id="NRFyNwabH1JWrwixctSO5I"><div class="row-ico" style="background:#F0F4FF" data-page-node-id="xLOIF3LHnMHSHPEiBzF7Sl"></div><div class="row-body" data-page-node-id="XOBAdk6LPd393cdwI8TllH"><div class="row-t" data-page-node-id="tjMOhmnFneWbZyrAm8CErj">音乐源与插件</div><div class="row-s" data-page-node-id="RLYxziJwHAsVMsNe8b4hdO">已启用 1 个音乐源</div></div><span class="chev" data-page-node-id="aLWWpcJyKR8ZZlYA4FbDO8"></span></div>
+        </div>
+      </div>
+
+      <div class="sec" data-page-node-id="eVYdt7M5wfJKgButNoWk0K">
+        <div class="sec-head" style="margin-bottom:8px" data-page-node-id="s3euyOItCT1wGAmmdTyHBv"><span class="sec-t" style="font-size:12.5px" data-page-node-id="8NEPeycyev31fFTMnpcsxh">其他</span></div>
+        <div class="rowlist" data-page-node-id="OFtDui293MFzSoCpReqgcm">
+          <div class="row" data-page-node-id="RAYh2mt7LPuuvdTHBJNK01"><div class="row-ico" style="background:#F3F0FF" data-page-node-id="9i9e4S32enMCI0BrnDIqRU"></div><div class="row-body" data-page-node-id="ZOFVibNasf2rxJUHD2Z2u9"><div class="row-t" data-page-node-id="BXNfirVi9WrKOYGd0JTNn2">权限管理</div><div class="row-s" data-page-node-id="fLyjjzPRDiKUTq28UfTs79">存储、通知、悬浮窗</div></div><span class="chev" data-page-node-id="jQptsppI4EFDJRTWK3xAvB"></span></div>
+          <div class="row" data-page-node-id="BN3YBxLlM3sTbVCjv5Mt2q"><div class="row-ico" style="background:#F0F4FF" data-page-node-id="2Zwn5FRPh1dYMK0aqucn4N"></div><div class="row-body" data-page-node-id="HdkjqIxgfIN4zwzQx2IevH"><div class="row-t" data-page-node-id="NkEB0um1F9ChdEM4hxihZH">关于与更新</div><div class="row-s" data-page-node-id="vQEIt8yBdrYBBTgdT26UoZ">版本 0.2.0 · 检查更新</div></div><span class="badge-star" data-page-node-id="oxllLuVfEdNz6Ht3ntE6vX">新</span><span class="chev" data-page-node-id="60z6kgnohE3UpGzdJjWus5"></span></div>
+        </div>
+      </div>
+
+      <div class="tabbar" style="margin-top:auto" data-page-node-id="SxfuZ7SWRYBo5R9JGoTeVq">
+        <div class="tab" data-page-node-id="cjDT9A1LfohNIhxFbOiEey"><div class="tab-i" data-page-node-id="JyJgCJylQ64AGZ25HtIcDE"></div>首页</div>
+        <div class="tab" data-page-node-id="0tSjuAVKqSwx3sA1WXlerK"><div class="tab-i" data-page-node-id="9huMx5xAEbrFaYTMrONG2p"></div>音乐库</div>
+        <div class="tab" data-page-node-id="0ZN7NGl1m7ZkcHXSYuIiun"><div class="tab-i" data-page-node-id="G345IyebyylQzfoyvr0oXS"></div>我的</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" data-page-node-id="LLAk66233c7gxTEGK50BKJ">
+    <div class="lg" data-page-node-id="sQutt5nPRdLZrX8Vb64GLH">
+      <div class="lg-mark" style="background:#EAF2FF;border:.5px solid #4D70F5" data-page-node-id="DUg61tyoDaDEsizCy8R9lX"></div>
+      <div data-page-node-id="vxd5V6YTfQ3zqKg9QMXS9s"><div class="lg-t" data-page-node-id="OhPWWXdvYxyyTDYxQnXpOS">入口唯一化</div><div class="lg-s" data-page-node-id="BOGNIyjlBeysaVV7qFUaPE">本地音乐从 4 处收敛到 1 处，我喜欢从 3 处收敛到 1 处</div></div>
+    </div>
+    <div class="lg" data-page-node-id="ydtD0YNCVQruX1ZV9AUGlD">
+      <div class="lg-mark" style="background:var(--primary-soft);border:.5px solid #4D70F5" data-page-node-id="s4lVnZgDsaaFQJZXr5mFCI"></div>
+      <div data-page-node-id="vMGARPn6VmXbIpX4gKNxr4"><div class="lg-t" data-page-node-id="s351ELga5DpW3kiVCkxJPb">设置位置不变</div><div class="lg-s" data-page-node-id="Bc1B4FBC8e3rNBHD9me1VD">设置保留在「我的」右上角，底部仍维持 3 个 Tab</div></div>
+    </div>
+    <div class="lg" data-page-node-id="5An0yTSo8myVqj0aUzBce7">
+      <div class="lg-mark" style="background:#EDFAF6;border:.5px solid #18BFA3" data-page-node-id="OlhQ8rraOAAhz3tgRn0AAv"></div>
+      <div data-page-node-id="c1cCv2zt13NXKSE9PQGkEx"><div class="lg-t" data-page-node-id="l62lqda1oLVzxXq86HVsxS">内容重心上移</div><div class="lg-s" data-page-node-id="6yYXjfHmkau9YMKu2QwlrJ">删除 4 宫格后，「继续播放」进入首屏可见区域</div></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
