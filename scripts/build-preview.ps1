@@ -94,8 +94,12 @@ function Get-AndroidSdkPath {
         $candidates += (Join-Path $env:USERPROFILE "AppData\Local\Android\Sdk")
     }
 
-    $candidates += (Join-Path $env:ProgramFiles "Android\Sdk")
-    $candidates += (Join-Path ${env:ProgramFiles(x86)} "Android\Sdk")
+    if ($env:ProgramFiles) {
+        $candidates += (Join-Path $env:ProgramFiles "Android\Sdk")
+    }
+    if (${env:ProgramFiles(x86)}) {
+        $candidates += (Join-Path ${env:ProgramFiles(x86)} "Android\Sdk")
+    }
 
     foreach ($candidate in @($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Container) })) {
         return (Get-Item -LiteralPath $candidate).FullName
