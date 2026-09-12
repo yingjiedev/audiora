@@ -44,6 +44,8 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { resolveImportedAssetOrPath } from "@/utils/fileUtils";
 import { resolveArtwork } from "@/utils/artwork";
 import { getLocalPlaybackSource } from "./localPlayback";
+import { adaptMediaSourceForPlayback } from "./mediaSourceAdapter";
+import { refreshCurrentSource } from "./refreshCurrentSource";
 
 
 
@@ -92,6 +94,9 @@ class TrackPlayer extends EventEmitter<{
         musicItem: IMusic.IMusicItem | null;
         wasPlaying: boolean;
     } | null = null;
+    // Changes whenever the selected track changes, including switching away
+    // from and back to the same media item during an asynchronous refresh.
+    private currentMusicRevision = 0;
     // 播放队列索引map
     private playListIndexMap = createMediaIndexMap([] as IMusic.IMusicItem[]);
 
@@ -994,6 +999,47 @@ class TrackPlayer extends EventEmitter<{
         );
     }
 
+    async refreshCurrentMusicSource(
+        musicItem: IMusic.IMusicItem,
+    ): Promise<boolean> {
+        const revision = this.currentMusicRevision;
+        const quality = this.quality;
+        const isTargetCurrent = () =>
+            revision === this.currentMusicRevision &&
+            this.isCurrentMusic(musicItem);
+
+        return refreshCurrentSource({
+            isTargetCurrent,
+            getProgress: async () =>
+                (await ReactNativeTrackPlayer.getProgress()).position ?? 0,
+            getShouldPlay: async () =>
+                !musicIsPaused(
+                    (await ReactNativeTrackPlayer.getPlaybackState()).state,
+                ),
+            getFreshSource: async () =>
+                this.pluginManagerService
+                    .getByMedia(musicItem)
+                    ?.methods?.getMediaSource(
+                        musicItem,
+                        quality,
+                        1,
+                        false,
+                        true,
+                    ),
+            adaptSource: adaptMediaSourceForPlayback,
+            applySource: async (source, shouldPlay) => {
+                await this.setTrackSource(
+                    this.mergeTrackSource(
+                        musicItem,
+                        source,
+                    ) as unknown as Track,
+                    shouldPlay,
+                );
+            },
+            restoreProgress: position => this.seekTo(position),
+        });
+    }
+
     async changeQuality(newQuality: IMusic.IQualityKey): Promise<boolean> {
         // 获取当前的音乐和进度
         if (newQuality === this.quality) {
@@ -1019,20 +1065,11 @@ class TrackPlayer extends EventEmitter<{
                 const playingState = (
                     await ReactNativeTrackPlayer.getPlaybackState()
                 ).state;
-                try {
-                    const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                    const localUrl = await getLocalStreamUrlIfNeeded(newSource.url, (newSource as any)?.ekey, newSource.headers, (newSource as any)?.cek);
-                    const adapted = localUrl ? { ...newSource, url: localUrl, headers: undefined } : newSource;
-                    await this.setTrackSource(
-                        this.mergeTrackSource(musicItem, adapted) as unknown as Track,
-                        !musicIsPaused(playingState),
-                    );
-                } catch {
-                    await this.setTrackSource(
-                        this.mergeTrackSource(musicItem, newSource) as unknown as Track,
-                        !musicIsPaused(playingState),
-                    );
-                }
+                const adaptedSource = await adaptMediaSourceForPlayback(newSource);
+                await this.setTrackSource(
+                    this.mergeTrackSource(musicItem, adaptedSource) as unknown as Track,
+                    !musicIsPaused(playingState),
+                );
 
                 await this.seekTo(progress.position ?? 0);
                 this.setQuality(newQuality);
@@ -1086,6 +1123,7 @@ class TrackPlayer extends EventEmitter<{
     /**************** 辅助函数 -- 设置内部状态 ****************/
 
     private setCurrentMusic(musicItem?: IMusic.IMusicItem | null) {
+        this.currentMusicRevision += 1;
         // 设置UI内部状态的musicitem
         if (!musicItem) {
             this.currentIndex = -1;

@@ -3,6 +3,7 @@ import ArtistSelectPanel from "./artistSelectPanel";
 import AssociateLrc from "./associateLrc";
 import ColorPicker from "./colorPicker";
 import ImportMusicSheet from "./importMusicSheet";
+import MergeImportMusicSheet from "./mergeImportMusicSheet";
 import MusicItemOptions from "./musicItemOptions";
 import MusicQuality from "./musicQuality";
 import CreateMusicSheet from "./createMusicSheet";
@@ -25,7 +26,6 @@ import MusicItemLyricOptions from "./musicItemLyricOptions";
 import EditMusicSheetInfo from "./editMusicSheetInfo";
 import QualityTranslation from "./qualityTranslation";
 import MusicMetadataSettings from "./musicMetadataSettings";
-import MvPlayer from "./mvPlayer";
 
 export default {
     /** 加入歌单 */
@@ -38,6 +38,8 @@ export default {
     CreateMusicSheet,
     /** 导入歌单 */
     ImportMusicSheet,
+    /** 合并导入多个歌单 */
+    MergeImportMusicSheet,
     /** 通过ID播放 */
     PlayById,
     /** 当前播放列表 */
@@ -80,6 +82,4 @@ export default {
     QualityTranslationPanel: QualityTranslation,
     /** 音乐标签设置 */
     MusicMetadataSettingsPanel: MusicMetadataSettings,
-    /** MV 播放器 */
-    MvPlayer,
 };
