@@ -2,7 +2,7 @@
   "expo": {
     "name": "Audiora",
     "slug": "audiora",
-    "version": "0.2.0",
+    "version": "0.2.4",
     "icon": "./assets/app-icon.png",
     "android": {
       "package": "io.github.yingjiedev.audiora",

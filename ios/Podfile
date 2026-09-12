@@ -24,12 +24,6 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '16.4'
 
 prepare_react_native_project!
 
-# Permission setup
-$RNPermissionsUseAppTrackingTransparency = true
-$RNPermissionsUseBluetooth = true
-$RNPermissionsUseMediaLibrary = true
-$RNPermissionsUsePhotoLibrary = true
-
 target 'MusicFree' do
   use_expo_modules!
 

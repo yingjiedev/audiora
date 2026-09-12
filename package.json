@@ -1,6 +1,6 @@
 {
   "name": "audiora",
-  "version": "0.2.0",
+  "version": "0.2.4",
   "private": true,
   "license": "AGPL",
   "author": {
@@ -79,13 +79,11 @@
     "react-native-get-random-values": "~1.11.0",
     "react-native-image-colors": "^2.5.1",
     "react-native-image-crop-picker": "0.51.1",
-    "react-native-image-picker": "^8.2.1",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-logs": "^5.5.0",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-modules": "^0.35.9",
     "react-native-pager-view": "8.0.2",
-    "react-native-permissions": "^5.4.4",
     "react-native-reanimated": "4.5.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
@@ -99,7 +97,6 @@
     "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.3",
     "recyclerlistview": "^4.2.3",
-    "shaka-player": "^4.16.48",
     "webdav": "^5.8.0"
   },
   "devDependencies": {
