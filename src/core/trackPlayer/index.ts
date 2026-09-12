@@ -18,6 +18,7 @@ import i18n from "@/core/i18n";
 import Network from "@/utils/network";
 import PersistStatus from "@/utils/persistStatus";
 import { getQualityOrder, getSmartQuality } from "@/utils/qualities";
+import { getMusicItemAudioMeta, mapLocalQuality } from "@/utils/localQuality";
 import { musicIsPaused } from "@/utils/trackUtils";
 import EventEmitter from "eventemitter3";
 import { produce } from "immer";
@@ -651,9 +652,10 @@ class TrackPlayer extends EventEmitter<{
             const preferredQuality = this.configService.getConfig("basic.defaultPlayQuality") ?? "master";
             let selectedQuality: IMusic.IQualityKey;
             
-            // 本地文件不需要请求在线音质；320k 仅作为播放器状态的兼容值。
+            // 本地文件不需要请求在线音质；此处音质状态仅作为播放器内部兼容值，
+            // 展示层会基于文件真实元数据重新映射（见 localQuality），无法映射时回退 320k。
             if (localSource) {
-                selectedQuality = "320k";
+                selectedQuality = mapLocalQuality(getMusicItemAudioMeta(musicItem)) ?? "320k";
             } else if (musicItem.qualities || musicItem.source) {
                 selectedQuality = getSmartQuality(
                     preferredQuality,

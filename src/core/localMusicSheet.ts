@@ -342,6 +342,7 @@ async function importLocal(_folderPaths: string[]) {
                 artwork: "",
                 [internalSerializeKey]: {
                     localPath: musicPath,
+                    audioMeta: normalizeAudioMeta(meta),
                 },
             } as IMusic.IMusicItem;
         }),

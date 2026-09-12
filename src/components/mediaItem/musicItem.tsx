@@ -13,6 +13,7 @@ import { ImgAsset } from "@/constants/assetsConst";
 import Badge, { BadgeType } from "../base/badge";
 
 import { getQualityKeys } from "@/utils/qualities";
+import { getMusicItemAudioMeta, mapLocalQuality } from "@/utils/localQuality";
 import { resolveArtwork } from "@/utils/artwork";
 import { canPlayMusicVideo } from "@/utils/musicVideo";
 
@@ -30,15 +31,21 @@ const qualityBadgeDisplayMap: Record<string, { type: BadgeType; text: string }> 
 // 获取音质标志信息
 function getQualityBadge(musicItem: IMusic.IMusicItem): { type: BadgeType; text: string } | null {
     const qualities = musicItem.qualities;
-    if (!qualities) return null;
-
-    // 按音质键逆序遍历（从高到低），跳过不计入显示的键
-    const keys = getQualityKeys();
-    for (let i = keys.length - 1; i >= 0; i--) {
-        const key = keys[i];
-        if (qualities[key] && qualityBadgeDisplayMap[key]) {
-            return qualityBadgeDisplayMap[key];
+    if (qualities) {
+        // 按音质键逆序遍历（从高到低），跳过不计入显示的键
+        const keys = getQualityKeys();
+        for (let i = keys.length - 1; i >= 0; i--) {
+            const key = keys[i];
+            if (qualities[key] && qualityBadgeDisplayMap[key]) {
+                return qualityBadgeDisplayMap[key];
+            }
         }
+    }
+
+    // 本地音乐没有在线音质列表，按文件真实技术元数据映射徽标（HQ/SQ/HR）
+    const mappedLocalQuality = mapLocalQuality(getMusicItemAudioMeta(musicItem));
+    if (mappedLocalQuality && qualityBadgeDisplayMap[mappedLocalQuality]) {
+        return qualityBadgeDisplayMap[mappedLocalQuality];
     }
     return null;
 }

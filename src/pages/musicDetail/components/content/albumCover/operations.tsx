@@ -19,6 +19,7 @@ import downloader from "@/core/downloader";
 import i18n from "@/core/i18n";
 
 import { getQualityAbbr, musicItemHasQualitySizes } from "@/utils/qualities";
+import { getLocalQualityAbbr } from "@/utils/localQuality";
 
 export default function Operations() {
     const musicItem = useCurrentMusic();
@@ -33,6 +34,12 @@ export default function Operations() {
             ? false
             : !!PluginManager.getByMedia(musicItem)?.supportedMethods.has("getMusicComments");
     }, [musicItem]);
+
+    // 本地音乐展示基于真实元数据映射的音质档位，未知信息显示中性"本地"
+    const localQualityAbbr = useMemo(
+        () => (isDownloaded ? getLocalQualityAbbr(musicItem) : null),
+        [isDownloaded, musicItem],
+    );
 
     return (
         <View
@@ -85,7 +92,9 @@ export default function Operations() {
                     });
                 }}>
                 <Text style={styles.qualityText}>
-                    {getQualityAbbr(currentQuality) || "HQ"}
+                    {isDownloaded
+                        ? localQualityAbbr ?? i18n.t("localQuality.abbr")
+                        : getQualityAbbr(currentQuality) || "HQ"}
                 </Text>
             </Pressable>
             <Icon

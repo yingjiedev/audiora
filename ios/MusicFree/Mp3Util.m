@@ -1201,6 +1201,147 @@ static BOOL MFWriteMetadata(NSString *filePath,
   return MFSetMetadataError(error, [NSString stringWithFormat:@"Writing metadata for .%@ is not supported on iOS yet", ext ?: @""]);
 }
 
+static BOOL MFReadFileHeader(NSString *path, NSUInteger length, NSData **outData) {
+  NSFileHandle *handle = [NSFileHandle fileHandleForReadingAtPath:path];
+  if (!handle) {
+    return NO;
+  }
+  NSData *data = [handle readDataOfLength:length];
+  [handle closeFile];
+  if (data.length == 0) {
+    return NO;
+  }
+  *outData = data;
+  return YES;
+}
+
+/**
+ * FLAC STREAMINFO：文件头为 "fLaC"(4) + 块头(4) + 34 字节 STREAMINFO。
+ * STREAMINFO 末 8 字节依次为 sampleRate(20bit) / channels-1(3bit) / bps-1(5bit) / totalSamples(36bit)。
+ */
+static BOOL MFParseFlacStreamInfoBytes(const uint8_t *bytes, NSUInteger length,
+                                       uint32_t *sampleRate, uint32_t *bitDepth, uint32_t *channels) {
+  if (length < 42) {
+    return NO;
+  }
+  if (!(bytes[0] == 'f' && bytes[1] == 'L' && bytes[2] == 'a' && bytes[3] == 'C')) {
+    return NO;
+  }
+  if ((bytes[4] & 0x7f) != 0) {
+    return NO; // 第一个块必须是 STREAMINFO
+  }
+  uint32_t parsedSampleRate = ((uint32_t)bytes[18] << 12) |
+      ((uint32_t)bytes[19] << 4) |
+      ((uint32_t)(bytes[20] & 0xf0) >> 4);
+  uint32_t parsedChannels = (uint32_t)((bytes[20] >> 1) & 0x7) + 1;
+  uint32_t parsedBitDepth = (uint32_t)(((bytes[20] & 0x1) << 4) | ((bytes[21] & 0xf0) >> 4)) + 1;
+  if (parsedSampleRate == 0 || parsedBitDepth == 0) {
+    return NO;
+  }
+  *sampleRate = parsedSampleRate;
+  *bitDepth = parsedBitDepth;
+  *channels = parsedChannels;
+  return YES;
+}
+
+/**
+ * 补充音频技术元数据：码率（bps）、采样率（Hz）、位深（bit）、编码格式。
+ * 码率取 track.estimatedDataRate；采样率/位深优先取 AVAssetTrack 音频格式描述，
+ * FLAC 文件额外手工解析 STREAMINFO（AVFoundation 对 FLAC 常返回 0），
+ * ALAC 从 magic cookie 读取位深。系统无法可靠获取的字段不写入。
+ */
+static void MFApplyAudioTechMeta(NSMutableDictionary *meta, AVAsset *asset, NSString *path) {
+  AVAssetTrack *audioTrack = [asset tracksWithMediaType:AVMediaTypeAudio].firstObject;
+
+  if (audioTrack.estimatedDataRate > 0) {
+    meta[@"bitrate"] = @((double)audioTrack.estimatedDataRate);
+  }
+
+  NSNumber *sampleRate = nil;
+  NSNumber *bitDepth = nil;
+  NSNumber *channelCount = nil;
+  NSString *codec = nil;
+
+  for (id desc in audioTrack.formatDescriptions) {
+    CMFormatDescriptionRef formatDescription = (__bridge CMFormatDescriptionRef)desc;
+    const AudioStreamBasicDescription *asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription);
+    if (!asbd) {
+      continue;
+    }
+    if (sampleRate == nil && asbd->mSampleRate > 0) {
+      sampleRate = @(asbd->mSampleRate);
+    }
+    if (channelCount == nil && asbd->mChannelsPerFrame > 0) {
+      channelCount = @(asbd->mChannelsPerFrame);
+    }
+    if (bitDepth == nil && asbd->mBitsPerChannel > 0) {
+      bitDepth = @(asbd->mBitsPerChannel);
+    }
+    if (codec == nil) {
+      switch (asbd->mFormatID) {
+        case kAudioFormatFLAC:
+          codec = @"flac";
+          break;
+        case kAudioFormatAppleLossless: {
+          codec = @"alac";
+          if (bitDepth == nil) {
+            const void *cookie = NULL;
+            size_t cookieSize = 0;
+            CMAudioFormatDescriptionGetMagicCookie(formatDescription, &cookieSize);
+            // alac cookie 布局：frameLength(4) + compatibleVersion(1) + bitDepth(1) ...
+            if (cookie != NULL && cookieSize >= 6) {
+              uint8_t alacBitDepth = ((const uint8_t *)cookie)[5];
+              if (alacBitDepth > 0) {
+                bitDepth = @(alacBitDepth);
+              }
+            }
+          }
+          break;
+        }
+        case kAudioFormatMPEG4AAC:
+          codec = @"aac";
+          break;
+        case kAudioFormatMPEGLayer3:
+          codec = @"mp3";
+          break;
+        case kAudioFormatOpus:
+          codec = @"opus";
+          break;
+        case kAudioFormatLinearPCM:
+          codec = @"pcm";
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  NSData *header = nil;
+  if (MFReadFileHeader(path, 64, &header)) {
+    const uint8_t *bytes = header.bytes;
+    uint32_t flacSampleRate = 0, flacBitDepth = 0, flacChannels = 0;
+    if (MFParseFlacStreamInfoBytes(bytes, header.length, &flacSampleRate, &flacBitDepth, &flacChannels)) {
+      sampleRate = @(flacSampleRate);
+      bitDepth = @(flacBitDepth);
+      channelCount = channelCount ?: @(flacChannels);
+      codec = @"flac";
+    }
+  }
+
+  if (sampleRate != nil) {
+    meta[@"sampleRate"] = sampleRate;
+  }
+  if (bitDepth != nil) {
+    meta[@"bitDepth"] = bitDepth;
+  }
+  if (channelCount != nil) {
+    meta[@"channelCount"] = channelCount;
+  }
+  if (codec != nil) {
+    meta[@"codec"] = codec;
+  }
+}
+
 @interface Mp3Util : RCTEventEmitter <RCTBridgeModule>
 @end
 
@@ -1215,7 +1356,8 @@ RCT_EXPORT_MODULE();
 RCT_EXPORT_METHOD(getBasicMeta:(NSString *)filePath
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
-  NSURL *url = [NSURL fileURLWithPath:filePath];
+  NSString *path = MFNormalizePath(filePath);
+  NSURL *url = [NSURL fileURLWithPath:path];
   AVAsset *asset = [AVAsset assetWithURL:url];
 
   NSMutableDictionary *meta = [NSMutableDictionary dictionary];
@@ -1237,6 +1379,8 @@ RCT_EXPORT_METHOD(getBasicMeta:(NSString *)filePath
     meta[@"duration"] = @((int)(CMTimeGetSeconds(duration) * 1000));
   }
 
+  MFApplyAudioTechMeta(meta, asset, path);
+
   resolve(meta);
 }
 
@@ -1246,7 +1390,8 @@ RCT_EXPORT_METHOD(getMediaMeta:(NSArray *)filePaths
   NSMutableArray *results = [NSMutableArray array];
 
   for (NSString *path in filePaths) {
-    NSURL *url = [NSURL fileURLWithPath:path];
+    NSString *normalizedPath = MFNormalizePath(path);
+    NSURL *url = [NSURL fileURLWithPath:normalizedPath];
     AVAsset *asset = [AVAsset assetWithURL:url];
     NSMutableDictionary *meta = [NSMutableDictionary dictionary];
 
@@ -1264,6 +1409,8 @@ RCT_EXPORT_METHOD(getMediaMeta:(NSArray *)filePaths
     if (CMTIME_IS_VALID(duration)) {
       meta[@"duration"] = @((int)(CMTimeGetSeconds(duration) * 1000));
     }
+
+    MFApplyAudioTechMeta(meta, asset, normalizedPath);
 
     [results addObject:meta];
   }

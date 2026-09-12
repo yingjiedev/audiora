@@ -6,6 +6,16 @@ export interface IBasicMeta {
     author?: string;
     duration?: string;
     title?: string;
+    /** 平均码率，单位 bps */
+    bitrate?: number;
+    /** 采样率，单位 Hz */
+    sampleRate?: number;
+    /** 位深，单位 bit；系统无法可靠获取时为空 */
+    bitDepth?: number;
+    /** 编码格式小写短名，如 mp3 / aac / flac / alac / wav / vorbis */
+    codec?: string;
+    /** 声道数 */
+    channelCount?: number;
 }
 
 export interface IWritableMeta extends IBasicMeta {

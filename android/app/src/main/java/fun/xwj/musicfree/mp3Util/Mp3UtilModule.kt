@@ -2,6 +2,8 @@ package `fun`.xwj.musicfree.mp3Util
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -9,6 +11,7 @@ import com.facebook.react.bridge.*
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.ByteArrayOutputStream
@@ -42,6 +45,201 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
 
     private fun isContentUri(uri: Uri?): Boolean {
         return uri?.scheme?.equals("content", ignoreCase = true) == true
+    }
+
+    /** Strip the file:// scheme so MediaExtractor/MediaMetadataRetriever get a plain path. */
+    private fun toLocalPathOrUri(filePath: String): String {
+        return if (filePath.startsWith("file://")) {
+            Uri.parse(filePath).path ?: filePath
+        } else {
+            filePath
+        }
+    }
+
+    private class AudioTechMeta(
+        val bitrate: Double?,
+        val sampleRate: Int?,
+        val bitDepth: Int?,
+        val codec: String?,
+        val channelCount: Int?,
+    )
+
+    /** Open a stream for file path / file:// / content:// without loading the whole file. */
+    private fun openAudioInputStream(source: String): InputStream? {
+        return try {
+            val uri = Uri.parse(source)
+            if (isContentUri(uri)) {
+                reactContext.contentResolver.openInputStream(uri)
+            } else {
+                FileInputStream(toLocalPathOrUri(source))
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun readHeaderBytes(source: String, byteCount: Int): ByteArray? {
+        return try {
+            openAudioInputStream(source)?.use { input ->
+                val buffer = ByteArray(byteCount)
+                var offset = 0
+                while (offset < byteCount) {
+                    val read = input.read(buffer, offset, byteCount - offset)
+                    if (read <= 0) break
+                    offset += read
+                }
+                if (offset > 0) buffer.copyOf(offset) else null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * FLAC STREAMINFO 解析：文件头为 "fLaC"(4) + 块头(4) + 34 字节 STREAMINFO。
+     * STREAMINFO 末 8 字节依次为 sampleRate(20bit) / channels-1(3bit) / bps-1(5bit) / totalSamples(36bit)。
+     */
+    private fun parseFlacStreamInfo(bytes: ByteArray): Triple<Int, Int, Int>? {
+        if (bytes.size < 42) return null
+        if (!(bytes[0] == 'f'.code.toByte() && bytes[1] == 'L'.code.toByte() &&
+              bytes[2] == 'a'.code.toByte() && bytes[3] == 'C'.code.toByte())) {
+            return null
+        }
+        if ((bytes[4].toInt() and 0x7f) != 0) return null // 第一个块必须是 STREAMINFO
+        val sampleRate = ((bytes[18].toInt() and 0xff) shl 12) or
+                ((bytes[19].toInt() and 0xff) shl 4) or
+                ((bytes[20].toInt() and 0xf0) shr 4)
+        val channels = ((bytes[20].toInt() shr 1) and 0x7) + 1
+        val bitDepth = (((bytes[20].toInt() and 0x1) shl 4) or
+                ((bytes[21].toInt() and 0xf0) shr 4)) + 1
+        if (sampleRate <= 0 || bitDepth <= 0) return null
+        return Triple(sampleRate, bitDepth, channels)
+    }
+
+    /** WAV fmt 块解析：RIFF/WAVE 头后遍历 chunk，fmt 块内偏移 2/4/14 为声道/采样率/位深。 */
+    private fun parseWavFormat(bytes: ByteArray): Triple<Int, Int, Int>? {
+        if (bytes.size < 12) return null
+        if (!(bytes[0] == 'R'.code.toByte() && bytes[1] == 'I'.code.toByte() &&
+              bytes[2] == 'F'.code.toByte() && bytes[3] == 'F'.code.toByte() &&
+              bytes[8] == 'W'.code.toByte() && bytes[9] == 'A'.code.toByte() &&
+              bytes[10] == 'V'.code.toByte() && bytes[11] == 'E'.code.toByte())) {
+            return null
+        }
+        var offset = 12
+        while (offset + 8 <= bytes.size) {
+            val chunkId = String(bytes, offset, 4, Charsets.US_ASCII)
+            val chunkSize = (bytes[offset + 4].toInt() and 0xff) or
+                    ((bytes[offset + 5].toInt() and 0xff) shl 8) or
+                    ((bytes[offset + 6].toInt() and 0xff) shl 16) or
+                    ((bytes[offset + 7].toInt() and 0xff) shl 24)
+            if (chunkId == "fmt " && offset + 8 + 16 <= bytes.size) {
+                val channels = (bytes[offset + 10].toInt() and 0xff) or
+                        ((bytes[offset + 11].toInt() and 0xff) shl 8)
+                val sampleRate = (bytes[offset + 12].toInt() and 0xff) or
+                        ((bytes[offset + 13].toInt() and 0xff) shl 8) or
+                        ((bytes[offset + 14].toInt() and 0xff) shl 16) or
+                        ((bytes[offset + 15].toInt() and 0xff) shl 24)
+                val bitDepth = (bytes[offset + 22].toInt() and 0xff) or
+                        ((bytes[offset + 23].toInt() and 0xff) shl 8)
+                if (sampleRate > 0 && bitDepth > 0) {
+                    return Triple(sampleRate, bitDepth, channels)
+                }
+                return null
+            }
+            if (chunkSize <= 0) return null
+            offset += 8 + chunkSize + (chunkSize % 2) // chunk 按 2 字节对齐
+        }
+        return null
+    }
+
+    /** MediaExtractor 兜底：读取音轨的采样率 / 声道数 / MIME 类型。 */
+    private fun probeAudioFormat(source: String): Triple<Int?, Int?, String?>? {
+        val extractor = MediaExtractor()
+        return try {
+            val uri = Uri.parse(source)
+            if (isContentUri(uri)) {
+                extractor.setDataSource(reactApplicationContext, uri, null)
+            } else {
+                extractor.setDataSource(toLocalPathOrUri(source))
+            }
+            for (i in 0 until extractor.trackCount) {
+                val format = extractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
+                if (!mime.startsWith("audio/", ignoreCase = true)) continue
+                val sampleRate = if (format.containsKey(MediaFormat.KEY_SAMPLE_RATE)) {
+                    format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                } else null
+                val channels = if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
+                    format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                } else null
+                return Triple(sampleRate, channels, mime)
+            }
+            null
+        } catch (e: Exception) {
+            null
+        } finally {
+            try {
+                extractor.release()
+            } catch (ignored: Exception) {
+            }
+        }
+    }
+
+    private fun codecFromMime(mime: String?, filePath: String): String? {
+        when (mime?.lowercase()) {
+            "audio/mpeg" -> return "mp3"
+            "audio/mp4a-latm", "audio/aac" -> return "aac"
+            "audio/flac" -> return "flac"
+            "audio/vorbis", "audio/ogg" -> return "vorbis"
+            "audio/opus" -> return "opus"
+            "audio/amr-wb" -> return "amr-wb"
+            "audio/amr-nb" -> return "amr-nb"
+            "audio/raw", "audio/g711-alaw", "audio/g711-mlaw" -> return "wav"
+        }
+        val lowerPath = filePath.lowercase().substringBefore('?')
+        return when (lowerPath.substringAfterLast('.', "")) {
+            "mp3", "flac", "wav", "aac", "ape", "wma", "opus" -> lowerPath.substringAfterLast('.', "")
+            "m4a", "mp4" -> "aac"
+            "ogg" -> "vorbis"
+            else -> null
+        }
+    }
+
+    /**
+     * 汇总音频技术元数据：码率取自 MediaMetadataRetriever（bps），
+     * 采样率/位深优先解析 FLAC STREAMINFO / WAV fmt 头，其余格式走 MediaExtractor 兜底。
+     */
+    private fun extractAudioTechMeta(source: String, mmrBitrate: String?): AudioTechMeta {
+        val bitrate = mmrBitrate?.toDoubleOrNull()?.takeIf { it > 0 }
+        val headerBytes = readHeaderBytes(source, 4096)
+        val flac = headerBytes?.let { parseFlacStreamInfo(it) }
+        val wav = if (flac == null) headerBytes?.let { parseWavFormat(it) } else null
+
+        var sampleRate: Int? = flac?.first ?: wav?.first
+        var bitDepth: Int? = flac?.second ?: wav?.second
+        var channelCount: Int? = flac?.third ?: wav?.third
+        var codec: String? = if (flac != null) "flac" else if (wav != null) "wav" else null
+
+        if (sampleRate == null || codec == null) {
+            val probe = probeAudioFormat(source)
+            if (probe != null) {
+                if (sampleRate == null) sampleRate = probe.first
+                if (channelCount == null) channelCount = probe.second
+                if (codec == null) codec = codecFromMime(probe.third, source)
+            }
+        }
+        if (codec == null) {
+            codec = codecFromMime(null, source)
+        }
+        return AudioTechMeta(bitrate, sampleRate, bitDepth, codec, channelCount)
+    }
+
+    private fun putAudioTechMeta(properties: WritableMap, techMeta: AudioTechMeta) {
+        techMeta.bitrate?.let { putDouble("bitrate", it) }
+        techMeta.sampleRate?.let { putInt("sampleRate", it) }
+        techMeta.bitDepth?.let { putInt("bitDepth", it) }
+        techMeta.codec?.let { putString("codec", it) }
+        techMeta.channelCount?.let { putInt("channelCount", it) }
     }
 
     /** Download cover bytes without blocking the React Native module queue. */
@@ -99,28 +297,37 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
 
     @ReactMethod
     fun getBasicMeta(filePath: String, promise: Promise) {
+        var mmr: MediaMetadataRetriever? = null
         try {
             val uri = Uri.parse(filePath)
-            val mmr = MediaMetadataRetriever()
+            mmr = MediaMetadataRetriever()
             if (isContentUri(uri)) {
                 mmr.setDataSource(reactApplicationContext, uri)
             } else {
-                mmr.setDataSource(filePath)
+                mmr.setDataSource(toLocalPathOrUri(filePath))
             }
+
+            val bitrate = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)
+            val techMeta = extractAudioTechMeta(filePath, bitrate)
 
             val properties = Arguments.createMap().apply {
                 putString("duration", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
-                putString("bitrate", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE))
                 putString("artist", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST))
                 putString("author", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_AUTHOR))
                 putString("album", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM))
                 putString("title", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE))
                 putString("date", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE))
                 putString("year", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR))
+                putAudioTechMeta(this, techMeta)
             }
             promise.resolve(properties)
         } catch (e: Exception) {
             promise.reject("Exception", e.message)
+        } finally {
+            try {
+                mmr?.release()
+            } catch (ignored: Exception) {
+            }
         }
     }
 
@@ -136,18 +343,21 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
                 if (isContentUri(uri)) {
                     mmr.setDataSource(reactApplicationContext, uri)
                 } else {
-                    mmr.setDataSource(filePath)
+                    mmr.setDataSource(toLocalPathOrUri(filePath))
                 }
+
+                val bitrate = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)
+                val techMeta = extractAudioTechMeta(filePath, bitrate)
 
                 val properties = Arguments.createMap().apply {
                     putString("duration", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
-                    putString("bitrate", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE))
                     putString("artist", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST))
                     putString("author", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_AUTHOR))
                     putString("album", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM))
                     putString("title", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE))
                     putString("date", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE))
                     putString("year", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR))
+                    putAudioTechMeta(this, techMeta)
                 }
                 metas.pushMap(properties)
             } catch (e: Exception) {

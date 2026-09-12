@@ -1,9 +1,10 @@
 import React, { Fragment } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import ThemeText from "@/components/base/themeText";
 
 import { getQualityText, getAvailableQualities, getQualitySize } from "@/utils/qualities";
+import { formatAudioQualityText, getMusicItemAudioMeta } from "@/utils/localQuality";
 import PluginManager from "@/core/pluginManager";
 import { sizeFormatter } from "@/utils/fileUtils";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -38,6 +39,11 @@ export default function MusicQuality(props: IMusicQualityProps) {
     const plugin = PluginManager.getByMedia(musicItem);
     const availableQualities = getAvailableQualities(musicItem, plugin?.instance);
 
+    // 本地音乐：展示文件真实技术参数，不显示虚构的在线音质列表
+    const localAudioMeta = getMusicItemAudioMeta(musicItem);
+    const localQualityText = formatAudioQualityText(localAudioMeta);
+    const isLocalWithMeta = !!localAudioMeta && !!localQualityText;
+
     return (
         <PanelBase
             height={rpx(520)}
@@ -62,7 +68,16 @@ export default function MusicQuality(props: IMusicQualityProps) {
                             },
                         ]}
                         showsVerticalScrollIndicator={availableQualities.length > 4}>
-                        {availableQualities.length > 0 ? (
+                        {isLocalWithMeta ? (
+                            <View style={style.item}>
+                                <ThemeText>{i18n.t("localQuality.fallback")}</ThemeText>
+                                <ThemeText
+                                    fontSize="description"
+                                    fontColor="textSecondary">
+                                    {localQualityText}
+                                </ThemeText>
+                            </View>
+                        ) : availableQualities.length > 0 ? (
                             availableQualities.map(key => {
                                 return (
                                     <Fragment key={`frag-${key}`}>
