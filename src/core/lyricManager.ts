@@ -281,6 +281,10 @@ class LyricManager implements IInjectable {
             }
         });
 
+        this.trackPlayer.on(TrackPlayerEvents.ProgressChanged, progress => {
+            this.syncAfterSeek(progress.position, this.isPlaybackAdvancing);
+        });
+
         RNTrackPlayer.addEventListener(Event.PlaybackProgressUpdated, evt => {
             const parser = this.lyricParser;
             const positionMs = evt.position * 1000;

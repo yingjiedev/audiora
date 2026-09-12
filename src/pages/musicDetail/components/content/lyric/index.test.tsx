@@ -21,7 +21,6 @@ const mockLyrics = Array.from({ length: 8 }, (_, index) => ({
 const mockCurrentLyric = mockLyrics[1];
 const mockLyricManager = {
     currentLyricItem: mockCurrentLyric,
-    syncAfterSeek: jest.fn(),
     unassociateLyric: jest.fn(),
 };
 
@@ -150,7 +149,6 @@ describe("Lyric progress seek", () => {
 
         expect(mockTrackPlayer.seekTo).toHaveBeenCalledWith(40);
         expect(mockTrackPlayer.play).toHaveBeenCalledTimes(1);
-        expect(mockLyricManager.syncAfterSeek).toHaveBeenCalledWith(40, true);
         expect(mockScrollToOffset).toHaveBeenCalledWith({
             animated: true,
             offset: 214,

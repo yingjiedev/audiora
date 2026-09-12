@@ -46,6 +46,7 @@ import { resolveArtwork } from "@/utils/artwork";
 import { getLocalPlaybackSource } from "./localPlayback";
 import { adaptMediaSourceForPlayback } from "./mediaSourceAdapter";
 import { refreshCurrentSource } from "./refreshCurrentSource";
+import SeekCoordinator from "./seekCoordinator";
 
 
 
@@ -97,6 +98,7 @@ class TrackPlayer extends EventEmitter<{
     // Changes whenever the selected track changes, including switching away
     // from and back to the same media item during an asynchronous refresh.
     private currentMusicRevision = 0;
+    private seekCoordinator = new SeekCoordinator();
     // 播放队列索引map
     private playListIndexMap = createMediaIndexMap([] as IMusic.IMusicItem[]);
 
@@ -1111,7 +1113,16 @@ class TrackPlayer extends EventEmitter<{
 
     async seekTo(progress: number) {
         PersistStatus.set("music.progress", progress);
-        return ReactNativeTrackPlayer.seekTo(progress);
+        return this.seekCoordinator.seek(
+            progress,
+            position => ReactNativeTrackPlayer.seekTo(position),
+            position => {
+                this.emit(TrackPlayerEvents.ProgressChanged, {
+                    position,
+                    duration: Number(this.currentMusic?.duration) || 0,
+                });
+            },
+        );
     }
 
     getProgress = ReactNativeTrackPlayer.getProgress;
