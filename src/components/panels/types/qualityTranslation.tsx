@@ -195,7 +195,7 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                                 key={qualityKey}
                                 style={[
                                     styles.itemContainer,
-                                    { borderBottomColor: colors.divider ?? "#e0e0e0" },
+                                    { borderBottomColor: colors.divider },
                                 ]}>
                                 <View style={styles.itemHeader}>
                                     <View style={styles.keyBadge}>
@@ -242,7 +242,7 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                                             <Icon
                                                 name="trash-outline"
                                                 size={rpx(28)}
-                                                color="#d64541"
+                                                color={colors.danger ?? colors.text}
                                             />
                                         </Pressable>
                                     </View>
@@ -306,7 +306,11 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                             </View>
                         ))}
 
-                        <View style={styles.actionsContainer}>
+                        <View
+                            style={[
+                                styles.actionsContainer,
+                                { borderTopColor: colors.divider },
+                            ]}>
                             <ListItem
                                 withHorizontalPadding
                                 heightType="small"
@@ -345,7 +349,10 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                         animationType="fade"
                         onRequestClose={() => setAddModalVisible(false)}>
                         <Pressable
-                            style={styles.modalOverlay}
+                            style={[
+                                styles.modalOverlay,
+                                { backgroundColor: colors.mask },
+                            ]}
                             onPress={() => setAddModalVisible(false)}>
                             <Pressable
                                 style={[
@@ -385,7 +392,9 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                                     <Pressable
                                         style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: colors.primary }]}
                                         onPress={handleAddConfirm}>
-                                        <ThemeText fontSize="content" style={styles.modalBtnPrimaryText}>
+                                        <ThemeText
+                                            fontSize="content"
+                                            color={colors.onPrimary}>
                                             确定
                                         </ThemeText>
                                     </Pressable>
@@ -466,7 +475,6 @@ const styles = StyleSheet.create({
     actionsContainer: {
         marginTop: rpx(16),
         borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: "#e0e0e0",
         paddingTop: rpx(8),
     },
     bottomPadding: {
@@ -474,7 +482,6 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
         justifyContent: "center",
         alignItems: "center",
     },
@@ -501,8 +508,5 @@ const styles = StyleSheet.create({
     },
     modalBtnPrimary: {
         borderWidth: 0,
-    },
-    modalBtnPrimaryText: {
-        color: "#fff",
     },
 });
