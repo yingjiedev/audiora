@@ -6,6 +6,7 @@ import {
 import pathConst from "@/constants/pathConst";
 import Mp3Util from "@/native/mp3Util";
 import { normalizeAudioMeta } from "@/utils/localQuality";
+import { normalizePluginMediaSourceResult } from "@/utils/mediaSource";
 import Base64 from "@/utils/base64";
 import delay from "@/utils/delay";
 import { addFileScheme, getFileName, removeFileScheme } from "@/utils/fileUtils";
@@ -428,9 +429,14 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
             const qualityInfo = mediaCache.source[quality];
             return {
                 url: qualityInfo!.url,
-                headers: mediaCache.headers,
+                headers: qualityInfo!.headers ?? mediaCache.headers,
                 userAgent:
-                    mediaCache.userAgent ?? mediaCache.headers?.["user-agent"],
+                    qualityInfo!.userAgent ??
+                    mediaCache.userAgent ??
+                    qualityInfo!.headers?.["user-agent"] ??
+                    mediaCache.headers?.["user-agent"],
+                quality: qualityInfo!.quality,
+                audioMeta: qualityInfo!.audioMeta,
             };
         }
         // 3. 替代插件
@@ -443,11 +449,13 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
 
         // 4. 插件解析
         if (!parserPlugin.instance.getMediaSource) {
+            const qualitySource = musicItem?.qualities?.[quality];
             const { url, auth } = formatAuthUrl(
-                musicItem?.qualities?.[quality]?.url ?? musicItem.url,
+                qualitySource?.url ?? musicItem.url,
             );
             return {
                 url: url,
+                quality: qualitySource?.url ? quality : undefined,
                 headers: auth
                     ? {
                         Authorization: auth,
@@ -460,18 +468,13 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
                 musicItem,
                 quality,
             )) ?? { url: musicItem?.qualities?.[quality]?.url };
-            const { url, headers, ekey, cek } = mediaSourceResult as any;
-            if (!url) {
+            if (!mediaSourceResult.url) {
                 throw new Error("NOT RETRY");
             }
             trace("播放", "插件播放");
-            const result = {
-                url,
-                headers,
-                userAgent: headers?.["user-agent"],
-                ekey, // 传递 ekey 用于 mflac 解密
-                cek, // 传递 cek 用于 CENC 流式解密
-            } as IPlugin.IMediaSourceResult;
+            const result = normalizePluginMediaSourceResult(
+                mediaSourceResult,
+            );
             const authFormattedResult = formatAuthUrl(result.url!);
             if (authFormattedResult.auth) {
                 result.url = authFormattedResult.url;
@@ -489,7 +492,9 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
                 const cacheSource = {
                     headers: result.headers,
                     userAgent: result.userAgent,
-                    url,
+                    url: result.url,
+                    quality: result.quality,
+                    audioMeta: result.audioMeta,
                 };
                 let realMusicItem = {
                     ...musicItem,

@@ -34,6 +34,9 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
     private val metadataExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "MusicFree-Metadata").apply { isDaemon = true }
     }
+    private val onlineMetadataExecutor = Executors.newFixedThreadPool(2) { runnable ->
+        Thread(runnable, "MusicFree-OnlineMetadata").apply { isDaemon = true }
+    }
     private val coverHttpClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(12, TimeUnit.SECONDS)
@@ -46,6 +49,25 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
 
     private fun isContentUri(uri: Uri?): Boolean {
         return uri?.scheme?.equals("content", ignoreCase = true) == true
+    }
+
+    private fun isHttpSource(source: String): Boolean {
+        val scheme = Uri.parse(source).scheme
+        return scheme.equals("http", ignoreCase = true) ||
+                scheme.equals("https", ignoreCase = true)
+    }
+
+    private fun toHeaderMap(headers: ReadableMap?): HashMap<String, String> {
+        val result = hashMapOf<String, String>()
+        if (headers == null) return result
+        val iterator = headers.keySetIterator()
+        while (iterator.hasNextKey()) {
+            val key = iterator.nextKey()
+            if (headers.getType(key) == ReadableType.String) {
+                headers.getString(key)?.let { result[key] = it }
+            }
+        }
+        return result
     }
 
     /** Strip the file:// scheme so MediaExtractor/MediaMetadataRetriever get a plain path. */
@@ -79,7 +101,33 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
         }
     }
 
-    private fun readHeaderBytes(source: String, byteCount: Int): ByteArray? {
+    private fun readHeaderBytes(
+        source: String,
+        byteCount: Int,
+        headers: Map<String, String> = emptyMap(),
+    ): ByteArray? {
+        if (isHttpSource(source)) {
+            return try {
+                val requestBuilder = Request.Builder().url(source)
+                headers.forEach { (key, value) -> requestBuilder.header(key, value) }
+                requestBuilder.header("Range", "bytes=0-${byteCount - 1}")
+                coverHttpClient.newCall(requestBuilder.build()).execute().use { response ->
+                    if (!response.isSuccessful) return null
+                    response.body?.byteStream()?.use { input ->
+                        val buffer = ByteArray(byteCount)
+                        var offset = 0
+                        while (offset < byteCount) {
+                            val read = input.read(buffer, offset, byteCount - offset)
+                            if (read <= 0) break
+                            offset += read
+                        }
+                        if (offset > 0) buffer.copyOf(offset) else null
+                    }
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
         return try {
             openAudioInputStream(source)?.use { input ->
                 val buffer = ByteArray(byteCount)
@@ -154,12 +202,17 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
     }
 
     /** MediaExtractor 兜底：读取音轨的采样率 / 声道数 / MIME 类型。 */
-    private fun probeAudioFormat(source: String): Triple<Int?, Int?, String?>? {
+    private fun probeAudioFormat(
+        source: String,
+        headers: Map<String, String> = emptyMap(),
+    ): Triple<Int?, Int?, String?>? {
         val extractor = MediaExtractor()
         return try {
             val uri = Uri.parse(source)
             if (isContentUri(uri)) {
                 extractor.setDataSource(reactApplicationContext, uri, null)
+            } else if (isHttpSource(source)) {
+                extractor.setDataSource(source, headers)
             } else {
                 extractor.setDataSource(toLocalPathOrUri(source))
             }
@@ -217,20 +270,29 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
         source: String,
         mmrBitrate: String?,
         mmrBitDepth: String?,
+        headers: Map<String, String> = emptyMap(),
+        mmrSampleRate: String? = null,
+        mmrMime: String? = null,
     ): AudioTechMeta {
         val bitrate = mmrBitrate?.toDoubleOrNull()?.takeIf { it > 0 }
         val retrieverBitDepth = mmrBitDepth?.toIntOrNull()?.takeIf { it > 0 }
-        val headerBytes = readHeaderBytes(source, 4096)
+        val retrieverSampleRate = mmrSampleRate?.toIntOrNull()?.takeIf { it > 0 }
+        var codec: String? = codecFromMime(mmrMime, source)
+        val headerBytes = if (codec == null || codec == "flac" || codec == "wav") {
+            readHeaderBytes(source, 4096, headers)
+        } else null
         val flac = headerBytes?.let { parseFlacStreamInfo(it) }
         val wav = if (flac == null) headerBytes?.let { parseWavFormat(it) } else null
 
-        var sampleRate: Int? = flac?.first ?: wav?.first
+        var sampleRate: Int? = flac?.first ?: wav?.first ?: retrieverSampleRate
         var bitDepth: Int? = flac?.second ?: wav?.second ?: retrieverBitDepth
         var channelCount: Int? = flac?.third ?: wav?.third
-        var codec: String? = if (flac != null) "flac" else if (wav != null) "wav" else null
+        codec = if (flac != null) "flac" else if (wav != null) "wav" else codec
 
-        if (sampleRate == null || codec == null) {
-            val probe = probeAudioFormat(source)
+        val needsFormatProbe = codec == null ||
+                (codec in setOf("flac", "wav", "pcm", "alac", "ape") && sampleRate == null)
+        if (needsFormatProbe) {
+            val probe = probeAudioFormat(source, headers)
             if (probe != null) {
                 if (sampleRate == null) sampleRate = probe.first
                 if (channelCount == null) channelCount = probe.second
@@ -249,6 +311,19 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
         techMeta.bitDepth?.let { properties.putInt("bitDepth", it) }
         techMeta.codec?.let { properties.putString("codec", it) }
         techMeta.channelCount?.let { properties.putInt("channelCount", it) }
+    }
+
+    private fun setRetrieverDataSource(
+        retriever: MediaMetadataRetriever,
+        source: String,
+        headers: Map<String, String> = emptyMap(),
+    ) {
+        val uri = Uri.parse(source)
+        when {
+            isContentUri(uri) -> retriever.setDataSource(reactApplicationContext, uri)
+            isHttpSource(source) -> retriever.setDataSource(source, headers)
+            else -> retriever.setDataSource(toLocalPathOrUri(source))
+        }
     }
 
     /** Download cover bytes without blocking the React Native module queue. */
@@ -308,19 +383,24 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
     fun getBasicMeta(filePath: String, promise: Promise) {
         var mmr: MediaMetadataRetriever? = null
         try {
-            val uri = Uri.parse(filePath)
             mmr = MediaMetadataRetriever()
-            if (isContentUri(uri)) {
-                mmr.setDataSource(reactApplicationContext, uri)
-            } else {
-                mmr.setDataSource(toLocalPathOrUri(filePath))
-            }
+            setRetrieverDataSource(mmr, filePath)
 
             val bitrate = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)
             val bitDepth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITS_PER_SAMPLE)
             } else null
-            val techMeta = extractAudioTechMeta(filePath, bitrate, bitDepth)
+            val sampleRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_SAMPLERATE)
+            } else null
+            val mime = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
+            val techMeta = extractAudioTechMeta(
+                filePath,
+                bitrate,
+                bitDepth,
+                mmrSampleRate = sampleRate,
+                mmrMime = mime,
+            )
 
             val properties = Arguments.createMap().apply {
                 putString("duration", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))
@@ -339,6 +419,61 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
             try {
                 mmr?.release()
             } catch (ignored: Exception) {
+            }
+        }
+    }
+
+    /**
+     * Best-effort technical metadata probe for the exact source used by the
+     * player. Online work runs away from the local import metadata queue and
+     * carries the same authentication headers as playback.
+     */
+    @ReactMethod
+    fun getAudioMeta(source: String, headers: ReadableMap?, promise: Promise) {
+        val headerMap = toHeaderMap(headers)
+        val executor = if (isHttpSource(source)) {
+            onlineMetadataExecutor
+        } else {
+            metadataExecutor
+        }
+        executor.execute {
+            var mmr: MediaMetadataRetriever? = null
+            try {
+                mmr = MediaMetadataRetriever()
+                setRetrieverDataSource(mmr, source, headerMap)
+                val bitrate = mmr.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_BITRATE,
+                )
+                val bitDepth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    mmr.extractMetadata(
+                        MediaMetadataRetriever.METADATA_KEY_BITS_PER_SAMPLE,
+                    )
+                } else null
+                val sampleRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_SAMPLERATE)
+                } else null
+                val mime = mmr.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_MIMETYPE,
+                )
+                val techMeta = extractAudioTechMeta(
+                    source,
+                    bitrate,
+                    bitDepth,
+                    headerMap,
+                    sampleRate,
+                    mime,
+                )
+                val properties = Arguments.createMap().apply {
+                    putAudioTechMeta(this, techMeta)
+                }
+                promise.resolve(properties)
+            } catch (e: Exception) {
+                promise.reject("AudioMetaProbeError", e.message, e)
+            } finally {
+                try {
+                    mmr?.release()
+                } catch (ignored: Exception) {
+                }
             }
         }
     }
@@ -366,7 +501,17 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
                 val bitDepth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITS_PER_SAMPLE)
                 } else null
-                val techMeta = extractAudioTechMeta(filePath, bitrate, bitDepth)
+                val sampleRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_SAMPLERATE)
+                } else null
+                val mime = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
+                val techMeta = extractAudioTechMeta(
+                    filePath,
+                    bitrate,
+                    bitDepth,
+                    mmrSampleRate = sampleRate,
+                    mmrMime = mime,
+                )
 
                 val properties = Arguments.createMap().apply {
                     putString("duration", mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))

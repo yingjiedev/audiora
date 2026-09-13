@@ -46,6 +46,10 @@ import { resolveImportedAssetOrPath } from "@/utils/fileUtils";
 import { resolveArtwork } from "@/utils/artwork";
 import { getLocalPlaybackSource } from "./localPlayback";
 import { adaptMediaSourceForPlayback } from "./mediaSourceAdapter";
+import {
+    getImmediateActualQuality,
+    probeActualAudioQuality,
+} from "./audioQuality";
 import { refreshCurrentSource } from "./refreshCurrentSource";
 import SeekCoordinator from "./seekCoordinator";
 
@@ -53,7 +57,10 @@ import SeekCoordinator from "./seekCoordinator";
 
 const currentMusicAtom = atom<IMusic.IMusicItem | null>(null);
 const repeatModeAtom = atom<MusicRepeatMode>(MusicRepeatMode.QUEUE);
+/** 用户或自动选档实际向插件请求的档位 */
 const qualityAtom = atom<IMusic.IQualityKey>("320k");
+/** 插件报告或媒体技术参数确认后的实际播放档位 */
+const actualQualityAtom = atom<IMusic.IQualityKey | null>(null);
 const playListAtom = atom<IMusic.IMusicItem[]>([]);
 
 function isLoopbackHttpUrl(url?: string) {
@@ -99,6 +106,7 @@ class TrackPlayer extends EventEmitter<{
     // Changes whenever the selected track changes, including switching away
     // from and back to the same media item during an asynchronous refresh.
     private currentMusicRevision = 0;
+    private qualityResolutionRevision = 0;
     private seekCoordinator = new SeekCoordinator();
     // 播放队列索引map
     private playListIndexMap = createMediaIndexMap([] as IMusic.IMusicItem[]);
@@ -146,6 +154,10 @@ class TrackPlayer extends EventEmitter<{
 
     public get quality() {
         return getDefaultStore().get(qualityAtom);
+    }
+
+    public get actualQuality() {
+        return getDefaultStore().get(actualQualityAtom);
     }
 
     public get playList() {
@@ -234,7 +246,7 @@ class TrackPlayer extends EventEmitter<{
             }
 
             this.setCurrentMusic(track);
-            // 同步本次智能选择的音质，保证音质标签与实际请求的音源一致
+            // 先记录恢复时的请求档位；实际音质等待音源报告或后台探测。
             this.setQuality(quality);
             void appendStartupBreadcrumb("trackplayer-restore-current-set", {
                 title: track.title,
@@ -254,20 +266,13 @@ class TrackPlayer extends EventEmitter<{
                 this.pluginManagerService.getByMedia(track)
                     ?.methods.getMediaSource(track, quality)
                     .then(async newSource => {
-                        try {
-                            const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                            const localUrl = await getLocalStreamUrlIfNeeded(newSource?.url, (newSource as any)?.ekey, newSource?.headers, (newSource as any)?.cek);
-                            if (localUrl) {
-                                track.url = localUrl;
-                                track.headers = undefined;
-                            } else {
-                                track.url = newSource?.url || track.url;
-                                track.headers = newSource?.headers || track.headers;
-                            }
-                        } catch {
-                            track.url = newSource?.url || track.url;
-                            track.headers = newSource?.headers || track.headers;
-                        }
+                        const resolvedSource = await adaptMediaSourceForPlayback({
+                            ...(newSource ?? {}),
+                            url: newSource?.url || track.url,
+                            headers: newSource?.headers || track.headers,
+                        });
+                        track.url = resolvedSource.url;
+                        track.headers = resolvedSource.headers;
 
                         if (isSameMediaItem(this.currentMusic, track)) {
                             void appendStartupBreadcrumb("trackplayer-restore-apply-source", {
@@ -275,6 +280,11 @@ class TrackPlayer extends EventEmitter<{
                                 hasSourceUrl: !!newSource?.url,
                             });
                             await this.setTrackSource(track as Track, false);
+                            this.updatePlaybackQuality(
+                                track,
+                                quality,
+                                resolvedSource,
+                            );
                             if (progress) {
                                 void appendStartupBreadcrumb("trackplayer-restore-seek", {
                                     title: track.title,
@@ -597,6 +607,13 @@ class TrackPlayer extends EventEmitter<{
                         // 2.1.2 恢复播放
                         await ReactNativeTrackPlayer.play();
                     }
+                    if (!this.actualQuality) {
+                        this.updatePlaybackQuality(
+                            musicItem,
+                            this.quality,
+                            currentTrack as IPlugin.IMediaSourceResult,
+                        );
+                    }
                     // 这种情况下，播放队列和当前歌曲都不需要变化
                     return;
                 }
@@ -684,7 +701,11 @@ class TrackPlayer extends EventEmitter<{
                     title: musicItem.title,
                     url: source.url,
                 });
-                this.setQuality(selectedQuality);
+                this.updatePlaybackQuality(
+                    musicItem,
+                    selectedQuality,
+                    source,
+                );
             } else if (this.isCurrentMusic(musicItem)) {
                 source = (await plugin?.methods?.getMediaSource(
                     musicItem,
@@ -707,7 +728,11 @@ class TrackPlayer extends EventEmitter<{
                             source.headers = undefined;
                         }
                     } catch {}
-                    this.setQuality(selectedQuality);
+                    this.updatePlaybackQuality(
+                        musicItem,
+                        selectedQuality,
+                        source,
+                    );
                 } else {
                     // 智能选择失败，回退到遍历所有音质
                     let fallbackQuality: IMusic.IQualityKey | null = null;
@@ -729,7 +754,11 @@ class TrackPlayer extends EventEmitter<{
                                         source.headers = undefined;
                                     }
                                 } catch {}
-                                this.setQuality(quality);
+                                this.updatePlaybackQuality(
+                                    musicItem,
+                                    quality,
+                                    source,
+                                );
                                 fallbackQuality = quality;
                                 break;
                             }
@@ -756,7 +785,12 @@ class TrackPlayer extends EventEmitter<{
                     for (let quality of qualityOrder) {
                         if (musicItem.source[quality]?.url) {
                             source = musicItem.source[quality]!;
-                            this.setQuality(quality);
+                            this.updatePlaybackQuality(
+                                musicItem,
+                                quality,
+                                source,
+                                true,
+                            );
 
                             break;
                         }
@@ -805,7 +839,11 @@ class TrackPlayer extends EventEmitter<{
                                         } catch (error: any) {
                                             devLog("error", "❌[trackPlayer] mflac处理异常", error);
                                         }
-                                        this.setQuality(quality);
+                                        this.updatePlaybackQuality(
+                                            musicItem,
+                                            quality,
+                                            source,
+                                        );
                                         break;
                                     }
                                 } else {
@@ -825,8 +863,11 @@ class TrackPlayer extends EventEmitter<{
                     source = {
                         url: musicItem.url,
                     };
-                    // 使用用户设置的默认音质，而不是硬编码
-                    this.setQuality(preferredQuality);
+                    this.updatePlaybackQuality(
+                        musicItem,
+                        preferredQuality,
+                        source,
+                    );
                 }
             }
 
@@ -1041,6 +1082,11 @@ class TrackPlayer extends EventEmitter<{
                     ) as unknown as Track,
                     shouldPlay,
                 );
+                this.updatePlaybackQuality(
+                    musicItem,
+                    quality,
+                    source,
+                );
             },
             restoreProgress: position => this.seekTo(position),
         });
@@ -1078,7 +1124,11 @@ class TrackPlayer extends EventEmitter<{
                 );
 
                 await this.seekTo(progress.position ?? 0);
-                this.setQuality(newQuality);
+                this.updatePlaybackQuality(
+                    musicItem,
+                    newQuality,
+                    adaptedSource,
+                );
             }
             return true;
         } catch {
@@ -1139,6 +1189,8 @@ class TrackPlayer extends EventEmitter<{
 
     private setCurrentMusic(musicItem?: IMusic.IMusicItem | null) {
         this.currentMusicRevision += 1;
+        this.qualityResolutionRevision += 1;
+        getDefaultStore().set(actualQualityAtom, null);
         // 设置UI内部状态的musicitem
         if (!musicItem) {
             this.currentIndex = -1;
@@ -1189,6 +1241,48 @@ class TrackPlayer extends EventEmitter<{
     private setQuality(quality: IMusic.IQualityKey) {
         getDefaultStore().set(qualityAtom, quality);
         PersistStatus.set("music.quality", quality);
+    }
+
+    private updatePlaybackQuality(
+        musicItem: IMusic.IMusicItem,
+        requestedQuality: IMusic.IQualityKey,
+        source: IPlugin.IMediaSourceResult,
+        trustRequestedQuality = false,
+    ) {
+        this.setQuality(requestedQuality);
+        const resolutionRevision = ++this.qualityResolutionRevision;
+        const musicRevision = this.currentMusicRevision;
+        const localMusicItem = LocalMusicSheet.isLocalMusic(musicItem);
+        const localQuality = localMusicItem
+            ? mapLocalQuality(
+                resolveLocalAudioMeta(musicItem, localMusicItem),
+            )
+            : null;
+        const immediateQuality =
+            localQuality ??
+            getImmediateActualQuality(source) ??
+            (trustRequestedQuality ? requestedQuality : null);
+        getDefaultStore().set(actualQualityAtom, immediateQuality);
+
+        if (immediateQuality || localMusicItem || !source.url) {
+            return;
+        }
+
+        void probeActualAudioQuality(source).then(probedQuality => {
+            if (
+                resolutionRevision !== this.qualityResolutionRevision ||
+                musicRevision !== this.currentMusicRevision ||
+                !this.isCurrentMusic(musicItem)
+            ) {
+                return;
+            }
+            getDefaultStore().set(actualQualityAtom, probedQuality);
+            devLog("info", "[TrackPlayer] Online audio quality probe completed", {
+                title: musicItem.title,
+                requestedQuality,
+                actualQuality: probedQuality,
+            });
+        });
     }
 
     // 设置音源
@@ -1433,7 +1527,8 @@ class TrackPlayer extends EventEmitter<{
 export const usePlayList = () => useAtomValue(playListAtom);
 export const useCurrentMusic = () => useAtomValue(currentMusicAtom);
 export const useRepeatMode = () => useAtomValue(repeatModeAtom);
-export const useMusicQuality = () => useAtomValue(qualityAtom);
+/** 已确认的实际播放音质；尚未确认时为 null。 */
+export const useMusicQuality = () => useAtomValue(actualQualityAtom);
 export function useMusicState() {
     const playbackState = usePlaybackState();
 

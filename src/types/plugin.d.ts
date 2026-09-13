@@ -5,8 +5,10 @@ declare namespace IPlugin {
         url?: string;
         /** UA */
         userAgent?: string;
-        /** 音质 */
+        /** 实际返回音源的音质；无法确认时不要回填请求档位 */
         quality?: IMusic.IQualityKey;
+        /** 音源实际技术参数；插件可在已知时直接返回 */
+        audioMeta?: IMusic.IAudioTechnicalMeta;
         /** 加密音频源所需的密钥，由播放器代理消费 */
         ekey?: string;
         /** CENC 音频源所需的内容密钥，由播放器代理消费 */

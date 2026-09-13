@@ -86,15 +86,23 @@ class Mp3UtilManager implements IMp3Util {
     }
 
     /**
-     * 读取本地音频技术元数据（码率 bps / 采样率 Hz / 位深 bit / 编码），
-     * 读取失败或原生模块不可用时返回 undefined，不抛错（入库流程不应被元数据读取打断）。
+     * 读取本地文件或在线音源的技术元数据（码率/采样率/位深/编码）。
+     * 读取失败或原生模块不可用时返回 undefined，不影响入库或播放。
      */
-    async getAudioMeta(filePath: string): Promise<import("@/utils/localQuality").ILocalAudioMeta | undefined> {
-        if (!this.nativeModule?.getBasicMeta) {
+    async getAudioMeta(
+        source: string,
+        headers?: Record<string, string>,
+    ): Promise<import("@/utils/localQuality").ILocalAudioMeta | undefined> {
+        if (!this.nativeModule?.getAudioMeta && !this.nativeModule?.getBasicMeta) {
             return undefined;
         }
         try {
-            const meta = await this.nativeModule.getBasicMeta(filePath);
+            const isRemoteSource = /^https?:\/\//i.test(source);
+            const meta = this.nativeModule.getAudioMeta
+                ? await this.nativeModule.getAudioMeta(source, headers ?? {})
+                : isRemoteSource
+                    ? undefined
+                    : await this.nativeModule.getBasicMeta(source);
             const { normalizeAudioMeta } = require("@/utils/localQuality");
             return normalizeAudioMeta(meta);
         } catch {
