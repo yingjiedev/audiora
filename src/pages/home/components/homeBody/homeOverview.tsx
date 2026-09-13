@@ -340,10 +340,7 @@ function QuickAccess(props: {
 
     return (
         <View style={styles.quickSection}>
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.quickContainer}>
+            <View style={styles.quickContainer}>
                 {quickItems.map(item => (
                     <Pressable
                         key={item.key}
@@ -379,7 +376,7 @@ function QuickAccess(props: {
                         </ThemeText>
                     </Pressable>
                 ))}
-            </ScrollView>
+            </View>
         </View>
     );
 }
@@ -797,17 +794,19 @@ const styles = StyleSheet.create({
     },
     quickContainer: {
         paddingHorizontal: rpx(24),
+        flexDirection: "row",
+        gap: rpx(10),
     },
     quickSection: {
         marginTop: rpx(20),
     },
     quickItem: {
-        width: rpx(164),
+        flex: 1,
+        minWidth: 0,
         height: rpx(164),
         borderRadius: rpx(20),
         alignItems: "center",
         justifyContent: "center",
-        marginRight: rpx(10),
     },
     quickArtwork: {
         width: rpx(84),

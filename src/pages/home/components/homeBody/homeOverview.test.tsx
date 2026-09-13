@@ -1,4 +1,5 @@
 import React from "react";
+import { StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import HomeOverview from "./homeOverview";
 
@@ -97,5 +98,28 @@ describe("HomeOverview quick access", () => {
             id: "favorite",
         });
         expect(mockNavigate).toHaveBeenNthCalledWith(4, "local");
+    });
+
+    it("stretches all quick entries evenly without a trailing offset", () => {
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+
+        const quickCards = [
+            "home.recommendSheet",
+            "home.playHistory",
+            "home.favoriteSheet",
+            "home.importPlaylist.a11y",
+        ].map(label =>
+            renderer!.root.findByProps({ accessibilityLabel: label }),
+        );
+
+        quickCards.forEach(card => {
+            const style = StyleSheet.flatten(card.props.style);
+            expect(style.flex).toBe(1);
+            expect(style.minWidth).toBe(0);
+            expect(style.marginRight).toBeUndefined();
+        });
     });
 });
