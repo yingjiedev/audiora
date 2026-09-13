@@ -1287,7 +1287,7 @@ static void MFApplyAudioTechMeta(NSMutableDictionary *meta, AVAsset *asset, NSSt
           if (bitDepth == nil) {
             const void *cookie = NULL;
             size_t cookieSize = 0;
-            CMAudioFormatDescriptionGetMagicCookie(formatDescription, &cookieSize);
+            cookie = CMAudioFormatDescriptionGetMagicCookie(formatDescription, &cookieSize);
             // alac cookie 布局：frameLength(4) + compatibleVersion(1) + bitDepth(1) ...
             if (cookie != NULL && cookieSize >= 6) {
               uint8_t alacBitDepth = ((const uint8_t *)cookie)[5];

@@ -3,6 +3,7 @@ import {
     getMusicItemAudioMeta,
     mapLocalQuality,
     normalizeAudioMeta,
+    resolveLocalAudioMeta,
 } from "./localQuality";
 
 describe("normalizeAudioMeta", () => {
@@ -177,6 +178,34 @@ describe("getMusicItemAudioMeta", () => {
             sampleRate: undefined,
             bitDepth: 24,
             codec: undefined,
+            channelCount: undefined,
+        });
+    });
+
+    it("prefers metadata from the matching local-sheet copy", () => {
+        const requestedItem = {
+            id: "1",
+            platform: "online",
+            $: { audioMeta: { codec: "mp3", bitrate: 128000 } },
+        } as any;
+        const localMusicItem = {
+            id: "1",
+            platform: "online",
+            $: {
+                localPath: "/tmp/downloaded.flac",
+                audioMeta: {
+                    codec: "flac",
+                    bitDepth: 24,
+                    sampleRate: 96000,
+                },
+            },
+        } as any;
+
+        expect(resolveLocalAudioMeta(requestedItem, localMusicItem)).toEqual({
+            bitrate: undefined,
+            sampleRate: 96000,
+            bitDepth: 24,
+            codec: "flac",
             channelCount: undefined,
         });
     });

@@ -10,45 +10,11 @@ import Tag from "../base/tag";
 import TrackPlayer from "@/core/trackPlayer";
 import Icon from "@/components/base/icon.tsx";
 import { ImgAsset } from "@/constants/assetsConst";
-import Badge, { BadgeType } from "../base/badge";
+import Badge from "../base/badge";
 
-import { getQualityKeys } from "@/utils/qualities";
-import { getMusicItemAudioMeta, mapLocalQuality } from "@/utils/localQuality";
 import { resolveArtwork } from "@/utils/artwork";
 import { canPlayMusicVideo } from "@/utils/musicVideo";
-
-// master/atmos_plus/atmos/dolby/vinyl 不计入显示，只认以下五级
-const qualityBadgeDisplayMap: Record<string, { type: BadgeType; text: string }> = {
-    hires:     { type: "hires",     text: "HR"  },
-    flac24bit: { type: "flac24bit", text: "SQ+" },
-    flac:      { type: "flac24bit", text: "SQ"  },
-    "320k":    { type: "quality",   text: "HQ"  },
-    "192k":    { type: "quality",   text: "LQ"  },
-    "128k":    { type: "quality",   text: "LQ"  },
-    "96k":     { type: "quality",   text: "LQ"  },
-};
-
-// 获取音质标志信息
-function getQualityBadge(musicItem: IMusic.IMusicItem): { type: BadgeType; text: string } | null {
-    const qualities = musicItem.qualities;
-    if (qualities) {
-        // 按音质键逆序遍历（从高到低），跳过不计入显示的键
-        const keys = getQualityKeys();
-        for (let i = keys.length - 1; i >= 0; i--) {
-            const key = keys[i];
-            if (qualities[key] && qualityBadgeDisplayMap[key]) {
-                return qualityBadgeDisplayMap[key];
-            }
-        }
-    }
-
-    // 本地音乐没有在线音质列表，按文件真实技术元数据映射徽标（HQ/SQ/HR）
-    const mappedLocalQuality = mapLocalQuality(getMusicItemAudioMeta(musicItem));
-    if (mappedLocalQuality && qualityBadgeDisplayMap[mappedLocalQuality]) {
-        return qualityBadgeDisplayMap[mappedLocalQuality];
-    }
-    return null;
-}
+import { getQualityBadge } from "./musicItemQuality";
 
 interface IMusicItemProps {
     index?: string | number;
@@ -78,8 +44,15 @@ export default function MusicItem(props: IMusicItemProps) {
         highlight = false,
     } = props;
 
-    // 获取音质标志
-    const qualityBadge = useMemo(() => getQualityBadge(musicItem), [musicItem]);
+    const isLocal = LocalMusicSheet.useIsLocal(musicItem);
+    const localMusicItem = isLocal
+        ? LocalMusicSheet.isLocalMusic(musicItem)
+        : undefined;
+    // 本地副本优先使用真实技术元数据，避免遗留在线 qualities 覆盖实际档位。
+    const qualityBadge = useMemo(
+        () => getQualityBadge(musicItem, localMusicItem),
+        [localMusicItem, musicItem],
+    );
     // 获取 VIP 标志
     const isVip = musicItem.fee === 1;
     const hasMv = useMemo(() => canPlayMusicVideo(musicItem), [musicItem]);
@@ -124,7 +97,7 @@ export default function MusicItem(props: IMusicItemProps) {
                 }
                 description={
                     <View style={styles.descContainer}>
-                        {LocalMusicSheet.isLocalMusic(musicItem) && (
+                        {isLocal && (
                             <Icon
                                 style={styles.icon}
                                 color="#11659a"

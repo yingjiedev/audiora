@@ -79,6 +79,21 @@ export function getMusicItemAudioMeta(
 }
 
 /**
+ * Resolve metadata for a requested item through its matching local-sheet copy.
+ * Downloaded online items usually keep the original object in playlists/player state,
+ * while the local copy owns the persisted path and audio metadata.
+ */
+export function resolveLocalAudioMeta(
+    musicItem?: IMusic.IMusicItem | null,
+    localMusicItem?: IMusic.IMusicItem | null,
+): ILocalAudioMeta | undefined {
+    return (
+        getMusicItemAudioMeta(localMusicItem) ??
+        getMusicItemAudioMeta(musicItem)
+    );
+}
+
+/**
  * 本地音质映射规则：
  * - 无损编码：位深 > 16 或采样率 > 48kHz → hires(HR)，否则 flac(SQ)
  * - 有损编码：按码率就近分档，码率未知 → null
@@ -187,8 +202,9 @@ export function formatAudioQualityText(
  */
 export function getLocalQualityAbbr(
     musicItem?: IMusic.IMusicItem | null,
+    localMusicItem?: IMusic.IMusicItem | null,
 ): string | null {
-    const meta = getMusicItemAudioMeta(musicItem);
+    const meta = resolveLocalAudioMeta(musicItem, localMusicItem);
     const quality = mapLocalQuality(meta);
     if (!quality) {
         return null;

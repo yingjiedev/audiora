@@ -25,6 +25,9 @@ export default function Operations() {
     const musicItem = useCurrentMusic();
     const currentQuality = useMusicQuality();
     const isDownloaded = LocalMusicSheet.useIsLocal(musicItem);
+    const localMusicItem = isDownloaded
+        ? LocalMusicSheet.isLocalMusic(musicItem)
+        : undefined;
 
     const rate = PersistStatus.useValue("music.rate", 100);
     const orientation = useOrientation();
@@ -37,8 +40,12 @@ export default function Operations() {
 
     // 本地音乐展示基于真实元数据映射的音质档位，未知信息显示中性"本地"
     const localQualityAbbr = useMemo(
-        () => (isDownloaded ? getLocalQualityAbbr(musicItem) : null),
-        [isDownloaded, musicItem],
+        () => (
+            isDownloaded
+                ? getLocalQualityAbbr(musicItem, localMusicItem)
+                : null
+        ),
+        [isDownloaded, localMusicItem, musicItem],
     );
 
     return (
@@ -53,12 +60,13 @@ export default function Operations() {
                     if (!musicItem) {
                         return;
                     }
-                    let panelMusicItem = musicItem;
+                    let panelMusicItem = localMusicItem ?? musicItem;
                     try {
                         const plugin = PluginManager.getByName(
                             musicItem.platform,
                         );
                         if (
+                            !isDownloaded &&
                             plugin?.methods?.getMusicInfo &&
                             (!musicItem.qualities ||
                                 !musicItemHasQualitySizes(musicItem))
@@ -81,6 +89,7 @@ export default function Operations() {
                         // fall back to list item
                     }
                     showPanel("MusicQuality", {
+                        isLocal: isDownloaded,
                         musicItem: panelMusicItem,
                         async onQualityPress(quality) {
                             const changeResult =
