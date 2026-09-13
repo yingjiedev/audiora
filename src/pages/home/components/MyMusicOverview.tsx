@@ -171,12 +171,6 @@ export default function MyMusicOverview() {
                             {t("home.personalTagline")}
                         </ThemeText>
                     </View>
-                    <Icon
-                        name="arrow-long-left"
-                        size={rpx(30)}
-                        color={colors.textSecondary}
-                        style={styles.forwardIcon}
-                    />
                 </Pressable>
 
                 <View style={styles.quickGrid}>
@@ -265,7 +259,6 @@ export default function MyMusicOverview() {
                                     {entry.description}
                                 </ThemeText>
                             </View>
-                            <Icon name="arrow-long-left" size={rpx(28)} color={colors.textSecondary} style={styles.forwardIcon} />
                         </Pressable>
                     ))}
                 </View>
@@ -299,7 +292,14 @@ export default function MyMusicOverview() {
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={t("home.viewAll")}
-                            style={styles.viewAllAction}
+                            style={[
+                                styles.viewAllAction,
+                                {
+                                    backgroundColor: Color(colors.primary)
+                                        .alpha(0.1)
+                                        .toString(),
+                                },
+                            ]}
                             onPress={() =>
                                 navigate(ROUTE_PATH.SHEET_BROWSER, {
                                     sheetType: "local",
@@ -311,12 +311,6 @@ export default function MyMusicOverview() {
                                 color={colors.primary}>
                                 {t("home.viewAll")}
                             </ThemeText>
-                            <Icon
-                                name="arrow-long-left"
-                                size={rpx(22)}
-                                color={colors.primary}
-                                style={styles.forwardIcon}
-                            />
                         </Pressable>
                     </View>
                 </View>
@@ -364,12 +358,6 @@ export default function MyMusicOverview() {
                                         })}
                                     </ThemeText>
                                 </View>
-                                <Icon
-                                    name="arrow-long-left"
-                                    size={rpx(28)}
-                                    color={colors.textSecondary}
-                                    style={styles.forwardIcon}
-                                />
                             </Pressable>
                         ))
                     ) : (
@@ -438,9 +426,6 @@ const styles = StyleSheet.create({
     },
     profileDescription: {
         marginTop: rpx(8),
-    },
-    forwardIcon: {
-        transform: [{ rotate: "180deg" }],
     },
     quickGrid: {
         flexDirection: "row",
@@ -516,10 +501,11 @@ const styles = StyleSheet.create({
     },
     viewAllAction: {
         height: rpx(48),
-        paddingHorizontal: rpx(8),
+        paddingHorizontal: rpx(16),
         marginLeft: rpx(4),
-        flexDirection: "row",
+        borderRadius: rpx(24),
         alignItems: "center",
+        justifyContent: "center",
     },
     playlistCard: {
         borderRadius: rpx(22),

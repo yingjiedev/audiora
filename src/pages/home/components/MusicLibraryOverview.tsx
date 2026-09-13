@@ -175,7 +175,6 @@ function LocalMusicContent() {
                         {t("musicLibrary.localSummary", { count: localMusics.length })}
                     </ThemeText>
                 </View>
-                <Icon name="arrow-long-left" size={rpx(30)} color={colors.textSecondary} style={styles.chevron} />
             </Pressable>
 
             <View style={styles.localGrid}>
@@ -231,7 +230,6 @@ function LocalMusicContent() {
                             <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{item.title}</ThemeText>
                             <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.browserDescription}>{item.description}</ThemeText>
                         </View>
-                        <Icon name="arrow-long-left" size={rpx(28)} color={colors.textSecondary} style={styles.chevron} />
                     </Pressable>
                 )) : <EmptyLocalBrowser />}
             </View>
@@ -298,7 +296,6 @@ function OnlineMusicContent() {
                                     : t("musicLibrary.sourceConnected")}
                             </ThemeText>
                         </View>
-                        <Icon name="arrow-long-left" size={rpx(28)} color={colors.textSecondary} style={styles.chevron} />
                     </Pressable>
                 )) : (
                     <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.addSource")} style={styles.emptyState} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
@@ -366,7 +363,6 @@ const styles = StyleSheet.create({
     heroIcon: { width: rpx(76), height: rpx(76), borderRadius: rpx(22), alignItems: "center", justifyContent: "center" },
     heroText: { flex: 1, minWidth: 0, marginLeft: rpx(16) },
     heroDescription: { marginTop: rpx(8) },
-    chevron: { transform: [{ rotate: "180deg" }] },
     localGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: rpx(18) },
     localCard: { width: "48.5%", minHeight: rpx(126), padding: rpx(16), borderRadius: rpx(18), marginBottom: rpx(12) },
     localIcon: { width: rpx(52), height: rpx(52), borderRadius: rpx(16), alignItems: "center", justifyContent: "center", marginBottom: rpx(10) },

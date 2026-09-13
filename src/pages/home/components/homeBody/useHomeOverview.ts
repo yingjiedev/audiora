@@ -1,4 +1,5 @@
 import { useMusicHistory } from "@/core/musicHistory";
+import MusicSheet, { useSheetsBase } from "@/core/musicSheet";
 import PluginManager, { useSortedPlugins } from "@/core/pluginManager";
 import { useCurrentMusic } from "@/core/trackPlayer";
 import { isSameMediaItem } from "@/utils/mediaUtils";
@@ -8,6 +9,7 @@ export default function useHomeOverview() {
     const sortedPlugins = useSortedPlugins();
     const currentMusic = useCurrentMusic();
     const history = useMusicHistory();
+    const sheets = useSheetsBase();
 
     const enabledPlugins = useMemo(
         () =>
@@ -37,10 +39,20 @@ export default function useHomeOverview() {
         [currentMusic, history],
     );
 
+    const favoriteSheet = useMemo(
+        () =>
+            sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id) ??
+            sheets[0] ??
+            null,
+        [sheets],
+    );
+
     return {
         currentMusic,
         featuredMusic,
         recentMusics,
+        historyCount: history.length,
+        favoriteSheet,
         topListPlugins,
     };
 }

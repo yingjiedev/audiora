@@ -71,7 +71,7 @@ export default function HomeHero() {
 
 const styles = StyleSheet.create({
     card: {
-        width: "auto",
+        alignSelf: "stretch",
         aspectRatio: 2.5,
         marginHorizontal: rpx(24),
         marginTop: rpx(12),

@@ -10,8 +10,8 @@ import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import Color from "color";
 import React, { ReactNode, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { DimensionValue } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import type { DimensionValue, ImageSourcePropType } from "react-native";
 import type { Plugin } from "@/core/pluginManager";
 import useHomeDiscovery, {
     IHomeDiscoveryPreview,
@@ -46,17 +46,6 @@ function getMusicDescription(musicItem?: IMusic.IMusicItem | null) {
     return [musicItem.artist, musicItem.platform].filter(Boolean).join(" · ");
 }
 
-function ForwardIcon(props: { size: number; color: string }) {
-    return (
-        <Icon
-            name="arrow-left"
-            size={props.size}
-            color={props.color}
-            style={styles.forwardIcon}
-        />
-    );
-}
-
 export default function HomeOverview() {
     const data = useHomeOverview();
     const discoveryPreview = useHomeDiscovery(data.topListPlugins);
@@ -67,7 +56,11 @@ export default function HomeOverview() {
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}>
             <HomeHero />
-            <RecommendedPlaylists />
+            <QuickAccess
+                historyCount={data.historyCount}
+                favoriteCount={data.favoriteSheet?.worksNum ?? 0}
+                favoriteSheetId={data.favoriteSheet?.id}
+            />
             <Discovery
                 topListPlugins={data.topListPlugins}
                 preview={discoveryPreview}
@@ -288,54 +281,106 @@ function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
     );
 }
 
-function RecommendedPlaylists() {
-    const colors = useColors();
+function QuickAccess(props: {
+    historyCount: number;
+    favoriteCount: number;
+    favoriteSheetId?: string;
+}) {
+    const { historyCount, favoriteCount, favoriteSheetId } = props;
     const { t } = useI18N();
     const navigate = useNavigate();
 
+    const quickItems: Array<{
+        key: string;
+        artwork: ImageSourcePropType;
+        title: string;
+        subtitle: string;
+        accent: string;
+        action: () => void;
+    }> = [
+        {
+            key: "recommend",
+            artwork: ImgAsset.quickLocal,
+            title: t("home.recommendSheet"),
+            subtitle: t("home.discovery"),
+            accent: "#00CDAA",
+            action: () => navigate(ROUTE_PATH.RECOMMEND_SHEETS),
+        },
+        {
+            key: "history",
+            artwork: ImgAsset.quickHistory,
+            title: t("home.playHistory"),
+            subtitle: t("home.songCount", { count: historyCount }),
+            accent: "#4D70F5",
+            action: () => navigate(ROUTE_PATH.HISTORY),
+        },
+        {
+            key: "favorite",
+            artwork: ImgAsset.quickFavorite,
+            title: t("home.favoriteSheet"),
+            subtitle: t("home.songCount", { count: favoriteCount }),
+            accent: "#FF567D",
+            action: () => {
+                if (favoriteSheetId) {
+                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
+                        id: favoriteSheetId,
+                    });
+                }
+            },
+        },
+        {
+            key: "folderImport",
+            artwork: ImgAsset.quickFolder,
+            title: t("home.importPlaylist.a11y"),
+            subtitle: t("home.scanLocal"),
+            accent: "#00A9EE",
+            action: () => navigate(ROUTE_PATH.LOCAL),
+        },
+    ];
+
     return (
-        <Section
-            title={t("home.recommendSheet")}
-            right={
-                <Pressable
-                    style={styles.sectionTextButton}
-                    onPress={() => navigate(ROUTE_PATH.RECOMMEND_SHEETS)}>
-                    <ThemeText fontSize="description" fontWeight="semibold" color={colors.primary}>
-                        {t("home.viewAll")}
-                    </ThemeText>
-                    <ForwardIcon size={rpx(26)} color={colors.primary} />
-                </Pressable>
-            }>
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t("home.recommendSheet")}
-                style={[
-                    styles.recommendCard,
-                    { backgroundColor: Color(colors.primary).alpha(0.1).toString() },
-                ]}
-                onPress={() => navigate(ROUTE_PATH.RECOMMEND_SHEETS)}>
-                <View
-                    style={[
-                        styles.recommendIcon,
-                        { backgroundColor: Color(colors.primary).alpha(0.16).toString() },
-                    ]}>
-                    <Icon name="motion-play" size={rpx(38)} color={colors.primary} />
-                </View>
-                <View style={styles.recommendText}>
-                    <ThemeText fontSize="subTitle" fontWeight="bold" numberOfLines={1}>
-                        {t("home.recommendForYou")}
-                    </ThemeText>
-                    <ThemeText
-                        fontSize="description"
-                        fontColor="textSecondary"
-                        numberOfLines={2}
-                        style={styles.smallTextMargin}>
-                        {t("home.recommendDescription")}
-                    </ThemeText>
-                </View>
-                <ForwardIcon size={rpx(30)} color={colors.textSecondary ?? colors.text} />
-            </Pressable>
-        </Section>
+        <View style={styles.quickSection}>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickContainer}>
+                {quickItems.map(item => (
+                    <Pressable
+                        key={item.key}
+                        accessibilityRole="button"
+                        accessibilityLabel={item.title}
+                        style={[
+                            styles.quickItem,
+                            {
+                                backgroundColor: Color(item.accent)
+                                    .alpha(0.055)
+                                    .toString(),
+                            },
+                        ]}
+                        onPress={item.action}>
+                        <Image
+                            source={item.artwork}
+                            style={styles.quickArtwork}
+                            resizeMode="contain"
+                        />
+                        <ThemeText
+                            numberOfLines={1}
+                            fontSize="tag"
+                            fontWeight="semibold"
+                            style={styles.quickText}>
+                            {item.title}
+                        </ThemeText>
+                        <ThemeText
+                            numberOfLines={1}
+                            fontSize="caption"
+                            fontColor="textSecondary"
+                            style={styles.quickSubtitle}>
+                            {item.subtitle}
+                        </ThemeText>
+                    </Pressable>
+                ))}
+            </ScrollView>
+        </View>
     );
 }
 
@@ -384,7 +429,14 @@ function Discovery(props: {
             title={t("home.topList")}
             right={
                 <Pressable
-                    style={styles.sectionTextButton}
+                    style={[
+                        styles.sectionActionButton,
+                        {
+                            backgroundColor: Color(colors.primary)
+                                .alpha(0.1)
+                                .toString(),
+                        },
+                    ]}
                     onPress={() =>
                         navigate(ROUTE_PATH.TOP_LIST, {
                             initialPluginHash: preview.topListPluginHash,
@@ -396,7 +448,6 @@ function Discovery(props: {
                         color={colors.primary}>
                         {t("common.view")}
                     </ThemeText>
-                    <ForwardIcon size={rpx(26)} color={colors.primary} />
                 </Pressable>
             }>
             {previewItems.length || preview.loading ? (
@@ -519,10 +570,6 @@ function Discovery(props: {
                             {fallbackDescription}
                         </ThemeText>
                     </View>
-                    <ForwardIcon
-                        size={rpx(30)}
-                        color={colors.textSecondary ?? colors.text}
-                    />
                 </Pressable>
             ) : null}
         </Section>
@@ -590,9 +637,6 @@ function Section(props: {
 }
 
 const styles = StyleSheet.create({
-    forwardIcon: {
-        transform: [{ rotate: "180deg" }],
-    },
     wrapper: {
         width: "100%",
         flex: 1,
@@ -622,30 +666,13 @@ const styles = StyleSheet.create({
     sectionSubtitle: {
         marginTop: rpx(8),
     },
-    sectionTextButton: {
+    sectionActionButton: {
         minHeight: rpx(48),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    recommendCard: {
-        minHeight: rpx(116),
-        marginHorizontal: rpx(24),
+        minWidth: rpx(88),
         paddingHorizontal: rpx(18),
-        borderRadius: rpx(22),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    recommendIcon: {
-        width: rpx(64),
-        height: rpx(64),
-        borderRadius: rpx(20),
+        borderRadius: rpx(24),
         alignItems: "center",
         justifyContent: "center",
-    },
-    recommendText: {
-        flex: 1,
-        minWidth: 0,
-        marginHorizontal: rpx(16),
     },
     continueCard: {
         marginHorizontal: rpx(24),
@@ -767,6 +794,33 @@ const styles = StyleSheet.create({
     },
     smallTextMargin: {
         marginTop: rpx(8),
+    },
+    quickContainer: {
+        paddingHorizontal: rpx(24),
+    },
+    quickSection: {
+        marginTop: rpx(20),
+    },
+    quickItem: {
+        width: rpx(164),
+        height: rpx(164),
+        borderRadius: rpx(20),
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: rpx(10),
+    },
+    quickArtwork: {
+        width: rpx(84),
+        height: rpx(84),
+    },
+    quickText: {
+        marginTop: rpx(6),
+        maxWidth: rpx(150),
+        textAlign: "center",
+    },
+    quickSubtitle: {
+        marginTop: rpx(2),
+        textAlign: "center",
     },
     discoveryPreviewContainer: {
         paddingHorizontal: rpx(24),
