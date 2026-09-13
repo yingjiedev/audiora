@@ -14,6 +14,7 @@ import {
 } from "@/utils/mediaUtils";
 import StateMapper from "@/utils/stateMapper";
 import { getStorage, setStorage } from "@/utils/storage";
+import { normalizeAudioMeta } from "@/utils/localQuality";
 import CryptoJs from "crypto-js";
 import { nanoid } from "@/utils/nanoid";
 import { useEffect, useState } from "react";
@@ -342,6 +343,7 @@ async function importLocal(_folderPaths: string[]) {
                 artwork: "",
                 [internalSerializeKey]: {
                     localPath: musicPath,
+                    audioMeta: normalizeAudioMeta(meta),
                 },
             } as IMusic.IMusicItem;
         }),

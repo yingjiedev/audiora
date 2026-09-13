@@ -1356,10 +1356,12 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 }
             }
 
+            const localAudioMeta = await Mp3Util.getAudioMeta(completedFilePath);
             LocalMusicSheet.addMusic({
                 ...task.musicItem,
                 [internalSerializeKey]: {
                     localPath: completedFilePath,
+                    audioMeta: localAudioMeta,
                 },
             });
 

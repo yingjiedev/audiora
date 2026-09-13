@@ -5,6 +5,7 @@ import {
 } from "@/constants/commonConst";
 import pathConst from "@/constants/pathConst";
 import Mp3Util from "@/native/mp3Util";
+import { normalizeAudioMeta } from "@/utils/localQuality";
 import Base64 from "@/utils/base64";
 import delay from "@/utils/delay";
 import { addFileScheme, getFileName, removeFileScheme } from "@/utils/fileUtils";
@@ -1707,6 +1708,7 @@ const localFilePluginDefine: IPlugin.IPluginDefine = {
             artwork: "",
             [internalSerializeKey]: {
                 localPath: urlLike,
+                audioMeta: normalizeAudioMeta(meta),
             },
             url: urlLike,
         };

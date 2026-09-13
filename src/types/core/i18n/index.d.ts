@@ -105,6 +105,9 @@ export interface ILanguageData {
     "home.notifications.a11y": string;
     "home.discovery": string;
     "home.myMusic": string;
+    "home.mine": string;
+    "home.personalTagline": string;
+    "home.noCustomPlaylists": string;
     "home.scanLocal": string;
     "home.import.short": string;
     "home.playById.short": string;
@@ -132,6 +135,7 @@ export interface ILanguageData {
     "toast.addToNextPlay": string; // 添加到下一曲
     "toast.beginDownload": string; // 开始下载
     "toast.rememberToSave": string; // 请记得保存
+    "toast.announcementNone": string; // 暂无可显示公告
 
     // 本地音乐相关
     "localMusic.scanLocalMusic": string; // 扫描本地音乐
@@ -638,6 +642,12 @@ export interface ILanguageData {
     "panel.musicItemOptions.refreshSourceFailed": string; // 缓存已清除，但当前歌曲音源刷新失败
     "panel.musicItemOptions.deleteFailed": string; // 删除失败
     "panel.musicItemOptions.redownload": string; // 重新下载
+    "panel.musicItemOptions.playMv": string; // 播放MV
+    "panel.mvPlayer.close": string; // 关闭MV
+    "panel.mvPlayer.quality": string; // 画质
+    "panel.mvPlayer.sourceUnavailable": string; // MV音源不可用
+    "panel.mvPlayer.loadFailed": string; // MV加载失败
+    "panel.mvPlayer.retry": string; // 重试
 
     // 面板相关 - 音质设置
     "panel.musicQuality.title": string; // 设置音质
@@ -691,6 +701,7 @@ export interface ILanguageData {
     "panel.playById.playingNow": string; // 开始播放
     "panel.playById.fetchFailed": string; // 获取歌曲信息失败
     "panel.playById.selectPlugin": string; // 选择插件
+    "panel.playById.inputId": string; // 输入歌曲ID
     "panel.playById.inputLabel": string; // 输入ID
     "panel.playById.placeholder": string; // 请输入歌曲ID
     "panel.playById.hint": string; // 输入歌曲ID后点击确认开始播放
@@ -714,6 +725,13 @@ export interface ILanguageData {
     "quality.atmos": string; // 无损音质 Atmos
     "quality.atmos_plus": string; // 无损音质 Atmos 2.0
     "quality.master": string; // 无损音质 Master
+
+    // 本地音频音质
+    "localQuality.abbr": string; // 本地
+    "localQuality.fallback": string; // 本地音频
+
+    "toast.artistNotSupported": string;
+    "toast.albumNotSupported": string;
 
     "settingsGroup.playback": string;
     "settingsGroup.download": string;

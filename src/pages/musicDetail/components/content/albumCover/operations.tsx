@@ -19,11 +19,15 @@ import downloader from "@/core/downloader";
 import i18n from "@/core/i18n";
 
 import { getQualityAbbr, musicItemHasQualitySizes } from "@/utils/qualities";
+import { getLocalQualityAbbr } from "@/utils/localQuality";
 
 export default function Operations() {
     const musicItem = useCurrentMusic();
     const currentQuality = useMusicQuality();
     const isDownloaded = LocalMusicSheet.useIsLocal(musicItem);
+    const localMusicItem = isDownloaded
+        ? LocalMusicSheet.isLocalMusic(musicItem)
+        : undefined;
 
     const rate = PersistStatus.useValue("music.rate", 100);
     const orientation = useOrientation();
@@ -33,6 +37,16 @@ export default function Operations() {
             ? false
             : !!PluginManager.getByMedia(musicItem)?.supportedMethods.has("getMusicComments");
     }, [musicItem]);
+
+    // 本地音乐展示基于真实元数据映射的音质档位，未知信息显示中性"本地"
+    const localQualityAbbr = useMemo(
+        () => (
+            isDownloaded
+                ? getLocalQualityAbbr(musicItem, localMusicItem)
+                : null
+        ),
+        [isDownloaded, localMusicItem, musicItem],
+    );
 
     return (
         <View
@@ -46,12 +60,13 @@ export default function Operations() {
                     if (!musicItem) {
                         return;
                     }
-                    let panelMusicItem = musicItem;
+                    let panelMusicItem = localMusicItem ?? musicItem;
                     try {
                         const plugin = PluginManager.getByName(
                             musicItem.platform,
                         );
                         if (
+                            !isDownloaded &&
                             plugin?.methods?.getMusicInfo &&
                             (!musicItem.qualities ||
                                 !musicItemHasQualitySizes(musicItem))
@@ -74,6 +89,7 @@ export default function Operations() {
                         // fall back to list item
                     }
                     showPanel("MusicQuality", {
+                        isLocal: isDownloaded,
                         musicItem: panelMusicItem,
                         async onQualityPress(quality) {
                             const changeResult =
@@ -85,7 +101,9 @@ export default function Operations() {
                     });
                 }}>
                 <Text style={styles.qualityText}>
-                    {getQualityAbbr(currentQuality) || "HQ"}
+                    {isDownloaded
+                        ? localQualityAbbr ?? i18n.t("localQuality.abbr")
+                        : getQualityAbbr(currentQuality) || "HQ"}
                 </Text>
             </Pressable>
             <Icon
