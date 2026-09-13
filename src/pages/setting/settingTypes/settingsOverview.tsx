@@ -69,12 +69,6 @@ function SettingsOverviewItem(
                     {description}
                 </ThemeText>
             </View>
-            <Icon
-                name="arrow-long-left"
-                size={rpx(30)}
-                color={colors.textSecondary}
-                style={styles.chevron}
-            />
         </Pressable>
     );
 }
@@ -390,5 +384,4 @@ const styles = StyleSheet.create({
     },
     itemContent: { flex: 1, minWidth: 0 },
     itemDescription: { marginTop: rpx(6) },
-    chevron: { transform: [{ rotate: "180deg" }], marginLeft: rpx(12) },
 });

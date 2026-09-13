@@ -134,12 +134,6 @@ export default function ThemeSetting() {
                             {item.description}
                         </ThemeText>
                     </View>
-                    <Icon
-                        name="arrow-long-left"
-                        size={rpx(30)}
-                        color={colors.textSecondary}
-                        style={styles.chevron}
-                    />
                 </Pressable>
             ))}
         </ScrollView>
@@ -169,7 +163,6 @@ const styles = StyleSheet.create({
     },
     text: { flex: 1, minWidth: 0, marginHorizontal: rpx(16) },
     description: { marginTop: rpx(6) },
-    chevron: { transform: [{ rotate: "180deg" }] },
     detail: { flex: 1, width: "100%" },
     detailContent: { paddingBottom: rpx(48) },
 });

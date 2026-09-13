@@ -99,4 +99,16 @@ describe("SettingsOverview", () => {
                 title: "sidebar.languageSettings",
             }));
     });
+
+    it("does not render decorative navigation arrows", () => {
+        let renderer: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(<SettingsOverview />);
+        });
+
+        expect(renderer!.root.findAllByProps({
+            name: "arrow-long-left",
+        })).toHaveLength(0);
+    });
 });
