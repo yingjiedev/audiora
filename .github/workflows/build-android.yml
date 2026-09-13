@@ -19,6 +19,9 @@ permissions:
 jobs:
     build-android:
         runs-on: ubuntu-latest
+        env:
+            # 发布证书指纹是公开信息；固定在代码中可防止 Actions secret 被误配为其他证书。
+            EXPECTED_RELEASE_CERT_SHA256: '43310e86c2f8e0d8a54e276994ca277437371c7af71bbf79efa916263361f9f9'
 
         steps:
             - name: Checkout code
@@ -310,14 +313,22 @@ jobs:
             # 🔍 产物签名校验：任何 Release APK 都不得使用仓库内 debug.keystore 签名（issue #3）
             - name: Verify APK signing
               run: |
-                  set -e
+                  set -euo pipefail
                   APK_DIR="android/app/build/outputs/apk/release"
 
+                  IS_RELEASE_TAG=false
+                  if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+                    IS_RELEASE_TAG=true
+                  fi
+
                   # debug.keystore 在仓库内，其证书指纹是固定值
-                  DEBUG_FINGERPRINT=$(keytool -list -v \
+                  if ! DEBUG_FINGERPRINT=$(keytool -list -v \
                     -keystore android/app/debug.keystore \
                     -storepass android -alias androiddebugkey 2>/dev/null \
-                    | grep "SHA256:" | head -n 1 | sed 's/.*SHA256:[[:space:]]*//' | tr -d ': ' | tr 'A-F' 'a-f')
+                    | grep "SHA256:" | head -n 1 | sed 's/.*SHA256:[[:space:]]*//' | tr -d ': ' | tr 'A-F' 'a-f'); then
+                    echo "❌ 无法读取 android/app/debug.keystore 的证书指纹，校验无法进行"
+                    exit 1
+                  fi
 
                   if [[ -z "$DEBUG_FINGERPRINT" ]]; then
                     echo "❌ 无法读取 android/app/debug.keystore 的证书指纹，校验无法进行"
@@ -325,7 +336,11 @@ jobs:
                   fi
                   echo "🔑 debug.keystore 指纹: $DEBUG_FINGERPRINT"
 
-                  APKSIGNER=$(ls "$ANDROID_SDK_ROOT"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
+                  if ! APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner -print 2>/dev/null \
+                    | sort -V | tail -n 1); then
+                    echo "❌ 未找到 apksigner"
+                    exit 1
+                  fi
                   if [[ -z "$APKSIGNER" ]]; then
                     echo "❌ 未找到 apksigner"
                     exit 1
@@ -333,26 +348,60 @@ jobs:
 
                   FAILED=0
                   shopt -s nullglob
-                  for apk in "$APK_DIR"/*.apk; do
-                    CERT_FINGERPRINT=$("$APKSIGNER" verify --print-certs "$apk" \
-                      | grep "Signer #1 certificate SHA-256 digest" \
-                      | sed 's/.*digest:[[:space:]]*//' | tr -d ': ' | tr 'A-F' 'a-f')
+                  APKS=("$APK_DIR"/*.apk)
+                  shopt -u nullglob
+                  if [[ "${#APKS[@]}" -eq 0 ]]; then
+                    echo "❌ 没有找到待校验的 Release APK"
+                    exit 1
+                  fi
+
+                  for apk in "${APKS[@]}"; do
                     echo "🧾 $(basename "$apk")"
-                    echo "   signer SHA-256: $CERT_FINGERPRINT"
-                    if [[ -z "$CERT_FINGERPRINT" ]]; then
+                    if ! CERT_OUTPUT=$("$APKSIGNER" verify --print-certs "$apk"); then
+                      echo "❌ APK 签名验证失败"
+                      FAILED=1
+                      continue
+                    fi
+
+                    mapfile -t SIGNER_FINGERPRINTS < <(
+                      printf '%s\n' "$CERT_OUTPUT" \
+                        | sed -nE 's/^Signer #[0-9]+ certificate SHA-256 digest:[[:space:]]*//p' \
+                        | tr -d ': ' | tr 'A-F' 'a-f'
+                    )
+
+                    if [[ "${#SIGNER_FINGERPRINTS[@]}" -eq 0 ]]; then
                       echo "❌ 无法读取签名证书指纹"
                       FAILED=1
-                    elif [[ "$CERT_FINGERPRINT" == "$DEBUG_FINGERPRINT" ]]; then
-                      echo "❌ 该 APK 使用了仓库内 debug.keystore 签名，禁止发布"
-                      FAILED=1
+                      continue
+                    fi
+
+                    for fingerprint in "${SIGNER_FINGERPRINTS[@]}"; do
+                      echo "   signer SHA-256: $fingerprint"
+                      if [[ "$fingerprint" == "$DEBUG_FINGERPRINT" ]]; then
+                        echo "❌ 该 APK 使用了仓库内 debug.keystore 签名，禁止发布"
+                        FAILED=1
+                      fi
+                    done
+
+                    if [[ "$IS_RELEASE_TAG" == "true" ]]; then
+                      if [[ "${#SIGNER_FINGERPRINTS[@]}" -ne 1 ]]; then
+                        echo "❌ 正式发版 APK 必须且只能有一个签名者"
+                        FAILED=1
+                      elif [[ "${SIGNER_FINGERPRINTS[0]}" != "$EXPECTED_RELEASE_CERT_SHA256" ]]; then
+                        echo "❌ APK 证书不是固定的 Audiora 正式发布证书"
+                        echo "   expected: $EXPECTED_RELEASE_CERT_SHA256"
+                        FAILED=1
+                      fi
                     fi
                   done
-                  shopt -u nullglob
-
                   if [[ "$FAILED" -ne 0 ]]; then
                     exit 1
                   fi
-                  echo "✅ 签名校验通过：无 APK 使用 debug.keystore 签名"
+                  if [[ "$IS_RELEASE_TAG" == "true" ]]; then
+                    echo "✅ 签名校验通过：APK 使用固定的 Audiora 正式发布证书"
+                  else
+                    echo "✅ 签名校验通过：验证构建未使用 debug.keystore"
+                  fi
 
             # 📤 上传构建产物
             - name: Upload All APKs as artifacts

@@ -145,14 +145,18 @@ android {
         }
     }
 
-    // Release 构建缺少签名配置时直接失败，禁止回退到 debug.keystore（issue #3）。
-    // 文件不存在时 debug 等其他任务不受影响；文件存在但缺 key 在配置阶段已抛错。
+    // 仅在任务图会产出或安装 Release 包时要求签名配置，避免 lintRelease、
+    // testReleaseUnitTest、uninstallRelease 等非打包任务无端依赖发布私钥。
+    // 文件存在但缺 key 时已在 signingConfigs.release 配置阶段抛错。
     gradle.taskGraph.whenReady { graph ->
-        def hasReleaseTasks = graph.allTasks.any { it.name.toLowerCase().contains("release") }
-        if (hasReleaseTasks && !keystorePropertiesFile.exists()) {
+        def releaseArtifactTasks = graph.allTasks.findAll { task ->
+            task.project == project && task.name ==~ /(?i)^(assemble|bundle|package|install).*release$/
+        }
+        if (!releaseArtifactTasks.isEmpty() && !keystorePropertiesFile.exists()) {
             throw new GradleException(
                 "Release 构建需要签名配置：请在 android/keystore.properties 提供 " +
-                "${keystoreRequiredKeys.join(' / ')}。禁止回退到 debug.keystore。"
+                "${keystoreRequiredKeys.join(' / ')}。禁止回退到 debug.keystore。" +
+                "触发任务: ${releaseArtifactTasks*.path.join(', ')}"
             )
         }
     }

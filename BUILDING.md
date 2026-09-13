@@ -19,6 +19,8 @@
 
   `RELEASE_STORE_FILE` 相对 `android/app/` 解析，也支持绝对路径。CI 发版使用 GitHub Secrets（`KEYSTORE_FILE` base64 等），与本地此文件互不影响。
 
+  CI 会进一步要求 tag 发版 APK 只包含一个签名者，并固定校验 Audiora 正式发布证书 SHA-256：`43310e86c2f8e0d8a54e276994ca277437371c7af71bbf79efa916263361f9f9`。证书轮换必须通过代码变更显式更新该指纹；不得只替换 Actions secrets。
+
 示例：从要测试的提交创建一个短路径工作树。
 
 ```powershell
