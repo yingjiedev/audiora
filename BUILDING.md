@@ -8,6 +8,18 @@
 - 在**独立的构建工作树**中操作，不能在含有未提交改动的主工作树中生成构建信息。
 - Windows 下将工作树放在短路径、未启用 EFS 加密的目录，例如 `C:\a`。React Native 原生依赖的 CMake 构建路径很深；过长路径或加密目录可能导致构建失败。
 - 每个可安装测试包都必须使用新的 `versionName` 和递增的 Android `versionCode`。脚本会自动生成并通过 Gradle 参数传入，不会改写需要提交的版本文件。
+- Release 构建需要签名配置，缺失时构建会直接失败（不会回退到 `debug.keystore`）。在 `android/keystore.properties`（已 gitignore）提供以下四项，并用 `keytool` 生成一个 keystore 文件：
+
+  ```properties
+  RELEASE_STORE_FILE=release.keystore
+  RELEASE_STORE_PASSWORD=<密码>
+  RELEASE_KEY_ALIAS=<别名>
+  RELEASE_KEY_PASSWORD=<密码>
+  ```
+
+  `RELEASE_STORE_FILE` 相对 `android/app/` 解析，也支持绝对路径。CI 发版使用 GitHub Secrets（`KEYSTORE_FILE` base64 等），与本地此文件互不影响。
+
+  CI 会进一步要求 tag 发版 APK 只包含一个签名者，并固定校验 Audiora 正式发布证书 SHA-256：`43310e86c2f8e0d8a54e276994ca277437371c7af71bbf79efa916263361f9f9`。证书轮换必须通过代码变更显式更新该指纹；不得只替换 Actions secrets。
 
 示例：从要测试的提交创建一个短路径工作树。
 
@@ -94,7 +106,7 @@ $apksigner = "$env:ANDROID_SDK_ROOT\build-tools\36.0.0\apksigner.bat"
 Get-FileHash -LiteralPath $apk -Algorithm SHA256
 ```
 
-至少记录并报告：APK 绝对路径、`applicationId`、`versionName`、`versionCode`、ABI、SHA-256、签名类型，以及是否有真机/模拟器验证。使用默认 `debug.keystore` 时，Release APK 是测试签名；若设备已有不同签名的同包名应用，应先卸载旧应用再安装。
+至少记录并报告：APK 绝对路径、`applicationId`、`versionName`、`versionCode`、ABI、SHA-256、签名类型，以及是否有真机/模拟器验证。Release 构建不再使用 `debug.keystore` 签名（缺失签名配置会直接构建失败）；本地自签测试包与 CI 发版包签名不同，若设备已有不同签名的同包名应用，应先卸载旧应用再安装。
 
 ## 常见问题
 
