@@ -1,0 +1,231 @@
+{
+    "src/components/base/badge.tsx": {
+        "#d64541": 1,
+        "#e6a23c": 1,
+        "#409eff": 1,
+        "#67c23a": 1,
+        "#909399": 1
+    },
+    "src/components/base/colorBlock.tsx": {
+        "#ccc": 1
+    },
+    "src/components/base/divider.tsx": {
+        "#999999": 1
+    },
+    "src/components/base/linkText.tsx": {
+        "#66ccff": 2
+    },
+    "src/components/base/listItem.tsx": {
+        "#00000022": 1
+    },
+    "src/components/base/playAllBar.tsx": {
+        "#e31639": 1
+    },
+    "src/components/base/splashImageOverlay.tsx": {
+        "#000000": 1
+    },
+    "src/components/base/statusBar.tsx": {
+        "#f6f9ff": 1
+    },
+    "src/components/base/switch.tsx": {
+        "#ffffff": 2,
+        "#1b1b1b": 1
+    },
+    "src/components/base/toast.tsx": {
+        "#457236": 1,
+        "#de7622": 1
+    },
+    "src/components/dialogs/components/setScheduleCloseTimeDialog.tsx": {
+        "#4e73f5": 2,
+        "#fafbff": 2,
+        "#f5f8ff": 1,
+        "#f8faff": 1,
+        "#e7ecfa": 1,
+        "#8392ba": 1,
+        "#43547b": 1,
+        "#121a31": 2,
+        "#f3f6fe": 1,
+        "#7d869b": 2,
+        "#edf1f9": 1,
+        "#27314a": 1,
+        "#5b84f7": 3,
+        "#3f6cf6": 2,
+        "#ffffff": 1
+    },
+    "src/components/dialogs/components/subscribePluginDialog.tsx": {
+        "#000": 1
+    },
+    "src/components/downloadStatusIndicator.tsx": {
+        "#666": 1,
+        "#007aff": 1
+    },
+    "src/components/errorBoundary/index.tsx": {
+        "#f5f2eb": 2,
+        "#192028": 2,
+        "#101419": 1
+    },
+    "src/components/mediaItem/musicItem.tsx": {
+        "#11659a": 1
+    },
+    "src/components/mediaItem/topListItem.tsx": {
+        "#ffffff": 1
+    },
+    "src/components/musicBar/index.tsx": {
+        "#ffffff": 1
+    },
+    "src/components/musicList/index.tsx": {
+        "#000": 1
+    },
+    "src/components/panels/base/panelBase.tsx": {
+        "#000": 2
+    },
+    "src/components/panels/base/panelFullscreen.tsx": {
+        "#000": 1
+    },
+    "src/components/panels/types/mergeImportMusicSheet.tsx": {
+        "#fff": 1
+    },
+    "src/components/panels/types/musicMetadataSettings.tsx": {
+        "#000": 1,
+        "#ccc": 1,
+        "#e0e0e0": 1
+    },
+    "src/components/panels/types/mvPlayer.tsx": {
+        "#fff": 10,
+        "#000": 2
+    },
+    "src/components/panels/types/playById.tsx": {
+        "#fff": 1
+    },
+    "src/components/panels/types/timingClose.tsx": {
+        "#5b84f7": 2,
+        "#a274ea": 2,
+        "#fafbff": 1,
+        "#f5f8ff": 1,
+        "#e1e6f2": 1,
+        "#bec8df": 2,
+        "#bcc6de": 1,
+        "#ffffff": 5,
+        "#4e566b": 1,
+        "#a58ffc": 2,
+        "#7d68e8": 2,
+        "#e9edf6": 1,
+        "#7483a4": 2,
+        "#dde2ed": 1,
+        "#eff2ff": 1,
+        "#8291f8": 1
+    },
+    "src/hooks/useCardStyle.ts": {
+        "#000": 1
+    },
+    "src/hooks/useColors.ts": {
+        "#ffffff": 1,
+        "#10172d": 1
+    },
+    "src/pages/downloading/downloadingList.tsx": {
+        "#ff4444": 1
+    },
+    "src/pages/home/components/homeBody/homeOverview.tsx": {
+        "#00cdaa": 1,
+        "#4d70f5": 1,
+        "#ff567d": 1,
+        "#00a9ee": 1,
+        "#ff8fa3": 1,
+        "#a88bff": 1,
+        "#7dd3b8": 1,
+        "#2d4a78": 1
+    },
+    "src/pages/home/components/HomeHero.tsx": {
+        "#ffffff": 2,
+        "#17213e": 1,
+        "#13244e": 1
+    },
+    "src/pages/home/components/MusicLibraryOverview.tsx": {
+        "#7892c9": 2,
+        "#5b72ff": 1,
+        "#8563f2": 1,
+        "#1f9df0": 1,
+        "#18bfa3": 1,
+        "#f7a719": 2,
+        "#ffffff": 1
+    },
+    "src/pages/home/components/MyMusicOverview.tsx": {
+        "#ff6e91": 1,
+        "#4d7cff": 1,
+        "#19c69f": 1,
+        "#f7a719": 1
+    },
+    "src/pages/musicDetail/components/background.tsx": {
+        "#000": 1
+    },
+    "src/pages/musicDetail/components/bottom/playControl.tsx": {
+        "#315fea": 1,
+        "#ffffff": 2,
+        "#08132d": 1
+    },
+    "src/pages/musicDetail/components/bottom/seekBar.tsx": {
+        "#ffffff": 2
+    },
+    "src/pages/musicDetail/components/content/albumCover/index.tsx": {
+        "#07132c": 1
+    },
+    "src/pages/musicDetail/components/content/lyric/draggingTime.tsx": {
+        "#dddddd": 1
+    },
+    "src/pages/musicDetail/components/content/lyric/index.tsx": {
+        "#66ccff": 1,
+        "#cccccc": 1,
+        "#66eeff": 1
+    },
+    "src/pages/musicDetail/components/navBar.tsx": {
+        "#ffffff": 1
+    },
+    "src/pages/searchMusicList/index.tsx": {
+        "#2b333eaa": 1,
+        "#666666": 1
+    },
+    "src/pages/setCustomTheme/body.tsx": {
+        "#ffffff": 1,
+        "#ccc": 1
+    },
+    "src/pages/setting/index.tsx": {
+        "#2b333eaa": 1
+    },
+    "src/pages/setting/settingTypes/aboutSetting.tsx": {
+        "#000": 1
+    },
+    "src/pages/setting/settingTypes/settingsOverview.tsx": {
+        "#9ea9c5": 1,
+        "#4f638d": 1,
+        "#edf3ff": 1,
+        "#3978ff": 1,
+        "#e9f2ff": 1,
+        "#7f63f4": 1,
+        "#f2eeff": 1,
+        "#3187f5": 1,
+        "#eaf5ff": 1,
+        "#3779f4": 1,
+        "#ecf3ff": 1,
+        "#1abaa5": 1,
+        "#e8fbf7": 1,
+        "#8257e7": 1,
+        "#f3edff": 1,
+        "#337df7": 1,
+        "#ebf4ff": 1,
+        "#141b4e": 1,
+        "#52627f": 1,
+        "#6c85b4": 2,
+        "#4c6bde": 1,
+        "#6179e8": 1,
+        "#586dea": 1
+    },
+    "src/pages/setting/settingTypes/themeSetting/background.tsx": {
+        "#ffffff": 1,
+        "#fff": 1,
+        "#131313": 1
+    },
+    "src/utils/themePalette.ts": {
+        "#010203": 1,
+        "#f2f2f2": 1
+    }
+}
