@@ -9,6 +9,9 @@ import Dialog from "./base";
 import Input from "@/components/base/input";
 import { useI18N } from "@/core/i18n";
 import PersistStatus from "@/utils/persistStatus";
+import useColors from "@/hooks/useColors";
+import { useTheme } from "@react-navigation/native";
+import Color from "color";
 
 interface ISetScheduleCloseTimeDialogProps {
     onOk?: (minutes: number) => void;
@@ -19,6 +22,27 @@ export default function SetScheduleCloseTimeDialog(
 ) {
     const { onOk } = props;
     const { t } = useI18N();
+    const colors = useColors();
+    const { dark } = useTheme();
+    // 品牌蓝两模式同款，深色下提亮一档
+    const brandBlue = dark ? Color("#4E73F5").lighten(0.18).toString() : "#4E73F5";
+    const surfaceGradient = dark
+        ? [colors.surfaceElevated ?? colors.card, colors.card]
+        : ["#FAFBFF", "#F5F8FF"];
+    // 加减按钮在两个模式下的描边与投影，浅色沿用设计稿的固定值
+    const stepButtonStyle = dark
+        ? {
+            backgroundColor: colors.placeholder,
+            borderColor: colors.border,
+            shadowColor: colors.shadow,
+            shadowOpacity: 0.28,
+        }
+        : {
+            backgroundColor: "#F8FAFF",
+            borderColor: "#E7ECFA",
+            shadowColor: "#8392BA",
+            shadowOpacity: 0.08,
+        };
 
     const initialMinutes = useMemo(() => {
         const lastCustomTime = Number(
@@ -73,25 +97,38 @@ export default function SetScheduleCloseTimeDialog(
 
     return (
         <Dialog
-            containerStyle={style.dialogContainer}
+            containerStyle={[
+                style.dialogContainer,
+                {
+                    backgroundColor: dark ? colors.surfaceElevated : "#FAFBFF",
+                    shadowColor: dark ? colors.shadow : "#43547B",
+                },
+            ]}
             onDismiss={hideDialog}>
             <LinearGradient
-                colors={["#FAFBFF", "#F5F8FF"]}
+                colors={surfaceGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
                 style={style.dialogSurface}>
-                <ThemeText style={style.title} fontWeight="semibold">
+                <ThemeText
+                    style={style.title}
+                    color={dark ? colors.text : "#121A31"}
+                    fontWeight="semibold">
                     {t("dialog.setScheduleCloseTime.title")}
                 </ThemeText>
 
-                <View style={style.stepper}>
+                <View
+                    style={[
+                        style.stepper,
+                        { backgroundColor: dark ? colors.surface : "#F3F6FE" },
+                    ]}>
                     <TouchableOpacity
                         activeOpacity={0.72}
                         accessibilityRole="button"
                         accessibilityLabel={`-5 ${t("dialog.setScheduleCloseTime.unit")}`}
                         onPress={() => adjustMinutes(-5)}
-                        style={style.stepButton}>
-                        <Icon name="minus" size={rpx(34)} color="#4E73F5" />
+                        style={[style.stepButton, stepButtonStyle]}>
+                        <Icon name="minus" size={rpx(34)} color={brandBlue} />
                     </TouchableOpacity>
 
                     <View style={style.timeValueContainer}>
@@ -99,7 +136,10 @@ export default function SetScheduleCloseTimeDialog(
                             hasHorizontalPadding={false}
                             accessibilityLabel={t("dialog.setScheduleCloseTime.title")}
                             selectTextOnFocus
-                            style={style.textInput}
+                            style={[
+                                style.textInput,
+                                { color: dark ? colors.text : "#121A31" },
+                            ]}
                             value={timeInput}
                             onChangeText={text => {
                                 const numericText = text.replace(/[^0-9]/g, "");
@@ -110,7 +150,9 @@ export default function SetScheduleCloseTimeDialog(
                             keyboardType="numeric"
                             maxLength={4}
                         />
-                        <ThemeText style={style.unitText} color="#7D869B">
+                        <ThemeText
+                            style={style.unitText}
+                            color={dark ? colors.textSecondary : "#7D869B"}>
                             {t("dialog.setScheduleCloseTime.unit")}
                         </ThemeText>
                     </View>
@@ -120,12 +162,14 @@ export default function SetScheduleCloseTimeDialog(
                         accessibilityRole="button"
                         accessibilityLabel={`+5 ${t("dialog.setScheduleCloseTime.unit")}`}
                         onPress={() => adjustMinutes(5)}
-                        style={style.stepButton}>
-                        <Icon name="plus" size={rpx(34)} color="#4E73F5" />
+                        style={[style.stepButton, stepButtonStyle]}>
+                        <Icon name="plus" size={rpx(34)} color={brandBlue} />
                     </TouchableOpacity>
                 </View>
 
-                <ThemeText style={style.hintText} color="#7D869B">
+                <ThemeText
+                    style={style.hintText}
+                    color={dark ? colors.textSecondary : "#7D869B"}>
                     {t("dialog.setScheduleCloseTime.hint")}
                 </ThemeText>
 
@@ -135,10 +179,13 @@ export default function SetScheduleCloseTimeDialog(
                         accessibilityRole="button"
                         accessibilityLabel={t("common.cancel")}
                         onPress={hideDialog}
-                        style={style.cancelButton}>
+                        style={[
+                            style.cancelButton,
+                            { backgroundColor: dark ? colors.placeholder : "#EDF1F9" },
+                        ]}>
                         <ThemeText
                             style={style.actionText}
-                            color="#27314A"
+                            color={dark ? colors.text : "#27314A"}
                             fontWeight="semibold">
                             {t("common.cancel")}
                         </ThemeText>
@@ -150,10 +197,18 @@ export default function SetScheduleCloseTimeDialog(
                         onPress={handleConfirm}
                         style={style.confirmTouch}>
                         <LinearGradient
-                            colors={["#5B84F7", "#3F6CF6"]}
+                            colors={dark
+                                ? [
+                                    Color("#5B84F7").lighten(0.16).toString(),
+                                    Color("#3F6CF6").lighten(0.16).toString(),
+                                ]
+                                : ["#5B84F7", "#3F6CF6"]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
-                            style={style.confirmButton}>
+                            style={[
+                                style.confirmButton,
+                                { shadowColor: dark ? colors.shadow : "#5B84F7" },
+                            ]}>
                             <ThemeText
                                 style={style.actionText}
                                 color="#FFFFFF"
@@ -170,13 +225,11 @@ export default function SetScheduleCloseTimeDialog(
 
 const style = StyleSheet.create({
     dialogContainer: {
-        backgroundColor: "#FAFBFF",
         borderColor: "transparent",
         borderRadius: rpx(34),
         borderWidth: 0,
         elevation: 10,
         overflow: "hidden",
-        shadowColor: "#43547B",
         shadowOffset: {
             width: 0,
             height: rpx(12),
@@ -192,13 +245,11 @@ const style = StyleSheet.create({
     },
     title: {
         alignSelf: "center",
-        color: "#121A31",
         fontSize: fontRpx(34),
         lineHeight: fontRpx(48),
     },
     stepper: {
         alignItems: "center",
-        backgroundColor: "#F3F6FE",
         borderRadius: rpx(72),
         flexDirection: "row",
         height: rpx(168),
@@ -208,20 +259,16 @@ const style = StyleSheet.create({
     },
     stepButton: {
         alignItems: "center",
-        backgroundColor: "#F8FAFF",
-        borderColor: "#E7ECFA",
         borderRadius: rpx(48),
         borderWidth: StyleSheet.hairlineWidth,
         height: rpx(96),
         justifyContent: "center",
         width: rpx(96),
         elevation: 1,
-        shadowColor: "#8392BA",
         shadowOffset: {
             width: 0,
             height: rpx(2),
         },
-        shadowOpacity: 0.08,
         shadowRadius: rpx(6),
     },
     timeValueContainer: {
@@ -230,7 +277,6 @@ const style = StyleSheet.create({
         width: rpx(200),
     },
     textInput: {
-        color: "#121A31",
         fontSize: fontRpx(60),
         fontWeight: "700",
         height: rpx(80),
@@ -260,7 +306,6 @@ const style = StyleSheet.create({
     },
     cancelButton: {
         alignItems: "center",
-        backgroundColor: "#EDF1F9",
         borderRadius: rpx(44),
         flex: 1,
         height: rpx(88),
@@ -274,7 +319,6 @@ const style = StyleSheet.create({
         borderRadius: rpx(44),
         height: rpx(88),
         justifyContent: "center",
-        shadowColor: "#5B84F7",
         shadowOffset: {
             width: 0,
             height: rpx(6),

@@ -16,6 +16,9 @@ import PanelBase from "../base/panelBase";
 import { hidePanel } from "../usePanel";
 import { useI18N } from "@/core/i18n";
 import { showDialog } from "@/components/dialogs/useDialog";
+import useColors from "@/hooks/useColors";
+import { useTheme } from "@react-navigation/native";
+import Color from "color";
 
 const shortCutTimes = [10, 20, 30, 45, 60] as const;
 const dialMaximum = 80;
@@ -25,6 +28,8 @@ export default function TimingClose() {
     const closeAfterPlay = useCloseAfterPlayEnd();
     const countDown = useScheduleCloseCountDown();
     const { t } = useI18N();
+    const colors = useColors();
+    const { dark } = useTheme();
     const [selectedMinutes, setSelectedMinutes] = useState(30);
 
     const isCountingDown = countDown !== null;
@@ -32,8 +37,18 @@ export default function TimingClose() {
         ? Math.max(1, Math.ceil(countDown / 60))
         : selectedMinutes;
     const isCustomTime = !shortCutTimes.includes(selectedMinutes as typeof shortCutTimes[number]);
-    const activeStroke = "#5B84F7";
-    const activeStrokeEnd = "#A274EA";
+    // 品牌紫蓝渐变是这块的设计标识，两个模式都保留；深色下整体提亮一档，
+    // 免得压在重色底上发闷
+    const activeStroke = dark ? Color("#5B84F7").lighten(0.16).toString() : "#5B84F7";
+    const activeStrokeEnd = dark ? Color("#A274EA").lighten(0.16).toString() : "#A274EA";
+    // 渐变上的白字按品牌色原样保留（渐变两端都是中亮色，白字足够）；
+    // 未选中态、输入框等平面元素则走主题色
+    const sheetColors = dark
+        ? [colors.surfaceElevated ?? colors.card, colors.card]
+        : ["#FAFBFF", "#F5F8FF"];
+    const trackColor = dark ? colors.placeholder : "#E1E6F2";
+    const tickColor = dark ? Color("#BEC8DF").darken(0.12).toString() : "#BEC8DF";
+    const sleepIconColor = dark ? colors.textSecondary : "#BCC6DE";
     const dialRadius = rpx(114);
     const dialKnobSize = rpx(28);
     const dialKnobAngle = (
@@ -66,13 +81,11 @@ export default function TimingClose() {
         <PanelBase
             borderTopRadius={rpx(40)}
             keyboardAvoidBehavior="none"
-            maskColor="#131828"
-            maskOpacity={0.74}
             positionMethod="top"
             height={rpx(740)}
             renderBody={() => (
                 <LinearGradient
-                    colors={["#FAFBFF", "#F5F8FF"]}
+                    colors={sheetColors}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                     style={styles.sheet}>
@@ -92,20 +105,20 @@ export default function TimingClose() {
                             <Icon
                                 name="moon-outline"
                                 size={rpx(52)}
-                                color="#BCC6DE"
+                                color={sleepIconColor}
                                 style={styles.sleepIcon}
                             />
                             <Icon
                                 name="zzz"
                                 size={rpx(22)}
-                                color="#BCC6DE"
+                                color={sleepIconColor}
                                 style={styles.sleepMarks}
                             />
                         </View>
                         <View style={styles.dialStack}>
                             <View style={styles.dialLayer} pointerEvents="none">
                                 <CircularProgressBase
-                                    activeStrokeColor="#E1E6F2"
+                                    activeStrokeColor={trackColor}
                                     activeStrokeWidth={rpx(7)}
                                     duration={0}
                                     inActiveStrokeColor="transparent"
@@ -135,7 +148,7 @@ export default function TimingClose() {
                             </View>
                             <View style={styles.dialTickLayer} pointerEvents="none">
                                 <CircularProgressBase
-                                    activeStrokeColor="#BEC8DF"
+                                    activeStrokeColor={tickColor}
                                     activeStrokeWidth={rpx(5)}
                                     dashedStrokeConfig={{ count: 60, width: rpx(1.4) }}
                                     duration={0}
@@ -160,13 +173,13 @@ export default function TimingClose() {
                                 colors={[activeStroke, activeStrokeEnd]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
-                                style={[styles.dialKnob, dialKnobPosition]}
+                                style={[styles.dialKnob, dialKnobPosition, dark ? { borderColor: colors.surfaceElevated } : null]}
                             />
                         </View>
                         <Icon
                             name="sun-outline"
                             size={rpx(56)}
-                            color="#BCC6DE"
+                            color={sleepIconColor}
                             style={styles.wakeIcon}
                         />
                     </View>
@@ -196,7 +209,10 @@ export default function TimingClose() {
                                         </LinearGradient>
                                     ) : (
                                         <View style={styles.timeOption}>
-                                            <ThemeText style={styles.timeOptionText} color="#4E566B" fontWeight="medium">
+                                            <ThemeText
+                                                style={styles.timeOptionText}
+                                                color={dark ? colors.text : "#4E566B"}
+                                                fontWeight="medium">
                                                 {time} {t("dialog.setScheduleCloseTime.unit")}
                                             </ThemeText>
                                         </View>
@@ -215,13 +231,21 @@ export default function TimingClose() {
                                 style={[
                                     styles.customTimeOption,
                                     {
-                                        borderColor: isCustomTime ? activeStroke : "#A58FFC",
+                                        borderColor: isCustomTime
+                                            ? activeStroke
+                                            : dark
+                                                ? Color("#A58FFC").lighten(0.14).toString()
+                                                : "#A58FFC",
                                         backgroundColor: isCustomTime ? activeStroke : "transparent",
                                     },
                                 ]}>
                                 <ThemeText
                                     style={styles.timeOptionText}
-                                    color={isCustomTime ? "#FFFFFF" : "#7D68E8"}
+                                    color={isCustomTime
+                                        ? "#FFFFFF"
+                                        : dark
+                                            ? Color("#7D68E8").lighten(0.3).toString()
+                                            : "#7D68E8"}
                                     fontWeight="medium">
                                     {t("panel.timingClose.customize")}
                                 </ThemeText>
@@ -234,8 +258,10 @@ export default function TimingClose() {
                             style={[
                                 styles.closeAfterPlayRow,
                                 {
-                                    backgroundColor: "#FFFFFF",
-                                    borderColor: "#E9EDF6",
+                                    backgroundColor: dark ? colors.card : "#FFFFFF",
+                                    borderColor: dark ? colors.border : "#E9EDF6",
+                                    shadowColor: dark ? colors.shadow : "#7483A4",
+                                    shadowOpacity: dark ? 0.28 : 0.11,
                                 },
                             ]}>
                             <ThemeText style={styles.closeAfterPlayText} fontWeight="medium">
@@ -243,8 +269,8 @@ export default function TimingClose() {
                             </ThemeText>
                             <ThemeSwitch
                                 activeTrackColor={activeStroke}
-                                inactiveTrackColor="#DDE2ED"
-                                thumbColor="#FFFFFF"
+                                inactiveTrackColor={dark ? colors.placeholder : "#DDE2ED"}
+                                thumbColor={dark ? colors.text : "#FFFFFF"}
                                 thumbSize={rpx(40)}
                                 trackHeight={rpx(44)}
                                 trackWidth={rpx(74)}
