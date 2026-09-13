@@ -624,6 +624,9 @@
     "quality.atmos_plus": "無損音質 Atmos 2.0",
     "quality.master": "無損音質 Master",
 
+    "localQuality.abbr": "本地",
+    "localQuality.fallback": "本地音訊",
+
     "panel.artistSelect.title": "選擇歌手",
     "panel.artistSelect.description": "這首歌有多位歌手，請選擇要查看的歌手",
     "toast.artistNotSupported": "當前插件不支持查看歌手詳情",

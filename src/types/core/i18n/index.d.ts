@@ -717,6 +717,10 @@ export interface ILanguageData {
     "quality.atmos": string; // 无损音质 Atmos
     "quality.atmos_plus": string; // 无损音质 Atmos 2.0
     "quality.master": string; // 无损音质 Master
+
+    // 本地音频音质
+    "localQuality.abbr": string; // 本地
+    "localQuality.fallback": string; // 本地音频
 }
 
 // 语言接口定义
