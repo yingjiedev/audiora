@@ -188,6 +188,7 @@ jobs:
                     STORE_PASSWORD="$KEYSTORE_PASSWORD"
                     ALIAS="$KEY_ALIAS"
                     ALIAS_PASSWORD="$KEY_PASSWORD"
+                    echo "SIGNING_MODE=release" >> "$GITHUB_ENV"
                   elif [[ "$IS_RELEASE_TAG" == "true" ]]; then
                     echo "❌ 正式发版构建（tag $GITHUB_REF_NAME）缺少签名 secrets：KEYSTORE_FILE / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD"
                     echo "❌ 禁止降级为临时自签证书——每次构建签名都不同，发布后用户将无法覆盖更新。"
@@ -198,6 +199,7 @@ jobs:
                     STORE_PASSWORD="musicfree"
                     ALIAS="musicfree"
                     ALIAS_PASSWORD="musicfree"
+                    echo "SIGNING_MODE=temporary" >> "$GITHUB_ENV"
                     keytool -genkeypair -v \
                       -keystore "$KEYSTORE_PATH" \
                       -storetype PKCS12 \
@@ -383,7 +385,7 @@ jobs:
                       fi
                     done
 
-                    if [[ "$IS_RELEASE_TAG" == "true" ]]; then
+                    if [[ "$IS_RELEASE_TAG" == "true" || "${SIGNING_MODE:-}" == "release" ]]; then
                       if [[ "${#SIGNER_FINGERPRINTS[@]}" -ne 1 ]]; then
                         echo "❌ 正式发版 APK 必须且只能有一个签名者"
                         FAILED=1
@@ -397,7 +399,7 @@ jobs:
                   if [[ "$FAILED" -ne 0 ]]; then
                     exit 1
                   fi
-                  if [[ "$IS_RELEASE_TAG" == "true" ]]; then
+                  if [[ "$IS_RELEASE_TAG" == "true" || "${SIGNING_MODE:-}" == "release" ]]; then
                     echo "✅ 签名校验通过：APK 使用固定的 Audiora 正式发布证书"
                   else
                     echo "✅ 签名校验通过：验证构建未使用 debug.keystore"
