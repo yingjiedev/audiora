@@ -18,29 +18,9 @@ export default function NavBar() {
     return (
         <View style={styles.appbar}>
             <View style={styles.titleRow}>
-                <View style={styles.tabs}>
-                    <View style={styles.activeTab}>
-                        <ThemeText fontSize="appbar" fontWeight="bolder">
-                            {t("home.recommend")}
-                        </ThemeText>
-                        <View
-                            style={[
-                                styles.activeLine,
-                                { backgroundColor: colors.accentCool },
-                            ]}
-                        />
-                    </View>
-                    <Pressable
-                        style={styles.tabButton}
-                        onPress={() => navigation.navigate(ROUTE_PATH.TOP_LIST)}>
-                        <ThemeText
-                            fontSize="title"
-                            fontWeight="semibold"
-                            fontColor="textSecondary">
-                            {t("home.discovery")}
-                        </ThemeText>
-                    </Pressable>
-                </View>
+                <ThemeText fontSize="appbar" fontWeight="bolder">
+                    {t("home.home")}
+                </ThemeText>
                 <Pressable
                     accessibilityLabel={t("sidebar.scheduleClose")}
                     style={styles.roundButton}
@@ -96,25 +76,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-    },
-    tabs: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    activeTab: {
-        alignItems: "flex-start",
-        justifyContent: "center",
-    },
-    tabButton: {
-        minHeight: rpx(64),
-        marginLeft: rpx(28),
-        justifyContent: "center",
-    },
-    activeLine: {
-        width: rpx(54),
-        height: rpx(6),
-        marginTop: rpx(2),
-        borderRadius: rpx(3),
     },
     roundButton: {
         width: rpx(64),

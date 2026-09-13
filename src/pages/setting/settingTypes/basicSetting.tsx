@@ -12,6 +12,7 @@ import useColors from "@/hooks/useColors";
 import LyricUtil, { LYRIC_COLOR_PRESETS } from "@/native/lyricUtil";
 import { resolveLyricPresets } from "@/utils/lyricPreset";
 import { AppConfigPropertyKey } from "@/types/core/config";
+import { useParams } from "@/core/router";
 import { clearCache, getCacheSize, sizeFormatter } from "@/utils/fileUtils";
 import { clearLog, getErrorLogContent } from "@/utils/log";
 import { getQualityKeys, getQualityText } from "@/utils/qualities";
@@ -113,6 +114,7 @@ function useCacheSize() {
 }
 
 export default function BasicSetting() {
+    const { section: requestedSection } = useParams<"setting">();
 
     const autoPlayWhenAppStart = useAppConfig("basic.autoPlayWhenAppStart");
     const openPlayDetailOnLaunch = useAppConfig("basic.openPlayDetailOnLaunch");
@@ -169,6 +171,7 @@ export default function BasicSetting() {
 
     const basicOptions = [
         {
+            key: "playback",
             title: t("basicSettings.playback"),
             data: [
                 createSwitch(
@@ -239,6 +242,7 @@ export default function BasicSetting() {
             ],
         },
         {
+            key: "common",
             title: t("basicSettings.common"),
             data: [
                 createRadio(
@@ -302,6 +306,7 @@ export default function BasicSetting() {
             ],
         },
         {
+            key: "sheetAndAlbum",
             title: t("basicSettings.sheetAndAlbum"),
             data: [
                 createRadio(
@@ -356,6 +361,7 @@ export default function BasicSetting() {
             ],
         },
         {
+            key: "plugin",
             title: t("basicSettings.plugin"),
             data: [
                 createSwitch(
@@ -376,6 +382,7 @@ export default function BasicSetting() {
             ],
         },
         {
+            key: "download",
             title: t("basicSettings.download"),
             data: [
                 {
@@ -533,6 +540,7 @@ export default function BasicSetting() {
             ],
         },
         {
+            key: "network",
             title: t("basicSettings.network"),
             data: [
                 createSwitch(
@@ -548,11 +556,13 @@ export default function BasicSetting() {
             ],
         },
         {
+            key: "lyric",
             title: t("basicSettings.lyric"),
             data: [],
             footer: <LyricSetting />,
         },
         {
+            key: "cache",
             title: t("basicSettings.cache"),
             data: [
                 {
@@ -648,6 +658,7 @@ export default function BasicSetting() {
             ],
         },
         {
+            key: "developer",
             title: t("basicSettings.developer"),
             data: [
                 createSwitch(
@@ -703,30 +714,36 @@ export default function BasicSetting() {
         },
     ];
 
+    const visibleOptions = requestedSection
+        ? basicOptions.filter(item => item.key === requestedSection)
+        : basicOptions;
+
     return (
         <View style={styles.wrapper}>
-            <FlatList
-                style={styles.headerContainer}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.headerContentContainer}
-                horizontal
-                data={basicOptions.map(it => it.title)}
-                renderItem={({ item, index }) => (
-                    <TouchableOpacity
-                        onPress={() => {
-                            sectionListRef.current?.scrollToLocation({
-                                sectionIndex: index,
-                                itemIndex: 0,
-                            });
-                        }}
-                        activeOpacity={0.7}
-                        style={styles.headerItemStyle}>
-                        <ThemeText fontWeight="bold">{item}</ThemeText>
-                    </TouchableOpacity>
-                )}
-            />
+            {!requestedSection ? (
+                <FlatList
+                    style={styles.headerContainer}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.headerContentContainer}
+                    horizontal
+                    data={basicOptions.map(it => it.title)}
+                    renderItem={({ item, index }) => (
+                        <TouchableOpacity
+                            onPress={() => {
+                                sectionListRef.current?.scrollToLocation({
+                                    sectionIndex: index,
+                                    itemIndex: 0,
+                                });
+                            }}
+                            activeOpacity={0.7}
+                            style={styles.headerItemStyle}>
+                            <ThemeText fontWeight="bold">{item}</ThemeText>
+                        </TouchableOpacity>
+                    )}
+                />
+            ) : null}
             <SectionList
-                sections={basicOptions}
+                sections={visibleOptions}
                 renderSectionHeader={({ section }) => (
                     <View style={styles.sectionHeader}>
                         <ThemeText

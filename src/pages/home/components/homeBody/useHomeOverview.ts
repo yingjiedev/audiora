@@ -1,6 +1,4 @@
 import { useMusicHistory } from "@/core/musicHistory";
-import MusicSheet, { useSheetsBase, useStarredSheets } from "@/core/musicSheet";
-import LocalMusicSheet from "@/core/localMusicSheet";
 import PluginManager, { useSortedPlugins } from "@/core/pluginManager";
 import { useCurrentMusic } from "@/core/trackPlayer";
 import { isSameMediaItem } from "@/utils/mediaUtils";
@@ -10,9 +8,6 @@ export default function useHomeOverview() {
     const sortedPlugins = useSortedPlugins();
     const currentMusic = useCurrentMusic();
     const history = useMusicHistory();
-    const sheets = useSheetsBase();
-    const starredSheets = useStarredSheets();
-    const localMusics = LocalMusicSheet.useMusicList();
 
     const enabledPlugins = useMemo(
         () =>
@@ -42,30 +37,10 @@ export default function useHomeOverview() {
         [currentMusic, history],
     );
 
-    const favoriteSheet = useMemo(
-        () =>
-            sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id) ??
-            sheets[0] ??
-            null,
-        [sheets],
-    );
-
-    const userSheets = useMemo(
-        () =>
-            sheets.filter(sheet => sheet.id !== MusicSheet.defaultSheet.id),
-        [sheets],
-    );
-
     return {
         currentMusic,
         featuredMusic,
         recentMusics,
-        historyCount: history.length,
-        localMusicCount: localMusics.length,
         topListPlugins,
-        sheets,
-        starredSheets,
-        favoriteSheet,
-        userSheets,
     };
 }

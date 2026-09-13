@@ -7,6 +7,7 @@ const mockNavigate = jest.fn();
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/dialogs/useDialog", () => ({ showDialog: jest.fn() }));
+jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
 jest.mock("@/constants/assetsConst", () => ({
     ImgAsset: {
         logo: 1,
@@ -15,7 +16,7 @@ jest.mock("@/constants/assetsConst", () => ({
 }));
 jest.mock("@/core/router", () => ({
     ROUTE_PATH: {
-        LOCAL: "local",
+        DOWNLOADING: "downloading",
         PERMISSIONS: "permissions",
         SETTING: "setting",
     },
@@ -60,22 +61,23 @@ describe("SettingsOverview", () => {
             renderer = TestRenderer.create(<SettingsOverview />);
         });
 
-        const basicSettings = renderer!.root.findByProps({
-            accessibilityLabel: "sidebar.basicSettings",
+        const playback = renderer!.root.findByProps({
+            accessibilityLabel: "settingsEntry.playback",
         });
-        const localMusic = renderer!.root.findByProps({
-            accessibilityLabel: "home.scanLocal",
+        const downloads = renderer!.root.findByProps({
+            accessibilityLabel: "home.downloadManagement",
         });
 
         act(() => {
-            basicSettings.props.onPress();
-            localMusic.props.onPress();
+            playback.props.onPress();
+            downloads.props.onPress();
         });
 
         expect(mockNavigate).toHaveBeenNthCalledWith(1, "setting", {
             type: "basic",
+            section: "playback",
         });
-        expect(mockNavigate).toHaveBeenNthCalledWith(2, "local");
+        expect(mockNavigate).toHaveBeenNthCalledWith(2, "downloading");
     });
 
     it("uses the existing language picker instead of adding language state", () => {

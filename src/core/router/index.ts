@@ -71,7 +71,7 @@ interface RouterParams extends RouterParamsBase {
     };
     setting: {
         type: string;
-        // anchor?: string | number;
+        section?: string;
     };
     local: undefined;
     downloading: undefined;

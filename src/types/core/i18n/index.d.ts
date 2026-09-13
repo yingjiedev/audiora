@@ -287,9 +287,6 @@ export interface ILanguageData {
     "themeSettings.coverStyleSquareImmersive": string; // 方形（沉浸式）
     "themeSettings.coverStyleCircle": string; // 圆形
     "themeSettings.homeDisplay": string; // 首页显示
-    "themeSettings.useNewHomeUI": string; // 使用新版首页
-    "themeSettings.hideHomeHeroCard": string; // 隐藏首页顶部音乐卡片
-    "themeSettings.hideHomeOperations": string; // 隐藏首页快捷按钮
     "themeSettings.backgroundTuning": string; // 背景调节
     "themeSettings.pickBackground": string; // 选择背景图
     "themeSettings.changeBackground": string; // 更换背景图
@@ -717,6 +714,89 @@ export interface ILanguageData {
     "quality.atmos": string; // 无损音质 Atmos
     "quality.atmos_plus": string; // 无损音质 Atmos 2.0
     "quality.master": string; // 无损音质 Master
+
+    "settingsGroup.playback": string;
+    "settingsGroup.download": string;
+    "settingsGroup.lyrics": string;
+    "settingsGroup.appearance": string;
+    "settingsGroup.storage": string;
+    "settingsGroup.sources": string;
+    "settingsGroup.permissions": string;
+    "settingsGroup.backup": string;
+    "settingsGroup.general": string;
+    "settingsGroup.about": string;
+    "settingsEntry.playback": string;
+    "settingsEntry.playbackDescription": string;
+    "settingsEntry.network": string;
+    "settingsEntry.networkDescription": string;
+    "settingsEntry.timingCloseDescription": string;
+    "settingsEntry.downloadOptions": string;
+    "settingsEntry.downloadOptionsDescription": string;
+    "settingsEntry.lyrics": string;
+    "settingsEntry.lyricsDescription": string;
+    "settingsEntry.cache": string;
+    "settingsEntry.cacheDescription": string;
+    "settingsEntry.pluginOptions": string;
+    "settingsEntry.pluginOptionsDescription": string;
+    "settingsEntry.general": string;
+    "settingsEntry.generalDescription": string;
+    "settingsEntry.sheetAndAlbum": string;
+    "settingsEntry.sheetAndAlbumDescription": string;
+    "settingsEntry.developerDescription": string;
+    "checkUpdate.newVersion": string;
+    "checkUpdate.currentVersion": string;
+    "checkUpdate.download": string;
+    "announcement.view": string;
+    "announcement.description": string;
+    "announcement.error": string;
+    "home.downloadManagement": string;
+    "home.downloadManagementDescription": string;
+    "home.aboutAndUpdate": string;
+    "home.currentVersion": string;
+    "home.continueListeningEmpty": string;
+    "home.exploreMusic": string;
+    "home.recommendForYou": string;
+    "home.recommendDescription": string;
+    "musicLibrary.onlineMusic": string;
+    "musicLibrary.allTracks": string;
+    "musicLibrary.browseArtists": string;
+    "musicLibrary.browseAlbums": string;
+    "musicLibrary.browseFolders": string;
+    "musicLibrary.uncategorizedFolder": string;
+    "musicLibrary.unknownTrack": string;
+    "musicLibrary.unknownArtist": string;
+    "musicLibrary.musicCount": string;
+    "musicLibrary.emptyLocalTitle": string;
+    "musicLibrary.emptyLocalDescription": string;
+    "musicLibrary.artists": string;
+    "musicLibrary.folders": string;
+    "musicLibrary.unit.track": string;
+    "musicLibrary.unit.artist": string;
+    "musicLibrary.unit.album": string;
+    "musicLibrary.unit.folder": string;
+    "musicLibrary.viewAllLocal": string;
+    "musicLibrary.localSummary": string;
+    "musicLibrary.browseEntry": string;
+    "musicLibrary.scanMusic": string;
+    "musicLibrary.viewEntry": string;
+    "musicLibrary.onlineSummary": string;
+    "musicLibrary.searchOnline": string;
+    "musicLibrary.sourcesAndPlatforms": string;
+    "musicLibrary.manageSources": string;
+    "musicLibrary.manage": string;
+    "musicLibrary.searchWithSource": string;
+    "musicLibrary.searchSupported": string;
+    "musicLibrary.sourceConnected": string;
+    "musicLibrary.addSource": string;
+    "musicLibrary.emptyOnlineTitle": string;
+    "musicLibrary.emptyOnlineDescription": string;
+    "musicLibrary.searchMusic": string;
+    "themeSettingsIndex.modeDescription": string;
+    "themeSettingsIndex.coverDescription": string;
+    "themeSettingsIndex.fontDescription": string;
+    "themeSettingsIndex.themeDescription": string;
+    "themeSettingsIndex.backgroundDescription": string;
+    "themeSettingsIndex.appearanceDescription": string;
 }
 
 // 语言接口定义

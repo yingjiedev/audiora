@@ -1,6 +1,7 @@
 import Icon, { IIconName } from "@/components/base/icon";
 import PillTabBar from "@/components/base/pillTabBar";
 import ThemeText from "@/components/base/themeText";
+import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import LocalMusicSheet from "@/core/localMusicSheet";
 import PluginManager, { useSortedPlugins } from "@/core/pluginManager";
@@ -10,9 +11,7 @@ import Color from "color";
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import TopListBody from "@/pages/topList/components/topListBody";
-
-type LibraryTab = "ranking" | "local" | "online";
+type LibraryTab = "local" | "online";
 type LocalBrowserMode = "tracks" | "artists" | "albums" | "folders";
 
 type LocalEntry = {
@@ -30,29 +29,18 @@ type BrowserItem = {
     description: string;
 };
 
-const libraryTabs: Array<{ key: LibraryTab; title: string }> = [
-    { key: "ranking", title: "榜单" },
-    { key: "local", title: "本地音乐" },
-    { key: "online", title: "在线音乐" },
-];
-
-const browseTitles: Record<LocalBrowserMode, string> = {
-    tracks: "全部歌曲",
-    artists: "按艺术家浏览",
-    albums: "按专辑浏览",
-    folders: "按文件夹浏览",
-};
-
 function getFolderName(item: IMusic.IMusicItem) {
     const extra = item[Symbol.for("$")] as { localPath?: string } | undefined;
     const path = item.localPath ?? extra?.localPath ?? "";
     const parts = String(path).split(/[\\/]/).filter(Boolean);
-    return parts.length > 1 ? parts[parts.length - 2] : "未分类文件夹";
+    return parts.length > 1
+        ? parts[parts.length - 2]
+        : i18n.t("musicLibrary.uncategorizedFolder");
 }
 
 function countBy(items: IMusic.IMusicItem[], getName: (item: IMusic.IMusicItem) => string) {
     return items.reduce<Record<string, number>>((result, item) => {
-        const name = getName(item) || "未知";
+        const name = getName(item) || i18n.t("common.unknownName");
         result[name] = (result[name] ?? 0) + 1;
         return result;
     }, {});
@@ -61,12 +49,13 @@ function countBy(items: IMusic.IMusicItem[], getName: (item: IMusic.IMusicItem) 
 function buildBrowserItems(
     mode: LocalBrowserMode,
     items: IMusic.IMusicItem[],
+    locale: string,
 ): BrowserItem[] {
     if (mode === "tracks") {
         return items.slice(0, 6).map(item => ({
             key: `${item.platform}-${item.id}`,
-            title: item.title || "未知歌曲",
-            description: item.artist || "未知艺术家",
+            title: item.title || i18n.t("musicLibrary.unknownTrack"),
+            description: item.artist || i18n.t("musicLibrary.unknownArtist"),
         }));
     }
 
@@ -77,24 +66,26 @@ function buildBrowserItems(
             : getFolderName;
 
     return Object.entries(countBy(items, getName))
-        .sort(([left], [right]) => left.localeCompare(right, "zh-CN"))
+        .sort(([left], [right]) => left.localeCompare(right, locale))
         .slice(0, 6)
         .map(([title, count]) => ({
             key: title,
             title,
-            description: `${count} 首音乐`,
+            description: i18n.t("musicLibrary.musicCount", { count }),
         }));
 }
 
 function EmptyLocalBrowser() {
+    const { t } = useI18N();
+
     return (
         <View style={styles.emptyState}>
             <Icon name="folder-music-outline" size={rpx(48)} color="#7892C9" />
             <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.emptyTitle}>
-                还没有本地音乐
+                {t("musicLibrary.emptyLocalTitle")}
             </ThemeText>
             <ThemeText fontSize="description" fontColor="textSecondary" style={styles.emptyDescription}>
-                扫描设备中的音乐文件后，会在这里按分类展示。
+                {t("musicLibrary.emptyLocalDescription")}
             </ThemeText>
         </View>
     );
@@ -103,6 +94,8 @@ function EmptyLocalBrowser() {
 function LocalMusicContent() {
     const colors = useColors();
     const navigate = useNavigate();
+    const { t, getLanguage } = useI18N();
+    const locale = getLanguage().locale;
     const localMusics = LocalMusicSheet.useMusicList();
     const [browserMode, setBrowserMode] = useState<LocalBrowserMode>("tracks");
 
@@ -119,41 +112,47 @@ function LocalMusicContent() {
         [localMusics],
     );
     const browserItems = useMemo(
-        () => buildBrowserItems(browserMode, localMusics),
-        [browserMode, localMusics],
+        () => buildBrowserItems(browserMode, localMusics, locale),
+        [browserMode, localMusics, locale],
     );
+    const browseTitles: Record<LocalBrowserMode, string> = {
+        tracks: t("musicLibrary.allTracks"),
+        artists: t("musicLibrary.browseArtists"),
+        albums: t("musicLibrary.browseAlbums"),
+        folders: t("musicLibrary.browseFolders"),
+    };
 
     const entries: LocalEntry[] = [
         {
             key: "tracks",
             icon: "musical-note",
-            title: "本地音乐",
+            title: t("home.localMusic"),
             count: localMusics.length,
-            unit: "首",
+            unit: t("musicLibrary.unit.track"),
             accent: "#5B72FF",
         },
         {
             key: "artists",
             icon: "user",
-            title: "艺术家",
+            title: t("musicLibrary.artists"),
             count: artistCount,
-            unit: "位",
+            unit: t("musicLibrary.unit.artist"),
             accent: "#8563F2",
         },
         {
             key: "albums",
             icon: "album-outline",
-            title: "专辑",
+            title: t("common.album"),
             count: albumCount,
-            unit: "张",
+            unit: t("musicLibrary.unit.album"),
             accent: "#1F9DF0",
         },
         {
             key: "folders",
             icon: "folder-outline",
-            title: "文件夹",
+            title: t("musicLibrary.folders"),
             count: folderCount,
-            unit: "个",
+            unit: t("musicLibrary.unit.folder"),
             accent: "#18BFA3",
         },
     ];
@@ -162,16 +161,18 @@ function LocalMusicContent() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="查看全部本地音乐"
+                accessibilityLabel={t("musicLibrary.viewAllLocal")}
                 style={[styles.localHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
                 onPress={() => navigate(ROUTE_PATH.LOCAL)}>
                 <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(0.16).toString() }]}>
                     <Icon name="folder-music-outline" size={rpx(48)} color={colors.primary} />
                 </View>
                 <View style={styles.heroText}>
-                    <ThemeText fontSize="subTitle" fontWeight="bold">本地音乐</ThemeText>
+                    <ThemeText fontSize="subTitle" fontWeight="bold">
+                        {t("home.localMusic")}
+                    </ThemeText>
                     <ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>
-                        已收录 {localMusics.length} 首，可继续扫描设备音乐
+                        {t("musicLibrary.localSummary", { count: localMusics.length })}
                     </ThemeText>
                 </View>
                 <Icon name="arrow-long-left" size={rpx(30)} color={colors.textSecondary} style={styles.chevron} />
@@ -184,7 +185,7 @@ function LocalMusicContent() {
                         <Pressable
                             key={entry.key}
                             accessibilityRole="button"
-                            accessibilityLabel={`浏览${entry.title}`}
+                            accessibilityLabel={t("musicLibrary.browseEntry", { name: entry.title })}
                             style={[styles.localCard, { backgroundColor: Color(entry.accent).alpha(selected ? 0.16 : 0.08).toString() }]}
                             onPress={() => setBrowserMode(entry.key)}>
                             <View style={[styles.localIcon, { backgroundColor: Color(entry.accent).alpha(0.16).toString() }]}>
@@ -205,12 +206,12 @@ function LocalMusicContent() {
                 <ThemeText fontSize="title" fontWeight="bold">{browseTitles[browserMode]}</ThemeText>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="扫描本地音乐"
+                    accessibilityLabel={t("localMusic.scanLocalMusic")}
                     style={[styles.scanAction, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
                     onPress={() => navigate(ROUTE_PATH.LOCAL)}>
                     <Icon name="folder-plus" size={rpx(26)} color={colors.primary} />
                     <ThemeText color={colors.primary} fontSize="caption" fontWeight="semibold" style={styles.scanText}>
-                        扫描音乐
+                        {t("musicLibrary.scanMusic")}
                     </ThemeText>
                 </Pressable>
             </View>
@@ -220,7 +221,7 @@ function LocalMusicContent() {
                     <Pressable
                         key={item.key}
                         accessibilityRole="button"
-                        accessibilityLabel={`查看${item.title}`}
+                        accessibilityLabel={t("musicLibrary.viewEntry", { name: item.title })}
                         style={[styles.browserRow, index < browserItems.length - 1 ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Color(colors.text).alpha(0.07).toString() } : null]}
                         onPress={() => navigate(ROUTE_PATH.LOCAL)}>
                         <View style={[styles.browserIcon, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
@@ -238,37 +239,10 @@ function LocalMusicContent() {
     );
 }
 
-function RankingsContent() {
-    const colors = useColors();
-    const navigate = useNavigate();
-    const topListCount = useSortedPlugins().filter(plugin =>
-        PluginManager.isPluginEnabled(plugin) && plugin.supportedMethods.has("getTopLists"),
-    ).length;
-
-    return (
-        <View style={styles.flexContent}>
-            <View style={styles.rankingHint}>
-                <View style={[styles.hintIcon, { backgroundColor: Color("#F7A719").alpha(0.14).toString() }]}>
-                    <Icon name="trophy" size={rpx(32)} color="#F7A719" />
-                </View>
-                <View style={styles.hintText}>
-                    <ThemeText fontSize="description" fontWeight="semibold">热门榜单</ThemeText>
-                    <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.hintDescription}>
-                        已接入 {topListCount} 个可用榜单音乐源
-                    </ThemeText>
-                </View>
-                <Pressable accessibilityRole="button" accessibilityLabel="管理音乐源" onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
-                    <ThemeText fontSize="caption" fontWeight="semibold" color={colors.primary}>管理</ThemeText>
-                </Pressable>
-            </View>
-            <TopListBody />
-        </View>
-    );
-}
-
 function OnlineMusicContent() {
     const colors = useColors();
     const navigate = useNavigate();
+    const { t } = useI18N();
     const enabledPlugins = useSortedPlugins().filter(plugin => PluginManager.isPluginEnabled(plugin));
 
     return (
@@ -278,14 +252,16 @@ function OnlineMusicContent() {
                     <Icon name="circle-stack" size={rpx(48)} color={colors.primary} />
                 </View>
                 <View style={styles.heroText}>
-                    <ThemeText fontSize="subTitle" fontWeight="bold">在线音乐</ThemeText>
+                    <ThemeText fontSize="subTitle" fontWeight="bold">
+                        {t("musicLibrary.onlineMusic")}
+                    </ThemeText>
                     <ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>
-                        已启用 {enabledPlugins.length} 个音乐源，搜索即可发现更多音乐
+                        {t("musicLibrary.onlineSummary", { count: enabledPlugins.length })}
                     </ThemeText>
                 </View>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="搜索在线音乐"
+                    accessibilityLabel={t("musicLibrary.searchOnline")}
                     style={[styles.onlineSearch, { backgroundColor: colors.primary }]}
                     onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
                     <Icon name="magnifying-glass" size={rpx(28)} color="#FFFFFF" />
@@ -293,9 +269,13 @@ function OnlineMusicContent() {
             </View>
 
             <View style={styles.sectionHeader}>
-                <ThemeText fontSize="title" fontWeight="bold">音乐源与平台</ThemeText>
-                <Pressable accessibilityRole="button" accessibilityLabel="管理音乐源" onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
-                    <ThemeText fontSize="caption" color={colors.primary} fontWeight="semibold">管理</ThemeText>
+                <ThemeText fontSize="title" fontWeight="bold">
+                    {t("musicLibrary.sourcesAndPlatforms")}
+                </ThemeText>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.manageSources")} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
+                    <ThemeText fontSize="caption" color={colors.primary} fontWeight="semibold">
+                        {t("musicLibrary.manage")}
+                    </ThemeText>
                 </Pressable>
             </View>
 
@@ -304,7 +284,7 @@ function OnlineMusicContent() {
                     <Pressable
                         key={plugin.hash}
                         accessibilityRole="button"
-                        accessibilityLabel={`使用${plugin.name}搜索`}
+                        accessibilityLabel={t("musicLibrary.searchWithSource", { name: plugin.name })}
                         style={[styles.browserRow, index < enabledPlugins.length - 1 ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Color(colors.text).alpha(0.07).toString() } : null]}
                         onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
                         <View style={[styles.browserIcon, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
@@ -313,16 +293,22 @@ function OnlineMusicContent() {
                         <View style={styles.browserText}>
                             <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{plugin.name}</ThemeText>
                             <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.browserDescription}>
-                                {plugin.supportedMethods.has("search") ? "支持在线搜索" : "已接入音乐源"}
+                                {plugin.supportedMethods.has("search")
+                                    ? t("musicLibrary.searchSupported")
+                                    : t("musicLibrary.sourceConnected")}
                             </ThemeText>
                         </View>
                         <Icon name="arrow-long-left" size={rpx(28)} color={colors.textSecondary} style={styles.chevron} />
                     </Pressable>
                 )) : (
-                    <Pressable accessibilityRole="button" accessibilityLabel="添加音乐源" style={styles.emptyState} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.addSource")} style={styles.emptyState} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
                         <Icon name="javascript" size={rpx(48)} color="#7892C9" />
-                        <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.emptyTitle}>还没有在线音乐源</ThemeText>
-                        <ThemeText fontSize="description" fontColor="textSecondary" style={styles.emptyDescription}>前往音乐源管理添加后，即可搜索和浏览在线音乐。</ThemeText>
+                        <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.emptyTitle}>
+                            {t("musicLibrary.emptyOnlineTitle")}
+                        </ThemeText>
+                        <ThemeText fontSize="description" fontColor="textSecondary" style={styles.emptyDescription}>
+                            {t("musicLibrary.emptyOnlineDescription")}
+                        </ThemeText>
                     </Pressable>
                 )}
             </View>
@@ -333,14 +319,21 @@ function OnlineMusicContent() {
 export default function MusicLibraryOverview() {
     const colors = useColors();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<LibraryTab>("ranking");
+    const { t } = useI18N();
+    const [activeTab, setActiveTab] = useState<LibraryTab>("local");
+    const libraryTabs: Array<{ key: LibraryTab; title: string }> = [
+        { key: "local", title: t("home.localMusic") },
+        { key: "online", title: t("musicLibrary.onlineMusic") },
+    ];
     const activeIndex = libraryTabs.findIndex(tab => tab.key === activeTab);
 
     return (
         <View style={[styles.wrapper, { backgroundColor: colors.pageBackground }]}>
             <View style={styles.header}>
-                <ThemeText fontSize="appbar" fontWeight="bolder">音乐库</ThemeText>
-                <Pressable accessibilityRole="button" accessibilityLabel="搜索音乐" style={styles.headerAction} onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
+                <ThemeText fontSize="appbar" fontWeight="bolder">
+                    {t("home.musicLibrary")}
+                </ThemeText>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.searchMusic")} style={styles.headerAction} onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
                     <Icon name="magnifying-glass" size={rpx(32)} color={colors.text} />
                 </Pressable>
             </View>
@@ -351,7 +344,6 @@ export default function MusicLibraryOverview() {
                 contentContainerStyle={styles.tabContent}
                 onIndexChange={index => setActiveTab(libraryTabs[index].key)}
             />
-            {activeTab === "ranking" ? <RankingsContent /> : null}
             {activeTab === "local" ? <LocalMusicContent /> : null}
             {activeTab === "online" ? <OnlineMusicContent /> : null}
         </View>

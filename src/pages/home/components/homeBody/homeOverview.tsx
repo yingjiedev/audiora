@@ -1,7 +1,6 @@
 import FastImage from "@/components/base/fastImage";
 import Icon, { IIconName } from "@/components/base/icon.tsx";
 import ThemeText from "@/components/base/themeText";
-import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
 import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
@@ -11,8 +10,8 @@ import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import Color from "color";
 import React, { ReactNode, useMemo } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { DimensionValue, ImageSourcePropType } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import type { DimensionValue } from "react-native";
 import type { Plugin } from "@/core/pluginManager";
 import useHomeDiscovery, {
     IHomeDiscoveryPreview,
@@ -68,25 +67,16 @@ export default function HomeOverview() {
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}>
             <HomeHero />
-            <QuickAccess
-                historyCount={data.historyCount}
-                favoriteCount={data.favoriteSheet?.worksNum ?? 0}
-                favoriteSheetId={data.favoriteSheet?.id}
-            />
+            <RecommendedPlaylists />
             <Discovery
                 topListPlugins={data.topListPlugins}
                 preview={discoveryPreview}
             />
-            <RecentListening musics={data.recentMusics} />
             <ContinueListening
                 currentMusic={data.currentMusic}
                 featuredMusic={data.featuredMusic}
             />
-            <MyMusic
-                favoriteSheet={data.favoriteSheet}
-                userSheets={data.userSheets}
-                starredSheets={data.starredSheets}
-            />
+            <RecentListening musics={data.recentMusics} />
         </ScrollView>
     );
 }
@@ -118,15 +108,16 @@ function ContinueListening(props: {
             <Section title={t("home.continueListening")}>
                 <View
                     style={[styles.emptyStart, { backgroundColor: colors.card }]}>
+                    <ThemeText
+                        fontSize="description"
+                        fontColor="textSecondary"
+                        style={styles.emptyStartText}>
+                        {t("home.continueListeningEmpty")}
+                    </ThemeText>
                     <QuickPill
-                        icon="inbox-arrow-down"
-                        title={t("home.importPlaylist.a11y")}
-                        onPress={() => showPanel("ImportMusicSheet")}
-                    />
-                    <QuickPill
-                        icon="folder-music-outline"
-                        title={t("home.scanLocal")}
-                        onPress={() => navigate(ROUTE_PATH.LOCAL)}
+                        icon="magnifying-glass"
+                        title={t("home.exploreMusic")}
+                        onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}
                     />
                 </View>
             </Section>
@@ -297,102 +288,54 @@ function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
     );
 }
 
-function QuickAccess(props: {
-    historyCount: number;
-    favoriteCount: number;
-    favoriteSheetId?: string;
-}) {
-    const { historyCount, favoriteCount, favoriteSheetId } = props;
+function RecommendedPlaylists() {
+    const colors = useColors();
     const { t } = useI18N();
     const navigate = useNavigate();
 
-    const quickItems: {
-        key: string;
-        artwork: ImageSourcePropType;
-        title: string;
-        subtitle: string;
-        accent: string;
-        action: () => void;
-    }[] = [
-        {
-            key: "recommend",
-            artwork: ImgAsset.quickLocal,
-            title: t("home.recommendSheet"),
-            subtitle: t("home.discovery"),
-            accent: "#00CDAA",
-            action: () => navigate(ROUTE_PATH.RECOMMEND_SHEETS),
-        },
-        {
-            key: "history",
-            artwork: ImgAsset.quickHistory,
-            title: t("home.playHistory"),
-            subtitle: t("home.songCount", { count: historyCount }),
-            accent: "#4D70F5",
-            action: () => navigate(ROUTE_PATH.HISTORY),
-        },
-        {
-            key: "favorite",
-            artwork: ImgAsset.quickFavorite,
-            title: t("home.favoriteSheet"),
-            subtitle: t("home.songCount", { count: favoriteCount }),
-            accent: "#FF567D",
-            action: () => {
-                if (favoriteSheetId) {
-                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: favoriteSheetId });
-                }
-            },
-        },
-        {
-            key: "folderImport",
-            artwork: ImgAsset.quickFolder,
-            title: t("home.importPlaylist.a11y"),
-            subtitle: t("home.scanLocal"),
-            accent: "#00A9EE",
-            action: () => navigate(ROUTE_PATH.LOCAL),
-        },
-    ];
-
     return (
-        <View style={styles.quickSection}>
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.quickContainer}>
-                {quickItems.map(item => (
-                    <Pressable
-                        key={item.key}
-                        style={[
-                            styles.quickItem,
-                            {
-                                backgroundColor: Color(item.accent)
-                                    .alpha(0.055)
-                                    .toString(),
-                            },
-                        ]}
-                        onPress={item.action}>
-                        <Image
-                            source={item.artwork}
-                            style={styles.quickArtwork}
-                            resizeMode="contain"
-                        />
-                        <ThemeText
-                            numberOfLines={1}
-                            fontSize="tag"
-                            fontWeight="semibold"
-                            style={styles.quickText}>
-                            {item.title}
-                        </ThemeText>
-                        <ThemeText
-                            numberOfLines={1}
-                            fontSize="caption"
-                            fontColor="textSecondary"
-                            style={styles.quickSubtitle}>
-                            {item.subtitle}
-                        </ThemeText>
-                    </Pressable>
-                ))}
-            </ScrollView>
-        </View>
+        <Section
+            title={t("home.recommendSheet")}
+            right={
+                <Pressable
+                    style={styles.sectionTextButton}
+                    onPress={() => navigate(ROUTE_PATH.RECOMMEND_SHEETS)}>
+                    <ThemeText fontSize="description" fontWeight="semibold" color={colors.primary}>
+                        {t("home.viewAll")}
+                    </ThemeText>
+                    <ForwardIcon size={rpx(26)} color={colors.primary} />
+                </Pressable>
+            }>
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("home.recommendSheet")}
+                style={[
+                    styles.recommendCard,
+                    { backgroundColor: Color(colors.primary).alpha(0.1).toString() },
+                ]}
+                onPress={() => navigate(ROUTE_PATH.RECOMMEND_SHEETS)}>
+                <View
+                    style={[
+                        styles.recommendIcon,
+                        { backgroundColor: Color(colors.primary).alpha(0.16).toString() },
+                    ]}>
+                    <Icon name="motion-play" size={rpx(38)} color={colors.primary} />
+                </View>
+                <View style={styles.recommendText}>
+                    <ThemeText fontSize="subTitle" fontWeight="bold" numberOfLines={1}>
+                        {t("home.recommendForYou")}
+                    </ThemeText>
+                    <ThemeText
+                        fontSize="description"
+                        fontColor="textSecondary"
+                        numberOfLines={2}
+                        style={styles.smallTextMargin}>
+                        {t("home.recommendDescription")}
+                    </ThemeText>
+                </View>
+                <ForwardIcon size={rpx(30)} color={colors.textSecondary ?? colors.text} />
+            </Pressable>
+        </Section>
     );
 }
 
@@ -438,7 +381,7 @@ function Discovery(props: {
 
     return (
         <Section
-            title={t("home.discovery")}
+            title={t("home.topList")}
             right={
                 <Pressable
                     style={styles.sectionTextButton}
@@ -586,197 +529,6 @@ function Discovery(props: {
     );
 }
 
-function MyMusic(props: {
-    favoriteSheet: IMusic.IMusicSheetItemBase | null;
-    userSheets: IMusic.IMusicSheetItemBase[];
-    starredSheets: IMusic.IMusicSheetItem[];
-}) {
-    const { favoriteSheet, userSheets, starredSheets } = props;
-    const colors = useColors();
-    const { t } = useI18N();
-    const navigate = useNavigate();
-
-    const rows: {
-        key: string;
-        icon: IIconName;
-        title: string;
-        desc: string;
-        accent: string;
-        action: () => void;
-    }[] = [
-        {
-            key: "favorite",
-            icon: "heart",
-            title: t("home.favoriteSheet"),
-            desc: t("home.songCount", {
-                count: favoriteSheet?.worksNum ?? 0,
-            }),
-            accent: "#FF8FA3",
-            action: () => {
-                if (favoriteSheet) {
-                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
-                        id: favoriteSheet.id,
-                    });
-                }
-            },
-        },
-        {
-            key: "localSheets",
-            icon: "playlist",
-            title: t("home.myPlaylists"),
-            desc: t("home.playlistCount", {
-                count: userSheets.length,
-            }),
-            accent: "#A88BFF",
-            action: () =>
-                navigate(ROUTE_PATH.SHEET_BROWSER, {
-                    sheetType: "local",
-                }),
-        },
-        {
-            key: "starredSheets",
-            icon: "bookmark-square",
-            title: t("home.starredPlaylists"),
-            desc: t("home.playlistCount", {
-                count: starredSheets.length,
-            }),
-            accent: "#7DD3B8",
-            action: () =>
-                navigate(ROUTE_PATH.SHEET_BROWSER, {
-                    sheetType: "starred",
-                }),
-        },
-    ];
-
-    return (
-        <Section
-            title={t("home.myMusic")}
-            right={
-                <View style={styles.myMusicActions}>
-                    <Pressable
-                        style={[
-                            styles.headerIconAction,
-                            {
-                                backgroundColor: Color(colors.text)
-                                    .alpha(0.07)
-                                    .toString(),
-                            },
-                        ]}
-                        onPress={() => showPanel("PlayById")}
-                        accessibilityLabel={t("home.playById.a11y")}>
-                        <Icon
-                            name="id"
-                            size={rpx(28)}
-                            color={colors.text}
-                        />
-                    </Pressable>
-                    <Pressable
-                        style={[
-                            styles.headerIconAction,
-                            {
-                                backgroundColor: Color(colors.text)
-                                    .alpha(0.07)
-                                    .toString(),
-                            },
-                        ]}
-                        onPress={() => showPanel("CreateMusicSheet")}
-                        accessibilityLabel={t("home.newPlaylist.a11y")}>
-                        <Icon
-                            name="plus"
-                            size={rpx(28)}
-                            color={colors.text}
-                        />
-                    </Pressable>
-                    <Pressable
-                        style={[
-                            styles.headerTextAction,
-                            {
-                                backgroundColor: Color(colors.primary)
-                                    .alpha(0.16)
-                                    .toString(),
-                            },
-                        ]}
-                        onPress={() => showPanel("ImportMusicSheet")}
-                        accessibilityLabel={t("home.importPlaylist.a11y")}>
-                        <Icon
-                            name="inbox-arrow-down"
-                            size={rpx(26)}
-                            color={colors.primary}
-                        />
-                        <ThemeText
-                            numberOfLines={1}
-                            fontSize="description"
-                            fontWeight="semibold"
-                            color={colors.primary}
-                            style={styles.headerTextActionLabel}>
-                            {t("home.import.short")}
-                        </ThemeText>
-                    </Pressable>
-                </View>
-            }>
-            <View
-                style={[
-                    styles.myMusicList,
-                    {
-                        backgroundColor: colors.card,
-                    },
-                ]}>
-                {rows.map((row, index) => (
-                    <Pressable
-                        key={row.key}
-                        style={[
-                            styles.myMusicRow,
-                            index < rows.length - 1
-                                ? {
-                                    borderBottomColor: Color(colors.text)
-                                        .alpha(0.06)
-                                        .toString(),
-                                    borderBottomWidth: StyleSheet.hairlineWidth,
-                                }
-                                : null,
-                        ]}
-                        onPress={row.action}>
-                        <View
-                            style={[
-                                styles.myMusicRowIcon,
-                                {
-                                    backgroundColor: Color(row.accent)
-                                        .alpha(0.18)
-                                        .toString(),
-                                },
-                            ]}>
-                            <Icon
-                                name={row.icon}
-                                size={rpx(30)}
-                                color={row.accent}
-                            />
-                        </View>
-                        <View style={styles.myMusicRowText}>
-                            <ThemeText
-                                numberOfLines={1}
-                                fontSize="subTitle"
-                                fontWeight="semibold">
-                                {row.title}
-                            </ThemeText>
-                            <ThemeText
-                                numberOfLines={1}
-                                fontSize="description"
-                                fontColor="textSecondary"
-                                style={styles.smallTextMargin}>
-                                {row.desc}
-                            </ThemeText>
-                        </View>
-                        <ForwardIcon
-                            size={rpx(30)}
-                            color={colors.textSecondary ?? colors.text}
-                        />
-                    </Pressable>
-                ))}
-            </View>
-        </Section>
-    );
-}
-
 function QuickPill(props: {
     icon: IIconName;
     title: string;
@@ -875,6 +627,26 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
     },
+    recommendCard: {
+        minHeight: rpx(116),
+        marginHorizontal: rpx(24),
+        paddingHorizontal: rpx(18),
+        borderRadius: rpx(22),
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    recommendIcon: {
+        width: rpx(64),
+        height: rpx(64),
+        borderRadius: rpx(20),
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    recommendText: {
+        flex: 1,
+        minWidth: 0,
+        marginHorizontal: rpx(16),
+    },
     continueCard: {
         marginHorizontal: rpx(24),
         minHeight: rpx(176),
@@ -951,6 +723,11 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
     },
+    emptyStartText: {
+        flex: 1,
+        minWidth: 0,
+        marginHorizontal: rpx(10),
+    },
     quickPill: {
         flex: 1,
         minWidth: 0,
@@ -990,34 +767,6 @@ const styles = StyleSheet.create({
     },
     smallTextMargin: {
         marginTop: rpx(8),
-    },
-    quickContainer: {
-        paddingHorizontal: rpx(24),
-    },
-    quickSection: {
-        marginTop: rpx(20),
-    },
-    quickItem: {
-        width: rpx(164),
-        height: rpx(164),
-        borderRadius: rpx(20),
-        borderWidth: 0,
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: rpx(10),
-    },
-    quickArtwork: {
-        width: rpx(84),
-        height: rpx(84),
-    },
-    quickText: {
-        marginTop: rpx(6),
-        maxWidth: rpx(150),
-        textAlign: "center",
-    },
-    quickSubtitle: {
-        marginTop: rpx(2),
-        textAlign: "center",
     },
     discoveryPreviewContainer: {
         paddingHorizontal: rpx(24),
@@ -1072,52 +821,5 @@ const styles = StyleSheet.create({
         flex: 1,
         minWidth: 0,
         marginLeft: rpx(14),
-    },
-    myMusicActions: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    headerIconAction: {
-        width: rpx(52),
-        height: rpx(52),
-        borderRadius: rpx(26),
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: rpx(10),
-    },
-    headerTextAction: {
-        height: rpx(52),
-        borderRadius: rpx(26),
-        paddingHorizontal: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    headerTextActionLabel: {
-        marginLeft: rpx(8),
-    },
-    myMusicList: {
-        marginHorizontal: rpx(24),
-        borderRadius: rpx(22),
-        overflow: "hidden",
-    },
-    myMusicRow: {
-        minHeight: rpx(104),
-        paddingHorizontal: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    myMusicRowIcon: {
-        width: rpx(54),
-        height: rpx(54),
-        borderRadius: rpx(16),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    myMusicRowText: {
-        flex: 1,
-        minWidth: 0,
-        marginLeft: rpx(14),
-        marginRight: rpx(10),
     },
 });

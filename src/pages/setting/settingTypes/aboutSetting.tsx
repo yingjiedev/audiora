@@ -1,6 +1,8 @@
 import React from "react";
 import {
     Image,
+    Linking,
+    Pressable,
     ScrollView,
     StyleSheet,
     View,
@@ -15,6 +17,10 @@ import DeviceInfo from "react-native-device-info";
 import buildInfo from "@/constants/buildInfo";
 import useHasCustomBackground from "@/hooks/useHasCustomBackground";
 import { useI18N } from "@/core/i18n";
+import Icon from "@/components/base/icon";
+import { showDialog } from "@/components/dialogs/useDialog";
+import { checkAppRelease, getLatestAnnouncement } from "@/core/appRelease";
+import Toast from "@/utils/toast";
 
 export default function AboutSetting() {
     const orientation = useOrientation();
@@ -31,6 +37,65 @@ export default function AboutSetting() {
             borderWidth: 0,
         }
         : null;
+
+    async function handleCheckUpdate() {
+        try {
+            const result = await checkAppRelease();
+            if (!result.hasUpdate) {
+                Toast.success(t("checkUpdate.error.latestVersion"));
+                return;
+            }
+
+            const downloadUrl = result.release.download[0];
+            showDialog("SimpleDialog", {
+                title: t("checkUpdate.newVersion", {
+                    version: result.release.version,
+                }),
+                content: (
+                    <View>
+                        {result.release.changeLog.map((item, index) => (
+                            <ThemeText key={`${index}-${item}`} style={style.releaseLine}>
+                                {`${index + 1}. ${item}`}
+                            </ThemeText>
+                        ))}
+                    </View>
+                ),
+                okText: downloadUrl ? t("checkUpdate.download") : undefined,
+                onOk: downloadUrl
+                    ? () => {
+                        Linking.openURL(downloadUrl).catch(() => undefined);
+                    }
+                    : undefined,
+            });
+        } catch {
+            Toast.warn(t("checkUpdate.error.cannotConnectToServer"));
+        }
+    }
+
+    async function handleShowAnnouncement() {
+        try {
+            const announcement = await getLatestAnnouncement();
+            if (!announcement) {
+                Toast.warn(t("toast.announcementNone"));
+                return;
+            }
+
+            showDialog("SimpleDialog", {
+                title: announcement.title,
+                content: (
+                    <View>
+                        {announcement.content.map((item, index) => (
+                            <ThemeText key={`${index}-${item}`} style={style.releaseLine}>
+                                {item || " "}
+                            </ThemeText>
+                        ))}
+                    </View>
+                ),
+            });
+        } catch {
+            Toast.warn(t("announcement.error"));
+        }
+    }
 
     return (
         <View
@@ -66,6 +131,39 @@ export default function AboutSetting() {
             <ScrollView
                 contentContainerStyle={style.scrollViewContainer}
                 style={style.scrollView}>
+
+                <View style={[style.actionCard, { backgroundColor: colors.card }, cardChrome]}>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t("sidebar.checkUpdate")}
+                        style={style.actionRow}
+                        onPress={handleCheckUpdate}>
+                        <Icon name="arrow-path" size={rpx(34)} color={colors.primary} />
+                        <View style={style.actionText}>
+                            <ThemeText fontSize="subTitle" fontWeight="semibold">
+                                {t("sidebar.checkUpdate")}
+                            </ThemeText>
+                            <ThemeText fontSize="description" fontColor="textSecondary" style={style.actionDescription}>
+                                {t("checkUpdate.currentVersion", { version })}
+                            </ThemeText>
+                        </View>
+                    </Pressable>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t("announcement.view")}
+                        style={style.actionRow}
+                        onPress={handleShowAnnouncement}>
+                        <Icon name="information-circle" size={rpx(34)} color={colors.primary} />
+                        <View style={style.actionText}>
+                            <ThemeText fontSize="subTitle" fontWeight="semibold">
+                                {t("announcement.view")}
+                            </ThemeText>
+                            <ThemeText fontSize="description" fontColor="textSecondary" style={style.actionDescription}>
+                                {t("announcement.description")}
+                            </ThemeText>
+                        </View>
+                    </Pressable>
+                </View>
 
                 <View
                     style={[
@@ -206,5 +304,29 @@ const style = StyleSheet.create({
     },
     cardContent: {
         fontSize: fontRpx(28),
+    },
+    actionCard: {
+        borderRadius: rpx(16),
+        marginBottom: rpx(16),
+        overflow: "hidden",
+        elevation: 2,
+    },
+    actionRow: {
+        minHeight: rpx(100),
+        paddingHorizontal: rpx(24),
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    actionText: {
+        flex: 1,
+        minWidth: 0,
+        marginLeft: rpx(18),
+    },
+    actionDescription: {
+        marginTop: rpx(6),
+    },
+    releaseLine: {
+        marginBottom: rpx(10),
+        lineHeight: fontRpx(40),
     },
 });
