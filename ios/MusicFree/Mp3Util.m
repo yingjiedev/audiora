@@ -1317,7 +1317,7 @@ static void MFApplyAudioTechMeta(NSMutableDictionary *meta, AVAsset *asset, NSSt
   }
 
   NSData *header = nil;
-  if (MFReadFileHeader(path, 64, &header)) {
+  if (path.length > 0 && MFReadFileHeader(path, 64, &header)) {
     const uint8_t *bytes = header.bytes;
     uint32_t flacSampleRate = 0, flacBitDepth = 0, flacChannels = 0;
     if (MFParseFlacStreamInfoBytes(bytes, header.length, &flacSampleRate, &flacBitDepth, &flacChannels)) {
@@ -1340,6 +1340,57 @@ static void MFApplyAudioTechMeta(NSMutableDictionary *meta, AVAsset *asset, NSSt
   if (codec != nil) {
     meta[@"codec"] = codec;
   }
+}
+
+static BOOL MFIsHTTPSource(NSString *source) {
+  NSString *scheme = [NSURL URLWithString:source].scheme.lowercaseString;
+  return [scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"];
+}
+
+static NSString *MFHeaderValue(NSDictionary *headers, NSString *name) {
+  for (id key in headers) {
+    if ([key isKindOfClass:[NSString class]] &&
+        [(NSString *)key caseInsensitiveCompare:name] == NSOrderedSame) {
+      id value = headers[key];
+      return [value isKindOfClass:[NSString class]] ? value : nil;
+    }
+  }
+  return nil;
+}
+
+static AVURLAsset *MFCreateAudioAsset(NSString *source,
+                                      NSDictionary *headers,
+                                      NSString **localPath) {
+  if (MFIsHTTPSource(source)) {
+    if (localPath) {
+      *localPath = nil;
+    }
+    NSURL *url = [NSURL URLWithString:source];
+    if (!url) {
+      return nil;
+    }
+    NSMutableDictionary *options = [NSMutableDictionary dictionary];
+    NSString *userAgent = MFHeaderValue(headers, @"User-Agent");
+    if (userAgent.length > 0) {
+      options[AVURLAssetHTTPUserAgentKey] = userAgent;
+    }
+    NSString *cookieHeader = MFHeaderValue(headers, @"Cookie");
+    if (cookieHeader.length > 0) {
+      NSArray<NSHTTPCookie *> *cookies = [NSHTTPCookie
+        cookiesWithResponseHeaderFields:@{ @"Set-Cookie": cookieHeader }
+        forURL:url];
+      if (cookies.count > 0) {
+        options[AVURLAssetHTTPCookiesKey] = cookies;
+      }
+    }
+    return [AVURLAsset URLAssetWithURL:url options:options];
+  }
+
+  NSString *path = MFNormalizePath(source);
+  if (localPath) {
+    *localPath = path;
+  }
+  return [AVURLAsset URLAssetWithURL:[NSURL fileURLWithPath:path] options:nil];
 }
 
 @interface Mp3Util : RCTEventEmitter <RCTBridgeModule>
@@ -1382,6 +1433,33 @@ RCT_EXPORT_METHOD(getBasicMeta:(NSString *)filePath
   MFApplyAudioTechMeta(meta, asset, path);
 
   resolve(meta);
+}
+
+RCT_EXPORT_METHOD(getAudioMeta:(NSString *)source
+                  headers:(NSDictionary *)headers
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+  NSString *localPath = nil;
+  AVURLAsset *asset = MFCreateAudioAsset(source, headers ?: @{}, &localPath);
+  if (!asset) {
+    reject(@"AudioMetaProbeError", @"Invalid audio source", nil);
+    return;
+  }
+
+  [asset loadValuesAsynchronouslyForKeys:@[@"tracks"] completionHandler:^{
+    NSError *error = nil;
+    AVKeyValueStatus status = [asset statusOfValueForKey:@"tracks" error:&error];
+    if (status == AVKeyValueStatusFailed || status == AVKeyValueStatusCancelled) {
+      reject(@"AudioMetaProbeError",
+             error.localizedDescription ?: @"Unable to inspect audio source",
+             error);
+      return;
+    }
+
+    NSMutableDictionary *meta = [NSMutableDictionary dictionary];
+    MFApplyAudioTechMeta(meta, asset, localPath);
+    resolve(meta);
+  }];
 }
 
 RCT_EXPORT_METHOD(getMediaMeta:(NSArray *)filePaths

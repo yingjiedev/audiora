@@ -97,6 +97,15 @@ export interface IMp3Util {
   getBasicMeta(filePath: string): Promise<IMusicBasicMeta>;
 
   /**
+   * 探测本地文件或在线音源的技术参数。
+   * 在线音源允许附带播放器使用的请求头；失败时由上层回退为未知音质。
+   */
+  getAudioMeta(
+    source: string,
+    headers?: Record<string, string>,
+  ): Promise<IMusicBasicMeta | undefined>;
+
+  /**
    * 批量获取音频文件基础元数据
    * @param filePaths 文件路径数组
    */

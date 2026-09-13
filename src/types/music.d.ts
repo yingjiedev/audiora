@@ -6,6 +6,21 @@ declare namespace IMusic {
 
     /** 音质 */
     export type IQualityKey = string;
+
+    /** 可用于判定实际音质的音频技术参数 */
+    export interface IAudioTechnicalMeta {
+        /** 平均码率，单位 bps */
+        bitrate?: number;
+        /** 采样率，单位 Hz */
+        sampleRate?: number;
+        /** 位深，单位 bit */
+        bitDepth?: number;
+        /** 编码格式小写短名，如 mp3 / aac / flac / alac */
+        codec?: string;
+        /** 声道数 */
+        channelCount?: number;
+    }
+
     export type IQuality = Record<
         string,
         {
@@ -21,10 +36,12 @@ declare namespace IMusic {
         url?: string;
         /** UA */
         userAgent?: string;
-        /** 音质 */
+        /** 该音源实际音质 */
         quality?: IMusic.IQualityKey;
         /** 大小 */
         size?: number;
+        /** 音源实际技术参数 */
+        audioMeta?: IAudioTechnicalMeta;
     }
 
     export interface IMusicItem {

@@ -25,6 +25,10 @@ export interface IWritableMeta extends IBasicMeta {
 
 interface IMp3Util {
     getBasicMeta: (fileName: string) => Promise<IBasicMeta>;
+    getAudioMeta?: (
+        source: string,
+        headers?: Record<string, string>,
+    ) => Promise<IBasicMeta>;
     getMediaMeta: (fileNames: string[]) => Promise<IBasicMeta[]>;
     getMediaCoverImg: (mediaPath: string) => Promise<string>;
     /** 读取内嵌歌词 */

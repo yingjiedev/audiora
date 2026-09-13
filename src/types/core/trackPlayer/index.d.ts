@@ -32,10 +32,11 @@ export interface ITrackPlayer extends IInjectable, EventEmitter<{
      */
     readonly repeatMode: MusicRepeatMode;
 
-    /**
-     * 当前播放音质
-     */
+    /** 当前向音源插件请求的播放音质 */
     readonly quality: IMusic.IQualityKey;
+
+    /** 已由插件或媒体技术参数确认的实际播放音质 */
+    readonly actualQuality: IMusic.IQualityKey | null;
 
     /**
      * 当前播放列表

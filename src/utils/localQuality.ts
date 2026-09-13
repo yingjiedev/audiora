@@ -22,18 +22,7 @@ const LOSSY_CODECS = new Set([
 ]);
 
 /** 音频技术元数据（与原生 IBasicMeta 中的技术字段一致） */
-export interface ILocalAudioMeta {
-    /** 平均码率，bps */
-    bitrate?: number;
-    /** 采样率，Hz */
-    sampleRate?: number;
-    /** 位深，bit */
-    bitDepth?: number;
-    /** 编码格式小写短名，如 mp3 / aac / flac / alac / wav / vorbis */
-    codec?: string;
-    /** 声道数 */
-    channelCount?: number;
-}
+export type ILocalAudioMeta = IMusic.IAudioTechnicalMeta;
 
 function toPositiveNumber(value: unknown): number | undefined {
     if (typeof value === "number" && Number.isFinite(value) && value > 0) {

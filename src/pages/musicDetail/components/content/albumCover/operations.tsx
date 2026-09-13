@@ -103,7 +103,9 @@ export default function Operations() {
                 <Text style={styles.qualityText}>
                     {isDownloaded
                         ? localQualityAbbr ?? i18n.t("localQuality.abbr")
-                        : getQualityAbbr(currentQuality) || "HQ"}
+                        : currentQuality
+                            ? getQualityAbbr(currentQuality)
+                            : "--"}
                 </Text>
             </Pressable>
             <Icon
