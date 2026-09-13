@@ -359,7 +359,7 @@ jobs:
 
                   for apk in "${APKS[@]}"; do
                     echo "🧾 $(basename "$apk")"
-                    if ! CERT_OUTPUT=$("$APKSIGNER" verify --print-certs "$apk"); then
+                    if ! CERT_OUTPUT=$("$APKSIGNER" verify --print-certs-pem "$apk"); then
                       echo "❌ APK 签名验证失败"
                       FAILED=1
                       continue
@@ -367,12 +367,21 @@ jobs:
 
                     mapfile -t SIGNER_FINGERPRINTS < <(
                       printf '%s\n' "$CERT_OUTPUT" \
-                        | sed -nE 's/^Signer #[0-9]+ certificate SHA-256 digest:[[:space:]]*//p' \
-                        | tr -d ': ' | tr 'A-F' 'a-f'
+                        | node -e '
+                            const crypto = require("crypto");
+                            const fs = require("fs");
+                            const output = fs.readFileSync(0, "utf8");
+                            const certificatePattern = /-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/g;
+                            for (const match of output.matchAll(certificatePattern)) {
+                              const der = Buffer.from(match[1].replace(/\s/g, ""), "base64");
+                              console.log(crypto.createHash("sha256").update(der).digest("hex"));
+                            }
+                          '
                     )
 
                     if [[ "${#SIGNER_FINGERPRINTS[@]}" -eq 0 ]]; then
                       echo "❌ 无法读取签名证书指纹"
+                      printf '%s\n' "$CERT_OUTPUT"
                       FAILED=1
                       continue
                     fi
