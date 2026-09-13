@@ -1,4 +1,5 @@
 import useColors from "@/hooks/useColors";
+import { useTheme } from "@react-navigation/native";
 import useOrientation from "@/hooks/useOrientation";
 import rpx, { vh } from "@/utils/rpx";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -62,7 +63,7 @@ export default function (props: IPanelBaseProps) {
         renderBody,
         keyboardAvoidBehavior,
         maskColor,
-        maskOpacity = 0.5,
+        maskOpacity,
         positionMethod = "bottom",
     } = props;
     const keyboardAvoidMode =
@@ -71,6 +72,9 @@ export default function (props: IPanelBaseProps) {
     const keyboardHeight = useSharedValue(0);
 
     const colors = useColors();
+    const { dark } = useTheme();
+    // 深色下 0.5 的纯黑压不住底下的卡片，面板会显得发飘；浅色保持原观感
+    const resolvedMaskOpacity = maskOpacity ?? (dark ? 0.82 : 0.5);
     const [loading, setLoading] = useState(true);
     const timerRef = useRef<any>(null);
     const safeAreaInsets = useSafeAreaInsets();
@@ -223,8 +227,8 @@ export default function (props: IPanelBaseProps) {
         // Keep the mask opaque for hit testing and animate only its opacity.
         // This is the same structure used by Dialog and avoids stacking a
         // static 0.5 opacity with an animated value.
-        opacity: snapPoint.value * maskOpacity,
-    }), [maskOpacity]);
+        opacity: snapPoint.value * resolvedMaskOpacity,
+    }), [resolvedMaskOpacity]);
 
     const mountPanel = useCallback(() => {
         setLoading(false);

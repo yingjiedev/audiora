@@ -1,6 +1,10 @@
 import { Theme, useTheme } from "@react-navigation/native";
 import Color from "color";
 import { useMemo } from "react";
+import { bestForeground } from "@/utils/colorContrast";
+
+/** 主色上前景色的候选：足够亮的主色用近黑，其余用纯白 */
+const onPrimaryCandidates = ["#FFFFFF", "#10172D"];
 
 type IColors = Theme["colors"];
 
@@ -48,6 +52,12 @@ export interface CustomizedColors extends IColors {
     info?: string;
     /** paneltabbar 背景色 */
     tabBar?: string;
+    /**
+     * 主色上的前景色（文字/图标）。
+     * 主色会随主题和用户的自定义配色变化，写死白字在调亮后的主色上只有
+     * 2.9:1，这里按对比度自动取白或近黑。
+     */
+    onPrimary?: string;
 }
 
 export default function useColors() {
@@ -55,8 +65,15 @@ export default function useColors() {
 
     const cColors: CustomizedColors = useMemo(() => {
         const customColors = colors as CustomizedColors;
+        let onPrimary = onPrimaryCandidates[0];
+        try {
+            onPrimary = bestForeground(colors.primary, onPrimaryCandidates);
+        } catch {
+            // 非法主色回落到白字
+        }
         return {
             ...customColors,
+            onPrimary,
             textSecondary: Color(colors.text).alpha(0.64).toString(),
             surface: customColors.surface ?? colors.card,
             surfaceElevated:
