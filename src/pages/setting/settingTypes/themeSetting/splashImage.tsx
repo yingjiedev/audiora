@@ -1,7 +1,4 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import rpx from "@/utils/rpx";
-import ThemeText from "@/components/base/themeText";
 import ListItem from "@/components/base/listItem";
 import Config, { useAppConfig } from "@/core/appConfig";
 import { useI18N } from "@/core/i18n";
@@ -12,6 +9,7 @@ import {
 } from "@/utils/backgroundImage";
 import { devLog } from "@/utils/log";
 import Toast from "@/utils/toast";
+import SettingSection from "../../components/settingSection";
 
 export default function SplashImage() {
     const { t } = useI18N();
@@ -47,42 +45,24 @@ export default function SplashImage() {
     }
 
     return (
-        <View>
-            <ThemeText
-                fontSize="subTitle"
-                fontWeight="bold"
-                style={styles.header}>
-                {t("themeSettings.splashImage")}
-            </ThemeText>
-            <View style={styles.sectionWrapper}>
-                <ListItem withHorizontalPadding onPress={onPickPress}>
+        <SettingSection title={t("themeSettings.splashImage")}>
+            <ListItem withHorizontalPadding onPress={onPickPress}>
+                <ListItem.Content
+                    title={
+                        splashImage
+                            ? t("themeSettings.changeSplashImage")
+                            : t("themeSettings.pickSplashImage")
+                    }
+                    description={t("themeSettings.splashImageDesc")}
+                />
+            </ListItem>
+            {splashImage ? (
+                <ListItem withHorizontalPadding onPress={onClearPress}>
                     <ListItem.Content
-                        title={
-                            splashImage
-                                ? t("themeSettings.changeSplashImage")
-                                : t("themeSettings.pickSplashImage")
-                        }
-                        description={t("themeSettings.splashImageDesc")}
+                        title={t("themeSettings.clearSplashImage")}
                     />
                 </ListItem>
-                {splashImage ? (
-                    <ListItem withHorizontalPadding onPress={onClearPress}>
-                        <ListItem.Content
-                            title={t("themeSettings.clearSplashImage")}
-                        />
-                    </ListItem>
-                ) : null}
-            </View>
-        </View>
+            ) : null}
+        </SettingSection>
     );
 }
-
-const styles = StyleSheet.create({
-    header: {
-        paddingLeft: rpx(24),
-        marginTop: rpx(36),
-    },
-    sectionWrapper: {
-        marginTop: rpx(24),
-    },
-});

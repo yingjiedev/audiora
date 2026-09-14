@@ -7,11 +7,11 @@ import { useI18N } from "@/core/i18n";
 import { useMusicHistory } from "@/core/musicHistory";
 import MusicSheet, { useSheetsBase, useStarredSheets } from "@/core/musicSheet";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
-import LocalMusicSheet from "@/core/localMusicSheet";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import Color from "color";
 import React, { useMemo } from "react";
+import DeviceInfo from "react-native-device-info";
 import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 type IQuickEntry = {
@@ -30,7 +30,7 @@ export default function MyMusicOverview() {
     const history = useMusicHistory();
     const sheets = useSheetsBase();
     const starredSheets = useStarredSheets();
-    const localMusics = LocalMusicSheet.useMusicList();
+    const version = DeviceInfo.getVersion();
 
     const favoriteSheet = useMemo(
         () =>
@@ -70,12 +70,12 @@ export default function MyMusicOverview() {
             onPress: () => navigate(ROUTE_PATH.HISTORY),
         },
         {
-            key: "local",
-            icon: "folder-music-outline",
-            title: t("home.localMusic"),
-            description: t("home.songCount", { count: localMusics.length }),
+            key: "downloads",
+            icon: "arrow-down-tray",
+            title: t("home.downloadManagement"),
+            description: t("home.downloadManagementDescription"),
             accent: "#19C69F",
-            onPress: () => navigate(ROUTE_PATH.LOCAL),
+            onPress: () => navigate(ROUTE_PATH.DOWNLOADING),
         },
         {
             key: "starred",
@@ -94,6 +94,24 @@ export default function MyMusicOverview() {
         ...(favoriteSheet ? [favoriteSheet] : []),
         ...userSheets,
     ];
+    const managementEntries: IQuickEntry[] = [
+        {
+            key: "backup",
+            icon: "circle-stack",
+            title: t("sidebar.backupAndResume"),
+            description: t("settingsOverview.backupDescription"),
+            accent: "#1ABAA5",
+            onPress: () => navigate(ROUTE_PATH.SETTING, { type: "backup" }),
+        },
+        {
+            key: "about",
+            icon: "information-circle",
+            title: t("home.aboutAndUpdate"),
+            description: t("home.currentVersion", { version }),
+            accent: "#337DF7",
+            onPress: () => navigate(ROUTE_PATH.SETTING, { type: "about" }),
+        },
+    ];
 
     return (
         <View style={[styles.wrapper, { backgroundColor: colors.pageBackground }]}>
@@ -102,17 +120,6 @@ export default function MyMusicOverview() {
                     {t("home.mine")}
                 </ThemeText>
                 <View style={styles.headerActions}>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("common.search")}
-                        style={styles.headerAction}
-                        onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
-                        <Icon
-                            name="magnifying-glass"
-                            size={rpx(32)}
-                            color={colors.text}
-                        />
-                    </Pressable>
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t("common.setting")}
@@ -134,11 +141,9 @@ export default function MyMusicOverview() {
                 showsVerticalScrollIndicator={false}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={t("common.setting")}
+                    accessibilityLabel={t("home.aboutAndUpdate")}
                     style={[styles.profileCard, { backgroundColor: colors.card }]}
-                    onPress={() =>
-                        navigate(ROUTE_PATH.SETTING, { type: "overview" })
-                    }>
+                    onPress={() => navigate(ROUTE_PATH.SETTING, { type: "about" })}>
                     <View
                         style={[
                             styles.avatarWrap,
@@ -166,12 +171,6 @@ export default function MyMusicOverview() {
                             {t("home.personalTagline")}
                         </ThemeText>
                     </View>
-                    <Icon
-                        name="arrow-long-left"
-                        size={rpx(30)}
-                        color={colors.textSecondary}
-                        style={styles.forwardIcon}
-                    />
                 </Pressable>
 
                 <View style={styles.quickGrid}>
@@ -223,11 +222,59 @@ export default function MyMusicOverview() {
                     ))}
                 </View>
 
+                <View style={[styles.managementCard, { backgroundColor: colors.card }]}>
+                    {managementEntries.map((entry, index) => (
+                        <Pressable
+                            key={entry.key}
+                            accessibilityRole="button"
+                            accessibilityLabel={entry.title}
+                            style={[
+                                styles.managementRow,
+                                index < managementEntries.length - 1
+                                    ? {
+                                        borderBottomColor: Color(colors.text)
+                                            .alpha(0.07)
+                                            .toString(),
+                                        borderBottomWidth: StyleSheet.hairlineWidth,
+                                    }
+                                    : null,
+                            ]}
+                            onPress={entry.onPress}>
+                            <View
+                                style={[
+                                    styles.managementIcon,
+                                    {
+                                        backgroundColor: Color(entry.accent)
+                                            .alpha(0.14)
+                                            .toString(),
+                                    },
+                                ]}>
+                                <Icon name={entry.icon} size={rpx(30)} color={entry.accent} />
+                            </View>
+                            <View style={styles.managementText}>
+                                <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>
+                                    {entry.title}
+                                </ThemeText>
+                                <ThemeText fontSize="caption" fontColor="textSecondary" numberOfLines={1} style={styles.quickDescription}>
+                                    {entry.description}
+                                </ThemeText>
+                            </View>
+                        </Pressable>
+                    ))}
+                </View>
+
                 <View style={styles.sectionHeader}>
                     <ThemeText fontSize="title" fontWeight="bold">
                         {t("home.myPlaylists")}
                     </ThemeText>
                     <View style={styles.sectionActions}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t("home.importPlaylist.a11y")}
+                            style={styles.sectionAction}
+                            onPress={() => showPanel("ImportMusicSheet")}>
+                            <Icon name="inbox-arrow-down" size={rpx(28)} color={colors.text} />
+                        </Pressable>
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={t("home.playById.a11y")}
@@ -245,7 +292,14 @@ export default function MyMusicOverview() {
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={t("home.viewAll")}
-                            style={styles.viewAllAction}
+                            style={[
+                                styles.viewAllAction,
+                                {
+                                    backgroundColor: Color(colors.primary)
+                                        .alpha(0.1)
+                                        .toString(),
+                                },
+                            ]}
                             onPress={() =>
                                 navigate(ROUTE_PATH.SHEET_BROWSER, {
                                     sheetType: "local",
@@ -257,12 +311,6 @@ export default function MyMusicOverview() {
                                 color={colors.primary}>
                                 {t("home.viewAll")}
                             </ThemeText>
-                            <Icon
-                                name="arrow-long-left"
-                                size={rpx(22)}
-                                color={colors.primary}
-                                style={styles.forwardIcon}
-                            />
                         </Pressable>
                     </View>
                 </View>
@@ -310,12 +358,6 @@ export default function MyMusicOverview() {
                                         })}
                                     </ThemeText>
                                 </View>
-                                <Icon
-                                    name="arrow-long-left"
-                                    size={rpx(28)}
-                                    color={colors.textSecondary}
-                                    style={styles.forwardIcon}
-                                />
                             </Pressable>
                         ))
                     ) : (
@@ -385,9 +427,6 @@ const styles = StyleSheet.create({
     profileDescription: {
         marginTop: rpx(8),
     },
-    forwardIcon: {
-        transform: [{ rotate: "180deg" }],
-    },
     quickGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
@@ -418,6 +457,29 @@ const styles = StyleSheet.create({
     quickDescription: {
         marginTop: rpx(6),
     },
+    managementCard: {
+        borderRadius: rpx(22),
+        overflow: "hidden",
+        marginTop: rpx(6),
+    },
+    managementRow: {
+        minHeight: rpx(94),
+        paddingHorizontal: rpx(16),
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    managementIcon: {
+        width: rpx(54),
+        height: rpx(54),
+        borderRadius: rpx(16),
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    managementText: {
+        flex: 1,
+        minWidth: 0,
+        marginHorizontal: rpx(14),
+    },
     sectionHeader: {
         minHeight: rpx(64),
         marginTop: rpx(16),
@@ -439,10 +501,11 @@ const styles = StyleSheet.create({
     },
     viewAllAction: {
         height: rpx(48),
-        paddingHorizontal: rpx(8),
+        paddingHorizontal: rpx(16),
         marginLeft: rpx(4),
-        flexDirection: "row",
+        borderRadius: rpx(24),
         alignItems: "center",
+        justifyContent: "center",
     },
     playlistCard: {
         borderRadius: rpx(22),

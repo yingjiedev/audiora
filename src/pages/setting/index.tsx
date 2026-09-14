@@ -7,15 +7,19 @@ import { useParams } from "@/core/router";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
 import AppBar from "@/components/base/appBar";
 import { useI18N } from "@/core/i18n";
+import useColors from "@/hooks/useColors";
 
 export default function Setting() {
     const { type } = useParams<"setting">();
     const settingItem = settingTypes[type];
 
     const { t } = useI18N();
+    const colors = useColors();
 
     return (
-        <SafeAreaView edges={["bottom", "top"]} style={style.wrapper}>
+        <SafeAreaView
+            edges={["bottom", "top"]}
+            style={[style.wrapper, { backgroundColor: colors.pageBackground }]}>
             <StatusBar />
             {settingItem.showNav === false ? null : (
                 <AppBar>{t(settingItem.i18nKey as any)}</AppBar>

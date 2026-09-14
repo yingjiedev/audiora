@@ -9,8 +9,6 @@ import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx
 import globalStyle from "@/constants/globalStyle";
 import Theme from "@/core/theme";
 import HomeBody from "./components/homeBody";
-import HomeBodyHorizontal from "./components/homeBodyHorizontal";
-import useOrientation from "@/hooks/useOrientation";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Config from "@/core/appConfig";
 import HomeBottomNavigation from "./components/HomeBottomNavigation";
@@ -18,7 +16,6 @@ import MyMusicOverview from "./components/MyMusicOverview";
 import MusicLibraryOverview from "./components/MusicLibraryOverview";
 
 function Home() {
-    const orientation = useOrientation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<"home" | "library" | "mine">("home");
     
@@ -36,30 +33,24 @@ function Home() {
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
             <HorizontalSafeAreaView style={globalStyle.flex1}>
-                {orientation === "vertical" && activeTab === "mine" ? (
+                {activeTab === "mine" ? (
                     <MyMusicOverview />
-                ) : orientation === "vertical" && activeTab === "library" ? (
+                ) : activeTab === "library" ? (
                     <MusicLibraryOverview />
                 ) : (
                     <>
                         <NavBar />
-                        {orientation === "vertical" ? (
-                            <HomeBody />
-                        ) : (
-                            <HomeBodyHorizontal />
-                        )}
+                        <HomeBody />
                     </>
                 )}
             </HorizontalSafeAreaView>
             <MusicBar />
-            {orientation === "vertical" && (
-                <HomeBottomNavigation
-                    activeTab={activeTab}
-                    onSelectHome={() => setActiveTab("home")}
-                    onSelectLibrary={() => setActiveTab("library")}
-                    onSelectMine={() => setActiveTab("mine")}
-                />
-            )}
+            <HomeBottomNavigation
+                activeTab={activeTab}
+                onSelectHome={() => setActiveTab("home")}
+                onSelectLibrary={() => setActiveTab("library")}
+                onSelectMine={() => setActiveTab("mine")}
+            />
         </SafeAreaView>
     );
 }

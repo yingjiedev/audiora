@@ -8,6 +8,14 @@ jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/base/pillTabBar", () => "PillTabBar");
 jest.mock("@/pages/topList/components/topListBody", () => "TopListBody");
+jest.mock("@/core/i18n", () => ({
+    __esModule: true,
+    default: { t: (key: string) => key },
+    useI18N: () => ({
+        t: (key: string) => key,
+        getLanguage: () => ({ locale: "en-US" }),
+    }),
+}));
 jest.mock("@/core/localMusicSheet", () => ({
     __esModule: true,
     default: {
@@ -31,7 +39,7 @@ jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => 
 describe("MusicLibraryOverview", () => {
     beforeEach(() => mockNavigate.mockReset());
 
-    it("uses rankings, local music, and online music as the library sections", () => {
+    it("keeps rankings on Home and uses local and online as library sections", () => {
         let renderer: TestRenderer.ReactTestRenderer;
         act(() => {
             renderer = TestRenderer.create(<MusicLibraryOverview />); 
@@ -39,24 +47,23 @@ describe("MusicLibraryOverview", () => {
 
         const tabBar = renderer!.root.findByType("PillTabBar");
         expect(tabBar.props.routes).toEqual([
-            { key: "ranking", title: "榜单" },
-            { key: "local", title: "本地音乐" },
-            { key: "online", title: "在线音乐" },
+            { key: "local", title: "home.localMusic" },
+            { key: "online", title: "musicLibrary.onlineMusic" },
         ]);
 
         act(() => {
-            tabBar.props.onIndexChange(1); 
+            tabBar.props.onIndexChange(0);
         });
         act(() => {
- renderer!.root.findByProps({ accessibilityLabel: "扫描本地音乐" }).props.onPress(); 
+ renderer!.root.findByProps({ accessibilityLabel: "localMusic.scanLocalMusic" }).props.onPress();
         });
         expect(mockNavigate).toHaveBeenCalledWith("local");
 
         act(() => {
-            tabBar.props.onIndexChange(2); 
+            tabBar.props.onIndexChange(1);
         });
         act(() => {
- renderer!.root.findByProps({ accessibilityLabel: "搜索在线音乐" }).props.onPress(); 
+ renderer!.root.findByProps({ accessibilityLabel: "musicLibrary.searchOnline" }).props.onPress();
         });
         expect(mockNavigate).toHaveBeenLastCalledWith("search-page");
     });

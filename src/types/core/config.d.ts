@@ -122,9 +122,6 @@ export interface IAppConfigProperties {
     "theme.selectedTheme": string;
     "theme.coverStyle": "square" | "circle";
     "theme.musicDetailCoverStyle": "classic" | "immersive";
-    "theme.homeLayout": "overview" | "classic";
-    "theme.hideHomeHeroCard": boolean;
-    "theme.hideHomeOperations": boolean;
     /** 卡片/弹窗/顶栏等表面的不透明度系数，0.3 ~ 1，默认 1 */
     "theme.surfaceOpacity": number;
     /** 背景图上的暗化遮罩，0 ~ 0.8，默认 0 */

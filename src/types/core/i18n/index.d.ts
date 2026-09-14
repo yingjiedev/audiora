@@ -105,6 +105,9 @@ export interface ILanguageData {
     "home.notifications.a11y": string;
     "home.discovery": string;
     "home.myMusic": string;
+    "home.mine": string;
+    "home.personalTagline": string;
+    "home.noCustomPlaylists": string;
     "home.scanLocal": string;
     "home.import.short": string;
     "home.playById.short": string;
@@ -132,6 +135,7 @@ export interface ILanguageData {
     "toast.addToNextPlay": string; // 添加到下一曲
     "toast.beginDownload": string; // 开始下载
     "toast.rememberToSave": string; // 请记得保存
+    "toast.announcementNone": string; // 暂无可显示公告
 
     // 本地音乐相关
     "localMusic.scanLocalMusic": string; // 扫描本地音乐
@@ -287,9 +291,6 @@ export interface ILanguageData {
     "themeSettings.coverStyleSquareImmersive": string; // 方形（沉浸式）
     "themeSettings.coverStyleCircle": string; // 圆形
     "themeSettings.homeDisplay": string; // 首页显示
-    "themeSettings.useNewHomeUI": string; // 使用新版首页
-    "themeSettings.hideHomeHeroCard": string; // 隐藏首页顶部音乐卡片
-    "themeSettings.hideHomeOperations": string; // 隐藏首页快捷按钮
     "themeSettings.backgroundTuning": string; // 背景调节
     "themeSettings.pickBackground": string; // 选择背景图
     "themeSettings.changeBackground": string; // 更换背景图
@@ -641,6 +642,12 @@ export interface ILanguageData {
     "panel.musicItemOptions.refreshSourceFailed": string; // 缓存已清除，但当前歌曲音源刷新失败
     "panel.musicItemOptions.deleteFailed": string; // 删除失败
     "panel.musicItemOptions.redownload": string; // 重新下载
+    "panel.musicItemOptions.playMv": string; // 播放MV
+    "panel.mvPlayer.close": string; // 关闭MV
+    "panel.mvPlayer.quality": string; // 画质
+    "panel.mvPlayer.sourceUnavailable": string; // MV音源不可用
+    "panel.mvPlayer.loadFailed": string; // MV加载失败
+    "panel.mvPlayer.retry": string; // 重试
 
     // 面板相关 - 音质设置
     "panel.musicQuality.title": string; // 设置音质
@@ -694,6 +701,7 @@ export interface ILanguageData {
     "panel.playById.playingNow": string; // 开始播放
     "panel.playById.fetchFailed": string; // 获取歌曲信息失败
     "panel.playById.selectPlugin": string; // 选择插件
+    "panel.playById.inputId": string; // 输入歌曲ID
     "panel.playById.inputLabel": string; // 输入ID
     "panel.playById.placeholder": string; // 请输入歌曲ID
     "panel.playById.hint": string; // 输入歌曲ID后点击确认开始播放
@@ -721,6 +729,96 @@ export interface ILanguageData {
     // 本地音频音质
     "localQuality.abbr": string; // 本地
     "localQuality.fallback": string; // 本地音频
+
+    "toast.artistNotSupported": string;
+    "toast.albumNotSupported": string;
+
+    "settingsGroup.playback": string;
+    "settingsGroup.download": string;
+    "settingsGroup.lyrics": string;
+    "settingsGroup.appearance": string;
+    "settingsGroup.storage": string;
+    "settingsGroup.sources": string;
+    "settingsGroup.permissions": string;
+    "settingsGroup.backup": string;
+    "settingsGroup.general": string;
+    "settingsGroup.about": string;
+    "settingsGroup.playbackAndDownload": string;
+    "settingsGroup.lyricsAndAppearance": string;
+    "settingsGroup.sourcesAndStorage": string;
+    "settingsGroup.systemAndData": string;
+    "settingsEntry.playback": string;
+    "settingsEntry.playbackDescription": string;
+    "settingsEntry.network": string;
+    "settingsEntry.networkDescription": string;
+    "settingsEntry.timingCloseDescription": string;
+    "settingsEntry.downloadOptions": string;
+    "settingsEntry.downloadOptionsDescription": string;
+    "settingsEntry.lyrics": string;
+    "settingsEntry.lyricsDescription": string;
+    "settingsEntry.cache": string;
+    "settingsEntry.cacheDescription": string;
+    "settingsEntry.pluginOptions": string;
+    "settingsEntry.pluginOptionsDescription": string;
+    "settingsEntry.general": string;
+    "settingsEntry.generalDescription": string;
+    "settingsEntry.sheetAndAlbum": string;
+    "settingsEntry.sheetAndAlbumDescription": string;
+    "settingsEntry.developerDescription": string;
+    "checkUpdate.newVersion": string;
+    "checkUpdate.currentVersion": string;
+    "checkUpdate.download": string;
+    "announcement.view": string;
+    "announcement.description": string;
+    "announcement.error": string;
+    "home.downloadManagement": string;
+    "home.downloadManagementDescription": string;
+    "home.aboutAndUpdate": string;
+    "home.currentVersion": string;
+    "home.continueListeningEmpty": string;
+    "home.exploreMusic": string;
+    "home.recommendForYou": string;
+    "home.recommendDescription": string;
+    "musicLibrary.onlineMusic": string;
+    "musicLibrary.allTracks": string;
+    "musicLibrary.browseArtists": string;
+    "musicLibrary.browseAlbums": string;
+    "musicLibrary.browseFolders": string;
+    "musicLibrary.uncategorizedFolder": string;
+    "musicLibrary.unknownTrack": string;
+    "musicLibrary.unknownArtist": string;
+    "musicLibrary.musicCount": string;
+    "musicLibrary.emptyLocalTitle": string;
+    "musicLibrary.emptyLocalDescription": string;
+    "musicLibrary.artists": string;
+    "musicLibrary.folders": string;
+    "musicLibrary.unit.track": string;
+    "musicLibrary.unit.artist": string;
+    "musicLibrary.unit.album": string;
+    "musicLibrary.unit.folder": string;
+    "musicLibrary.viewAllLocal": string;
+    "musicLibrary.localSummary": string;
+    "musicLibrary.browseEntry": string;
+    "musicLibrary.scanMusic": string;
+    "musicLibrary.viewEntry": string;
+    "musicLibrary.onlineSummary": string;
+    "musicLibrary.searchOnline": string;
+    "musicLibrary.sourcesAndPlatforms": string;
+    "musicLibrary.manageSources": string;
+    "musicLibrary.manage": string;
+    "musicLibrary.searchWithSource": string;
+    "musicLibrary.searchSupported": string;
+    "musicLibrary.sourceConnected": string;
+    "musicLibrary.addSource": string;
+    "musicLibrary.emptyOnlineTitle": string;
+    "musicLibrary.emptyOnlineDescription": string;
+    "musicLibrary.searchMusic": string;
+    "themeSettingsIndex.modeDescription": string;
+    "themeSettingsIndex.coverDescription": string;
+    "themeSettingsIndex.fontDescription": string;
+    "themeSettingsIndex.themeDescription": string;
+    "themeSettingsIndex.backgroundDescription": string;
+    "themeSettingsIndex.appearanceDescription": string;
 }
 
 // 语言接口定义
