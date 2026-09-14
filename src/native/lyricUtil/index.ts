@@ -42,13 +42,6 @@ interface ILyricUtil extends NativeModule {
     checkSystemAlertPermission: () => Promise<boolean>;
     /** 请求悬浮窗 */
     requestSystemAlertPermission: () => Promise<boolean>;
-    /**
-     * 解密QRC加密歌词（Native实现）
-     * 使用Triple-DES + Zlib解压算法
-     * @param encryptedHex - QRC加密的十六进制字符串
-     * @returns 解密后的原始文本（可能是XML格式）
-     */
-    decryptQRCLyric: (encryptedHex: string) => Promise<string>;
     lockDesktopLyric?: () => Promise<void>;
     unlockDesktopLyric?: () => Promise<void>;
     syncPlaybackState?: (state: Record<string, any>) => Promise<void>;
@@ -151,11 +144,6 @@ LyricUtil.checkSystemAlertPermission =
 LyricUtil.requestSystemAlertPermission =
     rawLyricUtil?.requestSystemAlertPermission?.bind(rawLyricUtil) ??
     (async () => false);
-LyricUtil.decryptQRCLyric =
-    rawLyricUtil?.decryptQRCLyric?.bind(rawLyricUtil) ??
-    (async () => {
-        throw new Error("decryptQRCLyric is not available");
-    });
 LyricUtil.addListener =
     rawLyricUtil?.addListener?.bind(rawLyricUtil) ??
     ((() => ({ remove: () => undefined })) as any);

@@ -1,6 +1,9 @@
 /**
  * QRC XML to Standard LRC Converter
- * Converts QQ Music's decrypted QRC XML format to standard LRC format
+ * Converts QRC-style lyric XML (plain text with word-level timing) to standard LRC format
+ *
+ * 仅处理明文歌词：内容由插件或自建服务提供，本模块不做任何解密，
+ * 也不持有任何平台的密钥材料。
  */
 
 /**

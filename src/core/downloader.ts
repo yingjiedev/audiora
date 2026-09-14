@@ -27,7 +27,7 @@ import LocalMusicSheet from "./localMusicSheet";
 import { IPluginManager } from "@/types/core/pluginManager";
 import musicMetadataManager from "./musicMetadataManager";
 import type { IDownloadMetadataConfig, IDownloadTaskMetadata } from "@/types/metadata";
-import { autoDecryptLyric } from "@/utils/musicDecrypter";
+import { normalizeLyric } from "@/utils/lyricFormat";
 import {
     copyLocalFileToAndroidDirectory,
     isAndroidSafUri,
@@ -494,9 +494,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 return null;
             }
 
-            const rawLrc = lyricSource.rawLrc ? await autoDecryptLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
-            const translation = lyricSource.translation ? await autoDecryptLyric(lyricSource.translation, enableWordByWord) : undefined;
-            const romanization = lyricSource.romanization ? await autoDecryptLyric(lyricSource.romanization, enableWordByWord) : undefined;
+            const rawLrc = lyricSource.rawLrc ? await normalizeLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
+            const translation = lyricSource.translation ? await normalizeLyric(lyricSource.translation, enableWordByWord) : undefined;
+            const romanization = lyricSource.romanization ? await normalizeLyric(lyricSource.romanization, enableWordByWord) : undefined;
 
             if (!rawLrc) {
                 return null;

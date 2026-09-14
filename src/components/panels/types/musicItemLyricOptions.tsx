@@ -28,7 +28,7 @@ import { useI18N } from "@/core/i18n";
 import PersistStatus from "@/utils/persistStatus";
 import { useCurrentMusic } from "@/core/trackPlayer";
 import PluginManager from "@/core/pluginManager";
-import { autoDecryptLyric } from "@/utils/musicDecrypter";
+import { normalizeLyric } from "@/utils/lyricFormat";
 import { writeFile } from "react-native-fs";
 import { escapeCharacter } from "@/utils/fileUtils";
 import { getDownloadMusicPath } from "@/constants/pathConst";
@@ -301,10 +301,10 @@ export default function MusicItemLyricOptions(
                         downloadPath,
                     });
 
-                    // Decrypt lyrics (auto-decrypt QRC format)
-                    const rawLrc = lyricSource.rawLrc ? await autoDecryptLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
-                    const translation = lyricSource.translation ? await autoDecryptLyric(lyricSource.translation, enableWordByWord) : undefined;
-                    const romanization = lyricSource.romanization ? await autoDecryptLyric(lyricSource.romanization, enableWordByWord) : undefined;
+                    // 统一歌词格式（带逐字时间轴的 XML -> LRC）
+                    const rawLrc = lyricSource.rawLrc ? await normalizeLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
+                    const translation = lyricSource.translation ? await normalizeLyric(lyricSource.translation, enableWordByWord) : undefined;
+                    const romanization = lyricSource.romanization ? await normalizeLyric(lyricSource.romanization, enableWordByWord) : undefined;
 
                     if (!rawLrc) {
                         Toast.warn(t("panel.musicItemLyricOptions.lyricNotFound"));

@@ -237,13 +237,6 @@ class LyricUtilManager {
     return sub ?? { remove: () => {} };
   }
 
-  async decryptQRCLyric(encryptedHex: string): Promise<string> {
-    if (!this.canCall("decryptQRCLyric")) {
-      throw new Error('decryptQRCLyric not available in native module');
-    }
-    return this.nativeModule.decryptQRCLyric(encryptedHex);
-  }
-
   isAvailable(): boolean {
     return !!this.nativeModule;
   }

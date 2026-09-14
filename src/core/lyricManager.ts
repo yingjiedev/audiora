@@ -18,7 +18,7 @@ import { unlink, writeFile } from "react-native-fs";
 import RNTrackPlayer, { Event, State } from "react-native-track-player";
 import { TrackPlayerEvents } from "@/core.defination/trackPlayer";
 import { IPluginManager } from "@/types/core/pluginManager";
-import { autoDecryptLyric } from "@/utils/musicDecrypter";
+import { normalizeLyric } from "@/utils/lyricFormat";
 import { devLog } from "@/utils/log";
 import {
     cancelAnimation,
@@ -857,14 +857,14 @@ class LyricManager implements IInjectable {
             const enableWordByWord = this.appConfig.getConfig("lyric.enableWordByWord") ?? true;
             devLog('info', '[Lyric] Word-by-word config', { enableWordByWord });
 
-            // Native async decryption (non-blocking, ~10ms)
-            // Pass enableWordByWord to preserve word-level timing for QRC lyrics
-            const rawLrc = lrcSource.rawLrc ? await autoDecryptLyric(lrcSource.rawLrc, enableWordByWord) : lrcSource.rawLrc;
-            const translation = lrcSource.translation ? await autoDecryptLyric(lrcSource.translation, enableWordByWord) : lrcSource.translation;
-            const romanization = lrcSource.romanization ? await autoDecryptLyric(lrcSource.romanization, enableWordByWord) : lrcSource.romanization;
+            // 统一歌词格式（带逐字时间轴的 XML -> LRC）
+            // enableWordByWord 用于保留逐字时间轴
+            const rawLrc = lrcSource.rawLrc ? await normalizeLyric(lrcSource.rawLrc, enableWordByWord) : lrcSource.rawLrc;
+            const translation = lrcSource.translation ? await normalizeLyric(lrcSource.translation, enableWordByWord) : lrcSource.translation;
+            const romanization = lrcSource.romanization ? await normalizeLyric(lrcSource.romanization, enableWordByWord) : lrcSource.romanization;
 
             const decryptDuration = Date.now() - decryptStartTime;
-            devLog('info', 'Lyric decryption completed', {
+            devLog('info', '歌词格式规范化完成', {
                 duration: decryptDuration,
                 rawLrcLength: rawLrc?.length,
                 translationLength: translation?.length,
