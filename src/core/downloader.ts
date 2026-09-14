@@ -9,7 +9,6 @@ import { getMediaUniqueKey, isSameMediaItem } from "@/utils/mediaUtils";
 import network from "@/utils/network";
 import { getQualityOrder } from "@/utils/qualities";
 import { generateFileNameFromConfig, DEFAULT_FILE_NAMING_CONFIG } from "@/utils/fileNamingFormatter";
-import { formatLyricsByTimestamp } from "@/utils/lrcParser";
 import { isMflacUrl, normalizeEkey } from "@/utils/mflac";
 import EventEmitter from "eventemitter3";
 import { atom, getDefaultStore, useAtomValue } from "jotai";
@@ -24,10 +23,10 @@ import Mp3Util, {
 } from "@/native/mp3Util";
 import Cenc from "@/native/cenc";
 import LocalMusicSheet from "./localMusicSheet";
+import { writeCompanionFiles } from "./downloadCompanionFiles";
 import { IPluginManager } from "@/types/core/pluginManager";
 import musicMetadataManager from "./musicMetadataManager";
 import type { IDownloadMetadataConfig, IDownloadTaskMetadata } from "@/types/metadata";
-import { autoDecryptLyric } from "@/utils/musicDecrypter";
 import {
     copyLocalFileToAndroidDirectory,
     isAndroidSafUri,
@@ -467,63 +466,6 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 filePath,
                 error: error instanceof Error ? error.message : String(error),
             });
-        }
-    }
-
-    private async downloadLyricFile(
-        musicItem: IMusic.IMusicItem,
-        musicFilePath: string,
-    ): Promise<string | null> {
-        const downloadLyricFile = this.configService.getConfig("basic.downloadLyricFile") ?? false;
-        if (!downloadLyricFile) {
-            return null;
-        }
-
-        const lyricFileFormat = this.configService.getConfig("basic.lyricFileFormat") ?? "lrc";
-        const lyricOrder = this.configService.getConfig("basic.lyricOrder") ?? ["romanization", "original", "translation"];
-        const enableWordByWord = this.configService.getConfig("basic.enableWordByWordLyric") ?? false;
-
-        try {
-            const plugin = this.pluginManagerService.getByName(musicItem.platform);
-            if (!plugin) {
-                return null;
-            }
-
-            const lyricSource = await plugin.methods.getLyric(musicItem);
-            if (!lyricSource) {
-                return null;
-            }
-
-            const rawLrc = lyricSource.rawLrc ? await autoDecryptLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
-            const translation = lyricSource.translation ? await autoDecryptLyric(lyricSource.translation, enableWordByWord) : undefined;
-            const romanization = lyricSource.romanization ? await autoDecryptLyric(lyricSource.romanization, enableWordByWord) : undefined;
-
-            if (!rawLrc) {
-                return null;
-            }
-
-            const lyricContent = formatLyricsByTimestamp(
-                rawLrc,
-                translation,
-                romanization,
-                lyricOrder,
-                { enableWordByWord },
-            );
-
-            if (!lyricContent) {
-                return null;
-            }
-
-            const lyricFilePath = `${musicFilePath.replace(/\.[^.]+$/, "")}.${lyricFileFormat}`;
-            const { writeFile } = require("react-native-fs");
-            await writeFile(removeFileScheme(lyricFilePath), lyricContent, "utf8");
-            return lyricFilePath;
-        } catch (error) {
-            errorLog("歌词文件下载失败", {
-                musicItem: musicItem.title,
-                error: error instanceof Error ? error.message : String(error),
-            });
-            return null;
         }
     }
 
@@ -1259,6 +1201,29 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         this.maybeEmitQueueCompleted();
     }
 
+    /**
+     * 把附属文件（歌词 / 封面）复制到 SAF 授权目录，返回目标 uri。
+     * 失败只记日志并返回 null —— 附属文件写不进去不应该让下载任务失败。
+     */
+    private async copyCompanionFileToSaf(
+        filePath: string | null,
+        safDirectoryUri: string,
+    ): Promise<string | null> {
+        if (!filePath) {
+            return null;
+        }
+        try {
+            return await copyLocalFileToAndroidDirectory(
+                filePath,
+                safDirectoryUri,
+                getFileName(filePath),
+            );
+        } catch (error) {
+            errorLog("附属文件写入授权目录失败", { filePath, error });
+            return null;
+        }
+    }
+
     private async completeTaskAfterDownload(taskId: string, removeNativeTask: boolean) {
         if (this.postProcessingTaskIds.has(taskId)) {
             return;
@@ -1325,34 +1290,41 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             }
 
             await this.writeMetadataToFile(task.musicItem, runtimeInfo.targetDownloadPath);
-            const lyricFilePath = await this.downloadLyricFile(
+            // 附属文件（歌词 / 封面）与音频同目录落盘；两者都是 best-effort，失败不影响下载结果
+            const companionFiles = await writeCompanionFiles(
                 task.musicItem,
                 runtimeInfo.targetDownloadPath,
+                this.configService,
+                this.pluginManagerService,
             );
 
+            const localCompanionPaths = [
+                companionFiles.lyricPath,
+                companionFiles.coverPath,
+            ].filter((path): path is string => !!path);
+
             let completedFilePath = runtimeInfo.targetDownloadPath;
+            let finalLyricPath = companionFiles.lyricPath;
+            let finalCoverPath = companionFiles.coverPath;
             if (runtimeInfo.safDirectoryUri) {
                 completedFilePath = await copyLocalFileToAndroidDirectory(
                     runtimeInfo.targetDownloadPath,
                     runtimeInfo.safDirectoryUri,
                     getFileName(runtimeInfo.targetDownloadPath),
                 );
-                if (lyricFilePath) {
-                    try {
-                        await copyLocalFileToAndroidDirectory(
-                            lyricFilePath,
-                            runtimeInfo.safDirectoryUri,
-                            getFileName(lyricFilePath),
-                        );
-                    } catch (error) {
-                        errorLog("歌词文件写入授权目录失败", error);
-                    }
-                }
-                await unlink(removeFileScheme(runtimeInfo.targetDownloadPath)).catch(error => {
-                    errorLog("授权目录写入成功，但下载临时文件清理失败", error);
-                });
-                if (lyricFilePath) {
-                    await unlink(removeFileScheme(lyricFilePath)).catch(() => {});
+                finalLyricPath = await this.copyCompanionFileToSaf(
+                    companionFiles.lyricPath,
+                    runtimeInfo.safDirectoryUri,
+                );
+                finalCoverPath = await this.copyCompanionFileToSaf(
+                    companionFiles.coverPath,
+                    runtimeInfo.safDirectoryUri,
+                );
+                // 授权目录写入完成后清理应用内部临时文件（音频 + 附属文件）
+                for (const tempPath of [runtimeInfo.targetDownloadPath, ...localCompanionPaths]) {
+                    await unlink(removeFileScheme(tempPath)).catch(error => {
+                        errorLog("授权目录写入成功，但下载临时文件清理失败", error);
+                    });
                 }
             }
 
@@ -1368,6 +1340,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             patchMediaExtra(task.musicItem, {
                 downloaded: true,
                 localPath: completedFilePath,
+                // 置为 undefined 可在重新下载且未生成附属文件时清掉上一次的残留路径
+                localLyricPath: finalLyricPath ?? undefined,
+                localCoverPath: finalCoverPath ?? undefined,
             });
 
             this.updateDownloadTask(task.musicItem, {

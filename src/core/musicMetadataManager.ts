@@ -60,8 +60,11 @@ class MusicMetadataManager {
    * 1. 优先使用 musicItem.artwork（搜索时已包含）
    * 2. 如果为空，尝试通过插件的 getMusicInfo 重新获取完整信息
    * 3. 如果仍然为空，返回 undefined
+   *
+   * 说明：封面文件落盘（src/core/downloadCompanionFiles.ts）复用同一策略，
+   * 保证内嵌封面与独立封面文件来自同一个 URL。
    */
-  private async getCoverUrl(musicItem: IMusic.IMusicItem): Promise<string | undefined> {
+  async getCoverUrl(musicItem: IMusic.IMusicItem): Promise<string | undefined> {
     try {
       // 策略1：如果音乐项目已经有封面URL，直接返回
       if (typeof musicItem.artwork === 'string' && musicItem.artwork.trim()) {

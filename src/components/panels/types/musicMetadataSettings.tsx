@@ -36,6 +36,8 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
     const currentWriteMetadataExtended = useAppConfig("basic.writeMetadataExtended");
     const currentDownloadLyricFile = useAppConfig("basic.downloadLyricFile");
     const currentLyricFileFormat = useAppConfig("basic.lyricFileFormat");
+    const currentDownloadCoverFile = useAppConfig("basic.downloadCoverFile");
+    const currentCoverFileNaming = useAppConfig("basic.downloadCoverFileNaming");
     const currentLyricOrder = useAppConfig("basic.lyricOrder");
     const currentEnableWordByWord = useAppConfig("basic.enableWordByWordLyric");
 
@@ -47,6 +49,8 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
         writeMetadataExtended: currentWriteMetadataExtended ?? false,
         downloadLyricFile: currentDownloadLyricFile ?? false,
         lyricFileFormat: currentLyricFileFormat ?? "lrc" as "lrc" | "txt",
+        downloadCoverFile: currentDownloadCoverFile ?? false,
+        coverFileNaming: currentCoverFileNaming ?? "sameAsAudio" as "sameAsAudio" | "fixedName",
         lyricOrder: currentLyricOrder ?? ["romanization", "original", "translation"] as LyricOrderItem[],
         enableWordByWord: currentEnableWordByWord ?? false,
     });
@@ -58,6 +62,8 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
         Config.setConfig("basic.writeMetadataExtended", settings.writeMetadataExtended);
         Config.setConfig("basic.downloadLyricFile", settings.downloadLyricFile);
         Config.setConfig("basic.lyricFileFormat", settings.lyricFileFormat);
+        Config.setConfig("basic.downloadCoverFile", settings.downloadCoverFile);
+        Config.setConfig("basic.downloadCoverFileNaming", settings.coverFileNaming);
         Config.setConfig("basic.lyricOrder", settings.lyricOrder);
         Config.setConfig("basic.enableWordByWordLyric", settings.enableWordByWord);
 
@@ -73,6 +79,8 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
             writeMetadataExtended: false,
             downloadLyricFile: false,
             lyricFileFormat: "lrc",
+            downloadCoverFile: false,
+            coverFileNaming: "sameAsAudio" as "sameAsAudio" | "fixedName",
             lyricOrder: ["romanization", "original", "translation"],
             enableWordByWord: false,
         });
@@ -295,6 +303,42 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
         );
     };
 
+    // Render cover file naming selector
+    const renderCoverNamingSelector = () => {
+        const options: Array<{ value: "sameAsAudio" | "fixedName"; label: string }> = [
+            { value: "sameAsAudio", label: "与音频同名" },
+            { value: "fixedName", label: "cover.jpg" },
+        ];
+
+        return (
+            <View style={styles.formatSelectorContainer}>
+                {options.map(option => (
+                    <TouchableOpacity
+                        key={option.value}
+                        style={[
+                            styles.formatOption,
+                            settings.coverFileNaming === option.value && {
+                                backgroundColor: colors.primary + '20',
+                                borderColor: colors.primary,
+                            },
+                        ]}
+                        onPress={() => setSettings(prev => ({
+                            ...prev,
+                            coverFileNaming: option.value,
+                        }))}
+                        activeOpacity={0.7}
+                    >
+                        <ThemeText
+                            fontSize="content"
+                            fontColor={settings.coverFileNaming === option.value ? "primary" : "text"}>
+                            {option.label}
+                        </ThemeText>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        );
+    };
+
     // Check if lyric features are enabled
     const lyricFeaturesEnabled = (settings.writeMetadata && settings.writeMetadataLyric) || settings.downloadLyricFile;
 
@@ -376,6 +420,41 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
                                 createSwitchHandler('downloadLyricFile'),
                                 { icon: "📄" }
                             )
+                        )}
+
+                        {/* Cover File Download Card */}
+                        {renderCard(
+                            <>
+                                {renderSwitchItem(
+                                    "下载封面文件",
+                                    "下载音乐时同时保存独立的封面图片，与音频文件同目录",
+                                    settings.downloadCoverFile,
+                                    createSwitchHandler('downloadCoverFile'),
+                                    { icon: "🖼️" }
+                                )}
+                                {settings.downloadCoverFile && (
+                                    <>
+                                        {renderDivider()}
+                                        <View style={styles.formatSection}>
+                                            <ThemeText
+                                                fontSize="description"
+                                                fontColor="textSecondary"
+                                                style={styles.formatLabel}>
+                                                封面文件命名
+                                            </ThemeText>
+                                            {renderCoverNamingSelector()}
+                                            <ThemeText
+                                                fontSize="description"
+                                                fontColor="textSecondary"
+                                                style={styles.namingHint}>
+                                                {settings.coverFileNaming === "sameAsAudio"
+                                                    ? "与音频同名（如 歌曲名-歌手.jpg），多首歌放同一目录不会互相覆盖"
+                                                    : "固定为 cover.jpg，兼容性更好，但同一目录多首歌会共用一张封面"}
+                                            </ThemeText>
+                                        </View>
+                                    </>
+                                )}
+                            </>
                         )}
 
                         {/* Lyric Order Settings - Show when either lyric feature is enabled */}
@@ -579,6 +658,10 @@ const styles = StyleSheet.create({
     },
     formatLabel: {
         marginBottom: rpx(8),
+    },
+    namingHint: {
+        marginTop: rpx(10),
+        lineHeight: fontSizeConst.description * 1.5,
     },
     formatSelectorContainer: {
         flexDirection: 'row',

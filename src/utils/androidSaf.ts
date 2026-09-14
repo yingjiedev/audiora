@@ -80,7 +80,12 @@ export function getMimeTypeForFile(fileName: string) {
     case "wav": return "audio/wav";
     case "aac":
     case "acc": return "audio/aac";
-    case "lrc": return "text/plain";
+    case "lrc":
+    case "txt": return "text/plain";
+    case "jpg":
+    case "jpeg": return "image/jpeg";
+    case "png": return "image/png";
+    case "webp": return "image/webp";
     default: return "application/octet-stream";
     }
 }

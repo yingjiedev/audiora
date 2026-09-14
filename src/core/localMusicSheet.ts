@@ -27,6 +27,7 @@ import {
     deleteAndroidSafUri,
     isAndroidSafUri,
 } from "@/utils/androidSaf";
+import { deleteCompanionFiles } from "@/utils/mediaCompanion";
 
 let localSheet: IMusic.IMusicItem[] = [];
 const localSheetStateMapper = new StateMapper(() => localSheet);
@@ -260,6 +261,8 @@ export async function removeMusic(
                     throw e;
                 }
             }
+            // 音频删除成功后一并清理随下载生成的歌词 / 封面
+            await deleteCompanionFiles(localMusicItem);
         }
     }
     localSheet = newSheet;
