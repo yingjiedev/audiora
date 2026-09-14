@@ -23,6 +23,7 @@ jest.mock("@/core/router", () => ({
     useNavigate: () => mockNavigate,
 }));
 jest.mock("@/hooks/useColors", () => () => ({
+    card: "#FFFFFF",
     pageBackground: "#F5F8FF",
     surface: "#FFFFFF",
 }));
