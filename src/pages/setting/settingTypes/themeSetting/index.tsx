@@ -1,6 +1,8 @@
+import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
 import { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate, useParams } from "@/core/router";
+import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import React, { ComponentType } from "react";
 import { Pressable, ScrollView, StyleSheet } from "react-native";
@@ -23,6 +25,7 @@ export default function ThemeSetting() {
     const { section } = useParams<"setting">();
     const { t } = useI18N();
     const navigate = useNavigate();
+    const colors = useColors();
 
     const sections: IThemeSection[] = [
         {
@@ -90,7 +93,13 @@ export default function ThemeSetting() {
                                 section: item.key,
                             })
                         }>
-                        <ThemeText>{item.title}</ThemeText>
+                        <ThemeText style={styles.itemTitle}>{item.title}</ThemeText>
+                        <Icon
+                            name="chevron-right"
+                            size={rpx(28)}
+                            color={colors.textSecondary}
+                            style={styles.chevron}
+                        />
                     </Pressable>
                 ))}
             </SettingSection>
@@ -110,6 +119,15 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     itemPressed: { opacity: 0.68 },
+    itemTitle: {
+        flex: 1,
+        minWidth: 0,
+    },
+    chevron: {
+        flexShrink: 0,
+        marginLeft: rpx(12),
+        opacity: 0.45,
+    },
     detail: { flex: 1, width: "100%" },
     detailContent: { paddingBottom: rpx(48) },
 });

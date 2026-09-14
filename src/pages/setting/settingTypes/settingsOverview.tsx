@@ -1,3 +1,4 @@
+import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { showPanel } from "@/components/panels/usePanel";
@@ -25,6 +26,7 @@ interface ISettingsGroup {
 
 function SettingsOverviewItem(props: ISettingsOverviewItem) {
     const { title, value, onPress } = props;
+    const colors = useColors();
 
     return (
         <Pressable
@@ -49,6 +51,12 @@ function SettingsOverviewItem(props: ISettingsOverviewItem) {
                     {value}
                 </ThemeText>
             ) : null}
+            <Icon
+                name="chevron-right"
+                size={rpx(28)}
+                color={colors.textSecondary}
+                style={styles.chevron}
+            />
         </Pressable>
     );
 }
@@ -256,5 +264,10 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         marginLeft: rpx(24),
         maxWidth: "48%",
+    },
+    chevron: {
+        flexShrink: 0,
+        marginLeft: rpx(12),
+        opacity: 0.45,
     },
 });

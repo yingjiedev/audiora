@@ -101,15 +101,22 @@ describe("SettingsOverview", () => {
             }));
     });
 
-    it("does not render decorative navigation arrows", () => {
+    it("shows a hierarchy chevron on every navigable setting row", () => {
         let renderer: TestRenderer.ReactTestRenderer;
 
         act(() => {
             renderer = TestRenderer.create(<SettingsOverview />);
         });
 
-        expect(renderer!.root.findAllByProps({
-            name: "arrow-long-left",
-        })).toHaveLength(0);
+        [
+            "settingsEntry.playback",
+            "sidebar.languageSettings",
+            "home.aboutAndUpdate",
+        ].forEach(accessibilityLabel => {
+            const row = renderer!.root.findByProps({ accessibilityLabel });
+
+            expect(row.findAllByProps({ name: "chevron-right" }))
+                .toHaveLength(1);
+        });
     });
 });
