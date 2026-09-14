@@ -2,6 +2,7 @@ import React, { memo, useMemo } from "react";
 import { StyleSheet, Text, View, StyleProp, ViewStyle } from "react-native";
 import rpx, { fontRpx } from "@/utils/rpx";
 import Color from "color";
+import { useTheme } from "@react-navigation/native";
 
 export type BadgeType = "quality" | "vip" | "source" | "hires" | "master" | "atmos" | "flac24bit";
 
@@ -13,8 +14,11 @@ interface IBadgeProps {
 
 function Badge(props: IBadgeProps) {
     const { type = "quality", children, style } = props;
+    const { dark } = useTheme();
 
     const badgeColors = useMemo(() => {
+        // color-exempt: 音质/VIP 徽标沿用行业约定色（Hi-Res 金标、VIP 红），
+        // 不跟主题走，只在深色下提亮一档保证小字可读
         let baseColor: string;
         switch (type) {
             case "vip":
@@ -35,11 +39,13 @@ function Badge(props: IBadgeProps) {
                 baseColor = "#909399";
         }
         return {
-            textColor: baseColor,
-            borderColor: baseColor,
-            backgroundColor: Color(baseColor).alpha(0.15).toString(),
+            textColor: dark ? Color(baseColor).lighten(0.22).toString() : baseColor,
+            borderColor: dark ? Color(baseColor).lighten(0.1).toString() : baseColor,
+            backgroundColor: Color(baseColor)
+                .alpha(dark ? 0.24 : 0.15)
+                .toString(),
         };
-    }, [type]);
+    }, [type, dark]);
 
     return (
         <View

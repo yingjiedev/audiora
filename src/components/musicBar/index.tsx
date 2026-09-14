@@ -15,7 +15,6 @@ import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
 import Icon from "@/components/base/icon.tsx";
 import { iconSizeConst } from "@/constants/uiConst";
-import Color from "color";
 import { radius, spacing } from "@/constants/designSystem";
 
 /** Single control: ring + icon share the same box and stay concentric. */
@@ -35,9 +34,8 @@ function CircularPlayBtn() {
     const progressValue = progress?.duration
         ? Math.min(100, Math.max(0, (100 * progress.position) / progress.duration))
         : 0;
-    const buttonForeground = Color(colors.primary).isDark()
-        ? "#FFFFFF"
-        : "#10172D";
+    // 前景色按主色对比度取白或近黑（深色主题的主色被调亮后白字只剩 2.9:1）
+    const buttonForeground = colors.onPrimary ?? "#FFFFFF";
 
     return (
         <Pressable

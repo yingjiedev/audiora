@@ -9,6 +9,7 @@ import { Marked } from "marked";
 import Loading from "@/components/base/loading";
 import { useOnMounted } from "@/hooks/useMounted";
 import useColors from "@/hooks/useColors";
+import { useTheme } from "@react-navigation/native";
 import { sanitizeHtml } from "@/utils/htmlUtil";
 import Toast from "@/utils/toast";
 import openUrl from "@/utils/openUrl";
@@ -27,6 +28,14 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
 
     const { t } = useI18N();
     const colors = useColors();
+    const { dark } = useTheme();
+
+    // WebView 里的 CSS 是字符串，深色下那几层 rgba(0,0,0,x) 全都会隐形
+    const codeFill = dark ? "rgba(255, 255, 255, 0.07)" : "rgba(0, 0, 0, 0.05)";
+    const subtleFill = dark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.02)";
+    const quoteFill = dark
+        ? "rgba(109, 141, 255, 0.14)"
+        : "rgba(0, 122, 255, 0.05)";
 
 
     useEffect(() => {
@@ -96,15 +105,15 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             blockquote {
                 margin: 16px 0;
                 padding: 4px 16px;
-                border-left: 4px solid ${colors.primary || "#007AFF"};
-                background-color: rgba(0, 122, 255, 0.05);
+                border-left: 4px solid ${colors.primary};
+                background-color: ${quoteFill};
                 border-radius: 4px;
             }
             
             code {
                 font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
                 font-size: 14px;
-                background-color: rgba(0, 0, 0, 0.05);
+                background-color: ${codeFill};
                 padding: 2px 6px;
                 border-radius: 3px;
             }
@@ -112,7 +121,7 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             pre {
                 font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
                 font-size: 14px;
-                background-color: rgba(0, 0, 0, 0.05);
+                background-color: ${codeFill};
                 padding: 16px;
                 border-radius: 8px;
                 overflow-x: auto;
@@ -121,14 +130,14 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             }
             
             a {
-                color: ${colors.primary || "#007AFF"};
+                color: ${colors.primary};
                 text-decoration: none;
                 border-bottom: 1px solid transparent;
                 transition: border-color 0.2s ease;
             }
             
             a:hover {
-                border-bottom-color: ${colors.primary || "#007AFF"};
+                border-bottom-color: ${colors.primary};
             }
             
             table {
@@ -141,12 +150,12 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             th, td {
                 padding: 12px;
                 text-align: left;
-                border-bottom: 1px solid ${colors.border || "rgba(0, 0, 0, 0.1)"};
+                border-bottom: 1px solid ${colors.border};
             }
             
             th {
                 font-weight: 600;
-                background-color: rgba(0, 0, 0, 0.02);
+                background-color: ${subtleFill};
             }
             
             img {
@@ -160,13 +169,13 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             .img-placeholder {
                 max-width: 100%;
                 height: 120px;
-                border: 2px dashed ${colors.border || "rgba(0, 0, 0, 0.2)"};
+                border: 2px dashed ${colors.border};
                 border-radius: 8px;
                 margin: 8px 0;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background-color: rgba(0, 0, 0, 0.02);
+                background-color: ${subtleFill};
                 cursor: pointer;
                 transition: all 0.2s ease;
                 font-size: 14px;
@@ -174,12 +183,12 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             }
             
             .img-placeholder:hover {
-                background-color: rgba(0, 0, 0, 0.05);
-                border-color: ${colors.primary || "#007AFF"};
+                background-color: ${codeFill};
+                border-color: ${colors.primary};
             }
             
             .img-placeholder.loading {
-                color: ${colors.primary || "#007AFF"};
+                color: ${colors.primary};
             }
             
             .img-loaded {
@@ -189,7 +198,7 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             hr {
                 border: none;
                 height: 1px;
-                background-color: ${colors.border || "rgba(0, 0, 0, 0.1)"};
+                background-color: ${colors.border};
                 margin: 24px 0;
             }
             
@@ -255,7 +264,7 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             }
         });
 
-    }, [markdownContent, onMounted, colors, title]);
+    }, [markdownContent, onMounted, colors, dark, title]);
 
     const actions = [
         {
