@@ -1,4 +1,4 @@
-# Issue #36 深色模式视觉深化 — 设计方案（待确认）
+# Issue #36 深色模式视觉深化 — 设计方案与实施进度
 
 > 关联 issue：https://github.com/yingjiedev/audiora/issues/36
 > 基线与范围：`src/` 现状扫描结果，工作树 commit `b8609634`
@@ -138,9 +138,9 @@
 
 ### D. 防线（防止回潮）
 
-1. **`scripts/check-hardcoded-colors.mjs`**：扫 `src/**/*.tsx` 的 hex 字面量；白名单（`WebPreview.tsx`、调色板、歌词预设、品牌色常量表、测试文件）；支持行内 `// color-exempt` 豁免；输出违规清单，非零退出。挂 `npm run check:colors`。
+1. **`scripts/check-hardcoded-colors.mjs`**：扫 `src/**/*.ts(x)` 中的 hex、`rgb/rgba`、`hsl/hsla` 和黑白命名色；基线按具体代码片段记录，不允许挪用已删除颜色的数量额度；忽略注释并支持行内 `color-exempt` 豁免。挂 `npm run check:colors`。
 2. **对比度单测** `src/core/theme.test.ts`（或新增 `darkContrast.test.ts`）：用 WCAG 公式断言深色主题关键前景/背景组合 —— 正文 ≥4.5:1、大字与图标 ≥3:1、边框/分割线 ≥1.4:1，并断言 `surface < card < surfaceElevated` 的明度序。
-3. **接入点**：`check:colors` 进 CI（与 `typecheck:runtime` 同级）；是否进 pre-commit（lint-staged）待你确认。
+3. **接入点**：`check:colors` 已接入独立的 PR workflow 和 pre-commit（lint-staged）；该 CI 只执行 Node 静态检查，不安装依赖或构建 App。
 
 ### E. 走查清单（对应验收「小屏 / 长文本 / 空状态 / 错误态」）
 

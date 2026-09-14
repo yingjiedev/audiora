@@ -26,6 +26,8 @@ export default function SetScheduleCloseTimeDialog(
     const { dark } = useTheme();
     // 品牌蓝两模式同款，深色下提亮一档
     const brandBlue = dark ? Color("#4E73F5").lighten(0.18).toString() : "#4E73F5";
+    // 深色下按钮渐变被调亮，用近黑色才能维持 AA 对比度。
+    const gradientForeground = dark ? "#10172D" : "#FFFFFF"; // color-exempt: fixed brand gradient foregrounds
     const surfaceGradient = dark
         ? [colors.surfaceElevated ?? colors.card, colors.card]
         : ["#FAFBFF", "#F5F8FF"];
@@ -211,7 +213,7 @@ export default function SetScheduleCloseTimeDialog(
                             ]}>
                             <ThemeText
                                 style={style.actionText}
-                                color="#FFFFFF"
+                                color={gradientForeground}
                                 fontWeight="semibold">
                                 {t("common.confirm")}
                             </ThemeText>

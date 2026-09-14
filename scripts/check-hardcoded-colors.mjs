@@ -2,17 +2,14 @@
 /**
  * 硬编码颜色检查（issue #36 的防线）。
  *
- * 组件里直接写 hex 色值是深色模式破窗的根源：浅色下看着正常，深色下就可能
- * 变成一块浅底或一行深色字。这个脚本把「不许新增写死的颜色」变成可执行约束。
- *
  * 用法：
- *   node scripts/check-hardcoded-colors.mjs              # 只拦新增
- *   node scripts/check-hardcoded-colors.mjs --update      # 重建基线快照
- *   node scripts/check-hardcoded-colors.mjs --all         # 列出全部（含存量）
+ *   node scripts/check-hardcoded-colors.mjs          # 只拦新增
+ *   node scripts/check-hardcoded-colors.mjs --update # 重建基线快照
+ *   node scripts/check-hardcoded-colors.mjs --all    # 列出全部（含存量）
  *
- * 为什么要有基线：仓库里已有的一批设计稿固定值（品牌色、行业约定色、浅色
- * 分支保留值）不可能一次清完。用基线锁住存量，保证「只减不增」，清理进度靠
- * 重新生成基线来推进。
+ * 基线按「颜色字面量 + 归一化代码行」记录，而不是给每个文件一个
+ * 可以挪用的颜色数量额度。这样删除注释或旧样式后，不能在其他位置
+ * 补上同色新样式而绕过检查。
  */
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
@@ -21,31 +18,26 @@ import { fileURLToPath } from "node:url";
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = join(projectRoot, "src");
 const baselinePath = join(projectRoot, "scripts", "color-baseline.json");
+const BASELINE_VERSION = 2;
 
-/** #RGB / #RGBA / #RRGGBB / #RRGGBBAA */
-const HEX_PATTERN =
-    /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g;
-/** 行内豁免标记：确实必须写死的行加这个注释并说明原因 */
+const COLOR_PATTERNS = [
+    /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g,
+    /\b(?:rgba?|hsla?)\((?=[^)\r\n]*\d)[^)\r\n]+\)/gi,
+    /(["'`])(?:black|white)\1/gi,
+];
 const EXEMPT_MARK = "color-exempt";
 
 /** 整文件豁免：这些文件的工作就是定义或挑选颜色 */
 const ALLOWED_PATHS = [
-    // 主题色板本身
     "src/core/theme.ts",
-    // 调色板 UI / 取色器
     "src/components/panels/types/colorPicker.tsx",
-    // 歌词配色预设
     "src/native/lyricUtil.ts",
     "src/pages/setting/settingTypes/basicSetting.tsx",
-    // web 预览，不进 app 渲染路径
     "src/preview",
-    // 图标映射（自动生成）
     "src/components/base/icon.tsx",
-    // 设计常量
     "src/constants",
 ];
 
-/** 按路径模式豁免 */
 const ALLOWED_PATTERNS = [
     /\.test\.tsx?$/,
     /\.test\.js$/,
@@ -91,53 +83,172 @@ function collectFiles(dir, result = []) {
     return result;
 }
 
-/** 当前扫描结果：{ "src/foo.tsx": { "#FFFFFF": 2, ... } } */
-const current = {};
+/** 去掉真正的 JS/TS 注释，保留字符串和模板字符串内容。 */
+function stripComments(source) {
+    let result = "";
+    let state = "code";
 
-collectFiles(srcDir).forEach(fullPath => {
-    const relativePath = toPosix(relative(projectRoot, fullPath));
-    if (isAllowed(relativePath)) {
-        return;
+    for (let index = 0; index < source.length; index += 1) {
+        const char = source[index];
+        const next = source[index + 1];
+
+        if (state === "line-comment") {
+            if (char === "\n") {
+                result += char;
+                state = "code";
+            } else {
+                result += " ";
+            }
+            continue;
+        }
+
+        if (state === "block-comment") {
+            if (char === "*" && next === "/") {
+                result += "  ";
+                index += 1;
+                state = "code";
+            } else {
+                result += char === "\n" ? "\n" : " ";
+            }
+            continue;
+        }
+
+        if (state !== "code") {
+            result += char;
+            if (char === "\\" && next !== undefined) {
+                result += next;
+                index += 1;
+            } else if (
+                (state === "single-quote" && char === "'") ||
+                (state === "double-quote" && char === "\"") ||
+                (state === "template" && char === "`")
+            ) {
+                state = "code";
+            }
+            continue;
+        }
+
+        if (char === "/" && next === "/") {
+            result += "  ";
+            index += 1;
+            state = "line-comment";
+        } else if (char === "/" && next === "*") {
+            result += "  ";
+            index += 1;
+            state = "block-comment";
+        } else {
+            result += char;
+            if (char === "'") {
+                state = "single-quote";
+            } else if (char === "\"") {
+                state = "double-quote";
+            } else if (char === "`") {
+                state = "template";
+            }
+        }
     }
 
-    const counter = {};
-    readFileSync(fullPath, "utf-8").split(/\r?\n/).forEach(line => {
-        if (line.includes(EXEMPT_MARK)) {
+    return result;
+}
+
+function normalizeLiteral(value) {
+    const unquoted = /^["'`].*["'`]$/.test(value)
+        ? value.slice(1, -1)
+        : value;
+    return unquoted.toLowerCase().replace(/\s+/g, "");
+}
+
+function normalizeCode(line) {
+    return line.trim().replace(/\s+/g, " ");
+}
+
+function scanFile(fullPath) {
+    const source = readFileSync(fullPath, "utf-8");
+    const originalLines = source.split(/\r?\n/);
+    const codeLines = stripComments(source).split(/\r?\n/);
+    const grouped = new Map();
+
+    codeLines.forEach((line, index) => {
+        if (originalLines[index]?.includes(EXEMPT_MARK)) {
             return;
         }
-        const matches = line.match(HEX_PATTERN);
-        if (!matches) {
+
+        const code = normalizeCode(line);
+        if (!code) {
             return;
         }
-        matches.forEach(color => {
-            const key = color.toLowerCase();
-            counter[key] = (counter[key] ?? 0) + 1;
+
+        COLOR_PATTERNS.forEach(pattern => {
+            for (const match of line.matchAll(pattern)) {
+                const literal = normalizeLiteral(match[0]);
+                const signature = `${literal}\u0000${code}`;
+                const existing = grouped.get(signature);
+                if (existing) {
+                    existing.count += 1;
+                } else {
+                    grouped.set(signature, { literal, code, count: 1 });
+                }
+            }
         });
     });
 
-    if (Object.keys(counter).length > 0) {
-        current[relativePath] = counter;
-    }
-});
-
-if (updateBaseline) {
-    writeFileSync(
-        baselinePath,
-        `${JSON.stringify(current, null, 4)}\n`,
-        "utf-8",
+    return [...grouped.values()].sort((left, right) =>
+        left.literal.localeCompare(right.literal) ||
+        left.code.localeCompare(right.code),
     );
-    const total = Object.values(current).reduce(
-        (sum, counter) =>
-            sum + Object.values(counter).reduce((inner, n) => inner + n, 0),
+}
+
+function collectCurrent() {
+    const files = {};
+    collectFiles(srcDir).forEach(fullPath => {
+        const relativePath = toPosix(relative(projectRoot, fullPath));
+        if (isAllowed(relativePath)) {
+            return;
+        }
+
+        const entries = scanFile(fullPath);
+        if (entries.length > 0) {
+            files[relativePath] = entries;
+        }
+    });
+    return files;
+}
+
+function entrySignature(entry) {
+    return `${entry.literal}\u0000${entry.code}`;
+}
+
+function entryMap(entries = []) {
+    return new Map(entries.map(entry => [entrySignature(entry), entry]));
+}
+
+function countEntries(files) {
+    return Object.values(files).reduce(
+        (sum, entries) => sum + entries.reduce((inner, entry) => inner + entry.count, 0),
         0,
     );
+}
+
+const current = collectCurrent();
+const totalCount = countEntries(current);
+
+if (updateBaseline) {
+    const baseline = {
+        version: BASELINE_VERSION,
+        files: current,
+    };
+    writeFileSync(
+        baselinePath,
+        `${JSON.stringify(baseline, null, 4)}\n`,
+        "utf-8",
+    );
     console.log(
-        `check-hardcoded-colors: 已写入基线 ${total} 处 / ${Object.keys(current).length} 个文件`,
+        `check-hardcoded-colors: 已写入基线 ${totalCount} 处 / ${Object.keys(current).length} 个文件`,
     );
     process.exit(0);
 }
 
-let baseline = {};
+let baseline;
 try {
     baseline = JSON.parse(readFileSync(baselinePath, "utf-8"));
 } catch {
@@ -147,23 +258,20 @@ try {
     process.exit(1);
 }
 
+if (baseline.version !== BASELINE_VERSION || !baseline.files) {
+    console.error(
+        "check-hardcoded-colors: 基线格式已过期，请运行 npm run check:colors:baseline 重建",
+    );
+    process.exit(1);
+}
+
 const regressions = [];
-let totalCount = 0;
-
-Object.keys(current).forEach(file => {
-    const counter = current[file];
-    const allowed = baseline[file] ?? {};
-
-    Object.keys(counter).forEach(color => {
-        totalCount += counter[color];
-        const allowedCount = allowed[color] ?? 0;
-        if (counter[color] > allowedCount) {
-            regressions.push({
-                file,
-                color,
-                count: counter[color],
-                allowed: allowedCount,
-            });
+Object.entries(current).forEach(([file, entries]) => {
+    const allowedEntries = entryMap(baseline.files[file]);
+    entries.forEach(entry => {
+        const allowed = allowedEntries.get(entrySignature(entry))?.count ?? 0;
+        if (entry.count > allowed) {
+            regressions.push({ file, ...entry, allowed });
         }
     });
 });
@@ -174,14 +282,15 @@ if (regressions.length > 0) {
     );
     regressions.forEach(item => {
         console.error(
-            `  ${item.file}  ${item.color} × ${item.count}（基线 ${item.allowed}）`,
+            `  ${item.file}  ${item.literal} × ${item.count}（基线 ${item.allowed}）`,
         );
+        console.error(`    ${item.code}`);
     });
     console.error("");
     console.error(
         "改用 useColors() 的语义 token；确实要写死就在该行加 color-exempt 注释。",
     );
-    console.error("存量清理后运行：node scripts/check-hardcoded-colors.mjs --update");
+    console.error("存量清理后运行：npm run check:colors:baseline");
     process.exit(1);
 }
 
@@ -189,8 +298,8 @@ if (reportAll) {
     console.log(
         `check-hardcoded-colors: 存量 ${totalCount} 处 / ${Object.keys(current).length} 个文件（未超基线）`,
     );
-    Object.keys(current).forEach(file => {
-        const colors = Object.keys(current[file]).join(" ");
+    Object.entries(current).forEach(([file, entries]) => {
+        const colors = [...new Set(entries.map(entry => entry.literal))].join(" ");
         console.log(`  ${file}  ${colors}`);
     });
     process.exit(0);

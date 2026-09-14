@@ -41,8 +41,10 @@ export default function TimingClose() {
     // 免得压在重色底上发闷
     const activeStroke = dark ? Color("#5B84F7").lighten(0.16).toString() : "#5B84F7";
     const activeStrokeEnd = dark ? Color("#A274EA").lighten(0.16).toString() : "#A274EA";
-    // 渐变上的白字按品牌色原样保留（渐变两端都是中亮色，白字足够）；
-    // 未选中态、输入框等平面元素则走主题色
+    // 深色下渐变会额外调亮，白字对比度只剩 2.1~3.0:1，
+    // 因此改用近黑前景；浅色保留原有观感。
+    const gradientForeground = dark ? "#10172D" : "#FFFFFF"; // color-exempt: fixed brand gradient foregrounds
+    // 未选中态、输入框等平面元素走主题色。
     const sheetColors = dark
         ? [colors.surfaceElevated ?? colors.card, colors.card]
         : ["#FAFBFF", "#F5F8FF"];
@@ -203,7 +205,7 @@ export default function TimingClose() {
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 1 }}
                                             style={styles.timeOptionSelected}>
-                                            <ThemeText style={styles.timeOptionText} color="#FFFFFF" fontWeight="semibold">
+                                            <ThemeText style={styles.timeOptionText} color={gradientForeground} fontWeight="semibold">
                                                 {time} {t("dialog.setScheduleCloseTime.unit")}
                                             </ThemeText>
                                         </LinearGradient>
@@ -242,7 +244,7 @@ export default function TimingClose() {
                                 <ThemeText
                                     style={styles.timeOptionText}
                                     color={isCustomTime
-                                        ? "#FFFFFF"
+                                        ? gradientForeground
                                         : dark
                                             ? Color("#7D68E8").lighten(0.3).toString()
                                             : "#7D68E8"}
@@ -296,7 +298,7 @@ export default function TimingClose() {
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.primaryAction}>
-                            <ThemeText style={styles.primaryActionText} color="#FFFFFF" fontWeight="medium">
+                            <ThemeText style={styles.primaryActionText} color={gradientForeground} fontWeight="medium">
                                 {isCountingDown
                                     ? t("panel.timingClose.cancelScheduleClose")
                                     : t("panel.timingClose.start")}

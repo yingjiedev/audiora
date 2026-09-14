@@ -35,6 +35,8 @@ export interface CustomizedColors extends IColors {
     placeholder?: string;
     /** 弹窗、浮层、菜单背景色 */
     backdrop?: string;
+    /** 弹窗与面板背后的遮罩 */
+    mask?: string;
     /** 卡片背景色 */
     card: string;
     /** 基础表面 */

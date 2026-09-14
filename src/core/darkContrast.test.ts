@@ -106,4 +106,17 @@ describe("bestForeground", () => {
         expect(blended.toLowerCase()).toBe("#808080");
         expect(contrastRatio(blended, "#000000")).toBeCloseTo(5.3, 1);
     });
+
+    it("定时关闭的深色渐变使用近黑前景", () => {
+        const gradientStops = [
+            Color("#5B84F7").lighten(0.16).toString(),
+            Color("#A274EA").lighten(0.16).toString(),
+            Color("#4E73F5").lighten(0.18).toString(),
+            Color("#3F6CF6").lighten(0.18).toString(),
+        ];
+
+        gradientStops.forEach(background => {
+            expect(contrastRatio(background, "#10172D")).toBeGreaterThanOrEqual(4.5);
+        });
+    });
 });
