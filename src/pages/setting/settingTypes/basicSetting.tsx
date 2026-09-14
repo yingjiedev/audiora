@@ -154,6 +154,7 @@ export default function BasicSetting() {
     const customQualityTranslations = useAppConfig("basic.qualityTranslations");
 
     const { t, getLanguage } = useI18N();
+    const colors = useColors();
     const qualityTextI18n = getQualityText(getLanguage().languageData, customQualityTranslations);
 
     const debugEnableErrorLog = useAppConfig("debug.errorLog");
@@ -743,6 +744,7 @@ export default function BasicSetting() {
                 />
             ) : null}
             <SectionList
+                contentContainerStyle={styles.sectionListContent}
                 sections={visibleOptions}
                 renderSectionHeader={({ section }) => (
                     <View style={styles.sectionHeader}>
@@ -758,13 +760,23 @@ export default function BasicSetting() {
                 renderSectionFooter={({ section }) => {
                     return section.footer ?? null;
                 }}
-                renderItem={({ item }) => {
+                renderItem={({ index, item, section }) => {
                     const Right = item.right;
+                    const isFirst = index === 0;
+                    const isLast = index === section.data.length - 1;
 
                     return (
                         <ListItem
                             withHorizontalPadding
                             heightType="small"
+                            style={[
+                                styles.sectionItem,
+                                {
+                                    backgroundColor: colors.card,
+                                },
+                                isFirst ? styles.sectionItemFirst : null,
+                                isLast ? styles.sectionItemLast : null,
+                            ]}
                             onPress={item.onPress}>
                             <ListItem.Content title={item.title} />
                             {Right}
@@ -786,12 +798,27 @@ const styles = StyleSheet.create({
         textAlignVertical: "center",
         maxWidth: rpx(400),
     },
+    sectionListContent: {
+        paddingBottom: rpx(48),
+    },
     sectionHeader: {
-        paddingHorizontal: rpx(24),
-        height: rpx(72),
+        paddingHorizontal: rpx(38),
+        height: rpx(64),
         flexDirection: "row",
         alignItems: "center",
-        marginTop: rpx(20),
+        marginTop: rpx(12),
+    },
+    sectionItem: {
+        marginHorizontal: rpx(24),
+        paddingHorizontal: rpx(24),
+    },
+    sectionItemFirst: {
+        borderTopLeftRadius: rpx(16),
+        borderTopRightRadius: rpx(16),
+    },
+    sectionItemLast: {
+        borderBottomLeftRadius: rpx(16),
+        borderBottomRightRadius: rpx(16),
     },
     headerContainer: {
         height: rpx(80),
@@ -1008,7 +1035,7 @@ function LyricSetting() {
     };
 
     return (
-        <View>
+        <View style={[lyricStyles.card, { backgroundColor: colors.card }]}>
             {/* 详情页歌词设置 */}
             <ListItem withHorizontalPadding heightType="small" onPress={autoSearchLyric.onPress}>
                 <ListItem.Content title={autoSearchLyric.title} />
@@ -1172,6 +1199,11 @@ function LyricSetting() {
 }
 
 const lyricStyles = StyleSheet.create({
+    card: {
+        borderRadius: rpx(16),
+        marginHorizontal: rpx(24),
+        overflow: "hidden",
+    },
     subHeader: {
         marginTop: rpx(24),
         marginBottom: rpx(8),

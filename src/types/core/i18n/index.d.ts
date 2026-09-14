@@ -743,6 +743,10 @@ export interface ILanguageData {
     "settingsGroup.backup": string;
     "settingsGroup.general": string;
     "settingsGroup.about": string;
+    "settingsGroup.playbackAndDownload": string;
+    "settingsGroup.lyricsAndAppearance": string;
+    "settingsGroup.sourcesAndStorage": string;
+    "settingsGroup.systemAndData": string;
     "settingsEntry.playback": string;
     "settingsEntry.playbackDescription": string;
     "settingsEntry.network": string;

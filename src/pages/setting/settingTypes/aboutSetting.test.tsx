@@ -33,6 +33,10 @@ jest.mock("@/core/i18n", () => ({
 jest.mock("@/core/theme", () => ({
     useTheme: () => ({ colors: { card: "white", primary: "blue" } }),
 }));
+jest.mock("@/hooks/useColors", () => () => ({
+    card: "white",
+    surface: "white",
+}));
 jest.mock("@/hooks/useHasCustomBackground", () => () => false);
 jest.mock("@/hooks/useOrientation", () => () => "vertical");
 jest.mock("@/utils/rpx", () => {
