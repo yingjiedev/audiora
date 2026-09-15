@@ -1,12 +1,10 @@
-import Icon from "@/components/base/icon";
-import ThemeText from "@/components/base/themeText";
 import { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate, useParams } from "@/core/router";
-import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import React, { ComponentType } from "react";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import SettingSection from "../../components/settingSection";
+import SettingRow from "../../components/settingRow";
 import AppearanceTuning from "./appearanceTuning";
 import Background from "./background";
 import BackgroundTuning from "./backgroundTuning";
@@ -25,7 +23,6 @@ export default function ThemeSetting() {
     const { section } = useParams<"setting">();
     const { t } = useI18N();
     const navigate = useNavigate();
-    const colors = useColors();
 
     const sections: IThemeSection[] = [
         {
@@ -79,28 +76,18 @@ export default function ThemeSetting() {
         <ScrollView style={styles.wrapper} contentContainerStyle={styles.content}>
             <SettingSection title={t("settingsGroup.appearance")}>
                 {sections.map(item => (
-                    <Pressable
+                    <SettingRow
                         key={item.key}
-                        accessibilityRole="button"
                         accessibilityLabel={item.title}
-                        style={({ pressed }) => [
-                            styles.item,
-                            pressed ? styles.itemPressed : null,
-                        ]}
+                        title={item.title}
+                        showChevron
                         onPress={() =>
                             navigate(ROUTE_PATH.SETTING, {
                                 type: "theme",
                                 section: item.key,
                             })
-                        }>
-                        <ThemeText style={styles.itemTitle}>{item.title}</ThemeText>
-                        <Icon
-                            name="chevron-right"
-                            size={rpx(28)}
-                            color={colors.textSecondary}
-                            style={styles.chevron}
-                        />
-                    </Pressable>
+                        }
+                    />
                 ))}
             </SettingSection>
         </ScrollView>
@@ -111,22 +98,6 @@ const styles = StyleSheet.create({
     wrapper: { width: "100%", flex: 1 },
     content: {
         paddingBottom: rpx(48),
-    },
-    item: {
-        minHeight: rpx(92),
-        paddingHorizontal: rpx(24),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    itemPressed: { opacity: 0.68 },
-    itemTitle: {
-        flex: 1,
-        minWidth: 0,
-    },
-    chevron: {
-        flexShrink: 0,
-        marginLeft: rpx(12),
-        opacity: 0.45,
     },
     detail: { flex: 1, width: "100%" },
     detailContent: { paddingBottom: rpx(48) },

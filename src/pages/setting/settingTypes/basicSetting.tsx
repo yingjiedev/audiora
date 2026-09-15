@@ -1,4 +1,3 @@
-import ListItem from "@/components/base/listItem";
 import Paragraph from "@/components/base/paragraph";
 import ThemeSwitch from "@/components/base/switch";
 import ThemeText from "@/components/base/themeText";
@@ -35,6 +34,8 @@ import {
     isAndroidSafUri,
     requestAndroidDirectoryAccess,
 } from "@/utils/androidSaf";
+import SettingRow from "../components/settingRow";
+import { settingsLayout } from "../components/settingsLayout";
 
 function createSwitch(
     title: string,
@@ -82,7 +83,7 @@ const createRadio = function (
     return {
         title,
         right: (
-            <ThemeText style={styles.centerText}>
+            <ThemeText numberOfLines={1} style={styles.valueText}>
                 {valueMap ? valueMap[value] : value}
             </ThemeText>
         ),
@@ -296,7 +297,7 @@ export default function BasicSetting() {
                 {
                     title: "音质管理",
                     right: (
-                        <ThemeText fontSize="subTitle" style={styles.centerText}>
+                        <ThemeText numberOfLines={1} fontSize="subTitle" style={styles.valueText}>
                             自定义
                         </ThemeText>
                     ),
@@ -391,7 +392,7 @@ export default function BasicSetting() {
                     right: (
                         <ThemeText
                             fontSize="subTitle"
-                            style={styles.centerText}
+                            style={styles.valueText}
                             numberOfLines={3}>
                             {Platform.OS === "android"
                                 ? getAndroidSafDirectoryLabel(downloadPath)
@@ -447,9 +448,9 @@ export default function BasicSetting() {
                 {
                     title: "文件命名格式",
                     right: (
-                        <ThemeText
+                        <ThemeText numberOfLines={1}
                             fontSize="subTitle"
-                            style={styles.centerText}>
+                            style={styles.valueText}>
                             {fileNamingType === "custom" ? "自定义" : (fileNamingPreset || "歌曲名-歌手")}
                         </ThemeText>
                     ),
@@ -476,9 +477,9 @@ export default function BasicSetting() {
                 ...(fileNamingType === "preset" || !fileNamingType ? [{
                     title: "预设模板",
                     right: (
-                        <ThemeText
+                        <ThemeText numberOfLines={1}
                             fontSize="subTitle"
-                            style={styles.centerText}>
+                            style={styles.valueText}>
                             {fileNamingPreset || "歌曲名-歌手"}
                         </ThemeText>
                     ),
@@ -502,7 +503,7 @@ export default function BasicSetting() {
                     right: (
                         <ThemeText
                             fontSize="subTitle"
-                            style={styles.centerText}
+                            style={styles.valueText}
                             numberOfLines={2}>
                             {fileNamingCustom || "{title}-{artist}"}
                         </ThemeText>
@@ -530,7 +531,7 @@ export default function BasicSetting() {
                 {
                     title: "音乐标签设置",
                     right: (
-                        <ThemeText fontSize="subTitle" style={styles.centerText}>
+                        <ThemeText numberOfLines={1} fontSize="subTitle" style={styles.valueText}>
                             自定义
                         </ThemeText>
                     ),
@@ -569,7 +570,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.musicCacheLimit"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {maxCacheSize
                                 ? sizeFormatter(maxCacheSize)
                                 : "512M"}
@@ -602,7 +603,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.clearMusicCache"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {sizeFormatter(cacheSize.music)}
                         </ThemeText>
                     ),
@@ -621,7 +622,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.clearLyricCache"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {sizeFormatter(cacheSize.lyric)}
                         </ThemeText>
                     ),
@@ -640,7 +641,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.clearImageCache"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {sizeFormatter(cacheSize.image)}
                         </ThemeText>
                     ),
@@ -766,9 +767,10 @@ export default function BasicSetting() {
                     const isLast = index === section.data.length - 1;
 
                     return (
-                        <ListItem
-                            withHorizontalPadding
-                            heightType="small"
+                        <SettingRow
+                            title={item.title}
+                            right={Right}
+                            onPress={item.onPress}
                             style={[
                                 styles.sectionItem,
                                 {
@@ -777,10 +779,7 @@ export default function BasicSetting() {
                                 isFirst ? styles.sectionItemFirst : null,
                                 isLast ? styles.sectionItemLast : null,
                             ]}
-                            onPress={item.onPress}>
-                            <ListItem.Content title={item.title} />
-                            {Right}
-                        </ListItem>
+                        />
                     );
                 }}
             />
@@ -794,23 +793,24 @@ const styles = StyleSheet.create({
         paddingBottom: rpx(24),
         flex: 1,
     },
-    centerText: {
+    valueText: {
         textAlignVertical: "center",
-        maxWidth: rpx(400),
+        // 交给外层控件槽做宽度约束，这里只负责自己能收缩
+        flexShrink: 1,
     },
     sectionListContent: {
         paddingBottom: rpx(48),
     },
     sectionHeader: {
-        paddingHorizontal: rpx(38),
+        // 与设置行文字左边缘对齐：分组卡片外边距 + 行内边距
+        paddingHorizontal: settingsLayout.groupMargin + settingsLayout.rowPadding,
         height: rpx(64),
         flexDirection: "row",
         alignItems: "center",
         marginTop: rpx(12),
     },
     sectionItem: {
-        marginHorizontal: rpx(24),
-        paddingHorizontal: rpx(24),
+        marginHorizontal: settingsLayout.groupMargin,
     },
     sectionItemFirst: {
         borderTopLeftRadius: rpx(16),
@@ -1037,51 +1037,22 @@ function LyricSetting() {
     return (
         <View style={[lyricStyles.card, { backgroundColor: colors.card }]}>
             {/* 详情页歌词设置 */}
-            <ListItem withHorizontalPadding heightType="small" onPress={autoSearchLyric.onPress}>
-                <ListItem.Content title={autoSearchLyric.title} />
-                {autoSearchLyric.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={wordByWordLyric.onPress}>
-                <ListItem.Content title={wordByWordLyric.title} />
-                {wordByWordLyric.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={wordByWordFloat.onPress}>
-                <ListItem.Content title={wordByWordFloat.title} />
-                {wordByWordFloat.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={highlightColor.onPress}>
-                <ListItem.Content title={highlightColor.title} />
-                {highlightColor.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={breathingDots.onPress}>
-                <ListItem.Content title={breathingDots.title} />
-                {breathingDots.right}
-            </ListItem>
+            <SettingRow title={autoSearchLyric.title} right={autoSearchLyric.right} onPress={autoSearchLyric.onPress} />
+            <SettingRow title={wordByWordLyric.title} right={wordByWordLyric.right} onPress={wordByWordLyric.onPress} />
+            <SettingRow title={wordByWordFloat.title} right={wordByWordFloat.right} onPress={wordByWordFloat.onPress} />
+            <SettingRow title={highlightColor.title} right={highlightColor.right} onPress={highlightColor.onPress} />
+            <SettingRow title={breathingDots.title} right={breathingDots.right} onPress={breathingDots.onPress} />
 
             {Platform.OS !== "android" && <>
                 {/* 桌面歌词设置（以下仅对悬浮在桌面/状态栏的歌词生效） */}
                 <ThemeText style={lyricStyles.subHeader}>
                     桌面歌词（仅对悬浮歌词生效）
                 </ThemeText>
-                <ListItem withHorizontalPadding heightType="small" onPress={openStatusBarLyric.onPress}>
-                    <ListItem.Content title={openStatusBarLyric.title} />
-                    {openStatusBarLyric.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small" onPress={hideWhenPaused.onPress}>
-                    <ListItem.Content title={hideWhenPaused.title} />
-                    {hideWhenPaused.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small" onPress={desktopTranslation.onPress}>
-                    <ListItem.Content title={desktopTranslation.title} />
-                    {desktopTranslation.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small" onPress={desktopRomanization.onPress}>
-                    <ListItem.Content title={desktopRomanization.title} />
-                    {desktopRomanization.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={`副行字号比例  ${((desktopSecondaryFontRatio ?? 0.85) * 100).toFixed(0)}%`} />
-                </ListItem>
+                <SettingRow title={openStatusBarLyric.title} right={openStatusBarLyric.right} onPress={openStatusBarLyric.onPress} />
+                <SettingRow title={hideWhenPaused.title} right={hideWhenPaused.right} onPress={hideWhenPaused.onPress} />
+                <SettingRow title={desktopTranslation.title} right={desktopTranslation.right} onPress={desktopTranslation.onPress} />
+                <SettingRow title={desktopRomanization.title} right={desktopRomanization.right} onPress={desktopRomanization.onPress} />
+                <SettingRow title={`副行字号比例  ${((desktopSecondaryFontRatio ?? 0.85) * 100).toFixed(0)}%`} />
                 <View style={lyricStyles.sliderContainer}>
                     <Slider
                         style={lyricStyles.slider}
@@ -1102,9 +1073,7 @@ function LyricSetting() {
                         thumbTintColor={colors.textHighlight}
                     />
                 </View>
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={`副行透明度比例  ${((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0)}%`} />
-                </ListItem>
+                <SettingRow title={`副行透明度比例  ${((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0)}%`} />
                 <View style={lyricStyles.sliderContainer}>
                     <Slider
                         style={lyricStyles.slider}
@@ -1125,15 +1094,10 @@ function LyricSetting() {
                         thumbTintColor={colors.textHighlight}
                     />
                 </View>
-                <ListItem withHorizontalPadding heightType="small" onPress={invertColorsSwitch.onPress}>
-                    <ListItem.Content title={invertColorsSwitch.title} />
-                    {invertColorsSwitch.right}
-                </ListItem>
+                <SettingRow title={invertColorsSwitch.title} right={invertColorsSwitch.right} onPress={invertColorsSwitch.onPress} />
 
                 {/* 位置控制 */}
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={`歌词宽度  ${Math.round((widthPercent ?? 0.8) * 100)}%`} />
-                </ListItem>
+                <SettingRow title={`歌词宽度  ${Math.round((widthPercent ?? 0.8) * 100)}%`} />
                 <View style={lyricStyles.sliderContainer}>
                     <Slider
                         style={lyricStyles.slider}
@@ -1156,9 +1120,7 @@ function LyricSetting() {
                 </View>
 
                 {/* 预设颜色方案（纯圆点，长按自定义） */}
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={t("basicSettings.lyric.colorPreset")} />
-                </ListItem>
+                <SettingRow title={t("basicSettings.lyric.colorPreset")} />
                 <View style={lyricStyles.presetRow}>
                     {LYRIC_COLOR_PRESETS.map((preset, idx) => (
                         <TouchableOpacity
@@ -1183,15 +1145,13 @@ function LyricSetting() {
 
                 {/* 锁定时显示解锁按钮 */}
                 {isLocked && showStatusBarLyric && (
-                    <ListItem
-                        withHorizontalPadding
-                        heightType="small"
+                    <SettingRow
+                        title={t("basicSettings.lyric.unlock")}
                         onPress={() => {
                             LyricUtil.unlockDesktopLyric();
                             Config.setConfig("lyric.isLocked", false);
-                        }}>
-                        <ListItem.Content title={t("basicSettings.lyric.unlock")} />
-                    </ListItem>
+                        }}
+                    />
                 )}
             </>}
         </View>
@@ -1200,14 +1160,14 @@ function LyricSetting() {
 
 const lyricStyles = StyleSheet.create({
     card: {
-        borderRadius: rpx(16),
-        marginHorizontal: rpx(24),
+        borderRadius: settingsLayout.cardRadius,
+        marginHorizontal: settingsLayout.groupMargin,
         overflow: "hidden",
     },
     subHeader: {
         marginTop: rpx(24),
         marginBottom: rpx(8),
-        paddingHorizontal: rpx(36),
+        paddingHorizontal: settingsLayout.rowPadding,
         opacity: 0.6,
         fontSize: fontRpx(24),
     },
@@ -1220,12 +1180,12 @@ const lyricStyles = StyleSheet.create({
         width: "100%",
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: rpx(24),
+        paddingHorizontal: settingsLayout.rowPadding,
     },
     presetRow: {
         flexDirection: "row",
         flexWrap: "wrap",
-        paddingHorizontal: rpx(24),
+        paddingHorizontal: settingsLayout.rowPadding,
         paddingBottom: rpx(16),
         gap: rpx(20),
         alignItems: "center",

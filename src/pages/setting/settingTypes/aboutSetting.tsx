@@ -201,7 +201,9 @@ const style = StyleSheet.create({
         flex: 1,
     },
     header: {
-        width: rpx(750),
+        // 不要写 rpx(750)：它等于整屏宽度，再叠上 HorizontalSafeAreaView
+        // 的左右 inset 就会横向溢出。用 100% 让它跟着安全区收缩。
+        width: "100%",
         height: rpx(300),
         justifyContent: "center",
         alignItems: "center",
