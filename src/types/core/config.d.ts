@@ -51,6 +51,10 @@ export interface IAppConfigProperties {
     // 歌词文件下载相关配置
     "basic.downloadLyricFile": boolean;
     "basic.lyricFileFormat": "lrc" | "txt";
+    // 封面文件下载相关配置
+    "basic.downloadCoverFile": boolean;
+    /** 封面文件命名：与音频同名，或固定 cover.xxx */
+    "basic.downloadCoverFileNaming": "sameAsAudio" | "fixedName";
     // 歌词内容顺序配置
     "basic.lyricOrder": ("original" | "translation" | "romanization")[];
     // 逐字歌词配置（QRC格式保留逐字时间戳）

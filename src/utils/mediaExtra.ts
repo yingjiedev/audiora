@@ -17,6 +17,10 @@ interface IMediaExtraProperties {
     downloaded?: boolean;
     /** 本地路径 */
     localPath?: string;
+    /** 随下载生成的歌词文件路径（同目录同名，仅扩展名不同） */
+    localLyricPath?: string;
+    /** 随下载生成的封面文件路径（同目录同名，仅扩展名不同） */
+    localCoverPath?: string;
     /** 歌词偏移 */
     lyricOffset?: number;
     /** 关联歌词 */
