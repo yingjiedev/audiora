@@ -68,7 +68,9 @@ export default function SettingRow(props: ISettingRowProps) {
             accessibilityRole={onPress ? "button" : undefined}
             accessibilityLabel={accessibilityLabel}
             android_ripple={
-                onPress ? { color: "rgba(62, 101, 255, 0.08)" } : undefined
+                onPress && colors.listActive
+                    ? { color: colors.listActive }
+                    : undefined
             }
             onPress={onPress}
             onLongPress={onLongPress}
