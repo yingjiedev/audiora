@@ -31,7 +31,8 @@ export default function MyMusicOverview() {
     const starredSheets = useStarredSheets();
     const version = DeviceInfo.getVersion();
     // 功能块统一使用中性卡片，主色只出现在图标容器内，避免同层级出现多个色相。
-    const iconTint = Color(colors.primary).alpha(0.12).toString();
+    const iconTint =
+        colors.listActive ?? Color(colors.primary).alpha(0.12).toString();
 
     const favoriteSheet = useMemo(
         () =>

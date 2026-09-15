@@ -99,7 +99,8 @@ function LocalMusicContent() {
     const localMusics = LocalMusicSheet.useMusicList();
     const [browserMode, setBrowserMode] = useState<LocalBrowserMode>("tracks");
     // 同层级功能块共用中性卡片，主色只用于图标容器与选中态。
-    const iconTint = Color(colors.primary).alpha(0.12).toString();
+    const iconTint =
+        colors.listActive ?? Color(colors.primary).alpha(0.12).toString();
 
     const artistCount = useMemo(
         () => new Set(localMusics.map(item => item.artist).filter(Boolean)).size,
