@@ -11,14 +11,18 @@ import { IAppConfig } from "@/types/core/config";
 import type { IPluginManager } from "@/types/core/pluginManager";
 import { removeFileScheme } from "@/utils/fileUtils";
 import { formatLyricsByTimestamp } from "@/utils/lrcParser";
-import { errorLog } from "@/utils/log";
+import { errorLog, devLog } from "@/utils/log";
 import {
+    deleteCompanionPath,
     getCompanionCoverPath,
     getCompanionLyricPath,
     getCoverExtensionFromUrl,
+    isSharedCoverPath,
 } from "@/utils/mediaCompanion";
+import { getMediaExtraProperty } from "@/utils/mediaExtra";
 import { autoDecryptLyric } from "@/utils/musicDecrypter";
 import { downloadFile, exists, moveFile, stat, unlink, writeFile } from "react-native-fs";
+import LocalMusicSheet from "./localMusicSheet";
 import musicMetadataManager from "./musicMetadataManager";
 
 type ILyricOrderItem = "original" | "translation" | "romanization";
@@ -62,12 +66,40 @@ export function getCompanionFileConfig(
     };
 }
 
+/**
+ * 生成临时文件后缀。
+ * 这里刻意不引入 nanoid：它依赖 nanoid 的 ESM 构建，当前 jest 的
+ * transformIgnorePatterns 没有放行该包，会导致引用链上的测试无法加载。
+ */
+const createTempSuffix = () =>
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+const coerceError = (error: unknown) =>
+    error instanceof Error ? error.message : String(error);
+
+/** 失败日志统一带上平台、id 与文件路径，方便同名歌曲 / SAF 场景定位（issue #64） */
+const logCompanionError = (
+    scene: string,
+    musicItem: IMusic.IMusicItem,
+    error: unknown,
+    extra: Record<string, unknown> = {},
+) => {
+    errorLog(scene, {
+        title: musicItem.title,
+        platform: musicItem.platform,
+        id: musicItem.id,
+        error: coerceError(error),
+        ...extra,
+    });
+};
+
 async function writeLyricFile(
     musicItem: IMusic.IMusicItem,
     audioFilePath: string,
     config: ICompanionFileConfig,
     pluginManager: IPluginManager,
 ): Promise<string | null> {
+    const targetPath = getCompanionLyricPath(audioFilePath, config.lyricFileFormat);
     try {
         const plugin = pluginManager.getByName(musicItem.platform);
         if (!plugin) {
@@ -105,13 +137,13 @@ async function writeLyricFile(
             return null;
         }
 
-        const lyricFilePath = getCompanionLyricPath(audioFilePath, config.lyricFileFormat);
+        const lyricFilePath = targetPath;
         await writeFile(removeFileScheme(lyricFilePath), lyricContent, "utf8");
         return lyricFilePath;
     } catch (error) {
-        errorLog("歌词文件下载失败", {
-            musicItem: musicItem.title,
-            error: error instanceof Error ? error.message : String(error),
+        logCompanionError("歌词文件下载失败", musicItem, error, {
+            audioFilePath,
+            lyricsFilePath: targetPath,
         });
         return null;
     }
@@ -123,6 +155,7 @@ async function writeCoverFile(
     config: ICompanionFileConfig,
 ): Promise<string | null> {
     let tempPath: string | null = null;
+    let coverFilePath: string | null = null;
     try {
         // 与音乐标签写入共用同一套封面解析策略：优先 musicItem.artwork，其次插件 getMusicInfo
         const coverUrl = await musicMetadataManager.getCoverUrl(musicItem);
@@ -131,20 +164,26 @@ async function writeCoverFile(
         }
 
         const extension = getCoverExtensionFromUrl(coverUrl);
-        const coverFilePath = getCompanionCoverPath(
+        coverFilePath = getCompanionCoverPath(
             audioFilePath,
             extension,
             config.coverFileNaming,
         );
-        tempPath = `${coverFilePath}.part`;
+        const targetPath = removeFileScheme(coverFilePath);
 
-        try {
-            if (await exists(tempPath)) {
-                await unlink(tempPath);
-            }
-        } catch {
-            // 临时文件不存在时无需处理
+        // 固定名封面是目录级资源（cover/folder/front），无法确认创建者时不覆盖，
+        // 否则会替换掉用户自己放的图片；与音频同名的封面则由本应用完全拥有，可以直接覆盖
+        if (isSharedCoverPath(coverFilePath) && (await exists(targetPath))) {
+            devLog(
+                "warn",
+                "目录级封面已存在，跳过写入以避免覆盖用户文件",
+                { path: coverFilePath },
+            );
+            return null;
         }
+
+        // 并发下载到同一目录时避免多个任务共用同一个 .part 临时文件
+        tempPath = `${coverFilePath}.${createTempSuffix()}.part`;
 
         const result = await downloadFile({
             fromUrl: coverUrl,
@@ -161,7 +200,6 @@ async function writeCoverFile(
             throw new Error("封面下载结果为空文件");
         }
 
-        const targetPath = removeFileScheme(coverFilePath);
         if (await exists(targetPath)) {
             await unlink(targetPath);
         }
@@ -169,9 +207,9 @@ async function writeCoverFile(
         tempPath = null;
         return coverFilePath;
     } catch (error) {
-        errorLog("封面文件下载失败", {
-            musicItem: musicItem.title,
-            error: error instanceof Error ? error.message : String(error),
+        logCompanionError("封面文件下载失败", musicItem, error, {
+            audioFilePath,
+            coverFilePath,
         });
         return null;
     } finally {
@@ -208,4 +246,61 @@ export async function writeCompanionFiles(
         : null;
 
     return { lyricPath, coverPath };
+}
+
+/** 读取当前记录在案的附属文件路径（重新下载前必须先取，否则旧文件会失去追踪） */
+export function readCompanionPaths(
+    musicItem: ICommon.IMediaBase,
+): ICompanionFilesResult {
+    return {
+        lyricPath: getMediaExtraProperty(musicItem, "localLyricPath") ?? null,
+        coverPath: getMediaExtraProperty(musicItem, "localCoverPath") ?? null,
+    };
+}
+
+/**
+ * 合并「本次下载结果」与「既有记录」，返回应写入 mediaExtra 的路径。
+ *
+ * 规则：
+ * - 本次成功且路径与旧记录不同 → 删除旧文件后采用新路径；
+ * - 本次没有生成（开关关闭 / 下载失败 / 扩展名变化）→ 保留旧记录，不做无主清除，
+ *   否则删歌时就再也找不到旧文件了（issue #63 review）；
+ * - 封面删除同样遵循目录共享与其他曲目引用的保护。
+ */
+export async function reconcileCompanionPaths(
+    musicItem: IMusic.IMusicItem,
+    previous: ICompanionFilesResult,
+    next: ICompanionFilesResult,
+): Promise<ICompanionFilesResult> {
+    const isCoverReferencedByOther = (coverPath: string) =>
+        LocalMusicSheet.isCoverPathUsedByOtherTrack(coverPath, musicItem);
+
+    await deleteIfReplaced(previous.lyricPath, next.lyricPath, false);
+    await deleteIfReplaced(previous.coverPath, next.coverPath, true, {
+        isCoverReferencedByOther,
+    });
+
+    return {
+        lyricPath: next.lyricPath ?? previous.lyricPath,
+        coverPath: next.coverPath ?? previous.coverPath,
+    };
+}
+
+async function deleteIfReplaced(
+    previousPath: string | null,
+    nextPath: string | null,
+    treatAsCover: boolean,
+    options: Parameters<typeof deleteCompanionPath>[1] = {},
+) {
+    if (!previousPath) {
+        return;
+    }
+    // 本次没有产出新文件：保留旧记录，由后续删歌流程负责清理
+    if (!nextPath) {
+        return;
+    }
+    if (removeFileScheme(nextPath) === removeFileScheme(previousPath)) {
+        return;
+    }
+    await deleteCompanionPath(previousPath, options, treatAsCover);
 }

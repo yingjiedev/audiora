@@ -23,7 +23,11 @@ import Mp3Util, {
 } from "@/native/mp3Util";
 import Cenc from "@/native/cenc";
 import LocalMusicSheet from "./localMusicSheet";
-import { writeCompanionFiles } from "./downloadCompanionFiles";
+import {
+    readCompanionPaths,
+    reconcileCompanionPaths,
+    writeCompanionFiles,
+} from "./downloadCompanionFiles";
 import { IPluginManager } from "@/types/core/pluginManager";
 import musicMetadataManager from "./musicMetadataManager";
 import type { IDownloadMetadataConfig, IDownloadTaskMetadata } from "@/types/metadata";
@@ -1290,6 +1294,8 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             }
 
             await this.writeMetadataToFile(task.musicItem, runtimeInfo.targetDownloadPath);
+            // 重新下载前先记下上一次的附属文件位置，避免只更新记录让旧文件变成无主垃圾
+            const previousCompanionPaths = readCompanionPaths(task.musicItem);
             // 附属文件（歌词 / 封面）与音频同目录落盘；两者都是 best-effort，失败不影响下载结果
             const companionFiles = await writeCompanionFiles(
                 task.musicItem,
@@ -1337,12 +1343,17 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 },
             });
 
+            const reconciledCompanionPaths = await reconcileCompanionPaths(
+                task.musicItem,
+                previousCompanionPaths,
+                { lyricPath: finalLyricPath, coverPath: finalCoverPath },
+            );
+
             patchMediaExtra(task.musicItem, {
                 downloaded: true,
                 localPath: completedFilePath,
-                // 置为 undefined 可在重新下载且未生成附属文件时清掉上一次的残留路径
-                localLyricPath: finalLyricPath ?? undefined,
-                localCoverPath: finalCoverPath ?? undefined,
+                localLyricPath: reconciledCompanionPaths.lyricPath ?? undefined,
+                localCoverPath: reconciledCompanionPaths.coverPath ?? undefined,
             });
 
             this.updateDownloadTask(task.musicItem, {

@@ -143,6 +143,33 @@ export function toFileUri(filePath: string): string {
     return normalized.startsWith("/") ? `file://${normalized}` : normalized;
 }
 
+/**
+ * 解析本地曲目的附属封面，优先级：同目录封面文件 > mediaExtra 记录的封面路径。
+ * 返回 null 表示没有独立封面，由调用方决定是否回退到音频内嵌 tag。
+ */
+export async function resolveCompanionArtwork(
+    rawLocalPath: string,
+    musicItem: ICommon.IMediaBase | null,
+): Promise<string | null> {
+    if (!rawLocalPath) {
+        return null;
+    }
+    const localPath = removeFileScheme(rawLocalPath);
+    // content:// 目录无法按路径遍历，跳过同目录查找
+    if (!isAndroidSafUri(localPath)) {
+        const fileCover = await findCompanionCoverFile(localPath);
+        if (fileCover) {
+            return toFileUri(fileCover);
+        }
+    }
+    const recordedCover = musicItem
+        ? getMediaExtraProperty(musicItem, "localCoverPath")
+        : null;
+    return typeof recordedCover === "string" && recordedCover
+        ? toFileUri(recordedCover)
+        : null;
+}
+
 function isFileNotFoundError(error: any) {
     const message = `${error?.message ?? error}`.toLowerCase();
     return (
@@ -152,6 +179,71 @@ function isFileNotFoundError(error: any) {
     );
 }
 
+export interface IDeleteCompanionOptions {
+    /**
+     * 封面路径是否仍被其他曲目引用。
+     * 引用关系由歌单（core 层）持有，这里只接受回调，避免 utils 反向依赖 core。
+     */
+    isCoverReferencedByOther?: (coverPath: string) => boolean;
+}
+
+/**
+ * 判断是否为「目录级共享封面」。
+ * 固定名（cover / folder / front）封面属于整个目录，归可能的多首歌曲共用，
+ * 删除单曲时不能把它当成该单曲的私有文件一起删掉。
+ */
+export function isSharedCoverPath(coverPath: string): boolean {
+    if (typeof coverPath !== "string" || !coverPath) {
+        return false;
+    }
+    const fileName = removeFileScheme(coverPath).split("/").pop() ?? "";
+    const lastDot = fileName.lastIndexOf(".");
+    if (lastDot <= 0) {
+        return false;
+    }
+    const nameWithoutExtension = fileName.slice(0, lastDot).toLowerCase();
+    const extension = fileName.slice(lastDot + 1).toLowerCase();
+    return (
+        (COMPANION_COVER_FIXED_NAMES as readonly string[]).includes(nameWithoutExtension) &&
+        (COMPANION_COVER_EXTENSIONS as readonly string[]).includes(extension)
+    );
+}
+
+/**
+ * 删除单个附属文件，失败只记日志（文件不存在视为成功）。
+ * 封面会先做「目录共享 / 仍被引用」两道保护。
+ */
+export async function deleteCompanionPath(
+    rawPath: string | null | undefined,
+    options: IDeleteCompanionOptions = {},
+    treatAsCover = false,
+): Promise<void> {
+    if (typeof rawPath !== "string" || !rawPath) {
+        return;
+    }
+
+    if (treatAsCover) {
+        if (isSharedCoverPath(rawPath)) {
+            return;
+        }
+        if (options.isCoverReferencedByOther?.(rawPath)) {
+            return;
+        }
+    }
+
+    try {
+        if (isAndroidSafUri(rawPath)) {
+            await deleteAndroidSafUri(rawPath);
+        } else {
+            await unlink(removeFileScheme(rawPath));
+        }
+    } catch (error) {
+        if (!isFileNotFoundError(error)) {
+            errorLog("附属文件清理失败", { path: rawPath, error });
+        }
+    }
+}
+
 /**
  * 删除随下载生成的附属文件（歌词 / 封面）。
  * 路径记录在 mediaExtra 中，SAF 授权目录下的文件走 deleteSafUri。
@@ -159,30 +251,16 @@ function isFileNotFoundError(error: any) {
  */
 export async function deleteCompanionFiles(
     musicItem: ICommon.IMediaBase | null,
+    options: IDeleteCompanionOptions = {},
 ): Promise<void> {
     if (!musicItem) {
         return;
     }
 
-    const companionPaths = [
-        getMediaExtraProperty(musicItem, "localLyricPath"),
-        getMediaExtraProperty(musicItem, "localCoverPath"),
-    ];
+    const lyricPath = getMediaExtraProperty(musicItem, "localLyricPath");
+    const coverPath = getMediaExtraProperty(musicItem, "localCoverPath");
 
-    for (const rawPath of companionPaths) {
-        if (typeof rawPath !== "string" || !rawPath) {
-            continue;
-        }
-        try {
-            if (isAndroidSafUri(rawPath)) {
-                await deleteAndroidSafUri(rawPath);
-            } else {
-                await unlink(removeFileScheme(rawPath));
-            }
-        } catch (error) {
-            if (!isFileNotFoundError(error)) {
-                errorLog("附属文件清理失败", { path: rawPath, error });
-            }
-        }
-    }
+    // 歌词永远与音频同名，属于当前曲目私有
+    await deleteCompanionPath(lyricPath, options, false);
+    await deleteCompanionPath(coverPath, options, true);
 }

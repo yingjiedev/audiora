@@ -43,7 +43,7 @@ import MediaCache from "../mediaCache";
 import _internalPluginMeta from "./meta";
 import { normalizePluginMusicItem } from "@/utils/qualities";
 import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
-import { findCompanionCoverFile, toFileUri } from "@/utils/mediaCompanion";
+import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
 
 
 axios.defaults.timeout = 2000;
@@ -1614,22 +1614,20 @@ const localFilePluginDefine: IPlugin.IPluginDefine = {
         const localPath = getLocalPath(musicBase);
         if (localPath) {
             const normalizedLocalPath = removeFileScheme(localPath);
-            const coverImg = await Mp3Util.getMediaCoverImg(
+            // 同目录封面文件优先于内嵌 tag：用户可以自己丢一张图进去替换封面，不必重写音频 tag
+            const companionArtwork = await resolveCompanionArtwork(
                 normalizedLocalPath,
+                musicBase,
             );
+            if (companionArtwork) {
+                return {
+                    artwork: companionArtwork,
+                };
+            }
+            const coverImg = await Mp3Util.getMediaCoverImg(normalizedLocalPath);
             if (coverImg) {
                 return {
                     artwork: coverImg,
-                };
-            }
-            // 内嵌封面缺失时回退到同目录封面文件（下载时保存的 <音频同名>.jpg / cover.jpg 等）
-            const companionCover = isAndroidSafUri(localPath)
-                ? getMediaExtraProperty(musicBase, "localCoverPath")
-                : (await findCompanionCoverFile(normalizedLocalPath)) ??
-                  getMediaExtraProperty(musicBase, "localCoverPath");
-            if (companionCover) {
-                return {
-                    artwork: toFileUri(companionCover),
                 };
             }
         }

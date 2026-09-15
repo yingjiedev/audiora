@@ -1,13 +1,16 @@
-import { unlink } from "react-native-fs";
+import { stat, unlink } from "react-native-fs";
 import { deleteAndroidSafUri } from "@/utils/androidSaf";
 import { getMediaExtraProperty } from "@/utils/mediaExtra";
 import {
     deleteCompanionFiles,
+    deleteCompanionPath,
     getBasePathWithoutExtension,
     getCompanionCoverCandidates,
     getCompanionCoverPath,
     getCompanionLyricPath,
     getCoverExtensionFromUrl,
+    isSharedCoverPath,
+    resolveCompanionArtwork,
     toFileUri,
 } from "@/utils/mediaCompanion";
 
@@ -20,6 +23,7 @@ jest.mock("@/utils/mediaExtra", () => ({
     getMediaExtraProperty: jest.fn(),
 }));
 
+const mockedStat = stat as unknown as jest.Mock;
 const mockedUnlink = unlink as unknown as jest.Mock;
 const mockedDeleteSafUri = deleteAndroidSafUri as unknown as jest.Mock;
 const mockedGetExtra = getMediaExtraProperty as unknown as jest.Mock;
@@ -137,6 +141,65 @@ describe("mediaCompanion", () => {
         });
     });
 
+    describe("resolveCompanionArtwork", () => {
+        beforeEach(() => {
+            mockedStat.mockReset();
+            mockedStat.mockImplementation(async (path: string) => ({
+                path,
+                isFile: () => path.endsWith(".jpg"),
+                size: 1024,
+            }));
+        });
+
+        it("同目录同名封面优先，返回可直接渲染的 file://", async () => {
+            const artwork = await resolveCompanionArtwork(
+                "/sdcard/Music/烟火里的尘埃-郁欢.flac",
+                null,
+            );
+
+            expect(artwork).toBe("file:///sdcard/Music/烟火里的尘埃-郁欢.jpg");
+        });
+
+        it("SAF 路径跳过文件系统查找，回落到 mediaExtra 记录", async () => {
+            mockedGetExtra.mockReturnValue("content://com.android/tree/cover");
+
+            const artwork = await resolveCompanionArtwork(
+                "content://com.android/tree/audio",
+                { id: "1", platform: "test" } as any,
+            );
+
+            expect(mockedStat).not.toHaveBeenCalled();
+            expect(artwork).toBe("content://com.android/tree/cover");
+        });
+
+        it("都没有附属封面时返回 null，由调用方回退内嵌 tag", async () => {
+            mockedStat.mockRejectedValue(new Error("ENOENT"));
+            mockedGetExtra.mockReturnValue(null);
+
+            expect(
+                await resolveCompanionArtwork(audioPath, null),
+            ).toBeNull();
+        });
+    });
+
+    describe("isSharedCoverPath", () => {
+        it("识别出目录级共享封面", () => {
+            expect(isSharedCoverPath("/sdcard/Music/cover.jpg")).toBe(true);
+            expect(isSharedCoverPath("/sdcard/Music/folder.PNG")).toBe(true);
+            expect(isSharedCoverPath("/sdcard/Music/front.webp")).toBe(true);
+        });
+
+        it("同名封面不属于共享文件", () => {
+            expect(isSharedCoverPath("/sdcard/Music/烟火里的尘埃-郁欢.jpg")).toBe(false);
+            expect(isSharedCoverPath("/sdcard/Music/cover.jpg.bak")).toBe(false);
+        });
+
+        it("空值与非法输入返回 false", () => {
+            expect(isSharedCoverPath("")).toBe(false);
+            expect(isSharedCoverPath(null as any)).toBe(false);
+        });
+    });
+
     describe("deleteCompanionFiles", () => {
         it("删除 mediaExtra 中记录的歌词与封面", async () => {
             mockedGetExtra.mockImplementation((_item: any, key: string) =>
@@ -175,6 +238,75 @@ describe("mediaCompanion", () => {
             mockedUnlink.mockRejectedValueOnce(new Error("EACCES"));
             await expect(
                 deleteCompanionFiles({ id: "1", platform: "test" } as any),
+            ).resolves.toBeUndefined();
+        });
+
+        it("目录级共享封面不会随单曲删除", async () => {
+            mockedGetExtra.mockImplementation((_item: any, key: string) =>
+                key === "localLyricPath"
+                    ? "/sdcard/Music/烟火里的尘埃-郁欢.lrc"
+                    : "/sdcard/Music/cover.jpg",
+            );
+
+            await deleteCompanionFiles({ id: "1", platform: "test" } as any);
+
+            expect(mockedUnlink).toHaveBeenCalledWith(
+                "/sdcard/Music/烟火里的尘埃-郁欢.lrc",
+            );
+            expect(mockedUnlink).not.toHaveBeenCalledWith("/sdcard/Music/cover.jpg");
+        });
+
+        it("仍被其他曲目引用的封面不会被删除", async () => {
+            mockedGetExtra.mockImplementation((_item: any, key: string) =>
+                key === "localLyricPath" ? null : "/sdcard/Music/共用.jpg",
+            );
+
+            await deleteCompanionFiles({ id: "1", platform: "test" } as any, {
+                isCoverReferencedByOther: () => true,
+            });
+
+            expect(mockedUnlink).not.toHaveBeenCalled();
+        });
+
+        it("未被引用时正常删除封面", async () => {
+            mockedGetExtra.mockImplementation((_item: any, key: string) =>
+                key === "localLyricPath" ? null : "/sdcard/Music/独占.jpg",
+            );
+
+            await deleteCompanionFiles({ id: "1", platform: "test" } as any, {
+                isCoverReferencedByOther: () => false,
+            });
+
+            expect(mockedUnlink).toHaveBeenCalledWith("/sdcard/Music/独占.jpg");
+        });
+    });
+
+    describe("deleteCompanionPath", () => {
+        it("按 cover 规则保护共享封面与被引用的封面", async () => {
+            await deleteCompanionPath("/sdcard/Music/cover.jpg", {}, true);
+            expect(mockedUnlink).not.toHaveBeenCalled();
+
+            await deleteCompanionPath(
+                "/sdcard/Music/a.jpg",
+                { isCoverReferencedByOther: () => true },
+                true,
+            );
+            expect(mockedUnlink).not.toHaveBeenCalled();
+        });
+
+        it("歌词按单曲私有文件处理，不做引用保护", async () => {
+            await deleteCompanionPath(
+                "/sdcard/Music/a.lrc",
+                { isCoverReferencedByOther: () => true },
+                false,
+            );
+            expect(mockedUnlink).toHaveBeenCalledWith("/sdcard/Music/a.lrc");
+        });
+
+        it("文件不存在时不视为错误", async () => {
+            mockedUnlink.mockRejectedValueOnce(new Error("ENOENT: no such file"));
+            await expect(
+                deleteCompanionPath("/sdcard/Music/missing.jpg", {}),
             ).resolves.toBeUndefined();
         });
     });

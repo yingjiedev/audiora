@@ -307,7 +307,7 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
     const renderCoverNamingSelector = () => {
         const options: Array<{ value: "sameAsAudio" | "fixedName"; label: string }> = [
             { value: "sameAsAudio", label: "与音频同名" },
-            { value: "fixedName", label: "cover.jpg" },
+            { value: "fixedName", label: "固定名 cover" },
         ];
 
         return (
@@ -449,7 +449,7 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
                                                 style={styles.namingHint}>
                                                 {settings.coverFileNaming === "sameAsAudio"
                                                     ? "与音频同名（如 歌曲名-歌手.jpg），多首歌放同一目录不会互相覆盖"
-                                                    : "固定为 cover.jpg，兼容性更好，但同一目录多首歌会共用一张封面"}
+                                                    : "固定为 cover.原图格式（jpg / png / webp 由封面原图决定），同一目录多首歌共用；已存在同名图片时不覆盖，删歌也不会连带删除"}
                                             </ThemeText>
                                         </View>
                                     </>

@@ -27,7 +27,8 @@ import {
     deleteAndroidSafUri,
     isAndroidSafUri,
 } from "@/utils/androidSaf";
-import { deleteCompanionFiles } from "@/utils/mediaCompanion";
+import { deleteCompanionFiles, resolveCompanionArtwork } from "@/utils/mediaCompanion";
+import { getMediaExtraProperty } from "@/utils/mediaExtra";
 
 let localSheet: IMusic.IMusicItem[] = [];
 const localSheetStateMapper = new StateMapper(() => localSheet);
@@ -102,9 +103,14 @@ async function hydrateLocalArtwork(musicItems: IMusic.IMusicItem[] = localSheet)
                 }
 
                 try {
-                    const artwork = await mp3Util.getMediaCoverImg(
-                        removeFileScheme(localPath),
+                    // 与 localFilePlugin.getMusicInfo 同一优先级：同目录封面文件 > 记录路径 > 内嵌 tag
+                    const companionArtwork = await resolveCompanionArtwork(
+                        localPath,
+                        musicItem,
                     );
+                    const artwork =
+                        companionArtwork ??
+                        (await mp3Util.getMediaCoverImg(removeFileScheme(localPath)));
                     return typeof artwork === "string" && artwork.trim()
                         ? { musicItem, artwork }
                         : null;
@@ -234,6 +240,31 @@ async function saveLocalSheet() {
     await setStorage(StorageKeys.LocalMusicSheet, localSheet);
 }
 
+/**
+ * 封面路径是否被除 exclude 之外的本地曲目引用。
+ * 固定名封面天然是多首歌共享的，删除其中一首时不能连文件一起删（issue #63 review）。
+ */
+function isCoverPathUsedByOtherTrack(
+    coverPath: string,
+    exclude: ICommon.IMediaBase,
+) {
+    if (!coverPath) {
+        return false;
+    }
+    const target = removeFileScheme(coverPath);
+    return localSheet.some(item => {
+        if (isSameMediaItem(item, exclude)) {
+            return false;
+        }
+        const itemCover = getMediaExtraProperty(item, "localCoverPath");
+        return (
+            typeof itemCover === "string" &&
+            !!itemCover &&
+            removeFileScheme(itemCover) === target
+        );
+    });
+}
+
 export async function removeMusic(
     musicItem: IMusic.IMusicItem,
     deleteOriginalFile = false,
@@ -262,7 +293,10 @@ export async function removeMusic(
                 }
             }
             // 音频删除成功后一并清理随下载生成的歌词 / 封面
-            await deleteCompanionFiles(localMusicItem);
+            await deleteCompanionFiles(localMusicItem, {
+                isCoverReferencedByOther: coverPath =>
+                    isCoverPathUsedByOtherTrack(coverPath, localMusicItem),
+            });
         }
     }
     localSheet = newSheet;
@@ -405,6 +439,7 @@ const LocalMusicSheet = {
     isLocalMusic,
     useIsLocal,
     getMusicList,
+    isCoverPathUsedByOtherTrack,
     hydrateArtwork: hydrateLocalArtwork,
     useMusicList: localSheetStateMapper.useMappedState,
     updateMusicList,
