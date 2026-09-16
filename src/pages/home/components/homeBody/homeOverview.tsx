@@ -289,13 +289,13 @@ function QuickAccess(props: {
     const { historyCount, favoriteCount, favoriteSheetId } = props;
     const { t } = useI18N();
     const navigate = useNavigate();
+    const colors = useColors();
 
     const quickItems: Array<{
         key: string;
         artwork: ImageSourcePropType;
         title: string;
         subtitle: string;
-        accent: string;
         action: () => void;
     }> = [
         {
@@ -303,7 +303,6 @@ function QuickAccess(props: {
             artwork: ImgAsset.quickLocal,
             title: t("home.recommendSheet"),
             subtitle: t("home.discovery"),
-            accent: "#00CDAA",
             action: () => navigate(ROUTE_PATH.RECOMMEND_SHEETS),
         },
         {
@@ -311,7 +310,6 @@ function QuickAccess(props: {
             artwork: ImgAsset.quickHistory,
             title: t("home.playHistory"),
             subtitle: t("home.songCount", { count: historyCount }),
-            accent: "#4D70F5",
             action: () => navigate(ROUTE_PATH.HISTORY),
         },
         {
@@ -319,7 +317,6 @@ function QuickAccess(props: {
             artwork: ImgAsset.quickFavorite,
             title: t("home.favoriteSheet"),
             subtitle: t("home.songCount", { count: favoriteCount }),
-            accent: "#FF567D",
             action: () => {
                 if (favoriteSheetId) {
                     navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
@@ -333,7 +330,6 @@ function QuickAccess(props: {
             artwork: ImgAsset.quickFolder,
             title: t("home.importPlaylist.a11y"),
             subtitle: t("home.scanLocal"),
-            accent: "#00A9EE",
             action: () => navigate(ROUTE_PATH.LOCAL),
         },
     ];
@@ -349,9 +345,8 @@ function QuickAccess(props: {
                         style={[
                             styles.quickItem,
                             {
-                                backgroundColor: Color(item.accent)
-                                    .alpha(0.055)
-                                    .toString(),
+                                backgroundColor: colors.card,
+                                borderColor: colors.border,
                             },
                         ]}
                         onPress={item.action}>
@@ -795,7 +790,7 @@ const styles = StyleSheet.create({
     quickContainer: {
         paddingHorizontal: rpx(24),
         flexDirection: "row",
-        gap: rpx(10),
+        gap: rpx(12),
     },
     quickSection: {
         marginTop: rpx(20),
@@ -805,6 +800,7 @@ const styles = StyleSheet.create({
         minWidth: 0,
         height: rpx(164),
         borderRadius: rpx(20),
+        borderWidth: StyleSheet.hairlineWidth,
         alignItems: "center",
         justifyContent: "center",
     },

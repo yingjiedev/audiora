@@ -19,7 +19,6 @@ type IQuickEntry = {
     icon: IIconName;
     title: string;
     description: string;
-    accent: string;
     onPress: () => void;
 };
 
@@ -31,6 +30,9 @@ export default function MyMusicOverview() {
     const sheets = useSheetsBase();
     const starredSheets = useStarredSheets();
     const version = DeviceInfo.getVersion();
+    // 功能块统一使用中性卡片，主色只出现在图标容器内，避免同层级出现多个色相。
+    const iconTint =
+        colors.listActive ?? Color(colors.primary).alpha(0.12).toString();
 
     const favoriteSheet = useMemo(
         () =>
@@ -52,7 +54,6 @@ export default function MyMusicOverview() {
             description: t("home.songCount", {
                 count: favoriteSheet?.worksNum ?? 0,
             }),
-            accent: "#FF6E91",
             onPress: () => {
                 if (favoriteSheet) {
                     navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
@@ -66,7 +67,6 @@ export default function MyMusicOverview() {
             icon: "clock-outline",
             title: t("home.playHistory"),
             description: t("home.songCount", { count: history.length }),
-            accent: "#4D7CFF",
             onPress: () => navigate(ROUTE_PATH.HISTORY),
         },
         {
@@ -74,7 +74,6 @@ export default function MyMusicOverview() {
             icon: "arrow-down-tray",
             title: t("home.downloadManagement"),
             description: t("home.downloadManagementDescription"),
-            accent: "#19C69F",
             onPress: () => navigate(ROUTE_PATH.DOWNLOADING),
         },
         {
@@ -84,7 +83,6 @@ export default function MyMusicOverview() {
             description: t("home.playlistCount", {
                 count: starredSheets.length,
             }),
-            accent: "#F7A719",
             onPress: () =>
                 navigate(ROUTE_PATH.SHEET_BROWSER, { sheetType: "starred" }),
         },
@@ -100,7 +98,6 @@ export default function MyMusicOverview() {
             icon: "circle-stack",
             title: t("sidebar.backupAndResume"),
             description: t("settingsOverview.backupDescription"),
-            accent: "#1ABAA5",
             onPress: () => navigate(ROUTE_PATH.SETTING, { type: "backup" }),
         },
         {
@@ -108,7 +105,6 @@ export default function MyMusicOverview() {
             icon: "information-circle",
             title: t("home.aboutAndUpdate"),
             description: t("home.currentVersion", { version }),
-            accent: "#337DF7",
             onPress: () => navigate(ROUTE_PATH.SETTING, { type: "about" }),
         },
     ];
@@ -182,25 +178,20 @@ export default function MyMusicOverview() {
                             style={[
                                 styles.quickCard,
                                 {
-                                    backgroundColor: Color(entry.accent)
-                                        .alpha(0.09)
-                                        .toString(),
+                                    backgroundColor: colors.card,
+                                    borderColor: colors.border,
                                 },
                             ]}
                             onPress={entry.onPress}>
                             <View
                                 style={[
                                     styles.quickIcon,
-                                    {
-                                        backgroundColor: Color(entry.accent)
-                                            .alpha(0.15)
-                                            .toString(),
-                                    },
+                                    { backgroundColor: iconTint },
                                 ]}>
                                 <Icon
                                     name={entry.icon}
                                     size={rpx(32)}
-                                    color={entry.accent}
+                                    color={colors.primary}
                                 />
                             </View>
                             <View style={styles.quickText}>
@@ -243,13 +234,9 @@ export default function MyMusicOverview() {
                             <View
                                 style={[
                                     styles.managementIcon,
-                                    {
-                                        backgroundColor: Color(entry.accent)
-                                            .alpha(0.14)
-                                            .toString(),
-                                    },
+                                    { backgroundColor: iconTint },
                                 ]}>
-                                <Icon name={entry.icon} size={rpx(30)} color={entry.accent} />
+                                <Icon name={entry.icon} size={rpx(30)} color={colors.primary} />
                             </View>
                             <View style={styles.managementText}>
                                 <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>
@@ -430,22 +417,23 @@ const styles = StyleSheet.create({
     quickGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
-        justifyContent: "space-between",
+        gap: rpx(12),
         marginTop: rpx(18),
     },
     quickCard: {
-        width: "48.5%",
+        width: "46%",
+        flexGrow: 1,
         minHeight: rpx(106),
-        borderRadius: rpx(18),
+        borderRadius: rpx(20),
+        borderWidth: StyleSheet.hairlineWidth,
         padding: rpx(16),
-        marginBottom: rpx(12),
         flexDirection: "row",
         alignItems: "center",
     },
     quickIcon: {
         width: rpx(56),
         height: rpx(56),
-        borderRadius: rpx(18),
+        borderRadius: rpx(16),
         alignItems: "center",
         justifyContent: "center",
     },
