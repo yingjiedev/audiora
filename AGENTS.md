@@ -28,6 +28,17 @@ Jest uses the React Native preset and loads `jest.setup.js`. Add regression test
 
 For Android preview handoff, build the requested preview APK and install it on the user's connected physical device. Once installation succeeds and the installed version is confirmed, stop; the user performs the UI and functional acceptance testing manually. Do not start an emulator, capture device screenshots, or perform substitute visual acceptance unless the user explicitly asks for it.
 
+## Android Preview Builds
+
+`BUILDING.md` is the command reference. The points below are the failure modes actually hit while building preview APKs — check them before assuming a source problem.
+
+- Build in a short-path worktree on a drive with real free space. A nearly full drive does not fail loudly; dependency extraction stops partway and leaves `node_modules` incomplete. The tell is `npm run typecheck:runtime` reporting `TS2304 Cannot find name 'Math' / 'Array' / 'JSON'` in files the change never touched. Reinstall instead of editing code.
+- Copy the fonts before building. `build-preview` does not do it (CI does), and a build without it ships an APK missing roughly 22 MB of fonts: run `New-Item -ItemType Directory -Force android/app/src/main/assets/fonts` followed by `Copy-Item assets/fonts/*.ttf android/app/src/main/assets/fonts/`.
+- If Node reports a module missing while its `package.json` points at a file that should exist, look for a `*.DELETE.<hash>` sibling in that directory before reinstalling. A sandboxed delete can rename the file away instead of removing it; the content is intact, so restoring the original name is enough.
+- Pass `-PreviewVersion` explicitly whenever the version string matters, for example `npm run build-preview -- -PreviewVersion 0.3.4`. `package.json` trails the release line, so the derived default can read older than the branch being built.
+- Without `android/keystore.properties` the release build falls back to the debug keystore. That installs over another debug-signed build with `adb install -r`, but it cannot replace a release-signed install without uninstalling, which clears app data.
+- Verify the artifact with `aapt2 dump badging` for package, `versionCode`/`versionName` and `native-code`, and with `apksigner` for the signature. Where `JAVA_HOME` is a POSIX-style path, `apksigner.bat` rejects it; call the jar directly: `java -jar "$ANDROID_SDK_ROOT/build-tools/36.0.0/lib/apksigner.jar" verify --verbose --print-certs <apk>`.
+
 ## Commit & Pull Request Guidelines
 
 Commits follow Conventional Commits, for example `fix(主题): correct custom background color` or `docs: update installation notes`. Commitlint permits `ci`, `chore`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, and `style`; choose the closest applicable type.
