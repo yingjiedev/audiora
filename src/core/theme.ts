@@ -58,6 +58,14 @@ export const lightTheme = {
     },
 };
 
+/**
+ * 深色预设的表面色阶。
+ *
+ * 深色模式下投影几乎不可见（shadowColor 恒为黑），层级只能靠表面色自身的
+ * 明度差撑起来，所以相邻层之间必须拉开足够距离：
+ * pageBackground < appBar < surface < card < surfaceElevated，逐层 ≥1.15:1。
+ * 改这里的任何一项都要同步更新 `src/core/darkContrast.test.ts` 的断言。
+ */
 export const darkTheme = {
     id: "p-dark",
     ..._DarkTheme,
@@ -70,27 +78,48 @@ export const darkTheme = {
         primary: "#6D8DFF",
         pageBackground: "#090F1F",
         shadow: "#000000",
-        appBar: "#090F1F",
+        appBar: "#0C1424",
         appBarText: "#F7FAFF",
-        musicBar: "#131D34",
+        musicBar: "#1A2642",
         musicBarText: "#F7FAFF",
-        divider: "rgba(204,220,255,0.10)",
-        border: "rgba(204,220,255,0.12)",
+        divider: "rgba(198,214,255,0.16)",
+        border: "rgba(198,214,255,0.20)",
         listActive: "rgba(109,141,255,0.15)",
         mask: "rgba(10,8,14,0.82)",
-        backdrop: "#111A2E",
-        surface: "#111A2E",
-        surfaceElevated: "#192541",
+        backdrop: "#131C31",
+        surface: "#131C31",
+        surfaceElevated: "#212E4E",
         accentWarm: "#B878FF",
         accentCool: "#25C7F4",
-        tabBar: "#111A2E",
-        placeholder: "#17233D",
+        tabBar: "#131C31",
+        placeholder: "#1C2843",
         success: "#20D2B0",
         danger: "#FF648B",
         info: "#58A6FF",
-        card: "#121D33",
-        notification: "#111A2E",
+        card: "#18233C",
+        notification: "#131C31",
     },
+};
+
+/**
+ * 深色色板校准（issue #36）之前的旧表面色。
+ *
+ * 老配置里存的就是这些值，只说明"从没单独调过"，不代表用户的个性化选择。
+ * 迁移判定必须把它们一并当成"未调过"，否则改色板后旧值会被误判为用户
+ * 自定义色，自定义主题里就会残留校准前的紫灰。
+ */
+const legacyDarkSurfaceColors: Partial<
+    Record<keyof CustomizedColors, string>
+> = {
+    appBar: "#090F1F",
+    tabBar: "#111A2E",
+    musicBar: "#131D34",
+    card: "#121D33",
+    backdrop: "#111A2E",
+    surface: "#111A2E",
+    surfaceElevated: "#192541",
+    notification: "#111A2E",
+    placeholder: "#17233D",
 };
 
 interface IBackgroundInfo {
@@ -334,6 +363,7 @@ function syncCardSurfaceColors(
         force ||
         !isDefaultLikeColor(colors.card, [
             darkTheme.colors.card,
+            legacyDarkSurfaceColors.card,
             lightTheme.colors.card,
             customBackgroundSurfaceColors.card,
         ]);
@@ -351,6 +381,7 @@ function syncCardSurfaceColors(
         force ||
         isDefaultLikeColor(nextColors.surface, [
             darkTheme.colors.surface,
+            legacyDarkSurfaceColors.surface,
             lightTheme.colors.surface,
             customBackgroundSurfaceColors.surface,
         ])
@@ -363,6 +394,7 @@ function syncCardSurfaceColors(
         force ||
         isDefaultLikeColor(nextColors.surfaceElevated, [
             darkTheme.colors.surfaceElevated,
+            legacyDarkSurfaceColors.surfaceElevated,
             lightTheme.colors.surfaceElevated,
             customBackgroundSurfaceColors.surfaceElevated,
         ])
@@ -441,6 +473,7 @@ function setup() {
         const surfaceUntouched = (key: keyof CustomizedColors, val: any) =>
             !val ||
             sameColor(val, darkTheme.colors[key]) ||
+            sameColor(val, legacyDarkSurfaceColors[key]) ||
             (customBackgroundSurfaceColors[key] !== undefined &&
                 sameColor(val, customBackgroundSurfaceColors[key]));
 

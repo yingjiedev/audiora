@@ -1,13 +1,13 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import rpx from "@/utils/rpx";
-import ThemeText from "@/components/base/themeText";
 // import pathConst from '@/constants/pathConst';
 import Config, { useAppConfig } from "@/core/appConfig";
 import ThemeCard from "./themeCard";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Theme from "@/core/theme";
 import { useI18N } from "@/core/i18n";
+import SettingSection from "../../components/settingSection";
 
 export default function Background() {
     const { t } = useI18N();
@@ -81,56 +81,51 @@ export default function Background() {
     // };
 
     return (
-        <View>
-            <ThemeText
-                fontSize="subTitle"
-                fontWeight="bold"
-                style={style.header}>
-                {t("themeSettings.setTheme")}
-            </ThemeText>
-            <View style={style.sectionWrapper}>
-                <ThemeCard
-                    preview="#fff"
-                    title={t("themeSettings.lightMode")}
-                    selected={themeSelectedTheme === "p-light"}
-                    onPress={() => {
-                        if (themeSelectedTheme !== "p-light") {
-                            Theme.setTheme("p-light");
-                            Config.setConfig("theme.followSystem", false);
-                        }
-                    }}
-                />
-                <ThemeCard
-                    preview="#131313"
-                    title={t("themeSettings.darkMode")}
-                    selected={themeSelectedTheme === "p-dark"}
-                    onPress={() => {
-                        if (themeSelectedTheme !== "p-dark") {
-                            Theme.setTheme("p-dark");
-                            Config.setConfig("theme.followSystem", false);
-                        }
-                    }}
-                />
+        <SettingSection
+            title={t("themeSettings.setTheme")}
+            cardStyle={style.sectionCard}>
+            <ThemeCard
+                preview="#fff"
+                title={t("themeSettings.lightMode")}
+                selected={themeSelectedTheme === "p-light"}
+                onPress={() => {
+                    if (themeSelectedTheme !== "p-light") {
+                        Theme.setTheme("p-light");
+                        Config.setConfig("theme.followSystem", false);
+                    }
+                }}
+            />
+            <ThemeCard
+                preview="#131313"
+                title={t("themeSettings.darkMode")}
+                selected={themeSelectedTheme === "p-dark"}
+                onPress={() => {
+                    if (themeSelectedTheme !== "p-dark") {
+                        Theme.setTheme("p-dark");
+                        Config.setConfig("theme.followSystem", false);
+                    }
+                }}
+            />
 
-                <ThemeCard
-                    title={t("themeSettings.customMode")}
-                    selected={themeSelectedTheme === "custom"}
-                    preview={themeBackground}
-                    onPress={() => {
-                        if (themeSelectedTheme !== "custom") {
-                            Config.setConfig("theme.followSystem", false);
-                            Theme.setTheme("custom", {
-                                colors: Config.getConfig(
-                                    "theme.customColors",
-                                ),
-                            });
-                        }
-                        navigate(ROUTE_PATH.SET_CUSTOM_THEME);
-                        // showPanel('ColorPicker');
-                    }}
-                />
+            <ThemeCard
+                title={t("themeSettings.customMode")}
+                selected={themeSelectedTheme === "custom"}
+                preview={themeBackground}
+                onPress={() => {
+                    if (themeSelectedTheme !== "custom") {
+                        Config.setConfig("theme.followSystem", false);
+                        Theme.setTheme("custom", {
+                            colors: Config.getConfig(
+                                "theme.customColors",
+                            ),
+                        });
+                    }
+                    navigate(ROUTE_PATH.SET_CUSTOM_THEME);
+                    // showPanel('ColorPicker');
+                }}
+            />
 
-                {/* <ImageCard
+            {/* <ImageCard
                     emptySrc={ImgAsset.backgroundDefault}
                     onPress={() => {
                         Config.set('setting.theme.background', undefined);
@@ -142,20 +137,15 @@ export default function Background() {
                     emptySrc={ImgAsset.addBackground}
                     onPress={onCustomBgPress}
                 /> */}
-            </View>
-        </View>
+        </SettingSection>
     );
 }
 
 const style = StyleSheet.create({
-    header: {
-        marginTop: rpx(36),
-        paddingLeft: rpx(24),
-    },
-    sectionWrapper: {
-        marginTop: rpx(28),
+    sectionCard: {
         flexDirection: "row",
         flexWrap: "wrap",
-        paddingHorizontal: rpx(24),
+        paddingHorizontal: rpx(20),
+        paddingVertical: rpx(24),
     },
 });

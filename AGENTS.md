@@ -26,6 +26,8 @@ Use TypeScript for new application code and the `@/` alias for imports from `src
 
 Jest uses the React Native preset and loads `jest.setup.js`. Add regression tests beside changed behavior, especially for parsing, storage, panels, and playback state. Mock native modules rather than requiring a device. No coverage threshold is enforced, but new logic should cover success, failure, and boundary cases.
 
+For Android preview handoff, build the requested preview APK and install it on the user's connected physical device. Once installation succeeds and the installed version is confirmed, stop; the user performs the UI and functional acceptance testing manually. Do not start an emulator, capture device screenshots, or perform substitute visual acceptance unless the user explicitly asks for it.
+
 ## Commit & Pull Request Guidelines
 
 Commits follow Conventional Commits, for example `fix(主题): correct custom background color` or `docs: update installation notes`. Commitlint permits `ci`, `chore`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, and `style`; choose the closest applicable type.

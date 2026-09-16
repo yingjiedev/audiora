@@ -1,7 +1,6 @@
 import FastImage from "@/components/base/fastImage";
 import Icon, { IIconName } from "@/components/base/icon.tsx";
 import ThemeText from "@/components/base/themeText";
-import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
 import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
@@ -47,17 +46,6 @@ function getMusicDescription(musicItem?: IMusic.IMusicItem | null) {
     return [musicItem.artist, musicItem.platform].filter(Boolean).join(" · ");
 }
 
-function ForwardIcon(props: { size: number; color: string }) {
-    return (
-        <Icon
-            name="arrow-left"
-            size={props.size}
-            color={props.color}
-            style={styles.forwardIcon}
-        />
-    );
-}
-
 export default function HomeOverview() {
     const data = useHomeOverview();
     const discoveryPreview = useHomeDiscovery(data.topListPlugins);
@@ -77,16 +65,11 @@ export default function HomeOverview() {
                 topListPlugins={data.topListPlugins}
                 preview={discoveryPreview}
             />
-            <RecentListening musics={data.recentMusics} />
             <ContinueListening
                 currentMusic={data.currentMusic}
                 featuredMusic={data.featuredMusic}
             />
-            <MyMusic
-                favoriteSheet={data.favoriteSheet}
-                userSheets={data.userSheets}
-                starredSheets={data.starredSheets}
-            />
+            <RecentListening musics={data.recentMusics} />
         </ScrollView>
     );
 }
@@ -118,15 +101,16 @@ function ContinueListening(props: {
             <Section title={t("home.continueListening")}>
                 <View
                     style={[styles.emptyStart, { backgroundColor: colors.card }]}>
+                    <ThemeText
+                        fontSize="description"
+                        fontColor="textSecondary"
+                        style={styles.emptyStartText}>
+                        {t("home.continueListeningEmpty")}
+                    </ThemeText>
                     <QuickPill
-                        icon="inbox-arrow-down"
-                        title={t("home.importPlaylist.a11y")}
-                        onPress={() => showPanel("ImportMusicSheet")}
-                    />
-                    <QuickPill
-                        icon="folder-music-outline"
-                        title={t("home.scanLocal")}
-                        onPress={() => navigate(ROUTE_PATH.LOCAL)}
+                        icon="magnifying-glass"
+                        title={t("home.exploreMusic")}
+                        onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}
                     />
                 </View>
             </Section>
@@ -306,14 +290,14 @@ function QuickAccess(props: {
     const { t } = useI18N();
     const navigate = useNavigate();
 
-    const quickItems: {
+    const quickItems: Array<{
         key: string;
         artwork: ImageSourcePropType;
         title: string;
         subtitle: string;
         accent: string;
         action: () => void;
-    }[] = [
+    }> = [
         {
             key: "recommend",
             artwork: ImgAsset.quickLocal,
@@ -338,7 +322,9 @@ function QuickAccess(props: {
             accent: "#FF567D",
             action: () => {
                 if (favoriteSheetId) {
-                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: favoriteSheetId });
+                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
+                        id: favoriteSheetId,
+                    });
                 }
             },
         },
@@ -354,13 +340,12 @@ function QuickAccess(props: {
 
     return (
         <View style={styles.quickSection}>
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.quickContainer}>
+            <View style={styles.quickContainer}>
                 {quickItems.map(item => (
                     <Pressable
                         key={item.key}
+                        accessibilityRole="button"
+                        accessibilityLabel={item.title}
                         style={[
                             styles.quickItem,
                             {
@@ -391,7 +376,7 @@ function QuickAccess(props: {
                         </ThemeText>
                     </Pressable>
                 ))}
-            </ScrollView>
+            </View>
         </View>
     );
 }
@@ -438,10 +423,17 @@ function Discovery(props: {
 
     return (
         <Section
-            title={t("home.discovery")}
+            title={t("home.topList")}
             right={
                 <Pressable
-                    style={styles.sectionTextButton}
+                    style={[
+                        styles.sectionActionButton,
+                        {
+                            backgroundColor: Color(colors.primary)
+                                .alpha(0.1)
+                                .toString(),
+                        },
+                    ]}
                     onPress={() =>
                         navigate(ROUTE_PATH.TOP_LIST, {
                             initialPluginHash: preview.topListPluginHash,
@@ -453,7 +445,6 @@ function Discovery(props: {
                         color={colors.primary}>
                         {t("common.view")}
                     </ThemeText>
-                    <ForwardIcon size={rpx(26)} color={colors.primary} />
                 </Pressable>
             }>
             {previewItems.length || preview.loading ? (
@@ -576,203 +567,8 @@ function Discovery(props: {
                             {fallbackDescription}
                         </ThemeText>
                     </View>
-                    <ForwardIcon
-                        size={rpx(30)}
-                        color={colors.textSecondary ?? colors.text}
-                    />
                 </Pressable>
             ) : null}
-        </Section>
-    );
-}
-
-function MyMusic(props: {
-    favoriteSheet: IMusic.IMusicSheetItemBase | null;
-    userSheets: IMusic.IMusicSheetItemBase[];
-    starredSheets: IMusic.IMusicSheetItem[];
-}) {
-    const { favoriteSheet, userSheets, starredSheets } = props;
-    const colors = useColors();
-    const { t } = useI18N();
-    const navigate = useNavigate();
-
-    const rows: {
-        key: string;
-        icon: IIconName;
-        title: string;
-        desc: string;
-        accent: string;
-        action: () => void;
-    }[] = [
-        {
-            key: "favorite",
-            icon: "heart",
-            title: t("home.favoriteSheet"),
-            desc: t("home.songCount", {
-                count: favoriteSheet?.worksNum ?? 0,
-            }),
-            accent: "#FF8FA3",
-            action: () => {
-                if (favoriteSheet) {
-                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
-                        id: favoriteSheet.id,
-                    });
-                }
-            },
-        },
-        {
-            key: "localSheets",
-            icon: "playlist",
-            title: t("home.myPlaylists"),
-            desc: t("home.playlistCount", {
-                count: userSheets.length,
-            }),
-            accent: "#A88BFF",
-            action: () =>
-                navigate(ROUTE_PATH.SHEET_BROWSER, {
-                    sheetType: "local",
-                }),
-        },
-        {
-            key: "starredSheets",
-            icon: "bookmark-square",
-            title: t("home.starredPlaylists"),
-            desc: t("home.playlistCount", {
-                count: starredSheets.length,
-            }),
-            accent: "#7DD3B8",
-            action: () =>
-                navigate(ROUTE_PATH.SHEET_BROWSER, {
-                    sheetType: "starred",
-                }),
-        },
-    ];
-
-    return (
-        <Section
-            title={t("home.myMusic")}
-            right={
-                <View style={styles.myMusicActions}>
-                    <Pressable
-                        style={[
-                            styles.headerIconAction,
-                            {
-                                backgroundColor: Color(colors.text)
-                                    .alpha(0.07)
-                                    .toString(),
-                            },
-                        ]}
-                        onPress={() => showPanel("PlayById")}
-                        accessibilityLabel={t("home.playById.a11y")}>
-                        <Icon
-                            name="id"
-                            size={rpx(28)}
-                            color={colors.text}
-                        />
-                    </Pressable>
-                    <Pressable
-                        style={[
-                            styles.headerIconAction,
-                            {
-                                backgroundColor: Color(colors.text)
-                                    .alpha(0.07)
-                                    .toString(),
-                            },
-                        ]}
-                        onPress={() => showPanel("CreateMusicSheet")}
-                        accessibilityLabel={t("home.newPlaylist.a11y")}>
-                        <Icon
-                            name="plus"
-                            size={rpx(28)}
-                            color={colors.text}
-                        />
-                    </Pressable>
-                    <Pressable
-                        style={[
-                            styles.headerTextAction,
-                            {
-                                backgroundColor: Color(colors.primary)
-                                    .alpha(0.16)
-                                    .toString(),
-                            },
-                        ]}
-                        onPress={() => showPanel("ImportMusicSheet")}
-                        accessibilityLabel={t("home.importPlaylist.a11y")}>
-                        <Icon
-                            name="inbox-arrow-down"
-                            size={rpx(26)}
-                            color={colors.primary}
-                        />
-                        <ThemeText
-                            numberOfLines={1}
-                            fontSize="description"
-                            fontWeight="semibold"
-                            color={colors.primary}
-                            style={styles.headerTextActionLabel}>
-                            {t("home.import.short")}
-                        </ThemeText>
-                    </Pressable>
-                </View>
-            }>
-            <View
-                style={[
-                    styles.myMusicList,
-                    {
-                        backgroundColor: colors.card,
-                    },
-                ]}>
-                {rows.map((row, index) => (
-                    <Pressable
-                        key={row.key}
-                        style={[
-                            styles.myMusicRow,
-                            index < rows.length - 1
-                                ? {
-                                    borderBottomColor: Color(colors.text)
-                                        .alpha(0.06)
-                                        .toString(),
-                                    borderBottomWidth: StyleSheet.hairlineWidth,
-                                }
-                                : null,
-                        ]}
-                        onPress={row.action}>
-                        <View
-                            style={[
-                                styles.myMusicRowIcon,
-                                {
-                                    backgroundColor: Color(row.accent)
-                                        .alpha(0.18)
-                                        .toString(),
-                                },
-                            ]}>
-                            <Icon
-                                name={row.icon}
-                                size={rpx(30)}
-                                color={row.accent}
-                            />
-                        </View>
-                        <View style={styles.myMusicRowText}>
-                            <ThemeText
-                                numberOfLines={1}
-                                fontSize="subTitle"
-                                fontWeight="semibold">
-                                {row.title}
-                            </ThemeText>
-                            <ThemeText
-                                numberOfLines={1}
-                                fontSize="description"
-                                fontColor="textSecondary"
-                                style={styles.smallTextMargin}>
-                                {row.desc}
-                            </ThemeText>
-                        </View>
-                        <ForwardIcon
-                            size={rpx(30)}
-                            color={colors.textSecondary ?? colors.text}
-                        />
-                    </Pressable>
-                ))}
-            </View>
         </Section>
     );
 }
@@ -838,9 +634,6 @@ function Section(props: {
 }
 
 const styles = StyleSheet.create({
-    forwardIcon: {
-        transform: [{ rotate: "180deg" }],
-    },
     wrapper: {
         width: "100%",
         flex: 1,
@@ -870,10 +663,13 @@ const styles = StyleSheet.create({
     sectionSubtitle: {
         marginTop: rpx(8),
     },
-    sectionTextButton: {
+    sectionActionButton: {
         minHeight: rpx(48),
-        flexDirection: "row",
+        minWidth: rpx(88),
+        paddingHorizontal: rpx(18),
+        borderRadius: rpx(24),
         alignItems: "center",
+        justifyContent: "center",
     },
     continueCard: {
         marginHorizontal: rpx(24),
@@ -951,6 +747,11 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
     },
+    emptyStartText: {
+        flex: 1,
+        minWidth: 0,
+        marginHorizontal: rpx(10),
+    },
     quickPill: {
         flex: 1,
         minWidth: 0,
@@ -993,18 +794,19 @@ const styles = StyleSheet.create({
     },
     quickContainer: {
         paddingHorizontal: rpx(24),
+        flexDirection: "row",
+        gap: rpx(10),
     },
     quickSection: {
         marginTop: rpx(20),
     },
     quickItem: {
-        width: rpx(164),
+        flex: 1,
+        minWidth: 0,
         height: rpx(164),
         borderRadius: rpx(20),
-        borderWidth: 0,
         alignItems: "center",
         justifyContent: "center",
-        marginRight: rpx(10),
     },
     quickArtwork: {
         width: rpx(84),
@@ -1072,52 +874,5 @@ const styles = StyleSheet.create({
         flex: 1,
         minWidth: 0,
         marginLeft: rpx(14),
-    },
-    myMusicActions: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    headerIconAction: {
-        width: rpx(52),
-        height: rpx(52),
-        borderRadius: rpx(26),
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: rpx(10),
-    },
-    headerTextAction: {
-        height: rpx(52),
-        borderRadius: rpx(26),
-        paddingHorizontal: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    headerTextActionLabel: {
-        marginLeft: rpx(8),
-    },
-    myMusicList: {
-        marginHorizontal: rpx(24),
-        borderRadius: rpx(22),
-        overflow: "hidden",
-    },
-    myMusicRow: {
-        minHeight: rpx(104),
-        paddingHorizontal: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    myMusicRowIcon: {
-        width: rpx(54),
-        height: rpx(54),
-        borderRadius: rpx(16),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    myMusicRowText: {
-        flex: 1,
-        minWidth: 0,
-        marginLeft: rpx(14),
-        marginRight: rpx(10),
     },
 });

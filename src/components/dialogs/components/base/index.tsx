@@ -29,7 +29,6 @@ import { ScrollView } from "react-native-gesture-handler";
 import useOrientation from "@/hooks/useOrientation.ts";
 import Config from "@/core/appConfig";
 import Theme from "@/core/theme";
-import Color from "color";
 
 interface IDialogProps {
     onDismiss?: () => void;
@@ -327,13 +326,8 @@ function BottomButton(props: {
 
     const hasCustomBackground = useHasCustomBackground();
 
-    // 主色是浅色时白字会白底白字，按亮度取对比色
-    let primaryFontColor = "white";
-    try {
-        primaryFontColor = Color(colors.primary).isDark() ? "white" : "black";
-    } catch {
-        // 非法色值保持白字
-    }
+    // 主色上的文字色由 useColors 按对比度算好，避免亮主色上出现白底白字
+    const primaryFontColor = colors.onPrimary ?? "white";
 
     return (
         <TouchableOpacity

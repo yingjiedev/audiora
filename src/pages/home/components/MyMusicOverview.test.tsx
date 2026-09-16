@@ -46,22 +46,19 @@ jest.mock("@/core/musicSheet", () => ({
     ],
     useStarredSheets: () => [{ id: "starred", platform: "remote" }],
 }));
-jest.mock("@/core/localMusicSheet", () => ({
-    __esModule: true,
-    default: {
-        useMusicList: () => [{ id: "local-1" }],
-    },
-}));
 jest.mock("@/core/router", () => ({
     ROUTE_PATH: {
+        DOWNLOADING: "downloading",
         HISTORY: "history",
         LOCAL: "local",
         LOCAL_SHEET_DETAIL: "local-sheet-detail",
-        SEARCH_PAGE: "search-page",
         SETTING: "setting",
         SHEET_BROWSER: "sheet-browser",
     },
     useNavigate: () => mockNavigate,
+}));
+jest.mock("react-native-device-info", () => ({
+    getVersion: () => "0.2.4",
 }));
 jest.mock("@/hooks/useColors", () => () => ({
     pageBackground: "#F5F8FF",
@@ -88,20 +85,20 @@ describe("MyMusicOverview", () => {
             renderer = TestRenderer.create(<MyMusicOverview />);
         });
 
-        const settingsButtons = renderer!.root.findAllByProps({
+        const settingsButton = renderer!.root.findByProps({
             accessibilityLabel: "common.setting",
         });
         const favorite = renderer!.root.findByProps({
             accessibilityLabel: "home.favoriteSheet",
         });
-        const localMusic = renderer!.root.findByProps({
-            accessibilityLabel: "home.localMusic",
+        const downloads = renderer!.root.findByProps({
+            accessibilityLabel: "home.downloadManagement",
         });
 
         act(() => {
-            settingsButtons[0].props.onPress();
+            settingsButton.props.onPress();
             favorite.props.onPress();
-            localMusic.props.onPress();
+            downloads.props.onPress();
         });
 
         expect(mockNavigate).toHaveBeenNthCalledWith(1, "setting", {
@@ -110,7 +107,10 @@ describe("MyMusicOverview", () => {
         expect(mockNavigate).toHaveBeenNthCalledWith(2, "local-sheet-detail", {
             id: "favorite",
         });
-        expect(mockNavigate).toHaveBeenNthCalledWith(3, "local");
+        expect(mockNavigate).toHaveBeenNthCalledWith(3, "downloading");
+        expect(renderer!.root.findAllByProps({
+            accessibilityLabel: "home.localMusic",
+        })).toHaveLength(0);
     });
 
     it("keeps playlist management actions available", () => {
@@ -122,6 +122,9 @@ describe("MyMusicOverview", () => {
 
         act(() => {
             renderer!.root.findByProps({
+                accessibilityLabel: "home.importPlaylist.a11y",
+            }).props.onPress();
+            renderer!.root.findByProps({
                 accessibilityLabel: "home.playById.a11y",
             }).props.onPress();
             renderer!.root.findByProps({
@@ -131,9 +134,12 @@ describe("MyMusicOverview", () => {
 
         expect(
             jest.requireMock("@/components/panels/usePanel").showPanel,
-        ).toHaveBeenNthCalledWith(1, "PlayById");
+        ).toHaveBeenNthCalledWith(1, "ImportMusicSheet");
         expect(
             jest.requireMock("@/components/panels/usePanel").showPanel,
-        ).toHaveBeenNthCalledWith(2, "CreateMusicSheet");
+        ).toHaveBeenNthCalledWith(2, "PlayById");
+        expect(
+            jest.requireMock("@/components/panels/usePanel").showPanel,
+        ).toHaveBeenNthCalledWith(3, "CreateMusicSheet");
     });
 });

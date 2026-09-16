@@ -1,0 +1,1145 @@
+{
+    "version": 2,
+    "files": {
+        "src/components/base/appBar.tsx": [
+            {
+                "literal": "rgba(0,0,0,0.82)",
+                "code": "? \"rgba(0,0,0,0.82)\"",
+                "count": 1
+            }
+        ],
+        "src/components/base/badge.tsx": [
+            {
+                "literal": "#409eff",
+                "code": "baseColor = \"#409eff\";",
+                "count": 1
+            },
+            {
+                "literal": "#67c23a",
+                "code": "baseColor = \"#67c23a\";",
+                "count": 1
+            },
+            {
+                "literal": "#909399",
+                "code": "baseColor = \"#909399\";",
+                "count": 1
+            },
+            {
+                "literal": "#d64541",
+                "code": "baseColor = \"#d64541\";",
+                "count": 1
+            },
+            {
+                "literal": "#e6a23c",
+                "code": "baseColor = \"#e6a23c\";",
+                "count": 1
+            }
+        ],
+        "src/components/base/button.tsx": [
+            {
+                "literal": "white",
+                "code": "color={type === \"normal\" ? undefined : \"white\"}>",
+                "count": 1
+            }
+        ],
+        "src/components/base/colorBlock.tsx": [
+            {
+                "literal": "#ccc",
+                "code": "borderColor: \"#ccc\",",
+                "count": 1
+            }
+        ],
+        "src/components/base/customBackground.tsx": [
+            {
+                "literal": "rgba(0,0,0,${mask})",
+                "code": "{ backgroundColor: `rgba(0,0,0,${mask})` },",
+                "count": 1
+            }
+        ],
+        "src/components/base/divider.tsx": [
+            {
+                "literal": "#999999",
+                "code": "backgroundColor: colors.divider ?? \"#999999\",",
+                "count": 1
+            }
+        ],
+        "src/components/base/linkText.tsx": [
+            {
+                "literal": "#66ccff",
+                "code": "color: \"#66ccff\",",
+                "count": 1
+            },
+            {
+                "literal": "#66ccff",
+                "code": "color: Color(\"#66ccff\").alpha(0.4).toString(),",
+                "count": 1
+            }
+        ],
+        "src/components/base/listEmpty.tsx": [
+            {
+                "literal": "rgba(128,128,128,0.2)",
+                "code": "backgroundColor: \"rgba(128, 128, 128, 0.2)\",",
+                "count": 1
+            }
+        ],
+        "src/components/base/listItem.tsx": [
+            {
+                "literal": "#00000022",
+                "code": "backgroundColor: \"#00000022\",",
+                "count": 1
+            }
+        ],
+        "src/components/base/playAllBar.tsx": [
+            {
+                "literal": "#e31639",
+                "code": "color={starred ? \"#e31639\" : undefined}",
+                "count": 1
+            }
+        ],
+        "src/components/base/splashImageOverlay.tsx": [
+            {
+                "literal": "#000000",
+                "code": "backgroundColor: \"#000000\",",
+                "count": 1
+            }
+        ],
+        "src/components/base/statusBar.tsx": [
+            {
+                "literal": "rgba(0,0,0,0)",
+                "code": "backgroundColor={\"rgba(0,0,0,0)\"}",
+                "count": 1
+            }
+        ],
+        "src/components/base/switch.tsx": [
+            {
+                "literal": "#1b1b1b",
+                "code": "thumbColor = Color(trackColor).isDark() ? \"#FFFFFF\" : \"#1B1B1B\";",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "let thumbColor = customThumbColor ?? \"#FFFFFF\";",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "thumbColor = Color(trackColor).isDark() ? \"#FFFFFF\" : \"#1B1B1B\";",
+                "count": 1
+            }
+        ],
+        "src/components/base/tip.tsx": [
+            {
+                "literal": "rgba(0,0,0,0.8)",
+                "code": "backgroundColor: \"rgba(0, 0, 0, 0.8)\",",
+                "count": 1
+            }
+        ],
+        "src/components/base/toast.tsx": [
+            {
+                "literal": "#457236",
+                "code": "color: \"#457236\",",
+                "count": 1
+            },
+            {
+                "literal": "#de7622",
+                "code": "color: \"#de7622\",",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "color: \"white\",",
+                "count": 1
+            }
+        ],
+        "src/components/dialogs/components/base/index.tsx": [
+            {
+                "literal": "rgba(0,0,0,0.5)",
+                "code": "backgroundColor: \"rgba(0, 0, 0, 0.5)\",",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "const primaryFontColor = colors.onPrimary ?? \"white\";",
+                "count": 1
+            }
+        ],
+        "src/components/dialogs/components/markdownDialog.tsx": [
+            {
+                "literal": "rgba(0,0,0,0.02)",
+                "code": "const subtleFill = dark ? \"rgba(255, 255, 255, 0.04)\" : \"rgba(0, 0, 0, 0.02)\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(0,0,0,0.05)",
+                "code": "const codeFill = dark ? \"rgba(255, 255, 255, 0.07)\" : \"rgba(0, 0, 0, 0.05)\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(0,122,255,0.05)",
+                "code": ": \"rgba(0, 122, 255, 0.05)\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(109,141,255,0.14)",
+                "code": "? \"rgba(109, 141, 255, 0.14)\"",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.04)",
+                "code": "const subtleFill = dark ? \"rgba(255, 255, 255, 0.04)\" : \"rgba(0, 0, 0, 0.02)\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.07)",
+                "code": "const codeFill = dark ? \"rgba(255, 255, 255, 0.07)\" : \"rgba(0, 0, 0, 0.05)\";",
+                "count": 1
+            }
+        ],
+        "src/components/dialogs/components/setScheduleCloseTimeDialog.tsx": [
+            {
+                "literal": "#121a31",
+                "code": "{ color: dark ? colors.text : \"#121A31\" },",
+                "count": 1
+            },
+            {
+                "literal": "#121a31",
+                "code": "color={dark ? colors.text : \"#121A31\"}",
+                "count": 1
+            },
+            {
+                "literal": "#27314a",
+                "code": "color={dark ? colors.text : \"#27314A\"}",
+                "count": 1
+            },
+            {
+                "literal": "#3f6cf6",
+                "code": ": [\"#5B84F7\", \"#3F6CF6\"]}",
+                "count": 1
+            },
+            {
+                "literal": "#3f6cf6",
+                "code": "Color(\"#3F6CF6\").lighten(0.16).toString(),",
+                "count": 1
+            },
+            {
+                "literal": "#43547b",
+                "code": "shadowColor: dark ? colors.shadow : \"#43547B\",",
+                "count": 1
+            },
+            {
+                "literal": "#4e73f5",
+                "code": "const brandBlue = dark ? Color(\"#4E73F5\").lighten(0.18).toString() : \"#4E73F5\";",
+                "count": 2
+            },
+            {
+                "literal": "#5b84f7",
+                "code": ": [\"#5B84F7\", \"#3F6CF6\"]}",
+                "count": 1
+            },
+            {
+                "literal": "#5b84f7",
+                "code": "{ shadowColor: dark ? colors.shadow : \"#5B84F7\" },",
+                "count": 1
+            },
+            {
+                "literal": "#5b84f7",
+                "code": "Color(\"#5B84F7\").lighten(0.16).toString(),",
+                "count": 1
+            },
+            {
+                "literal": "#7d869b",
+                "code": "color={dark ? colors.textSecondary : \"#7D869B\"}>",
+                "count": 2
+            },
+            {
+                "literal": "#8392ba",
+                "code": "shadowColor: \"#8392BA\",",
+                "count": 1
+            },
+            {
+                "literal": "#e7ecfa",
+                "code": "borderColor: \"#E7ECFA\",",
+                "count": 1
+            },
+            {
+                "literal": "#edf1f9",
+                "code": "{ backgroundColor: dark ? colors.placeholder : \"#EDF1F9\" },",
+                "count": 1
+            },
+            {
+                "literal": "#f3f6fe",
+                "code": "{ backgroundColor: dark ? colors.surface : \"#F3F6FE\" },",
+                "count": 1
+            },
+            {
+                "literal": "#f5f8ff",
+                "code": ": [\"#FAFBFF\", \"#F5F8FF\"];",
+                "count": 1
+            },
+            {
+                "literal": "#f8faff",
+                "code": "backgroundColor: \"#F8FAFF\",",
+                "count": 1
+            },
+            {
+                "literal": "#fafbff",
+                "code": ": [\"#FAFBFF\", \"#F5F8FF\"];",
+                "count": 1
+            },
+            {
+                "literal": "#fafbff",
+                "code": "backgroundColor: dark ? colors.surfaceElevated : \"#FAFBFF\",",
+                "count": 1
+            }
+        ],
+        "src/components/dialogs/components/subscribePluginDialog.tsx": [
+            {
+                "literal": "#000",
+                "code": "shadowColor: hasCustomBackground ? \"transparent\" : \"#000\",",
+                "count": 1
+            }
+        ],
+        "src/components/errorBoundary/index.tsx": [
+            {
+                "literal": "#101419",
+                "code": "colors.pageBackground ?? colors.background ?? \"#101419\";",
+                "count": 1
+            },
+            {
+                "literal": "#192028",
+                "code": "const card = colors?.card ?? \"#192028\";",
+                "count": 1
+            },
+            {
+                "literal": "#192028",
+                "code": "const card = colors.card ?? \"#192028\";",
+                "count": 1
+            },
+            {
+                "literal": "#f5f2eb",
+                "code": "const text = colors?.text ?? \"#F5F2EB\";",
+                "count": 1
+            },
+            {
+                "literal": "#f5f2eb",
+                "code": "const text = colors.text ?? \"#F5F2EB\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(0,0,0,0.05)",
+                "code": "backgroundColor: \"rgba(0, 0, 0, 0.05)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(245,242,235,0.11)",
+                "code": "const divider = colors?.divider ?? \"rgba(245,242,235,0.11)\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(245,242,235,0.11)",
+                "code": "const divider = colors.divider ?? \"rgba(245,242,235,0.11)\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(245,242,235,0.64)",
+                "code": "const textSecondary = colors?.textSecondary ?? \"rgba(245,242,235,0.64)\";",
+                "count": 1
+            },
+            {
+                "literal": "rgba(245,242,235,0.64)",
+                "code": "const textSecondary = colors.textSecondary ?? \"rgba(245,242,235,0.64)\";",
+                "count": 1
+            }
+        ],
+        "src/components/mediaItem/musicItem.tsx": [
+            {
+                "literal": "#11659a",
+                "code": "color=\"#11659a\"",
+                "count": 1
+            }
+        ],
+        "src/components/mediaItem/topListItem.tsx": [
+            {
+                "literal": "#ffffff",
+                "code": "color=\"#FFFFFF\"",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.92)",
+                "code": "color=\"rgba(255,255,255,0.92)\"",
+                "count": 1
+            }
+        ],
+        "src/components/musicBar/index.tsx": [
+            {
+                "literal": "#ffffff",
+                "code": "const buttonForeground = colors.onPrimary ?? \"#FFFFFF\";",
+                "count": 1
+            }
+        ],
+        "src/components/musicList/index.tsx": [
+            {
+                "literal": "#000",
+                "code": "shadowColor: \"#000\",",
+                "count": 1
+            }
+        ],
+        "src/components/panels/base/panelBase.tsx": [
+            {
+                "literal": "#000",
+                "code": "backgroundColor: \"#000\",",
+                "count": 1
+            },
+            {
+                "literal": "#000",
+                "code": "style={[style.mask, { backgroundColor: maskColor ?? \"#000\" }, maskAnimated]}",
+                "count": 1
+            }
+        ],
+        "src/components/panels/base/panelFullscreen.tsx": [
+            {
+                "literal": "#000",
+                "code": "backgroundColor: \"#000\",",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/editMusicSheetInfo.tsx": [
+            {
+                "literal": "white",
+                "code": "<ThemeText color={\"white\"}>{t(\"common.confirm\")}</ThemeText>",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/mergeImportMusicSheet.tsx": [
+            {
+                "literal": "#fff",
+                "code": "? \"#fff\"",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/musicMetadataSettings.tsx": [
+            {
+                "literal": "#000",
+                "code": "shadowColor: '#000',",
+                "count": 1
+            },
+            {
+                "literal": "#ccc",
+                "code": "borderColor: '#ccc',",
+                "count": 1
+            },
+            {
+                "literal": "#e0e0e0",
+                "code": "borderTopColor: \"#e0e0e0\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(128,128,128,0.1)",
+                "code": "backgroundColor: 'rgba(128,128,128,0.1)',",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/mvPlayer.tsx": [
+            {
+                "literal": "#000",
+                "code": "backgroundColor: \"#000\",",
+                "count": 2
+            },
+            {
+                "literal": "#fff",
+                "code": "<ActivityIndicator color=\"#fff\" size=\"large\" />",
+                "count": 1
+            },
+            {
+                "literal": "#fff",
+                "code": "color: \"#fff\",",
+                "count": 6
+            },
+            {
+                "literal": "#fff",
+                "code": "color=\"#fff\"",
+                "count": 1
+            },
+            {
+                "literal": "#fff",
+                "code": "minimumTrackTintColor=\"#fff\"",
+                "count": 1
+            },
+            {
+                "literal": "#fff",
+                "code": "thumbTintColor=\"#fff\"",
+                "count": 1
+            },
+            {
+                "literal": "rgba(0,0,0,0.72)",
+                "code": "backgroundColor: \"rgba(0,0,0,0.72)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(20,20,20,0.96)",
+                "code": "backgroundColor: \"rgba(20,20,20,0.96)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.16)",
+                "code": "backgroundColor: \"rgba(255,255,255,0.16)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.2)",
+                "code": "backgroundColor: \"rgba(255,255,255,0.2)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.22)",
+                "code": "backgroundColor: \"rgba(255,255,255,0.22)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.32)",
+                "code": "borderColor: \"rgba(255,255,255,0.32)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.38)",
+                "code": "maximumTrackTintColor=\"rgba(255,255,255,0.38)\"",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.58)",
+                "code": "color: \"rgba(255,255,255,0.58)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.72)",
+                "code": "color: \"rgba(255,255,255,0.72)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.86)",
+                "code": "color: \"rgba(255,255,255,0.86)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.92)",
+                "code": "color: \"rgba(255,255,255,0.92)\",",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/playById.tsx": [
+            {
+                "literal": "#fff",
+                "code": "? \"#fff\"",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/qualityTranslation.tsx": [
+            {
+                "literal": "rgba(100,100,100,0.15)",
+                "code": "backgroundColor: \"rgba(100,100,100,0.15)\",",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/timingClose.tsx": [
+            {
+                "literal": "#4e566b",
+                "code": "color={dark ? colors.text : \"#4E566B\"}",
+                "count": 1
+            },
+            {
+                "literal": "#5b84f7",
+                "code": "const activeStroke = dark ? Color(\"#5B84F7\").lighten(0.16).toString() : \"#5B84F7\";",
+                "count": 2
+            },
+            {
+                "literal": "#7483a4",
+                "code": "shadowColor: \"#7483A4\",",
+                "count": 1
+            },
+            {
+                "literal": "#7483a4",
+                "code": "shadowColor: dark ? colors.shadow : \"#7483A4\",",
+                "count": 1
+            },
+            {
+                "literal": "#7d68e8",
+                "code": ": \"#7D68E8\"}",
+                "count": 1
+            },
+            {
+                "literal": "#7d68e8",
+                "code": "? Color(\"#7D68E8\").lighten(0.3).toString()",
+                "count": 1
+            },
+            {
+                "literal": "#8291f8",
+                "code": "shadowColor: \"#8291F8\",",
+                "count": 1
+            },
+            {
+                "literal": "#a274ea",
+                "code": "const activeStrokeEnd = dark ? Color(\"#A274EA\").lighten(0.16).toString() : \"#A274EA\";",
+                "count": 2
+            },
+            {
+                "literal": "#a58ffc",
+                "code": ": \"#A58FFC\",",
+                "count": 1
+            },
+            {
+                "literal": "#a58ffc",
+                "code": "? Color(\"#A58FFC\").lighten(0.14).toString()",
+                "count": 1
+            },
+            {
+                "literal": "#bcc6de",
+                "code": "const sleepIconColor = dark ? colors.textSecondary : \"#BCC6DE\";",
+                "count": 1
+            },
+            {
+                "literal": "#bec8df",
+                "code": "const tickColor = dark ? Color(\"#BEC8DF\").darken(0.12).toString() : \"#BEC8DF\";",
+                "count": 2
+            },
+            {
+                "literal": "#dde2ed",
+                "code": "inactiveTrackColor={dark ? colors.placeholder : \"#DDE2ED\"}",
+                "count": 1
+            },
+            {
+                "literal": "#e1e6f2",
+                "code": "const trackColor = dark ? colors.placeholder : \"#E1E6F2\";",
+                "count": 1
+            },
+            {
+                "literal": "#e9edf6",
+                "code": "borderColor: dark ? colors.border : \"#E9EDF6\",",
+                "count": 1
+            },
+            {
+                "literal": "#eff2ff",
+                "code": "borderColor: \"#EFF2FF\",",
+                "count": 1
+            },
+            {
+                "literal": "#f5f8ff",
+                "code": ": [\"#FAFBFF\", \"#F5F8FF\"];",
+                "count": 1
+            },
+            {
+                "literal": "#fafbff",
+                "code": ": [\"#FAFBFF\", \"#F5F8FF\"];",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "backgroundColor: dark ? colors.card : \"#FFFFFF\",",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "thumbColor={dark ? colors.text : \"#FFFFFF\"}",
+                "count": 1
+            }
+        ],
+        "src/hooks/useCardStyle.ts": [
+            {
+                "literal": "#000",
+                "code": "shadowColor: options.shadowColor ?? colors.shadow ?? \"#000\",",
+                "count": 1
+            }
+        ],
+        "src/hooks/useColors.ts": [
+            {
+                "literal": "#10172d",
+                "code": "const onPrimaryCandidates = [\"#FFFFFF\", \"#10172D\"];",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "const onPrimaryCandidates = [\"#FFFFFF\", \"#10172D\"];",
+                "count": 1
+            }
+        ],
+        "src/pages/downloading/downloadingList.tsx": [
+            {
+                "literal": "#ff4444",
+                "code": "color=\"#ff4444\"",
+                "count": 1
+            }
+        ],
+        "src/pages/home/components/homeBody/homeOverview.tsx": [
+            {
+                "literal": "#00a9ee",
+                "code": "accent: \"#00A9EE\",",
+                "count": 1
+            },
+            {
+                "literal": "#00cdaa",
+                "code": "accent: \"#00CDAA\",",
+                "count": 1
+            },
+            {
+                "literal": "#2d4a78",
+                "code": "shadowColor: \"#2D4A78\",",
+                "count": 1
+            },
+            {
+                "literal": "#4d70f5",
+                "code": "accent: \"#4D70F5\",",
+                "count": 1
+            },
+            {
+                "literal": "#ff567d",
+                "code": "accent: \"#FF567D\",",
+                "count": 1
+            }
+        ],
+        "src/pages/home/components/HomeHero.tsx": [
+            {
+                "literal": "#13244e",
+                "code": "shadowColor: \"#13244E\",",
+                "count": 1
+            },
+            {
+                "literal": "#17213e",
+                "code": "color=\"#17213E\"",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "backgroundColor: \"#FFFFFF\",",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "color=\"#FFFFFF\"",
+                "count": 1
+            },
+            {
+                "literal": "rgba(10,28,72,0.28)",
+                "code": "textShadowColor: \"rgba(10,28,72,0.28)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(10,34,91,0.08)",
+                "code": "backgroundColor: \"rgba(10,34,91,0.08)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.9)",
+                "code": "color=\"rgba(255,255,255,0.9)\"",
+                "count": 1
+            },
+            {
+                "literal": "rgba(4,10,28,0.34)",
+                "code": "backgroundColor: \"rgba(4,10,28,0.34)\",",
+                "count": 1
+            }
+        ],
+        "src/pages/home/components/MusicLibraryOverview.tsx": [
+            {
+                "literal": "#18bfa3",
+                "code": "accent: \"#18BFA3\",",
+                "count": 1
+            },
+            {
+                "literal": "#1f9df0",
+                "code": "accent: \"#1F9DF0\",",
+                "count": 1
+            },
+            {
+                "literal": "#5b72ff",
+                "code": "accent: \"#5B72FF\",",
+                "count": 1
+            },
+            {
+                "literal": "#7892c9",
+                "code": "<Icon name=\"folder-music-outline\" size={rpx(48)} color=\"#7892C9\" />",
+                "count": 1
+            },
+            {
+                "literal": "#7892c9",
+                "code": "<Icon name=\"javascript\" size={rpx(48)} color=\"#7892C9\" />",
+                "count": 1
+            },
+            {
+                "literal": "#8563f2",
+                "code": "accent: \"#8563F2\",",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "<Icon name=\"magnifying-glass\" size={rpx(28)} color=\"#FFFFFF\" />",
+                "count": 1
+            }
+        ],
+        "src/pages/home/components/MyMusicOverview.tsx": [
+            {
+                "literal": "#19c69f",
+                "code": "accent: \"#19C69F\",",
+                "count": 1
+            },
+            {
+                "literal": "#1abaa5",
+                "code": "accent: \"#1ABAA5\",",
+                "count": 1
+            },
+            {
+                "literal": "#337df7",
+                "code": "accent: \"#337DF7\",",
+                "count": 1
+            },
+            {
+                "literal": "#4d7cff",
+                "code": "accent: \"#4D7CFF\",",
+                "count": 1
+            },
+            {
+                "literal": "#f7a719",
+                "code": "accent: \"#F7A719\",",
+                "count": 1
+            },
+            {
+                "literal": "#ff6e91",
+                "code": "accent: \"#FF6E91\",",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/background.tsx": [
+            {
+                "literal": "#000",
+                "code": "backgroundColor: \"#000\",",
+                "count": 1
+            },
+            {
+                "literal": "black",
+                "code": "backgroundColor: \"black\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(0,0,0,0)",
+                "code": "\"rgba(0,0,0,0)\",",
+                "count": 2
+            },
+            {
+                "literal": "rgba(0,0,0,1)",
+                "code": "\"rgba(0,0,0,1)\",",
+                "count": 2
+            },
+            {
+                "literal": "rgba(0,221,181,0.16)",
+                "code": "\"rgba(0,221,181,0.16)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(5,12,28,0.06)",
+                "code": "\"rgba(5,12,28,0.06)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(5,12,28,0.18)",
+                "code": "\"rgba(5,12,28,0.18)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(5,12,28,0.72)",
+                "code": "\"rgba(5,12,28,0.72)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(59,130,246,0.18)",
+                "code": "\"rgba(59,130,246,0.18)\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(99,102,241,0.34)",
+                "code": "\"rgba(99,102,241,0.34)\",",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/bottom/playControl.tsx": [
+            {
+                "literal": "#08132d",
+                "code": "shadowColor: \"#08132D\",",
+                "count": 1
+            },
+            {
+                "literal": "#315fea",
+                "code": "color={props.dark ? \"#315FEA\" : \"#FFFFFF\"}",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "backgroundColor: \"#FFFFFF\",",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "color={props.dark ? \"#315FEA\" : \"#FFFFFF\"}",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/bottom/seekBar.tsx": [
+            {
+                "literal": "#ffffff",
+                "code": "minimumTrackTintColor={\"#FFFFFF\"}",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "thumbTintColor={\"#FFFFFF\"}",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.28)",
+                "code": "maximumTrackTintColor={\"rgba(255,255,255,0.28)\"}",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.72)",
+                "code": "color: \"rgba(255,255,255,0.72)\",",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/content/albumCover/index.tsx": [
+            {
+                "literal": "#07132c",
+                "code": "shadowColor: \"#07132C\",",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/content/albumCover/operations.tsx": [
+            {
+                "literal": "white",
+                "code": "color: \"white\",",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "color=\"white\"",
+                "count": 3
+            }
+        ],
+        "src/pages/musicDetail/components/content/albumCover/songInfo.tsx": [
+            {
+                "literal": "rgba(255,255,255,0.16)",
+                "code": "backgroundColor: \"rgba(255, 255, 255, 0.16)\",",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "color: \"white\",",
+                "count": 4
+            },
+            {
+                "literal": "white",
+                "code": "color={isFavorite ? \"red\" : \"white\"}",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/content/heartIcon/index.tsx": [
+            {
+                "literal": "white",
+                "code": "color=\"white\"",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/content/lyric/draggingTime.tsx": [
+            {
+                "literal": "#dddddd",
+                "code": "color: \"#dddddd\",",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.1)",
+                "code": "backgroundColor: \"rgba(255,255,255,0.1)\",",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/content/lyric/index.tsx": [
+            {
+                "literal": "#66ccff",
+                "code": "color: \"#66ccff\",",
+                "count": 1
+            },
+            {
+                "literal": "#66eeff",
+                "code": "color: \"#66eeff\",",
+                "count": 1
+            },
+            {
+                "literal": "#cccccc",
+                "code": "backgroundColor: \"#cccccc\",",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "<Loading color=\"white\" />",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "color: \"white\",",
+                "count": 3
+            }
+        ],
+        "src/pages/musicDetail/components/content/lyric/lyricItem.tsx": [
+            {
+                "literal": "rgba(255,255,255,0.8)",
+                "code": "[\"rgba(255, 255, 255, 0)\", \"rgba(255, 255, 255, 0.8)\"],",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0)",
+                "code": "[\"rgba(255, 255, 255, 0)\", \"rgba(255, 255, 255, 0.8)\"],",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "<Text style={[styles.wordText, fontStyle, { fontSize: lineFontSize, color: \"white\" }]}>",
+                "count": 2
+            },
+            {
+                "literal": "white",
+                "code": "color: \"white\",",
+                "count": 3
+            },
+            {
+                "literal": "white",
+                "code": "color: highlight ? highlightColor : \"white\",",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "color: highlight ? primaryColor : \"white\",",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "const effectiveHighlightColor = pureWhiteMode ? \"white\" : colors.primary;",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "highlightColor=\"white\"",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "primaryColor=\"white\"",
+                "count": 2
+            }
+        ],
+        "src/pages/musicDetail/components/content/lyric/lyricOperations.tsx": [
+            {
+                "literal": "white",
+                "code": "color=\"white\"",
+                "count": 3
+            },
+            {
+                "literal": "white",
+                "code": "color={\"white\"}",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "showRomanization && !pureWhiteMode ? colors.primary : \"white\"",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "showTranslation && hasTranslation && !pureWhiteMode ? colors.primary : \"white\"",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/components/navBar.tsx": [
+            {
+                "literal": "#ffffff",
+                "code": "color=\"#FFFFFF\">",
+                "count": 1
+            },
+            {
+                "literal": "rgba(255,255,255,0.78)",
+                "code": "color=\"rgba(255,255,255,0.78)\"",
+                "count": 1
+            },
+            {
+                "literal": "white",
+                "code": "color=\"white\"",
+                "count": 1
+            }
+        ],
+        "src/pages/musicDetail/index.tsx": [
+            {
+                "literal": "rgba(255,255,255,0.12)",
+                "code": "backgroundColor: \"rgba(255, 255, 255, 0.12)\",",
+                "count": 1
+            }
+        ],
+        "src/pages/searchMusicList/index.tsx": [
+            {
+                "literal": "#2b333eaa",
+                "code": "backgroundColor: \"#2b333eaa\",",
+                "count": 1
+            },
+            {
+                "literal": "#666666",
+                "code": "color: \"#666666\",",
+                "count": 1
+            }
+        ],
+        "src/pages/searchPage/components/historyPanel.tsx": [
+            {
+                "literal": "rgba(0,0,0,0.06)",
+                "code": "borderBottomColor: \"rgba(0,0,0,0.06)\",",
+                "count": 1
+            }
+        ],
+        "src/pages/setCustomTheme/body.tsx": [
+            {
+                "literal": "#ccc",
+                "code": "borderColor: \"#ccc\",",
+                "count": 1
+            },
+            {
+                "literal": "#ffffff",
+                "code": "fallback: \"#ffffff\",",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/index.tsx": [
+            {
+                "literal": "#2b333eaa",
+                "code": "backgroundColor: \"#2b333eaa\",",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/settingsOverview.tsx": [
+            {
+                "literal": "rgba(62,101,255,0.08)",
+                "code": "android_ripple={{ color: \"rgba(62, 101, 255, 0.08)\" }}",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/themeSetting/background.tsx": [
+            {
+                "literal": "#131313",
+                "code": "preview=\"#131313\"",
+                "count": 1
+            },
+            {
+                "literal": "#fff",
+                "code": "preview=\"#fff\"",
+                "count": 1
+            }
+        ],
+        "src/utils/themePalette.ts": [
+            {
+                "literal": "#f2f2f2",
+                "code": "export const NEUTRAL_FALLBACK_PRIMARY = \"#F2F2F2\";",
+                "count": 1
+            }
+        ]
+    }
+}

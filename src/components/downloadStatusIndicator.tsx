@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useDownloadTask } from "@/core/downloader";
 import { DownloadStatus } from "@/core/downloader";
+import useColors from "@/hooks/useColors";
 
 interface DownloadStatusIndicatorProps {
   musicItem: IMusic.IMusicItem;
@@ -15,6 +16,7 @@ export const DownloadStatusIndicator: React.FC<DownloadStatusIndicatorProps> = (
     musicItem, 
 }) => {
     const downloadTask = useDownloadTask(musicItem);
+    const colors = useColors();
 
     if (!downloadTask) {
         return null; // 没有下载任务
@@ -51,19 +53,20 @@ export const DownloadStatusIndicator: React.FC<DownloadStatusIndicatorProps> = (
         }
     };
 
+    // 状态色走主题：之前写死的 #666 在深色底上只有 2.5:1，#007AFF 是 iOS 蓝
     const getStatusColor = () => {
         switch (downloadTask.status) {
         case DownloadStatus.Pending:
-            return "#666";
+            return colors.textSecondary;
         case DownloadStatus.Preparing:
         case DownloadStatus.Downloading:
-            return "#007AFF";
+            return colors.info ?? colors.primary;
         case DownloadStatus.Completed:
-            return "#34C759";
+            return colors.success ?? colors.primary;
         case DownloadStatus.Error:
-            return "#FF3B30";
+            return colors.danger ?? colors.primary;
         default:
-            return "#666";
+            return colors.textSecondary;
         }
     };
 
@@ -75,11 +78,16 @@ export const DownloadStatusIndicator: React.FC<DownloadStatusIndicatorProps> = (
       
             {downloadTask.status === DownloadStatus.Downloading && (
                 <View style={styles.progressContainer}>
-                    <View style={styles.progressBackground}>
+                    <View
+                        style={[
+                            styles.progressBackground,
+                            { backgroundColor: colors.placeholder },
+                        ]}>
                         <View 
                             style={[
                                 styles.progressFill,
                                 {
+                                    backgroundColor: colors.info ?? colors.primary,
                                     width: `${downloadTask.fileSize && downloadTask.downloadedSize 
                                         ? Math.round((downloadTask.downloadedSize / downloadTask.fileSize) * 100) 
                                         : 0}%`,
@@ -106,13 +114,11 @@ const styles = StyleSheet.create({
     },
     progressBackground: {
         height: 4,
-        backgroundColor: "#E5E5E7",
         borderRadius: 2,
         overflow: "hidden",
     },
     progressFill: {
         height: "100%",
-        backgroundColor: "#007AFF",
         borderRadius: 2,
     },
 });

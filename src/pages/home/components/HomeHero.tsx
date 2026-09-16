@@ -8,12 +8,14 @@ import { musicIsPaused } from "@/utils/trackUtils";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React from "react";
 import { ImageBackground, Pressable, StyleSheet, View } from "react-native";
+import { useTheme } from "@react-navigation/native";
 
 export default function HomeHero() {
     const currentMusic = useCurrentMusic();
     const musicState = useMusicState();
     const navigate = useNavigate();
     const { t } = useI18N();
+    const { dark } = useTheme();
     const isPlaying = !!currentMusic && !musicIsPaused(musicState);
 
     return (
@@ -29,7 +31,7 @@ export default function HomeHero() {
                 resizeMode="stretch"
                 style={styles.image}
                 imageStyle={styles.imageRadius}>
-                <View style={styles.shade} />
+                <View style={[styles.shade, dark ? styles.shadeDark : null]} />
                 <View style={styles.copy}>
                     <ThemeText
                         fontSize="section"
@@ -71,8 +73,8 @@ export default function HomeHero() {
 
 const styles = StyleSheet.create({
     card: {
-        width: "auto",
-        aspectRatio: 2.5,
+        alignSelf: "stretch",
+        height: rpx(268),
         marginHorizontal: rpx(24),
         marginTop: rpx(12),
         borderRadius: rpx(28),
@@ -89,6 +91,10 @@ const styles = StyleSheet.create({
     shade: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: "rgba(10,34,91,0.08)",
+    },
+    // 深色模式下 hero 图过亮会跟整页脱节，压一层深色蒙版
+    shadeDark: {
+        backgroundColor: "rgba(4,10,28,0.34)",
     },
     copy: {
         width: "62%",
@@ -113,6 +119,7 @@ const styles = StyleSheet.create({
         borderRadius: rpx(36),
         alignItems: "center",
         justifyContent: "center",
+        // color-exempt: 按钮压在 hero 图上，与主题无关，两模式都是白色圆钮
         backgroundColor: "#FFFFFF",
         shadowColor: "#13244E",
         shadowOffset: { width: 0, height: rpx(6) },

@@ -1,41 +1,32 @@
-import Icon, { IIconName } from "@/components/base/icon";
+import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
-import { ImgAsset } from "@/constants/assetsConst";
 import { showDialog } from "@/components/dialogs/useDialog";
+import { showPanel } from "@/components/panels/usePanel";
 import { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import useColors from "@/hooks/useColors";
-import rpx, { fontRpx } from "@/utils/rpx";
+import rpx from "@/utils/rpx";
 import DeviceInfo from "react-native-device-info";
 import React from "react";
-import {
-    Image,
-    ImageBackground,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
-} from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import SettingSection from "../components/settingSection";
 
 interface ISettingsOverviewItem {
-    icon: IIconName;
-    iconColor: string;
-    iconBackground: string;
+    key: string;
     title: string;
-    description: string;
+    value?: string;
     onPress: () => void;
 }
 
+interface ISettingsGroup {
+    key: string;
+    title: string;
+    items: ISettingsOverviewItem[];
+}
+
 function SettingsOverviewItem(props: ISettingsOverviewItem) {
-    const {
-        icon,
-        iconColor,
-        iconBackground,
-        title,
-        description,
-        onPress,
-    } = props;
+    const { title, value, onPress } = props;
+    const colors = useColors();
 
     return (
         <Pressable
@@ -43,23 +34,29 @@ function SettingsOverviewItem(props: ISettingsOverviewItem) {
             accessibilityLabel={title}
             android_ripple={{ color: "rgba(62, 101, 255, 0.08)" }}
             onPress={onPress}
-            style={({ pressed }) => [style.item, pressed ? style.itemPressed : null]}>
-            <View style={[style.iconWrap, { backgroundColor: iconBackground }]}>
-                <Icon name={icon} size={rpx(38)} color={iconColor} />
-            </View>
-            <View style={style.itemContent}>
-                <ThemeText fontSize="subTitle" fontWeight="semibold" numberOfLines={1}>
+            style={({ pressed }) => [
+                styles.item,
+                pressed ? styles.itemPressed : null,
+            ]}>
+            <View style={styles.itemContent}>
+                <ThemeText numberOfLines={2}>
                     {title}
                 </ThemeText>
+            </View>
+            {value ? (
                 <ThemeText
                     fontColor="textSecondary"
-                    fontSize="description"
                     numberOfLines={1}
-                    style={style.itemDescription}>
-                    {description}
+                    style={styles.itemValue}>
+                    {value}
                 </ThemeText>
-            </View>
-            <Icon name="arrow-long-left" size={rpx(34)} color="#9EA9C5" style={style.chevron} />
+            ) : null}
+            <Icon
+                name="chevron-right"
+                size={rpx(28)}
+                color={colors.textSecondary}
+                style={styles.chevron}
+            />
         </Pressable>
     );
 }
@@ -68,11 +65,10 @@ export default function SettingsOverview() {
     const navigate = useNavigate();
     const colors = useColors();
     const { t, getLanguage, getSupportedLanguages, setLanguage } = useI18N();
-    const appName = DeviceInfo.getApplicationName();
     const version = DeviceInfo.getVersion();
 
-    function navigateToSetting(type: string) {
-        navigate(ROUTE_PATH.SETTING, { type });
+    function navigateToSetting(type: string, section?: string) {
+        navigate(ROUTE_PATH.SETTING, { type, section });
     }
 
     function openLanguageDialog() {
@@ -90,224 +86,188 @@ export default function SettingsOverview() {
         });
     }
 
-    const items: ISettingsOverviewItem[] = [
+    const playbackAndDownloadItems: ISettingsOverviewItem[] = [
         {
-            icon: "cog-8-tooth",
-            iconColor: "#4F638D",
-            iconBackground: "#EDF3FF",
-            title: t("sidebar.basicSettings"),
-            description: t("settingsOverview.generalDescription"),
-            onPress: () => navigateToSetting("basic"),
+            key: "playback-options",
+            title: t("settingsEntry.playback"),
+            onPress: () => navigateToSetting("basic", "playback"),
         },
         {
-            icon: "javascript",
-            iconColor: "#3978FF",
-            iconBackground: "#E9F2FF",
+            key: "network",
+            title: t("settingsEntry.network"),
+            onPress: () => navigateToSetting("basic", "network"),
+        },
+        {
+            key: "timing-close",
+            title: t("sidebar.scheduleClose"),
+            onPress: () => showPanel("TimingClose"),
+        },
+        {
+            key: "download-manager",
+            title: t("home.downloadManagement"),
+            onPress: () => navigate(ROUTE_PATH.DOWNLOADING),
+        },
+        {
+            key: "download-options",
+            title: t("settingsEntry.downloadOptions"),
+            onPress: () => navigateToSetting("basic", "download"),
+        },
+    ];
+
+    const sourceAndStorageItems: ISettingsOverviewItem[] = [
+        {
+            key: "cache",
+            title: t("settingsEntry.cache"),
+            onPress: () => navigateToSetting("basic", "cache"),
+        },
+        {
+            key: "plugin-manager",
             title: t("sidebar.pluginManagement"),
-            description: t("settingsOverview.sourceDescription"),
             onPress: () => navigateToSetting("plugin"),
         },
         {
-            icon: "folder-music-outline",
-            iconColor: "#7F63F4",
-            iconBackground: "#F2EEFF",
-            title: t("home.scanLocal"),
-            description: t("settingsOverview.localDescription"),
-            onPress: () => navigate(ROUTE_PATH.LOCAL),
+            key: "plugin-options",
+            title: t("settingsEntry.pluginOptions"),
+            onPress: () => navigateToSetting("basic", "plugin"),
+        },
+    ];
+
+    const groups: ISettingsGroup[] = [
+        {
+            key: "playback-and-download",
+            title: t("settingsGroup.playbackAndDownload"),
+            items: playbackAndDownloadItems,
         },
         {
-            icon: "t-shirt-outline",
-            iconColor: "#3187F5",
-            iconBackground: "#EAF5FF",
-            title: t("sidebar.themeSettings"),
-            description: t("settingsOverview.themeDescription"),
-            onPress: () => navigateToSetting("theme"),
+            key: "lyrics-and-appearance",
+            title: t("settingsGroup.lyricsAndAppearance"),
+            items: [
+                {
+                    key: "lyrics-options",
+                    title: t("settingsEntry.lyrics"),
+                    onPress: () => navigateToSetting("basic", "lyric"),
+                },
+                {
+                    key: "theme",
+                    title: t("sidebar.themeSettings"),
+                    onPress: () => navigateToSetting("theme"),
+                },
+            ],
+        },
+        {
+            key: "sources-and-storage",
+            title: t("settingsGroup.sourcesAndStorage"),
+            items: sourceAndStorageItems,
         },
         ...(Platform.OS === "android"
             ? [{
-                icon: "shield-keyhole-outline" as IIconName,
-                iconColor: "#3779F4",
-                iconBackground: "#ECF3FF",
-                title: t("sidebar.permissionManagement"),
-                description: t("settingsOverview.permissionDescription"),
-                onPress: () => navigate(ROUTE_PATH.PERMISSIONS),
+                key: "system-and-data",
+                title: t("settingsGroup.systemAndData"),
+                items: [
+                    {
+                        key: "permission-manager",
+                        title: t("sidebar.permissionManagement"),
+                        onPress: () => navigate(ROUTE_PATH.PERMISSIONS),
+                    },
+                    {
+                        key: "backup-and-restore",
+                        title: t("sidebar.backupAndResume"),
+                        onPress: () => navigateToSetting("backup"),
+                    },
+                ],
             }]
-            : []),
+            : [{
+                key: "system-and-data",
+                title: t("settingsGroup.systemAndData"),
+                items: [{
+                    key: "backup-and-restore",
+                    title: t("sidebar.backupAndResume"),
+                    onPress: () => navigateToSetting("backup"),
+                }],
+            }]),
         {
-            icon: "circle-stack",
-            iconColor: "#1ABAA5",
-            iconBackground: "#E8FBF7",
-            title: t("sidebar.backupAndResume"),
-            description: t("settingsOverview.backupDescription"),
-            onPress: () => navigateToSetting("backup"),
+            key: "general",
+            title: t("settingsGroup.general"),
+            items: [
+                {
+                    key: "general-options",
+                    title: t("settingsEntry.general"),
+                    onPress: () => navigateToSetting("basic", "common"),
+                },
+                {
+                    key: "sheet-options",
+                    title: t("settingsEntry.sheetAndAlbum"),
+                    onPress: () => navigateToSetting("basic", "sheetAndAlbum"),
+                },
+                {
+                    key: "developer-options",
+                    title: t("basicSettings.developer"),
+                    onPress: () => navigateToSetting("basic", "developer"),
+                },
+                {
+                    key: "language",
+                    title: t("sidebar.languageSettings"),
+                    value: getLanguage().name || t("settingsOverview.languageDescription"),
+                    onPress: openLanguageDialog,
+                },
+            ],
         },
         {
-            icon: "language",
-            iconColor: "#8257E7",
-            iconBackground: "#F3EDFF",
-            title: t("sidebar.languageSettings"),
-            description: getLanguage().name || t("settingsOverview.languageDescription"),
-            onPress: openLanguageDialog,
-        },
-        {
-            icon: "information-circle",
-            iconColor: "#337DF7",
-            iconBackground: "#EBF4FF",
-            title: `${t("common.about")} ${appName}`,
-            description: `${t("about.version", { version })} · ${t("settingsOverview.aboutDescription")}`,
-            onPress: () => navigateToSetting("about"),
+            key: "about",
+            title: t("settingsGroup.about"),
+            items: [{
+                key: "about-and-update",
+                title: t("home.aboutAndUpdate"),
+                value: t("about.version", { version }),
+                onPress: () => navigateToSetting("about"),
+            }],
         },
     ];
 
     return (
-        <View style={[style.wrapper, { backgroundColor: colors.pageBackground }]}>
+        <View style={[styles.wrapper, { backgroundColor: colors.pageBackground }]}>
             <ScrollView
-                contentContainerStyle={style.content}
+                contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}>
-                <ThemeText fontSize="section" fontWeight="bold" style={style.pageTitle}>
-                    {t("common.setting")}
-                </ThemeText>
-
-                <ImageBackground
-                    source={ImgAsset.settingsRibbonBackground}
-                    resizeMode="cover"
-                    imageStyle={style.brandBackgroundImage}
-                    style={style.brandCard}>
-                    <View style={style.brandContent}>
-                        <Image source={ImgAsset.logo} resizeMode="contain" style={style.brandLogo} />
-                        <View style={style.brandText}>
-                            <ThemeText color="#141B4E" fontSize="section" fontWeight="bold">
-                                {appName}
-                            </ThemeText>
-                            <ThemeText color="#52627F" fontSize="description" style={style.brandTagline}>
-                                {t("settingsOverview.tagline")}
-                            </ThemeText>
-                        </View>
-                    </View>
-                </ImageBackground>
-
-                <View style={[style.listCard, { backgroundColor: colors.surface }]}>
-                    {items.map(item => (
-                        <SettingsOverviewItem key={item.title} {...item} />
-                    ))}
-                </View>
-
-                <ImageBackground
-                    source={ImgAsset.settingsRibbonBackground}
-                    resizeMode="cover"
-                    imageStyle={style.footerBackgroundImage}
-                    style={style.footerCard}>
-                    <ThemeText color="#4C6BDE" fontSize="subTitle" fontWeight="bold" style={style.footerText}>
-                        {t("settingsOverview.footerLine1")}
-                    </ThemeText>
-                    <ThemeText color="#6179E8" fontSize="subTitle" fontWeight="bold" style={style.footerText}>
-                        {t("settingsOverview.footerLine2")}
-                    </ThemeText>
-                    <ThemeText color="#586DEA" fontSize="subTitle" fontWeight="semibold" style={style.footerSignature}>
-                        — {appName}
-                    </ThemeText>
-                </ImageBackground>
+                {groups.map(group => (
+                    <SettingSection key={group.key} title={group.title}>
+                        {group.items.map(item => {
+                            const { key, ...itemProps } = item;
+                            return (
+                                <SettingsOverviewItem
+                                    key={key}
+                                    {...itemProps}
+                                />
+                            );
+                        })}
+                    </SettingSection>
+                ))}
             </ScrollView>
         </View>
     );
 }
 
-const style = StyleSheet.create({
-    wrapper: {
-        flex: 1,
-        width: "100%",
-    },
+const styles = StyleSheet.create({
+    wrapper: { flex: 1, width: "100%" },
     content: {
-        paddingHorizontal: rpx(30),
-        paddingTop: rpx(24),
         paddingBottom: rpx(60),
     },
-    pageTitle: {
-        marginBottom: rpx(26),
-    },
-    brandCard: {
-        height: rpx(200),
-        borderRadius: rpx(28),
-        overflow: "hidden",
-        justifyContent: "center",
-        marginBottom: rpx(22),
-        backgroundColor: "#EFF9FF",
-    },
-    brandBackgroundImage: {
-        opacity: 0.84,
-    },
-    brandContent: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: rpx(38),
-    },
-    brandLogo: {
-        width: rpx(100),
-        height: rpx(100),
-        borderRadius: rpx(26),
-        marginRight: rpx(26),
-    },
-    brandText: {
-        flex: 1,
-    },
-    brandTagline: {
-        marginTop: rpx(10),
-    },
-    listCard: {
-        borderRadius: rpx(28),
-        overflow: "hidden",
-        marginBottom: rpx(24),
-        shadowColor: "#6C85B4",
-        shadowOffset: { width: 0, height: rpx(8) },
-        shadowOpacity: 0.09,
-        shadowRadius: rpx(22),
-        elevation: 2,
-    },
     item: {
-        minHeight: rpx(110),
+        minHeight: rpx(92),
         paddingHorizontal: rpx(24),
         flexDirection: "row",
         alignItems: "center",
     },
-    itemPressed: {
-        opacity: 0.68,
-    },
-    iconWrap: {
-        width: rpx(68),
-        height: rpx(68),
-        borderRadius: rpx(20),
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: rpx(22),
-    },
-    itemContent: {
-        flex: 1,
-        minWidth: 0,
-    },
-    itemDescription: {
-        marginTop: rpx(8),
+    itemPressed: { opacity: 0.68 },
+    itemContent: { flex: 1, minWidth: 0 },
+    itemValue: {
+        flexShrink: 1,
+        marginLeft: rpx(24),
+        maxWidth: "48%",
     },
     chevron: {
-        transform: [{ rotate: "180deg" }],
+        flexShrink: 0,
         marginLeft: rpx(12),
-    },
-    footerCard: {
-        minHeight: rpx(210),
-        borderRadius: rpx(28),
-        overflow: "hidden",
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: rpx(30),
-        backgroundColor: "#F0F7FF",
-    },
-    footerBackgroundImage: {
-        opacity: 0.78,
-        transform: [{ rotate: "180deg" }],
-    },
-    footerText: {
-        lineHeight: fontRpx(38),
-    },
-    footerSignature: {
-        marginTop: rpx(14),
+        opacity: 0.45,
     },
 });
