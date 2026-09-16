@@ -1,5 +1,5 @@
 import { useI18N } from "@/core/i18n";
-import { ROUTE_PATH, useNavigate, useParams } from "@/core/router";
+import { ROUTE_PATH, useParams, usePush } from "@/core/router";
 import rpx from "@/utils/rpx";
 import React, { ComponentType } from "react";
 import { ScrollView, StyleSheet } from "react-native";
@@ -22,7 +22,7 @@ interface IThemeSection {
 export default function ThemeSetting() {
     const { section } = useParams<"setting">();
     const { t } = useI18N();
-    const navigate = useNavigate();
+    const push = usePush();
 
     const sections: IThemeSection[] = [
         {
@@ -82,7 +82,7 @@ export default function ThemeSetting() {
                         title={item.title}
                         showChevron
                         onPress={() =>
-                            navigate(ROUTE_PATH.SETTING, {
+                            push(ROUTE_PATH.SETTING, {
                                 type: "theme",
                                 section: item.key,
                             })

@@ -3,6 +3,7 @@ import TestRenderer, { act } from "react-test-renderer";
 import SettingsOverview from "./settingsOverview";
 
 const mockNavigate = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
@@ -21,6 +22,7 @@ jest.mock("@/core/router", () => ({
         SETTING: "setting",
     },
     useNavigate: () => mockNavigate,
+    usePush: () => mockPush,
 }));
 jest.mock("@/hooks/useColors", () => () => ({
     card: "#FFFFFF",
@@ -52,6 +54,7 @@ jest.mock("react-native-device-info", () => ({
 describe("SettingsOverview", () => {
     beforeEach(() => {
         mockNavigate.mockReset();
+        mockPush.mockReset();
         jest.requireMock("@/components/dialogs/useDialog").showDialog.mockReset();
     });
 
@@ -74,11 +77,55 @@ describe("SettingsOverview", () => {
             downloads.props.onPress();
         });
 
-        expect(mockNavigate).toHaveBeenNthCalledWith(1, "setting", {
+        // 设置子页与首页共用同一个 route，只有 params 不同。
+        // 这里必须是 push：navigate 会复用栈里已有的 setting 屏幕，
+        // 导致整条设置链路只有一层，返回时直接退到入口页。
+        expect(mockPush).toHaveBeenNthCalledWith(1, "setting", {
             type: "basic",
             section: "playback",
         });
-        expect(mockNavigate).toHaveBeenNthCalledWith(2, "downloading");
+        expect(mockNavigate).toHaveBeenNthCalledWith(1, "downloading");
+    });
+
+    it("pushes every sub-setting page so back returns one level", () => {
+        let renderer: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(<SettingsOverview />);
+        });
+
+        act(() => {
+            [
+                "settingsEntry.playback",
+                "sidebar.themeSettings",
+                "sidebar.backupAndResume",
+                "home.aboutAndUpdate",
+            ].forEach(accessibilityLabel => {
+                renderer!.root
+                    .findByProps({ accessibilityLabel })
+                    .props.onPress();
+            });
+        });
+
+        expect(mockPush).toHaveBeenCalledTimes(4);
+        expect(mockPush).toHaveBeenNthCalledWith(1, "setting", {
+            type: "basic",
+            section: "playback",
+        });
+        expect(mockPush).toHaveBeenNthCalledWith(2, "setting", {
+            type: "theme",
+            section: undefined,
+        });
+        expect(mockPush).toHaveBeenNthCalledWith(3, "setting", {
+            type: "backup",
+            section: undefined,
+        });
+        expect(mockPush).toHaveBeenNthCalledWith(4, "setting", {
+            type: "about",
+            section: undefined,
+        });
+        // 退化为 navigate 会让「返回上一级」直接退回入口页
+        expect(mockNavigate).not.toHaveBeenCalled();
     });
 
     it("uses the existing language picker instead of adding language state", () => {

@@ -1,7 +1,7 @@
 import { showDialog } from "@/components/dialogs/useDialog";
 import { showPanel } from "@/components/panels/usePanel";
 import { useI18N } from "@/core/i18n";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { ROUTE_PATH, useNavigate, usePush } from "@/core/router";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import DeviceInfo from "react-native-device-info";
@@ -39,12 +39,15 @@ function SettingsOverviewItem(props: ISettingsOverviewItem) {
 
 export default function SettingsOverview() {
     const navigate = useNavigate();
+    const push = usePush();
     const colors = useColors();
     const { t, getLanguage, getSupportedLanguages, setLanguage } = useI18N();
     const version = DeviceInfo.getVersion();
 
+    // 设置子页与首页共用 ROUTE_PATH.SETTING，只有参数不同。
+    // navigate 会复用栈中已有屏幕，必须 push 才能压出「上一级」。
     function navigateToSetting(type: string, section?: string) {
-        navigate(ROUTE_PATH.SETTING, { type, section });
+        push(ROUTE_PATH.SETTING, { type, section });
     }
 
     function openLanguageDialog() {
