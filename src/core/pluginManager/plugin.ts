@@ -43,6 +43,7 @@ import MediaCache from "../mediaCache";
 import _internalPluginMeta from "./meta";
 import { normalizePluginMusicItem } from "@/utils/qualities";
 import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
+import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
 
 
 axios.defaults.timeout = 2000;
@@ -1612,12 +1613,23 @@ const localFilePluginDefine: IPlugin.IPluginDefine = {
     async getMusicInfo(musicBase) {
         const localPath = getLocalPath(musicBase);
         if (localPath) {
-            const coverImg = await Mp3Util.getMediaCoverImg(
-                removeFileScheme(localPath),
+            const normalizedLocalPath = removeFileScheme(localPath);
+            // 同目录封面文件优先于内嵌 tag：用户可以自己丢一张图进去替换封面，不必重写音频 tag
+            const companionArtwork = await resolveCompanionArtwork(
+                normalizedLocalPath,
+                musicBase,
             );
-            return {
-                artwork: coverImg,
-            };
+            if (companionArtwork) {
+                return {
+                    artwork: companionArtwork,
+                };
+            }
+            const coverImg = await Mp3Util.getMediaCoverImg(normalizedLocalPath);
+            if (coverImg) {
+                return {
+                    artwork: coverImg,
+                };
+            }
         }
         return null;
     },
