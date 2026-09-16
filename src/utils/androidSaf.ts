@@ -7,9 +7,17 @@ import NativeUtils from "@/native/utils";
 const JSON_MIME_TYPE = "application/json";
 const DEFAULT_MUSIC_DIRECTORY = "Music/Audiora";
 
-export interface IAndroidSafAudioFile {
+/**
+ * 授权目录扫描结果。
+ * 除了音频，还会返回同目录的歌词 / 封面，导入时才能重建附属文件关联。
+ */
+export interface IAndroidSafFile {
     uri: string;
     name: string;
+    /** audio | lyric | cover */
+    kind?: string;
+    /** 直接父目录的 uri，用于把附属文件与音频配对 */
+    parentUri?: string;
     documentId?: string;
 }
 
@@ -61,8 +69,11 @@ export async function requestAndroidDirectoryAccess(
     return permission.granted ? permission.directoryUri : null;
 }
 
-export function scanAndroidSafAudioFiles(directoryUri: string) {
-    return NativeUtils.scanSafAudioFiles(directoryUri);
+/** 扫描授权目录，返回音频及其同目录的歌词 / 封面 */
+export function scanAndroidSafDirectoryFiles(
+    directoryUri: string,
+): Promise<IAndroidSafFile[]> {
+    return NativeUtils.scanSafDirectoryFiles(directoryUri);
 }
 
 export function androidSafUriExists(uri: string) {
@@ -105,6 +116,13 @@ export function copyLocalFileToAndroidDirectory(
 
 export function deleteAndroidSafUri(uri: string) {
     return NativeUtils.deleteSafUri(uri);
+}
+
+/** 读取授权目录下的文本文件（歌词） */
+export async function readAndroidSafText(uri: string) {
+    return await StorageAccessFramework.readAsStringAsync(uri, {
+        encoding: EncodingType.UTF8,
+    });
 }
 
 export async function writeTextToAndroidDirectory(

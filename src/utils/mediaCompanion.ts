@@ -4,11 +4,15 @@
  * 约定：附属文件与音频文件放在同一目录，默认与音频同名、仅扩展名不同，
  * 这样第三方播放器（以及本应用的本地文件插件）无需额外配置即可识别。
  */
-import { stat, unlink } from "react-native-fs";
-import { deleteAndroidSafUri, isAndroidSafUri } from "./androidSaf";
+import { readFile, stat, unlink } from "react-native-fs";
+import {
+    deleteAndroidSafUri,
+    isAndroidSafUri,
+    readAndroidSafText,
+} from "./androidSaf";
 import { getDirectory, removeFileScheme } from "./fileUtils";
 import { errorLog } from "./log";
-import { getMediaExtraProperty } from "./mediaExtra";
+import { getMediaExtraProperty, patchMediaExtra } from "./mediaExtra";
 
 /** 支持的封面扩展名，按顺序作为查找优先级 */
 export const COMPANION_COVER_EXTENSIONS = [
@@ -17,6 +21,9 @@ export const COMPANION_COVER_EXTENSIONS = [
     "png",
     "webp",
 ] as const;
+
+/** 支持的歌词扩展名，按顺序作为查找优先级 */
+export const COMPANION_LYRIC_EXTENSIONS = ["lrc", "txt"] as const;
 
 /** 第三方播放器常识别的固定封面名，作为同名封面不存在时的兜底 */
 export const COMPANION_COVER_FIXED_NAMES = ["cover", "folder", "front"] as const;
@@ -130,6 +137,200 @@ export async function findCompanionCoverFile(
         }
     }
     return null;
+}
+
+/** 去掉扩展名的文件名（不含目录） */
+export function getFileNameWithoutExtension(fileName: string): string {
+    const lastDot = fileName.lastIndexOf(".");
+    return lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+}
+
+/**
+ * 判断文件是否为附属文件（歌词 / 封面），不是则返回 null。
+ * 用于扫描阶段把目录里的文件分流出音频与附属文件。
+ */
+export function getCompanionFileKind(
+    fileName: string,
+): "lyric" | "cover" | null {
+    if (typeof fileName !== "string" || !fileName) {
+        return null;
+    }
+    const extension = fileName.slice(fileName.lastIndexOf(".") + 1).toLowerCase();
+    if ((COMPANION_LYRIC_EXTENSIONS as readonly string[]).includes(extension)) {
+        return "lyric";
+    }
+    if ((COMPANION_COVER_EXTENSIONS as readonly string[]).includes(extension)) {
+        return "cover";
+    }
+    return null;
+}
+
+/** 扫描得到的附属文件：普通目录为绝对路径，SAF 目录为 content:// uri */
+export interface ICompanionScanFile {
+    /** 可直接用于读取的路径或 uri */
+    path: string;
+    /** 文件名（含扩展名） */
+    name: string;
+    /** 父目录标识：普通目录为目录绝对路径，SAF 为父目录 uri */
+    directory: string;
+}
+
+/**
+ * 附属文件索引：目录 -> （小写文件名 -> 路径）
+ *
+ * 之所以用「目录 + 文件名」而不是完整路径，是为了同时支持普通目录与 SAF：
+ * content:// 无法按路径拼接出兄弟文件，只能靠扫描结果里的父目录 uri 关联。
+ */
+export interface ICompanionIndex {
+    byDirectory: Map<string, Map<string, string>>;
+}
+
+export interface ICompanionMatchTarget {
+    path: string;
+    name?: string;
+    directory?: string;
+}
+
+export interface ICompanionMatch {
+    lyricPath: string | null;
+    coverPath: string | null;
+}
+
+function normalizeDirectoryKey(directory: string) {
+    return removeFileScheme(directory ?? "");
+}
+
+/** 把扫描到的附属文件整理成可按「目录 + 文件名」查表的索引 */
+export function buildCompanionIndex(
+    files: ICompanionScanFile[],
+): ICompanionIndex {
+    const byDirectory = new Map<string, Map<string, string>>();
+    for (const file of files ?? []) {
+        if (!file?.path) {
+            continue;
+        }
+        const directory = normalizeDirectoryKey(file.directory ?? "");
+        const fileName = (file.name || file.path.split("/").pop() || "").toLowerCase();
+        if (!directory || !fileName) {
+            continue;
+        }
+        let directoryEntries = byDirectory.get(directory);
+        if (!directoryEntries) {
+            directoryEntries = new Map<string, string>();
+            byDirectory.set(directory, directoryEntries);
+        }
+        // 同名不同大小写只保留第一个，避免重复扫描时反复覆盖
+        if (!directoryEntries.has(fileName)) {
+            directoryEntries.set(fileName, file.path);
+        }
+    }
+    return { byDirectory };
+}
+
+/**
+ * 为一条音频匹配同目录的歌词 / 封面。
+ *
+ * 优先级与落盘命名一致：先按「父目录 + 音频 basename」找同名文件，
+ * 封面再以目录级固定名（cover / folder / front）兜底。
+ */
+export function matchCompanionFiles(
+    index: ICompanionIndex,
+    audio: ICompanionMatchTarget,
+): ICompanionMatch {
+    if (!audio?.path || !index?.byDirectory) {
+        return { lyricPath: null, coverPath: null };
+    }
+
+    const directory = normalizeDirectoryKey(
+        audio.directory ?? getDirectory(removeFileScheme(audio.path)),
+    );
+    const directoryEntries = index.byDirectory.get(directory);
+    if (!directoryEntries) {
+        return { lyricPath: null, coverPath: null };
+    }
+
+    const firstHit = (fileNames: string[]) => {
+        for (const fileName of fileNames) {
+            const hit = directoryEntries.get(fileName);
+            if (hit) {
+                return hit;
+            }
+        }
+        return null;
+    };
+
+    const baseName = getFileNameWithoutExtension(
+        audio.name || audio.path.split("/").pop() || "",
+    ).toLowerCase();
+
+    const lyricPath = firstHit(
+        COMPANION_LYRIC_EXTENSIONS.map(extension => `${baseName}.${extension}`),
+    );
+    // 同名封面不存在时用目录级固定名（cover / folder / front）兜底，
+    // 这类封面属于整个目录，多首歌共用
+    const coverPath =
+        firstHit(COMPANION_COVER_EXTENSIONS.map(extension => `${baseName}.${extension}`)) ??
+        firstHit(
+            COMPANION_COVER_FIXED_NAMES.flatMap(name =>
+                COMPANION_COVER_EXTENSIONS.map(extension => `${name}.${extension}`),
+            ),
+        );
+
+    return { lyricPath, coverPath };
+}
+
+/**
+ * 把扫描到的歌词 / 封面重新挂到曲目上，并写回 mediaExtra。
+ *
+ * 重装或换设备后 MMKV 里的 localLyricPath / localCoverPath 全部丢失，
+ * 而默认下载文件名不含 platform / id，导入后会生成新的本地身份，
+ * 因此只能在导入时按目录结构重新建立关联（issue #83）。
+ *
+ * 固定名封面（cover / folder / front）属于整个目录，多首歌会指向同一个文件；
+ * 删除侧已按共享封面处理，不会因为其中一首被删而连带删除文件。
+ *
+ * @returns 成功重建关联的曲目数
+ */
+export function linkCompanionFiles(
+    audioFiles: ICompanionMatchTarget[],
+    musicItems: ICommon.IMediaBase[],
+    companionFiles: ICompanionScanFile[],
+): number {
+    if (!companionFiles?.length) {
+        return 0;
+    }
+    const index = buildCompanionIndex(companionFiles);
+    let linkedCount = 0;
+
+    musicItems.forEach((musicItem, position) => {
+        const audioFile = audioFiles[position];
+        if (!audioFile || !musicItem?.platform || !musicItem.id) {
+            return;
+        }
+        const { lyricPath, coverPath } = matchCompanionFiles(index, audioFile);
+        if (!lyricPath && !coverPath) {
+            return;
+        }
+        patchMediaExtra(musicItem, {
+            ...(lyricPath ? { localLyricPath: lyricPath } : {}),
+            ...(coverPath ? { localCoverPath: coverPath } : {}),
+        });
+        linkedCount += 1;
+    });
+
+    return linkedCount;
+}
+
+/**
+ * 读取附属文本文件内容（歌词）。
+ * SAF 授权目录下的文件只能通过 ContentResolver 读取，普通路径走 RNFS。
+ */
+export async function readCompanionText(rawPath: string): Promise<string> {
+    const normalized = removeFileScheme(rawPath);
+    if (isAndroidSafUri(normalized)) {
+        return await readAndroidSafText(normalized);
+    }
+    return await readFile(normalized, "utf8");
 }
 
 /**

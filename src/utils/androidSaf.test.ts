@@ -18,7 +18,7 @@ jest.mock("@/native/utils", () => ({
         copyFileToSafDirectory: jest.fn(),
         deleteSafUri: jest.fn(),
         safUriExists: jest.fn(),
-        scanSafAudioFiles: jest.fn(),
+        scanSafDirectoryFiles: jest.fn(),
     },
 }));
 

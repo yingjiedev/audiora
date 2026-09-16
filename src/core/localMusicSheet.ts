@@ -20,14 +20,18 @@ import { nanoid } from "@/utils/nanoid";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { exists, unlink } from "react-native-fs";
-import { scanLocalMusicPaths } from "./localMusicScanner";
+import { scanLocalMediaPaths } from "./localMusicScanner";
 import { shouldRetainUnavailableLocalPath } from "./localMusicPathPolicy";
 import {
     androidSafUriExists,
     deleteAndroidSafUri,
     isAndroidSafUri,
 } from "@/utils/androidSaf";
-import { deleteCompanionFiles, resolveCompanionArtwork } from "@/utils/mediaCompanion";
+import {
+    deleteCompanionFiles,
+    linkCompanionFiles,
+    resolveCompanionArtwork,
+} from "@/utils/mediaCompanion";
 import { getMediaExtraProperty } from "@/utils/mediaExtra";
 
 let localSheet: IMusic.IMusicItem[] = [];
@@ -319,16 +323,16 @@ function parseFilename(fn: string): Partial<IMusic.IMusicItem> | null {
 }
 
 let importToken: string | null = null;
-// 获取本地的文件列表
+// 获取本地的文件列表（音频 + 同目录的歌词 / 封面）
 async function getMusicStats(folderPaths: string[]) {
     const _importToken = nanoid();
     importToken = _importToken;
-    const musicFiles = await scanLocalMusicPaths(
+    const scannedFiles = await scanLocalMediaPaths(
         folderPaths,
         () => importToken === _importToken,
     );
 
-    return { musicFiles, token: _importToken };
+    return { ...scannedFiles, token: _importToken };
 }
 
 function cancelImportLocal() {
@@ -339,17 +343,17 @@ function cancelImportLocal() {
 const groupNum = 25;
 async function importLocal(_folderPaths: string[]) {
     const folderPaths = [..._folderPaths.map(it => removeFileScheme(it))];
-    const { musicFiles, token } = await getMusicStats(folderPaths);
+    const { audioFiles, companionFiles, token } = await getMusicStats(folderPaths);
     if (token !== importToken) {
         throw new Error("Import Broken");
     }
     // 分组请求，不然序列化可能出问题
     let metas: any[] = [];
-    const groups = Math.ceil(musicFiles.length / groupNum);
+    const groups = Math.ceil(audioFiles.length / groupNum);
     for (let i = 0; i < groups; ++i) {
         metas = metas.concat(
             await mp3Util.getMediaMeta(
-                musicFiles
+                audioFiles
                     .slice(i * groupNum, (i + 1) * groupNum)
                     .map(file => file.path),
             ),
@@ -359,7 +363,7 @@ async function importLocal(_folderPaths: string[]) {
         throw new Error("Import Broken");
     }
     const musicItems: IMusic.IMusicItem[] = await Promise.all(
-        musicFiles.map(async (musicFile, index) => {
+        audioFiles.map(async (musicFile, index) => {
             const musicPath = musicFile.path;
             let { platform, id, title, artist } =
                 parseFilename(getFileName(musicFile.name, true)) ?? {};
@@ -388,6 +392,9 @@ async function importLocal(_folderPaths: string[]) {
     if (token !== importToken) {
         throw new Error("Import Broken");
     }
+    // 导入是一次完整重建：扫描到的歌词 / 封面要写回 mediaExtra，
+    // 否则重装后这些文件会变成无人认领的孤儿（删除曲目时也不会被清理）
+    linkCompanionFiles(audioFiles, musicItems, companionFiles);
     await addMusic(musicItems);
 }
 

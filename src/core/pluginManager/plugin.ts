@@ -43,6 +43,7 @@ import MediaCache from "../mediaCache";
 import _internalPluginMeta from "./meta";
 import { normalizePluginMusicItem } from "@/utils/qualities";
 import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
+import { readCompanionText } from "@/utils/mediaCompanion";
 import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
 
 
@@ -1640,11 +1641,38 @@ const localFilePluginDefine: IPlugin.IPluginDefine = {
         let romanization: string | null = null;
         if (localPath) {
             const normalizedLocalPath = removeFileScheme(localPath);
+            // 记录的歌词文件优先于内嵌 tag：
+            // 1. 用户可以自己改 .lrc 而不必重写音频；
+            // 2. SAF 授权目录下无法靠给音频 uri 拼 ".lrc" 找到兄弟文件，
+            //    只能依赖下载或导入时写入 localLyricPath 的那条记录
+            const recordedLyricPath = getMediaExtraProperty(
+                musicBase,
+                "localLyricPath",
+            );
+            if (typeof recordedLyricPath === "string" && recordedLyricPath) {
+                try {
+                    const recordedLyric = normalizeLyricText(
+                        await readCompanionText(recordedLyricPath),
+                    );
+                    if (recordedLyric.trim()) {
+                        rawLrc = recordedLyric;
+                    }
+                } catch (e) {
+                    devLog("warn", "读取歌词文件失败", {
+                        path: recordedLyricPath,
+                        error: e,
+                    });
+                }
+            }
             // 读取内嵌歌词
-            try {
-                rawLrc = normalizeLyricText(await Mp3Util.getLyric(normalizedLocalPath));
-            } catch (e) {
-                devLog("warn", "读取内嵌歌词失败", e);
+            if (!rawLrc) {
+                try {
+                    rawLrc = normalizeLyricText(
+                        await Mp3Util.getLyric(normalizedLocalPath),
+                    );
+                } catch (e) {
+                    devLog("warn", "读取内嵌歌词失败", e);
+                }
             }
 
             const lastDot = normalizedLocalPath.lastIndexOf(".");
