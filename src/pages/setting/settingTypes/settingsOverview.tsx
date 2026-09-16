@@ -1,15 +1,14 @@
-import Icon from "@/components/base/icon";
-import ThemeText from "@/components/base/themeText";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { showPanel } from "@/components/panels/usePanel";
 import { useI18N } from "@/core/i18n";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { ROUTE_PATH, useNavigate, usePush } from "@/core/router";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import DeviceInfo from "react-native-device-info";
 import React from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import SettingSection from "../components/settingSection";
+import SettingRow from "../components/settingRow";
 
 interface ISettingsOverviewItem {
     key: string;
@@ -26,49 +25,29 @@ interface ISettingsGroup {
 
 function SettingsOverviewItem(props: ISettingsOverviewItem) {
     const { title, value, onPress } = props;
-    const colors = useColors();
 
     return (
-        <Pressable
-            accessibilityRole="button"
+        <SettingRow
             accessibilityLabel={title}
-            android_ripple={{ color: "rgba(62, 101, 255, 0.08)" }}
+            title={title}
+            value={value}
             onPress={onPress}
-            style={({ pressed }) => [
-                styles.item,
-                pressed ? styles.itemPressed : null,
-            ]}>
-            <View style={styles.itemContent}>
-                <ThemeText numberOfLines={2}>
-                    {title}
-                </ThemeText>
-            </View>
-            {value ? (
-                <ThemeText
-                    fontColor="textSecondary"
-                    numberOfLines={1}
-                    style={styles.itemValue}>
-                    {value}
-                </ThemeText>
-            ) : null}
-            <Icon
-                name="chevron-right"
-                size={rpx(28)}
-                color={colors.textSecondary}
-                style={styles.chevron}
-            />
-        </Pressable>
+            showChevron
+        />
     );
 }
 
 export default function SettingsOverview() {
     const navigate = useNavigate();
+    const push = usePush();
     const colors = useColors();
     const { t, getLanguage, getSupportedLanguages, setLanguage } = useI18N();
     const version = DeviceInfo.getVersion();
 
+    // 设置子页与首页共用 ROUTE_PATH.SETTING，只有参数不同。
+    // navigate 会复用栈中已有屏幕，必须 push 才能压出「上一级」。
     function navigateToSetting(type: string, section?: string) {
-        navigate(ROUTE_PATH.SETTING, { type, section });
+        push(ROUTE_PATH.SETTING, { type, section });
     }
 
     function openLanguageDialog() {
@@ -251,23 +230,5 @@ const styles = StyleSheet.create({
     wrapper: { flex: 1, width: "100%" },
     content: {
         paddingBottom: rpx(60),
-    },
-    item: {
-        minHeight: rpx(92),
-        paddingHorizontal: rpx(24),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    itemPressed: { opacity: 0.68 },
-    itemContent: { flex: 1, minWidth: 0 },
-    itemValue: {
-        flexShrink: 1,
-        marginLeft: rpx(24),
-        maxWidth: "48%",
-    },
-    chevron: {
-        flexShrink: 0,
-        marginLeft: rpx(12),
-        opacity: 0.45,
     },
 });

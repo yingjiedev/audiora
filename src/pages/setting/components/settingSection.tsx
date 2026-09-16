@@ -1,8 +1,9 @@
 import ThemeText from "@/components/base/themeText";
 import useColors from "@/hooks/useColors";
-import rpx from "@/utils/rpx";
 import React, { ReactNode } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { settingsLayout } from "./settingsLayout";
+import rpx from "@/utils/rpx";
 
 interface ISettingSectionProps {
     children: ReactNode;
@@ -43,15 +44,15 @@ export default function SettingSection(props: ISettingSectionProps) {
 
 const styles = StyleSheet.create({
     section: {
-        marginHorizontal: rpx(24),
-        marginTop: rpx(24),
+        marginHorizontal: settingsLayout.groupMargin,
+        marginTop: settingsLayout.groupMargin,
     },
     title: {
-        marginBottom: rpx(12),
+        marginBottom: settingsLayout.titleGap,
         marginHorizontal: rpx(14),
     },
     card: {
-        borderRadius: rpx(16),
+        borderRadius: settingsLayout.cardRadius,
         overflow: "hidden",
     },
 });
