@@ -114,6 +114,9 @@ export interface ILanguageData {
     "home.manageSources.short": string;
     "home.favoriteSheet": string;
     "home.playlistCount": string;
+    // 拾音
+    "home.shiyin": string;
+    "home.shiyinSubtitle": string;
     "home.playById.a11y": string; // 通过ID播放
 
     // 对话框相关
@@ -734,6 +737,9 @@ export interface ILanguageData {
 
     "toast.artistNotSupported": string;
     "toast.albumNotSupported": string;
+    "toast.shiyinStarted": string;
+    "toast.shiyinNoSource": string;
+    "toast.shiyinNoMusic": string;
 
     "settingsGroup.playback": string;
     "settingsGroup.download": string;

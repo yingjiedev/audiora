@@ -18,6 +18,7 @@ import useHomeDiscovery, {
 } from "./useHomeDiscovery";
 import useHomeOverview from "./useHomeOverview";
 import HomeHero from "../HomeHero";
+import ShiYinCard from "../ShiYinCard";
 
 function formatTime(value?: number) {
     const seconds = Math.max(0, Math.floor(value ?? 0));
@@ -56,6 +57,12 @@ export default function HomeOverview() {
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}>
             <HomeHero />
+            <ShiYinCard
+                topListPlugins={data.topListPlugins}
+                topListCache={data.topListCache}
+                excludeMusicItems={data.recentHistory}
+                preferredArtists={data.tasteArtists}
+            />
             <QuickAccess
                 historyCount={data.historyCount}
                 favoriteCount={data.favoriteSheet?.worksNum ?? 0}
