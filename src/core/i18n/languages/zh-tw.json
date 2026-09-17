@@ -111,6 +111,8 @@
     "toast.saveSuccess": "儲存成功",
     "toast.sortHasBeenUpdated": "排序已更新",
     "toast.currentQualityNotAvailableForCurrentMusic": "當前暫無此音質音樂",
+    "toast.musicQualityDowngraded": "歌曲不支援{quality}，已降級至{alternative}",
+    "toast.mediaSourceUnavailable": "無法取得音源，請稍後重試或更換音源外掛",
     "toast.commmentNotAvaliableForCurrentMusic": "當前歌曲暫無評論",
     "toast.addToNextPlay": "已添加到下一首播放",
     "toast.beginDownload": "開始下載，全部下載完成之前請不要關閉應用",

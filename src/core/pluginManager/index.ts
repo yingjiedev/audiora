@@ -10,6 +10,7 @@ import {
     IPluginManager,
 } from "@/types/core/pluginManager";
 import { removeAllMediaExtra } from "@/utils/mediaExtra";
+import { resolvePluginQualityMode } from "@/utils/qualities";
 import axios from "axios";
 import { compare } from "compare-versions";
 import EventEmitter from "eventemitter3";
@@ -76,6 +77,10 @@ class PluginManager implements IPluginManager, IInjectable {
         if (plugin.path && plugin.state === PluginState.Mounted) {
             // Never cache live functions — JSON drops them and left a stub
             // that looked "mounted" without getMusicDetailPageUrl etc.
+            // 首次加载/安装插件时就探测它用哪套音质协议（MusicFree 官方 4 档 or Audiora 扩展多音质），
+            // 结果随缓存一起保存，播放与音质面板都读它，不必每次重新判定。
+            const qualityMode = resolvePluginQualityMode(plugin.instance);
+
             const serializableInstance: Record<string, unknown> = {
                 platform: plugin.instance.platform,
                 version: plugin.instance.version,
@@ -84,6 +89,7 @@ class PluginManager implements IPluginManager, IInjectable {
                 primaryKey: plugin.instance.primaryKey,
                 supportedSearchType: plugin.instance.supportedSearchType,
                 supportedQualities: plugin.instance.supportedQualities,
+                qualityMode,
                 supportedVideoQualities: plugin.instance.supportedVideoQualities,
                 cacheControl: plugin.instance.cacheControl,
                 description: plugin.instance.description,
@@ -101,6 +107,12 @@ class PluginManager implements IPluginManager, IInjectable {
                     supportedMethods: [...plugin.supportedMethods],
                 }),
             );
+
+            devLog("info", "[插件音质探测]", {
+                platform: plugin.instance.platform,
+                qualityMode,
+                declaredQualities: plugin.instance.supportedQualities,
+            });
         }
     }
 
