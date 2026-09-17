@@ -4,14 +4,15 @@
  * 设计要点：
  * 1. 与音频文件同目录存放，默认同名不同扩展名，第三方播放器可直接识别；
  * 2. 封面先下载到 .part 临时文件再移动，避免半张图被当成成品；
- * 3. 两个写入都 best-effort：失败只记日志，绝不影响已经落盘的音频文件。
- *    （下载后处理的整体隔离见 issue #64，这里先保证新增逻辑不会拖垮任务）
+ * 3. 每个写入步骤都是独立的一步后处理：失败向上抛具体原因与路径，
+ *    由 downloader 的 runPostProcessing 统一记录，绝不影响已经落盘的音频文件
+ *    （下载后处理的整体隔离见 issue #64）。
  */
 import { IAppConfig } from "@/types/core/config";
 import type { IPluginManager } from "@/types/core/pluginManager";
 import { removeFileScheme } from "@/utils/fileUtils";
 import { formatLyricsByTimestamp } from "@/utils/lrcParser";
-import { errorLog, devLog } from "@/utils/log";
+import { devLog } from "@/utils/log";
 import {
     deleteCompanionPath,
     getCompanionCoverPath,
@@ -22,6 +23,7 @@ import {
 import { getMediaExtraProperty } from "@/utils/mediaExtra";
 import { autoDecryptLyric } from "@/utils/musicDecrypter";
 import { downloadFile, exists, moveFile, stat, unlink, writeFile } from "react-native-fs";
+import { PostProcessingStepError } from "./downloadPostProcessing";
 import LocalMusicSheet from "./localMusicSheet";
 import musicMetadataManager from "./musicMetadataManager";
 
@@ -77,23 +79,11 @@ const createTempSuffix = () =>
 const coerceError = (error: unknown) =>
     error instanceof Error ? error.message : String(error);
 
-/** 失败日志统一带上平台、id 与文件路径，方便同名歌曲 / SAF 场景定位（issue #64） */
-const logCompanionError = (
-    scene: string,
-    musicItem: IMusic.IMusicItem,
-    error: unknown,
-    extra: Record<string, unknown> = {},
-) => {
-    errorLog(scene, {
-        title: musicItem.title,
-        platform: musicItem.platform,
-        id: musicItem.id,
-        error: coerceError(error),
-        ...extra,
-    });
-};
-
-async function writeLyricFile(
+/**
+ * 写歌词文件。没有歌词 / 插件不支持时返回 null（不算失败），
+ * 真正的失败（取歌词或写文件抛错）带上音频与目标路径向上抛。
+ */
+export async function writeLyricFile(
     musicItem: IMusic.IMusicItem,
     audioFilePath: string,
     config: ICompanionFileConfig,
@@ -137,19 +127,21 @@ async function writeLyricFile(
             return null;
         }
 
-        const lyricFilePath = targetPath;
-        await writeFile(removeFileScheme(lyricFilePath), lyricContent, "utf8");
-        return lyricFilePath;
+        await writeFile(removeFileScheme(targetPath), lyricContent, "utf8");
+        return targetPath;
     } catch (error) {
-        logCompanionError("歌词文件下载失败", musicItem, error, {
+        throw new PostProcessingStepError(coerceError(error), {
             audioFilePath,
-            lyricsFilePath: targetPath,
+            lyricFilePath: targetPath,
         });
-        return null;
     }
 }
 
-async function writeCoverFile(
+/**
+ * 写封面文件。没有可用封面时返回 null（不算失败），
+ * 真正的失败（下载或移动文件抛错）带上音频与目标路径向上抛。
+ */
+export async function writeCoverFile(
     musicItem: IMusic.IMusicItem,
     audioFilePath: string,
     config: ICompanionFileConfig,
@@ -207,45 +199,15 @@ async function writeCoverFile(
         tempPath = null;
         return coverFilePath;
     } catch (error) {
-        logCompanionError("封面文件下载失败", musicItem, error, {
+        throw new PostProcessingStepError(coerceError(error), {
             audioFilePath,
             coverFilePath,
         });
-        return null;
     } finally {
         if (tempPath) {
             await unlink(tempPath).catch(() => {});
         }
     }
-}
-
-/**
- * 写入下载附属文件（歌词 / 封面）
- *
- * @param musicItem 原始音乐条目（平台、id 用于取插件与封面）
- * @param audioFilePath 已落盘的音频文件路径（SAF 场景下为应用内部临时路径）
- * @returns 实际写入的文件路径，未启用或失败为 null
- */
-export async function writeCompanionFiles(
-    musicItem: IMusic.IMusicItem,
-    audioFilePath: string,
-    configService: IAppConfig,
-    pluginManager: IPluginManager,
-): Promise<ICompanionFilesResult> {
-    const config = getCompanionFileConfig(configService);
-
-    if (!config.downloadLyricFile && !config.downloadCoverFile) {
-        return { lyricPath: null, coverPath: null };
-    }
-
-    const lyricPath = config.downloadLyricFile
-        ? await writeLyricFile(musicItem, audioFilePath, config, pluginManager)
-        : null;
-    const coverPath = config.downloadCoverFile
-        ? await writeCoverFile(musicItem, audioFilePath, config)
-        : null;
-
-    return { lyricPath, coverPath };
 }
 
 /** 读取当前记录在案的附属文件路径（重新下载前必须先取，否则旧文件会失去追踪） */
