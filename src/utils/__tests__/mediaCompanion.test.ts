@@ -1,15 +1,20 @@
-import { stat, unlink } from "react-native-fs";
-import { deleteAndroidSafUri } from "@/utils/androidSaf";
-import { getMediaExtraProperty } from "@/utils/mediaExtra";
+import { readFile, stat, unlink } from "react-native-fs";
+import { deleteAndroidSafUri, readAndroidSafText } from "@/utils/androidSaf";
+import { getMediaExtraProperty, patchMediaExtra } from "@/utils/mediaExtra";
 import {
+    buildCompanionIndex,
     deleteCompanionFiles,
     deleteCompanionPath,
     getBasePathWithoutExtension,
     getCompanionCoverCandidates,
     getCompanionCoverPath,
+    getCompanionFileKind,
     getCompanionLyricPath,
     getCoverExtensionFromUrl,
     isSharedCoverPath,
+    linkCompanionFiles,
+    matchCompanionFiles,
+    readCompanionText,
     resolveCompanionArtwork,
     toFileUri,
 } from "@/utils/mediaCompanion";
@@ -17,16 +22,19 @@ import {
 jest.mock("@/utils/androidSaf", () => ({
     isAndroidSafUri: (uri?: string | null) => !!uri?.startsWith("content://"),
     deleteAndroidSafUri: jest.fn(async () => true),
+    readAndroidSafText: jest.fn(async () => ""),
 }));
 
 jest.mock("@/utils/mediaExtra", () => ({
     getMediaExtraProperty: jest.fn(),
+    patchMediaExtra: jest.fn(),
 }));
 
 const mockedStat = stat as unknown as jest.Mock;
 const mockedUnlink = unlink as unknown as jest.Mock;
 const mockedDeleteSafUri = deleteAndroidSafUri as unknown as jest.Mock;
 const mockedGetExtra = getMediaExtraProperty as unknown as jest.Mock;
+const mockedPatchExtra = patchMediaExtra as unknown as jest.Mock;
 
 const audioPath = "/sdcard/Music/烟火里的尘埃-郁欢.flac";
 
@@ -35,6 +43,7 @@ describe("mediaCompanion", () => {
         mockedUnlink.mockClear();
         mockedDeleteSafUri.mockClear();
         mockedGetExtra.mockReset();
+        mockedPatchExtra.mockReset();
     });
 
     describe("getBasePathWithoutExtension", () => {
@@ -308,6 +317,291 @@ describe("mediaCompanion", () => {
             await expect(
                 deleteCompanionPath("/sdcard/Music/missing.jpg", {}),
             ).resolves.toBeUndefined();
+        });
+    });
+
+    describe("getCompanionFileKind", () => {
+        it("区分歌词、封面与无关文件", () => {
+            expect(getCompanionFileKind("song.lrc")).toBe("lyric");
+            expect(getCompanionFileKind("song.txt")).toBe("lyric");
+            expect(getCompanionFileKind("song.jpg")).toBe("cover");
+            expect(getCompanionFileKind("song.WEBP")).toBe("cover");
+            expect(getCompanionFileKind("song.flac")).toBeNull();
+            expect(getCompanionFileKind("")).toBeNull();
+        });
+    });
+
+    describe("matchCompanionFiles", () => {
+        const directory = "/sdcard/Music";
+
+        function indexOf(files: Array<{ path: string; name: string; directory: string }>) {
+            return buildCompanionIndex(files);
+        }
+
+        it("按父目录 + 音频 basename 匹配同名歌词与封面", () => {
+            const index = indexOf([
+                { path: `${directory}/song.lrc`, name: "song.lrc", directory },
+                { path: `${directory}/song.png`, name: "song.png", directory },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: `${directory}/song.flac`,
+                    name: "song.flac",
+                    directory,
+                }),
+            ).toEqual({
+                lyricPath: `${directory}/song.lrc`,
+                coverPath: `${directory}/song.png`,
+            });
+        });
+
+        it("同名封面不存在时回落到目录级固定名封面", () => {
+            const index = indexOf([
+                { path: `${directory}/folder.jpg`, name: "folder.jpg", directory },
+                { path: `${directory}/cover.webp`, name: "cover.webp", directory },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: `${directory}/song.flac`,
+                    name: "song.flac",
+                    directory,
+                }).coverPath,
+            ).toBe(`${directory}/cover.webp`);
+        });
+
+        it("同名歌词优先于 txt，同名封面优先于固定名", () => {
+            const index = indexOf([
+                { path: `${directory}/song.txt`, name: "song.txt", directory },
+                { path: `${directory}/song.lrc`, name: "song.lrc", directory },
+                { path: `${directory}/cover.jpg`, name: "cover.jpg", directory },
+                { path: `${directory}/song.jpeg`, name: "song.jpeg", directory },
+            ]);
+
+            const matched = matchCompanionFiles(index, {
+                path: `${directory}/song.mp3`,
+                name: "song.mp3",
+                directory,
+            });
+            expect(matched.lyricPath).toBe(`${directory}/song.lrc`);
+            expect(matched.coverPath).toBe(`${directory}/song.jpeg`);
+        });
+
+        it("兼容旧版 SAF 写入留下的 .lrc.txt 双扩展名歌词", () => {
+            const index = indexOf([
+                {
+                    path: `${directory}/song.lrc.txt`,
+                    name: "song.lrc.txt",
+                    directory,
+                },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: `${directory}/song.mp3`,
+                    name: "song.mp3",
+                    directory,
+                }).lyricPath,
+            ).toBe(`${directory}/song.lrc.txt`);
+        });
+
+        it("不会跨目录匹配", () => {
+            const index = indexOf([
+                { path: "/sdcard/Other/song.lrc", name: "song.lrc", directory: "/sdcard/Other" },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: `${directory}/song.flac`,
+                    name: "song.flac",
+                    directory,
+                }),
+            ).toEqual({ lyricPath: null, coverPath: null });
+        });
+
+        it("嵌套目录各自独立配对", () => {
+            const nested = `${directory}/live`;
+            const index = indexOf([
+                { path: `${directory}/song.lrc`, name: "song.lrc", directory },
+                { path: `${nested}/song.lrc`, name: "song.lrc", directory: nested },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: `${nested}/song.mp3`,
+                    name: "song.mp3",
+                    directory: nested,
+                }).lyricPath,
+            ).toBe(`${nested}/song.lrc`);
+        });
+
+        it("SAF 目录按父目录 uri 配对", () => {
+            const parentUri = "content://com.android/tree/1/document/2";
+            const index = indexOf([
+                {
+                    path: "content://com.android/tree/1/document/9",
+                    name: "Song One.lrc",
+                    directory: parentUri,
+                },
+                {
+                    path: "content://com.android/tree/1/document/10",
+                    name: "cover.jpg",
+                    directory: parentUri,
+                },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: "content://com.android/tree/1/document/3",
+                    name: "Song One.mp3",
+                    directory: parentUri,
+                }),
+            ).toEqual({
+                lyricPath: "content://com.android/tree/1/document/9",
+                coverPath: "content://com.android/tree/1/document/10",
+            });
+        });
+
+        it("文件名大小写不影响匹配", () => {
+            const index = indexOf([
+                { path: `${directory}/SONG.LRC`, name: "SONG.LRC", directory },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: `${directory}/song.mp3`,
+                    name: "song.mp3",
+                    directory,
+                }).lyricPath,
+            ).toBe(`${directory}/SONG.LRC`);
+        });
+
+        it("目录里没有附属文件时返回空", () => {
+            expect(
+                matchCompanionFiles(buildCompanionIndex([]), {
+                    path: `${directory}/song.mp3`,
+                    name: "song.mp3",
+                    directory,
+                }),
+            ).toEqual({ lyricPath: null, coverPath: null });
+        });
+    });
+
+    describe("linkCompanionFiles", () => {
+        const directory = "/sdcard/Music";
+
+        it("重装后重新导入，把歌词与封面写回 mediaExtra", () => {
+            const musicItems = [
+                { id: "a", platform: "本地" },
+                { id: "b", platform: "本地" },
+            ] as ICommon.IMediaBase[];
+
+            const linked = linkCompanionFiles(
+                [
+                    {
+                        path: `${directory}/song-a.flac`,
+                        name: "song-a.flac",
+                        directory,
+                    },
+                    {
+                        path: `${directory}/song-b.flac`,
+                        name: "song-b.flac",
+                        directory,
+                    },
+                ],
+                musicItems,
+                [
+                    {
+                        path: `${directory}/song-a.lrc`,
+                        name: "song-a.lrc",
+                        directory,
+                    },
+                    {
+                        path: `${directory}/song-a.jpg`,
+                        name: "song-a.jpg",
+                        directory,
+                    },
+                    {
+                        path: `${directory}/cover.jpg`,
+                        name: "cover.jpg",
+                        directory,
+                    },
+                ],
+            );
+
+            expect(linked).toBe(2);
+            expect(mockedPatchExtra).toHaveBeenCalledWith(musicItems[0], {
+                localLyricPath: `${directory}/song-a.lrc`,
+                localCoverPath: `${directory}/song-a.jpg`,
+            });
+            // 目录级共享封面会被同一目录的所有曲目指向
+            expect(mockedPatchExtra).toHaveBeenCalledWith(musicItems[1], {
+                localCoverPath: `${directory}/cover.jpg`,
+            });
+        });
+
+        it("没有匹配到附属文件时不改动已有记录", () => {
+            const musicItems = [
+                { id: "a", platform: "本地" },
+            ] as ICommon.IMediaBase[];
+
+            expect(
+                linkCompanionFiles(
+                    [
+                        {
+                            path: `${directory}/song-a.flac`,
+                            name: "song-a.flac",
+                            directory,
+                        },
+                    ],
+                    musicItems,
+                    [
+                        {
+                            path: `${directory}/othersong.lrc`,
+                            name: "othersong.lrc",
+                            directory,
+                        },
+                    ],
+                ),
+            ).toBe(0);
+            expect(mockedPatchExtra).not.toHaveBeenCalled();
+        });
+
+        it("没有附属文件时直接跳过", () => {
+            expect(linkCompanionFiles([], [], [])).toBe(0);
+            expect(mockedPatchExtra).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("readCompanionText", () => {
+        const mockedReadFile = readFile as unknown as jest.Mock;
+        const mockedReadSafText = readAndroidSafText as unknown as jest.Mock;
+
+        beforeEach(() => {
+            mockedReadFile.mockReset();
+            mockedReadSafText.mockReset();
+        });
+
+        it("普通路径走 RNFS", async () => {
+            mockedReadFile.mockResolvedValue("[00:01.00]hello");
+
+            await expect(readCompanionText("/sdcard/Music/song.lrc")).resolves.toBe(
+                "[00:01.00]hello",
+            );
+            expect(mockedReadFile).toHaveBeenCalledWith(
+                "/sdcard/Music/song.lrc",
+                "utf8",
+            );
+        });
+
+        it("SAF uri 走 ContentResolver", async () => {
+            mockedReadSafText.mockResolvedValue("[00:02.00]world");
+
+            await expect(
+                readCompanionText("content://com.android/tree/1"),
+            ).resolves.toBe("[00:02.00]world");
+            expect(mockedReadFile).not.toHaveBeenCalled();
         });
     });
 });

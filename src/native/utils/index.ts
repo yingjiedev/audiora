@@ -3,9 +3,11 @@ import { NativeModule, NativeModules } from "react-native";
 interface INativeUtils extends NativeModule {
     exitApp: () => void;
     saveImageToAppStorage: (sourcePath: string, displayName: string) => Promise<string>;
-    scanSafAudioFiles: (directoryUri: string) => Promise<Array<{
+    scanSafDirectoryFiles: (directoryUri: string) => Promise<Array<{
         uri: string;
         name: string;
+        kind?: string;
+        parentUri?: string;
         documentId?: string;
     }>>;
     safUriExists: (uri: string) => Promise<boolean>;

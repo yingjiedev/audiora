@@ -31,6 +31,8 @@ class UtilsModule(context: ReactApplicationContext) : ReactContextBaseJavaModule
     private val supportedAudioExtensions = setOf(
         "mp3", "flac", "wma", "wav", "m4a", "ogg", "acc", "aac", "ape", "opus",
     )
+    private val supportedLyricExtensions = setOf("lrc", "txt")
+    private val supportedCoverExtensions = setOf("jpg", "jpeg", "png", "webp")
 
     override fun getName() = "NativeUtils"
 
@@ -80,7 +82,7 @@ class UtilsModule(context: ReactApplicationContext) : ReactContextBaseJavaModule
     }
 
     @ReactMethod
-    fun scanSafAudioFiles(directoryUri: String, promise: Promise) {
+    fun scanSafDirectoryFiles(directoryUri: String, promise: Promise) {
         fileExecutor.execute {
             try {
                 val root = DocumentFile.fromTreeUri(reactContext, Uri.parse(directoryUri))
@@ -94,24 +96,34 @@ class UtilsModule(context: ReactApplicationContext) : ReactContextBaseJavaModule
                 pending.add(root)
                 while (pending.isNotEmpty()) {
                     val directory = pending.removeFirst()
-                    if (!visited.add(directory.uri.toString())) {
+                    val directoryKey = directory.uri.toString()
+                    if (!visited.add(directoryKey)) {
                         continue
                     }
                     directory.listFiles().forEach { entry ->
                         if (entry.isDirectory) {
                             pending.add(entry)
-                        } else if (entry.isFile && isSupportedAudioFile(entry)) {
-                            result.pushMap(Arguments.createMap().apply {
-                                putString("uri", entry.uri.toString())
-                                putString("name", entry.name ?: entry.uri.lastPathSegment ?: "audio")
-                                putString(
-                                    "documentId",
-                                    runCatching {
-                                        DocumentsContract.getDocumentId(entry.uri)
-                                    }.getOrNull(),
-                                )
-                            })
+                            return@forEach
                         }
+                        if (!entry.isFile) {
+                            return@forEach
+                        }
+                        val displayName = entry.name ?: entry.uri.lastPathSegment
+                        val kind = companionFileKind(entry, displayName) ?: return@forEach
+                        result.pushMap(Arguments.createMap().apply {
+                            putString("uri", entry.uri.toString())
+                            putString("name", displayName ?: "audio")
+                            putString("kind", kind)
+                            // 父目录 uri：content:// 无法靠路径拼接找兄弟文件，
+                            // 关联歌词 / 封面只能依赖扫描时的父子关系
+                            putString("parentUri", directoryKey)
+                            putString(
+                                "documentId",
+                                runCatching {
+                                    DocumentsContract.getDocumentId(entry.uri)
+                                }.getOrNull(),
+                            )
+                        })
                     }
                 }
                 promise.resolve(result)
@@ -121,11 +133,16 @@ class UtilsModule(context: ReactApplicationContext) : ReactContextBaseJavaModule
         }
     }
 
-    private fun isSupportedAudioFile(file: DocumentFile): Boolean {
-        val extension = file.name
-            ?.substringAfterLast('.', "")
-            ?.lowercase()
-        return extension in supportedAudioExtensions || file.type?.startsWith("audio/") == true
+    /**
+     * 音频 / 歌词 / 封面之外的文件不返回：扫描结果要能重建附属文件关联，
+     * 但没必要把目录里的无关文件全量搬到 JS 侧。
+     */
+    private fun companionFileKind(file: DocumentFile, displayName: String?): String? {
+        val extension = displayName?.substringAfterLast('.', "")?.lowercase()
+        if (extension in supportedAudioExtensions) return "audio"
+        if (extension in supportedLyricExtensions) return "lyric"
+        if (extension in supportedCoverExtensions) return "cover"
+        return if (file.type?.startsWith("audio/") == true) "audio" else null
     }
 
     @ReactMethod
