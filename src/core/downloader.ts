@@ -7,7 +7,7 @@ import { errorLog, devLog } from "@/utils/log";
 import { getMediaExtraProperty, patchMediaExtra } from "@/utils/mediaExtra";
 import { getMediaUniqueKey, isSameMediaItem } from "@/utils/mediaUtils";
 import network from "@/utils/network";
-import { getQualityOrder } from "@/utils/qualities";
+import { getPluginQualityScope, getQualityOrder, pickSupportedQuality } from "@/utils/qualities";
 import { generateFileNameFromConfig, DEFAULT_FILE_NAMING_CONFIG } from "@/utils/fileNamingFormatter";
 import { isMflacUrl, normalizeEkey } from "@/utils/mflac";
 import EventEmitter from "eventemitter3";
@@ -930,9 +930,15 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
 
         const plugin = this.pluginManagerService.getByName(musicItem.platform);
         if (plugin) {
+            // 下载与播放保持一致：档位范围由插件协议决定（官方协议插件只有 4 档），
+            // 默认下载音质（多数是 master）若不在范围内，先落到范围内的最高档再逐档降。
+            const pluginQualityScope = getPluginQualityScope(plugin.instance);
+            const scopedStartQuality =
+                pickSupportedQuality(actualQuality, pluginQualityScope) ?? actualQuality;
             const qualityOrder = getQualityOrder(
-                actualQuality,
+                scopedStartQuality,
                 this.configService.getConfig("basic.downloadQualityOrder") ?? "desc",
+                pluginQualityScope,
             );
 
             for (const currentQuality of qualityOrder) {

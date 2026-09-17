@@ -111,6 +111,8 @@
     "toast.saveSuccess": "Saved successfully",
     "toast.sortHasBeenUpdated": "Sort order updated",
     "toast.currentQualityNotAvailableForCurrentMusic": "Current quality not available for this song",
+    "toast.musicQualityDowngraded": "{quality} is not available for this song, downgraded to {alternative}",
+    "toast.mediaSourceUnavailable": "Unable to load the audio source. Try again later or switch the source plugin.",
     "toast.commmentNotAvaliableForCurrentMusic": "No comments available for current song",
     "toast.addToNextPlay": "Added to play next",
     "toast.beginDownload": "Download started, please don't close the app until all downloads complete",

@@ -11,6 +11,10 @@ import delay from "@/utils/delay";
 import { addFileScheme, getFileName, removeFileScheme } from "@/utils/fileUtils";
 import { getMediaExtraProperty, patchMediaExtra } from "@/utils/mediaExtra";
 import {
+    resolvePluginQualityMode,
+    toOfficialQuality,
+} from "@/utils/qualities";
+import {
     buildFallbackMusicDetailUrl,
     getLocalPath,
     isSameMediaItem,
@@ -457,9 +461,15 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
             };
         }
         try {
+            // 插件协议边界：官方协议的插件只认 low/standard/high/super，
+            // app 的内部音质键（128k…master）必须先转换，否则插件认不出会退回默认档。
+            const pluginQuality =
+                resolvePluginQualityMode(parserPlugin.instance) === "official"
+                    ? toOfficialQuality(quality)
+                    : quality;
             const mediaSourceResult = (await parserPlugin.instance.getMediaSource(
                 musicItem,
-                quality,
+                pluginQuality,
             )) ?? { url: musicItem?.qualities?.[quality]?.url };
             const { url, headers, ekey, cek } = mediaSourceResult as any;
             if (!url) {
@@ -1562,6 +1572,9 @@ export class Plugin {
             };
         }
 
+        // 挂载后实例会被真实插件定义整体替换，缓存里的 qualityMode 会丢，必须重新探测一次。
+        // 判定规则：声明了非官方音质键（96k/flac/master…）→ extended；否则一律按 MusicFree 官方 4 档处理。
+        _instance.qualityMode = resolvePluginQualityMode(_instance);
         this.instance = _instance;
         this.path = pluginPath;
         this.name = _instance.platform;
