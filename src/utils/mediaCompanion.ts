@@ -264,7 +264,13 @@ export function matchCompanionFiles(
     ).toLowerCase();
 
     const lyricPath = firstHit(
-        COMPANION_LYRIC_EXTENSIONS.map(extension => `${baseName}.${extension}`),
+        COMPANION_LYRIC_EXTENSIONS.flatMap(extension => [
+            `${baseName}.${extension}`,
+            // 历史遗留：旧版本的 SAF 写入把 `.lrc` 交给 DocumentsProvider 推导，
+            // 被追加成了 `.lrc.txt`（见 issue #83 验收记录）。这类文件仍然要能认出来，
+            // 否则用户重装后导入目录，歌词关联重建不了。
+            ...(extension === "lrc" ? [`${baseName}.lrc.txt`] : []),
+        ]),
     );
     // 同名封面不存在时用目录级固定名（cover / folder / front）兜底，
     // 这类封面属于整个目录，多首歌共用

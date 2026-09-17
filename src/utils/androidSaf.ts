@@ -8,6 +8,18 @@ const JSON_MIME_TYPE = "application/json";
 const DEFAULT_MUSIC_DIRECTORY = "Music/Audiora";
 
 /**
+ * `.lrc` 故意用一个 Android `MimeTypeMap` 不认识的自定义 MIME。
+ *
+ * DocumentsProvider 落盘时会走 framework 的 `FileUtils.splitFileName`：
+ * 若「给定 MIME」与「文件名扩展名推出的 MIME」不一致，它会用
+ * `getExtensionFromMimeType(给定 MIME)` 作为扩展名**追加**到文件名后面。
+ * Android 不认识 `.lrc`（推出来是 null），所以传 `text/plain` 会得到
+ * `歌曲-歌手.lrc.txt`；传一个它同样不认识的 MIME 时该扩展名取不到，
+ * 文件名被原样保留。详见 issue #83 的验收记录。
+ */
+const LRC_MIME_TYPE = "text/x-lrc";
+
+/**
  * 授权目录扫描结果。
  * 除了音频，还会返回同目录的歌词 / 封面，导入时才能重建附属文件关联。
  */
@@ -91,7 +103,7 @@ export function getMimeTypeForFile(fileName: string) {
     case "wav": return "audio/wav";
     case "aac":
     case "acc": return "audio/aac";
-    case "lrc":
+    case "lrc": return LRC_MIME_TYPE;
     case "txt": return "text/plain";
     case "jpg":
     case "jpeg": return "image/jpeg";
@@ -130,13 +142,12 @@ export async function writeTextToAndroidDirectory(
     fileName: string,
     content: string,
 ) {
-    const extension = fileName.split(".").pop();
-    const baseName = extension
-        ? fileName.slice(0, -(extension.length + 1))
-        : fileName;
+    // 不要把扩展名交给 DocumentsProvider 补：`.lrc` 在 Android 眼里没有对应 MIME，
+    // 一旦交给它推导，`.lrc` 会被追加成 `.lrc.txt`（导出歌词时尤其明显）。
+    // 直接传完整文件名 + `getMimeTypeForFile` 里与之配套的 MIME，文件名才能原样落盘。
     const fileUri = await StorageAccessFramework.createFileAsync(
         directoryUri,
-        baseName,
+        fileName,
         getMimeTypeForFile(fileName),
     );
     await StorageAccessFramework.writeAsStringAsync(fileUri, content, {

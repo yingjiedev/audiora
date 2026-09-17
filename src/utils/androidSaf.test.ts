@@ -114,7 +114,10 @@ describe("Android SAF backup", () => {
             "content://provider/tree/primary%3AMusic%2FAudiora/document/id",
         )).toBe("Music/Audiora");
         expect(getMimeTypeForFile("track.flac")).toBe("audio/flac");
-        expect(getMimeTypeForFile("lyrics.lrc")).toBe("text/plain");
+        // `.lrc` 必须用 Android 不认识的 MIME，否则 DocumentsProvider 会把
+        // 文件名追加成 `.lrc.txt`（text/plain 对应 txt 扩展名）
+        expect(getMimeTypeForFile("lyrics.lrc")).toBe("text/x-lrc");
+        expect(getMimeTypeForFile("lyrics.txt")).toBe("text/plain");
         expect(getLegacyPathFromAndroidDocumentId(
             "primary:Music/Audiora/track.mp3",
         )).toBe("/storage/emulated/0/Music/Audiora/track.mp3");
@@ -149,10 +152,11 @@ describe("Android SAF backup", () => {
             "Song.lrc",
             "[00:00]Song",
         )).resolves.toBe("content://music/lyrics");
+        // 完整文件名交给 provider，避免它按 MIME 推导出 `.lrc.txt`
         expect(mockCreateFileAsync).toHaveBeenCalledWith(
             "content://tree/music",
-            "Song",
-            "text/plain",
+            "Song.lrc",
+            "text/x-lrc",
         );
         expect(mockWriteAsStringAsync).toHaveBeenCalledWith(
             "content://music/lyrics",

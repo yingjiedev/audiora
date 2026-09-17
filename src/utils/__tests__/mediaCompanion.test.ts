@@ -388,6 +388,24 @@ describe("mediaCompanion", () => {
             expect(matched.coverPath).toBe(`${directory}/song.jpeg`);
         });
 
+        it("兼容旧版 SAF 写入留下的 .lrc.txt 双扩展名歌词", () => {
+            const index = indexOf([
+                {
+                    path: `${directory}/song.lrc.txt`,
+                    name: "song.lrc.txt",
+                    directory,
+                },
+            ]);
+
+            expect(
+                matchCompanionFiles(index, {
+                    path: `${directory}/song.mp3`,
+                    name: "song.mp3",
+                    directory,
+                }).lyricPath,
+            ).toBe(`${directory}/song.lrc.txt`);
+        });
+
         it("不会跨目录匹配", () => {
             const index = indexOf([
                 { path: "/sdcard/Other/song.lrc", name: "song.lrc", directory: "/sdcard/Other" },
