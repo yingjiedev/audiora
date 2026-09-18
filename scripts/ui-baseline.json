@@ -1,0 +1,807 @@
+{
+    "version": 1,
+    "files": {
+        "src/components/panels/base/panelBase.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"关闭面板\"",
+                "code": "accessibilityLabel=\"关闭面板\"",
+                "count": 1
+            }
+        ],
+        "src/components/panels/base/panelFullscreen.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"关闭面板\"",
+                "code": "accessibilityLabel=\"关闭面板\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"显示播放器控件\"",
+                "code": "accessibilityLabel=\"显示播放器控件\"",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/associateLrc.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"关联歌词失败\"",
+                "code": "errorLog(\"关联歌词失败\", e?.message);",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/coverOptions.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"本地关联封面失败\"",
+                "code": "errorLog(\"本地关联封面失败\", e?.message ?? e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"恢复封面失败\"",
+                "code": "errorLog(\"恢复封面失败\", e?.message ?? e);",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/editMusicSheetInfo.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"🎨[编辑歌单信息] 写入背景失败\"",
+                "code": "devLog(\"warn\", \"🎨[编辑歌单信息] 写入背景失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"🎨[编辑歌单信息] 选择背景失败\"",
+                "code": "devLog(\"warn\", \"🎨[编辑歌单信息] 选择背景失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"📁[编辑歌单信息] 写入图片失败\"",
+                "code": "devLog(\"warn\", \"📁[编辑歌单信息] 写入图片失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"📁[编辑歌单信息] 选择封面图片\"",
+                "code": "devLog(\"info\", \"📁[编辑歌单信息] 选择封面图片\", { uri });",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"📁[编辑歌单信息] 选择图片失败\"",
+                "code": "devLog(\"warn\", \"📁[编辑歌单信息] 选择图片失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🎨",
+                "code": "devLog(\"warn\", \"🎨[编辑歌单信息] 写入背景失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🎨",
+                "code": "devLog(\"warn\", \"🎨[编辑歌单信息] 选择背景失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "📁",
+                "code": "devLog(\"info\", \"📁[编辑歌单信息] 选择封面图片\", { uri });",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "📁",
+                "code": "devLog(\"warn\", \"📁[编辑歌单信息] 写入图片失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "📁",
+                "code": "devLog(\"warn\", \"📁[编辑歌单信息] 选择图片失败\", e);",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/musicItemLyricOptions.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"[歌词下载] 保存成功\"",
+                "code": "devLog(\"info\", \"[歌词下载] 保存成功\", {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"[歌词下载] 配置信息\"",
+                "code": "devLog(\"info\", \"[歌词下载] 配置信息\", {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"[歌词下载] 下载歌词文件失败\"",
+                "code": "devLog(\"warn\", \"[歌词下载] 下载歌词文件失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"🎤[歌词选项] 删除本地歌词失败\"",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 删除本地歌词失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"🎤[歌词选项] 上传本地歌词失败\"",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 上传本地歌词失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"🎤[歌词选项] 上传翻译歌词失败\"",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 上传翻译歌词失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"🎤[歌词选项] 上传罗马音歌词失败\"",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 上传罗马音歌词失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"翻译\"",
+                "code": "translation: \"翻译\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"罗\"",
+                "code": "romanization: \"罗\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"罗马音\"",
+                "code": "romanization: \"罗马音\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"上传罗马音歌词\"",
+                "code": "title: \"上传罗马音歌词\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"译\"",
+                "code": "translation: \"译\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"原\"",
+                "code": "original: \"原\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"原文\"",
+                "code": "original: \"原文\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`歌词顺序: ${orderText}`",
+                "code": "return `歌词顺序: ${orderText}`;",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`歌词顺序: ${orderText}`",
+                "code": "Toast.success(`歌词顺序: ${orderText}`);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🎤",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 删除本地歌词失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🎤",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 上传本地歌词失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🎤",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 上传翻译歌词失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🎤",
+                "code": "devLog(\"warn\", \"🎤[歌词选项] 上传罗马音歌词失败\", e);",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/musicItemOptions.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"[专辑ID] 未找到专辑ID字段\"",
+                "code": "devLog(\"warn\", \"[专辑ID] 未找到专辑ID字段\", {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"分享歌曲失败\"",
+                "code": "devLog(\"warn\", \"分享歌曲失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"获取分享链接失败\"",
+                "code": "devLog(\"warn\", \"获取分享链接失败\", e);",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/mvPlayer.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"播放视频\"",
+                "code": "accessibilityLabel={paused ? \"播放视频\" : \"暂停视频\"}",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"后退十秒\"",
+                "code": "accessibilityLabel=\"后退十秒\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"前进十秒\"",
+                "code": "accessibilityLabel=\"前进十秒\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"暂停视频\"",
+                "code": "accessibilityLabel={paused ? \"播放视频\" : \"暂停视频\"}",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/playById.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"QQ音乐\"",
+                "code": "{(selectedPlugin?.name === \"QQ音乐\" || selectedPlugin?.name?.startsWith(\"QQ音乐\")) && (",
+                "count": 2
+            }
+        ],
+        "src/components/panels/types/qualityTranslation.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"恢复默认\"",
+                "code": "title: \"恢复默认\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"恢复默认\"",
+                "code": "title=\"恢复默认\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"恢复为内置 12 个音质键\"",
+                "code": "description=\"恢复为内置 12 个音质键\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"键名不能为空\"",
+                "code": "Toast.warn(\"键名不能为空\");",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"键名只能包含小写字母、数字和下划线\"",
+                "code": "Toast.warn(\"键名只能包含小写字母、数字和下划线\");",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"将恢复为内置的 12 个音质键，自定义键将被移除。确定？\"",
+                "code": "content: \"将恢复为内置的 12 个音质键，自定义键将被移除。确定？\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"删除内置音质\"",
+                "code": "title: \"删除内置音质\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"输入键名（如 dts、galaxy）\"",
+                "code": "description=\"输入键名（如 dts、galaxy）\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"输入键名（英文小写+数字，如 dts、galaxy）\"",
+                "code": "placeholder=\"输入键名（英文小写+数字，如 dts、galaxy）\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"缩写\"",
+                "code": "placeholder=\"缩写\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"添加自定义音质\"",
+                "code": "title=\"添加自定义音质\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"已重置为默认值\"",
+                "code": "Toast.success(\"已重置为默认值\");",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"音质管理\"",
+                "code": "title=\"音质管理\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"音质配置已保存\"",
+                "code": "Toast.success(\"音质配置已保存\");",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`\"${key}\" 是内置音质键，删除后可通过\"恢复默认\"找回。确定删除？`",
+                "code": "content: `\"${key}\" 是内置音质键，删除后可通过\"恢复默认\"找回。确定删除？`,",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`\"${key}\" 已存在`",
+                "code": "Toast.warn(`\"${key}\" 已存在`);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`显示标签`",
+                "code": "placeholder={`显示标签`}",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`已删除 ${key}`",
+                "code": "Toast.success(`已删除 ${key}`);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`已添加 ${key}`",
+                "code": "Toast.success(`已添加 ${key}`);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "<ThemeText fontSize=\" \">取消</ThemeText>",
+                "code": "<ThemeText fontSize=\"content\">取消</ThemeText>",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "标签",
+                "code": "标签",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "管理音质键列表：可增删、排序、编辑标签。保存后全局生效。",
+                "code": "管理音质键列表：可增删、排序、编辑标签。保存后全局生效。",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "内置",
+                "code": "内置",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "确定",
+                "code": "确定",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "缩写",
+                "code": "缩写",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "添加自定义音质",
+                "code": "添加自定义音质",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/searchCover/CoverList.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"获取歌曲封面失败\"",
+                "code": "errorLog(\"获取歌曲封面失败\", e);",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/searchCover/useSearchCover.ts": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"🔍[搜索封面] 开始搜索\"",
+                "code": "devLog(\"info\", \"🔍[搜索封面] 开始搜索\", { query, queryPage });",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"搜索封面失败\"",
+                "code": "\"搜索封面失败\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"搜索封面失败\"",
+                "code": "errorLog(\"搜索封面失败\", e?.message);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"搜索结果为空\"",
+                "code": "throw new Error(\"搜索结果为空\");",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🔍",
+                "code": "devLog(\"info\", \"🔍[搜索封面] 开始搜索\", { query, queryPage });",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/searchLrc/useSearchLrc.ts": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"🔍[搜索歌词] 开始搜索\"",
+                "code": "devLog(\"info\", \"🔍[搜索歌词] 开始搜索\", { query, queryPage });",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"搜索结果为空\"",
+                "code": "throw new Error(\"搜索结果为空\");",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"搜索失败\"",
+                "code": "\"搜索失败\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"搜索失败\"",
+                "code": "errorLog(\"搜索失败\", e?.message);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🔍",
+                "code": "devLog(\"info\", \"🔍[搜索歌词] 开始搜索\", { query, queryPage });",
+                "count": 1
+            }
+        ],
+        "src/components/panels/types/setUserVariables.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"设置用户变量\"",
+                "code": "title={title ?? \"设置用户变量\"}",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/aboutSetting.tsx": [
+            {
+                "rule": "cjk-text",
+                "text": "<ThemeText style={style.cardContent}>猫头猫</ThemeText>",
+                "code": "<ThemeText style={style.cardContent}>猫头猫</ThemeText>",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/backupSetting.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"💾[备份设置] 备份被拒绝\"",
+                "code": "devLog(\"warn\", \"💾[备份设置] 备份被拒绝\", reason);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"💾[备份设置] 恢复被拒绝\"",
+                "code": "devLog(\"warn\", \"💾[备份设置] 恢复被拒绝\", reason);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"💾[备份设置] Android 本地备份失败\"",
+                "code": "devLog(\"warn\", \"💾[备份设置] Android 本地备份失败\", reason);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"恢复失败\"",
+                "code": "errorLog(\"恢复失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"无效的URL\"",
+                "code": "throw \"无效的URL\";",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "💾",
+                "code": "devLog(\"warn\", \"💾[备份设置] 备份被拒绝\", reason);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "💾",
+                "code": "devLog(\"warn\", \"💾[备份设置] 恢复被拒绝\", reason);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "💾",
+                "code": "devLog(\"warn\", \"💾[备份设置] Android 本地备份失败\", reason);",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/basicSetting.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"背景颜色\"",
+                "code": "{ label: \"背景颜色\", value: \"backgroundColor\" },",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"背景颜色\"",
+                "code": "colorKey === \"unsungColor\" ? \"未播放颜色\" : colorKey === \"sungColor\" ? \"已播放颜色\" : \"背景颜色\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"纯白模式\"",
+                "code": "const highlightColor = createSwitch(\"纯白模式\", \"lyric.pureWhiteMode\", pureWhiteMode ?? true);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"恢复默认\"",
+                "code": "{ label: \"恢复默认\", value: \"reset\" },",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"空歌词行呼吸灯特效\"",
+                "code": "const breathingDots = createSwitch(\"空歌词行呼吸灯特效\", \"lyric.enableBreathingDots\", enableBreathingDots ?? true);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"未播放颜色\"",
+                "code": "{ label: \"未播放颜色\", value: \"unsungColor\" },",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"未播放颜色\"",
+                "code": "colorKey === \"unsungColor\" ? \"未播放颜色\" : colorKey === \"sungColor\" ? \"已播放颜色\" : \"背景颜色\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"颜色反转（已唱白色/未唱彩色）\"",
+                "code": "const invertColorsSwitch = createSwitch(\"颜色反转（已唱白色/未唱彩色）\", \"lyric.invertColors\", invertColors ?? false, (newValue) => {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"已播放颜色\"",
+                "code": "{ label: \"已播放颜色\", value: \"sungColor\" },",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"已播放颜色\"",
+                "code": "colorKey === \"unsungColor\" ? \"未播放颜色\" : colorKey === \"sungColor\" ? \"已播放颜色\" : \"背景颜色\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"逐字歌词\"",
+                "code": "const wordByWordLyric = createSwitch(\"逐字歌词\", \"lyric.enableWordByWord\", enableWordByWord ?? true, (newValue) => {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"逐字歌词浮动动画\"",
+                "code": "const wordByWordFloat = createSwitch(\"逐字歌词浮动动画\", \"lyric.enableWordByWordFloat\", enableWordByWordFloat ?? true);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"桌面歌词显示翻译\"",
+                "code": "const desktopTranslation = createSwitch(\"桌面歌词显示翻译\", \"lyric.desktopShowTranslation\", desktopShowTranslation ?? true);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"桌面歌词显示罗马音\"",
+                "code": "const desktopRomanization = createSwitch(\"桌面歌词显示罗马音\", \"lyric.desktopShowRomanization\", desktopShowRomanization ?? false);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`副行透明度比例 ${((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0)}%`",
+                "code": "<SettingRow title={`副行透明度比例 ${((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0)}%`} />",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`副行字号比例 ${((desktopSecondaryFontRatio ?? 0.85) * 100).toFixed(0)}%`",
+                "code": "<SettingRow title={`副行字号比例 ${((desktopSecondaryFontRatio ?? 0.85) * 100).toFixed(0)}%`} />",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`歌词宽度 ${Math.round((widthPercent ?? 0.8) * 100)}%`",
+                "code": "<SettingRow title={`歌词宽度 ${Math.round((widthPercent ?? 0.8) * 100)}%`} />",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`自定义预设 ${idx + 1}`",
+                "code": "title: `自定义预设 ${idx + 1}`,",
+                "count": 1
+            },
+            {
+                "rule": "cjk-text",
+                "text": "桌面歌词（仅对悬浮歌词生效）",
+                "code": "桌面歌词（仅对悬浮歌词生效）",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/index.ts": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"备份与恢复\"",
+                "code": "title: \"备份与恢复\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"插件管理\"",
+                "code": "title: \"插件管理\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"基本设置\"",
+                "code": "title: \"基本设置\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"设置\"",
+                "code": "title: \"设置\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"主题设置\"",
+                "code": "title: \"主题设置\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "`关于${deviceInfoModule.getApplicationName()}`",
+                "code": "title: `关于${deviceInfoModule.getApplicationName()}`,",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/pluginSetting/views/pluginList.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"插件安装失败\"",
+                "code": "trace(\"插件安装失败\", e?.message);",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"从本地安装插件\"",
+                "code": "if (item.value === \"从本地安装插件\") {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"从本地安装插件\"",
+                "code": "value: \"从本地安装插件\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"从网络安装插件\"",
+                "code": "item.value === \"从网络安装插件\"",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"从网络安装插件\"",
+                "code": "value: \"从网络安装插件\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"更新订阅\"",
+                "code": "} else if (item.value === \"更新订阅\") {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"更新订阅\"",
+                "code": "value: \"更新订阅\",",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"更新全部插件\"",
+                "code": "} else if (item.value === \"更新全部插件\") {",
+                "count": 1
+            },
+            {
+                "rule": "cjk-literal",
+                "text": "\"更新全部插件\"",
+                "code": "value: \"更新全部插件\",",
+                "count": 1
+            }
+        ],
+        "src/pages/setting/settingTypes/themeSetting/splashImage.tsx": [
+            {
+                "rule": "cjk-literal",
+                "text": "\"🖼️[启动图] 设置启动图失败\"",
+                "code": "devLog(\"warn\", \"🖼️[启动图] 设置启动图失败\", e);",
+                "count": 1
+            },
+            {
+                "rule": "emoji",
+                "text": "🖼",
+                "code": "devLog(\"warn\", \"🖼️[启动图] 设置启动图失败\", e);",
+                "count": 1
+            }
+        ]
+    }
+}
