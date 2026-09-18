@@ -14,6 +14,9 @@ import TrackPlayer, {
 import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
 import Icon from "@/components/base/icon.tsx";
+import RoundActionButton, {
+    useRoundActionForeground,
+} from "@/components/base/roundActionButton";
 import { iconSizeConst } from "@/constants/uiConst";
 import { radius, spacing } from "@/constants/designSystem";
 
@@ -28,51 +31,42 @@ const BAR_HEIGHT = rpx(108);
 function CircularPlayBtn() {
     const progress = useProgress();
     const musicState = useMusicState();
-    const colors = useColors();
+    // 进度环跟图标同色，走圆钮统一的取色，不在这里另算一份
+    const ringColor = useRoundActionForeground();
 
     const isPaused = musicIsPaused(musicState);
     const progressValue = progress?.duration
         ? Math.min(100, Math.max(0, (100 * progress.position) / progress.duration))
         : 0;
-    // 前景色按主色对比度取白或近黑（深色主题的主色被调亮后白字只剩 2.9:1）
-    const buttonForeground = colors.onPrimary ?? "#FFFFFF";
 
     return (
-        <Pressable
-            accessibilityRole="button"
+        <RoundActionButton
+            variant="solid"
             accessibilityLabel={"播放或暂停歌曲"}
             hitSlop={10}
+            size={PLAY_SIZE}
+            iconName={isPaused ? "play" : "pause"}
+            iconSize={PLAY_ICON_SIZE}
+            iconStyle={isPaused ? style.playIconNudge : undefined}
             onPress={async () => {
                 if (isPaused) {
                     await TrackPlayer.play();
                 } else {
                     await TrackPlayer.pause();
                 }
-            }}
-            style={[style.playBtn, { backgroundColor: colors.primary }]}>
-            {/* Layer 1: progress ring — same box, same center */}
-            <View style={style.playLayer} pointerEvents="none">
-                <CircularProgressBase
-                    activeStrokeWidth={PLAY_STROKE}
-                    inActiveStrokeWidth={rpx(2)}
-                    inActiveStrokeOpacity={0.25}
-                    value={progressValue}
-                    duration={100}
-                    radius={PLAY_RADIUS}
-                    activeStrokeColor={buttonForeground}
-                    inActiveStrokeColor={buttonForeground}
-                />
-            </View>
-            {/* Layer 2: icon — same box, same center (not a sibling in flow) */}
-            <View style={style.playLayer} pointerEvents="none">
-                <Icon
-                    name={isPaused ? "play" : "pause"}
-                    size={PLAY_ICON_SIZE}
-                    color={buttonForeground}
-                    style={isPaused ? style.playIconNudge : undefined}
-                />
-            </View>
-        </Pressable>
+            }}>
+            {/* 进度环与图标共用同一个方框、同一个圆心 */}
+            <CircularProgressBase
+                activeStrokeWidth={PLAY_STROKE}
+                inActiveStrokeWidth={rpx(2)}
+                inActiveStrokeOpacity={0.25}
+                value={progressValue}
+                duration={100}
+                radius={PLAY_RADIUS}
+                activeStrokeColor={ringColor}
+                inActiveStrokeColor={ringColor}
+            />
+        </RoundActionButton>
     );
 }
 
@@ -177,21 +171,6 @@ const style = StyleSheet.create({
      * One fixed square. Both ring and icon are absolute-filled layers so they
      * share the exact same geometry (no flow siblings that can drift apart).
      */
-    playBtn: {
-        width: PLAY_SIZE,
-        height: PLAY_SIZE,
-        position: "relative",
-        borderRadius: PLAY_RADIUS,
-    },
-    playLayer: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: PLAY_SIZE,
-        height: PLAY_SIZE,
-        alignItems: "center",
-        justifyContent: "center",
-    },
     playIconNudge: {
         // Play triangle reads slightly left-of-center optically.
         marginLeft: rpx(2),

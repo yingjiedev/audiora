@@ -1,4 +1,4 @@
-import Icon from "@/components/base/icon";
+import RoundActionButton from "@/components/base/roundActionButton";
 import ThemeText from "@/components/base/themeText";
 import { ImgAsset } from "@/constants/assetsConst";
 import { useI18N } from "@/core/i18n";
@@ -48,8 +48,11 @@ export default function HomeHero() {
                         {t("home.welcomeSubtitle")}
                     </ThemeText>
                 </View>
-                <Pressable
+                <RoundActionButton
+                    variant="inverse"
                     style={styles.playButton}
+                    size={rpx(72)}
+                    iconName={isPlaying ? "pause" : "play"}
                     onPress={event => {
                         event.stopPropagation();
                         if (!currentMusic) {
@@ -59,13 +62,8 @@ export default function HomeHero() {
                         } else {
                             TrackPlayer.play(currentMusic);
                         }
-                    }}>
-                    <Icon
-                        name={isPlaying ? "pause" : "play"}
-                        size={rpx(36)}
-                        color="#17213E"
-                    />
-                </Pressable>
+                    }}
+                />
             </ImageBackground>
         </Pressable>
     );
@@ -114,17 +112,5 @@ const styles = StyleSheet.create({
         position: "absolute",
         right: rpx(32),
         bottom: rpx(30),
-        width: rpx(72),
-        height: rpx(72),
-        borderRadius: rpx(36),
-        alignItems: "center",
-        justifyContent: "center",
-        // color-exempt: 按钮压在 hero 图上，与主题无关，两模式都是白色圆钮
-        backgroundColor: "#FFFFFF",
-        shadowColor: "#13244E",
-        shadowOffset: { width: 0, height: rpx(6) },
-        shadowOpacity: 0.18,
-        shadowRadius: rpx(10),
-        elevation: 4,
     },
 });

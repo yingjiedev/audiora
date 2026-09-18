@@ -370,13 +370,6 @@
                 "count": 1
             }
         ],
-        "src/components/musicBar/index.tsx": [
-            {
-                "literal": "#ffffff",
-                "code": "const buttonForeground = colors.onPrimary ?? \"#FFFFFF\";",
-                "count": 1
-            }
-        ],
         "src/components/musicList/index.tsx": [
             {
                 "literal": "#000",
@@ -670,47 +663,12 @@
         ],
         "src/pages/home/components/homeBody/homeOverview.tsx": [
             {
-                "literal": "#00a9ee",
-                "code": "accent: \"#00A9EE\",",
-                "count": 1
-            },
-            {
-                "literal": "#00cdaa",
-                "code": "accent: \"#00CDAA\",",
-                "count": 1
-            },
-            {
                 "literal": "#2d4a78",
                 "code": "shadowColor: \"#2D4A78\",",
-                "count": 1
-            },
-            {
-                "literal": "#4d70f5",
-                "code": "accent: \"#4D70F5\",",
-                "count": 1
-            },
-            {
-                "literal": "#ff567d",
-                "code": "accent: \"#FF567D\",",
                 "count": 1
             }
         ],
         "src/pages/home/components/HomeHero.tsx": [
-            {
-                "literal": "#13244e",
-                "code": "shadowColor: \"#13244E\",",
-                "count": 1
-            },
-            {
-                "literal": "#17213e",
-                "code": "color=\"#17213E\"",
-                "count": 1
-            },
-            {
-                "literal": "#ffffff",
-                "code": "backgroundColor: \"#FFFFFF\",",
-                "count": 1
-            },
             {
                 "literal": "#ffffff",
                 "code": "color=\"#FFFFFF\"",
@@ -739,70 +697,8 @@
         ],
         "src/pages/home/components/MusicLibraryOverview.tsx": [
             {
-                "literal": "#18bfa3",
-                "code": "accent: \"#18BFA3\",",
-                "count": 1
-            },
-            {
-                "literal": "#1f9df0",
-                "code": "accent: \"#1F9DF0\",",
-                "count": 1
-            },
-            {
-                "literal": "#5b72ff",
-                "code": "accent: \"#5B72FF\",",
-                "count": 1
-            },
-            {
-                "literal": "#7892c9",
-                "code": "<Icon name=\"folder-music-outline\" size={rpx(48)} color=\"#7892C9\" />",
-                "count": 1
-            },
-            {
-                "literal": "#7892c9",
-                "code": "<Icon name=\"javascript\" size={rpx(48)} color=\"#7892C9\" />",
-                "count": 1
-            },
-            {
-                "literal": "#8563f2",
-                "code": "accent: \"#8563F2\",",
-                "count": 1
-            },
-            {
                 "literal": "#ffffff",
                 "code": "<Icon name=\"magnifying-glass\" size={rpx(28)} color=\"#FFFFFF\" />",
-                "count": 1
-            }
-        ],
-        "src/pages/home/components/MyMusicOverview.tsx": [
-            {
-                "literal": "#19c69f",
-                "code": "accent: \"#19C69F\",",
-                "count": 1
-            },
-            {
-                "literal": "#1abaa5",
-                "code": "accent: \"#1ABAA5\",",
-                "count": 1
-            },
-            {
-                "literal": "#337df7",
-                "code": "accent: \"#337DF7\",",
-                "count": 1
-            },
-            {
-                "literal": "#4d7cff",
-                "code": "accent: \"#4D7CFF\",",
-                "count": 1
-            },
-            {
-                "literal": "#f7a719",
-                "code": "accent: \"#F7A719\",",
-                "count": 1
-            },
-            {
-                "literal": "#ff6e91",
-                "code": "accent: \"#FF6E91\",",
                 "count": 1
             }
         ],
@@ -1112,13 +1008,6 @@
             {
                 "literal": "#2b333eaa",
                 "code": "backgroundColor: \"#2b333eaa\",",
-                "count": 1
-            }
-        ],
-        "src/pages/setting/settingTypes/settingsOverview.tsx": [
-            {
-                "literal": "rgba(62,101,255,0.08)",
-                "code": "android_ripple={{ color: \"rgba(62, 101, 255, 0.08)\" }}",
                 "count": 1
             }
         ],
