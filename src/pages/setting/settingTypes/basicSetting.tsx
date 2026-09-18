@@ -295,10 +295,10 @@ export default function BasicSetting() {
                     showExitOnNotification ?? false,
                 ),
                 {
-                    title: "音质管理",
+                    title: t("basicSettings.qualityManagement"),
                     right: (
                         <ThemeText numberOfLines={1} fontSize="subTitle" style={styles.valueText}>
-                            自定义
+                            {t("basicSettings.custom")}
                         </ThemeText>
                     ),
                     onPress() {
@@ -446,20 +446,20 @@ export default function BasicSetting() {
                 ),
                 // 文件命名格式设置
                 {
-                    title: "文件命名格式",
+                    title: t("basicSettings.fileNaming"),
                     right: (
                         <ThemeText numberOfLines={1}
                             fontSize="subTitle"
                             style={styles.valueText}>
-                            {fileNamingType === "custom" ? "自定义" : (fileNamingPreset || "歌曲名-歌手")}
+                            {fileNamingType === "custom" ? t("basicSettings.custom") : (fileNamingPreset || t("basicSettings.fileNamingDefaultPreset"))}
                         </ThemeText>
                     ),
                     onPress() {
                         showDialog("RadioDialog", {
-                            title: "文件命名格式类型",
+                            title: t("basicSettings.fileNamingType"),
                             content: [
-                                { label: "预设模板", value: "preset" },
-                                { label: "自定义模板", value: "custom" },
+                                { label: t("basicSettings.fileNamingPreset"), value: "preset" },
+                                { label: t("basicSettings.fileNamingCustom"), value: "custom" },
                             ],
                             onOk(val) {
                                 Config.setConfig("basic.fileNamingType", val as "preset" | "custom");
@@ -475,18 +475,18 @@ export default function BasicSetting() {
                 },
                 // 预设模板选择（仅当选择预设模板时显示）
                 ...(fileNamingType === "preset" || !fileNamingType ? [{
-                    title: "预设模板",
+                    title: t("basicSettings.fileNamingPreset"),
                     right: (
                         <ThemeText numberOfLines={1}
                             fontSize="subTitle"
                             style={styles.valueText}>
-                            {fileNamingPreset || "歌曲名-歌手"}
+                            {fileNamingPreset || t("basicSettings.fileNamingDefaultPreset")}
                         </ThemeText>
                     ),
                     onPress() {
                         const presetTemplates = getPresetTemplates();
                         showDialog("RadioDialog", {
-                            title: "选择预设模板",
+                            title: t("basicSettings.fileNamingPresetTitle"),
                             content: presetTemplates.map(template => ({
                                 label: template,
                                 value: template,
@@ -499,7 +499,7 @@ export default function BasicSetting() {
                 }] : []),
                 // 自定义模板输入（仅当选择自定义模板时显示）
                 ...(fileNamingType === "custom" ? [{
-                    title: "自定义模板",
+                    title: t("basicSettings.fileNamingCustom"),
                     right: (
                         <ThemeText
                             fontSize="subTitle"
@@ -510,29 +510,31 @@ export default function BasicSetting() {
                     ),
                     onPress() {
                         showPanel("SimpleInput", {
-                            title: "自定义文件命名模板",
-                            placeholder: "例如: {title}-{artist}-{album}",
+                            title: t("basicSettings.fileNamingCustomTitle"),
+                            placeholder: t("basicSettings.fileNamingPlaceholder"),
                             defaultValue: fileNamingCustom || "{title}-{artist}",
-                            tips: `可用变量：${Object.entries(TEMPLATE_VARIABLES).map(([key, desc]) => `${key}(${desc})`).join(", ")}`,
+                            tips: t("basicSettings.fileNamingVariables", {
+                                variables: Object.entries(TEMPLATE_VARIABLES).map(([key, desc]) => `${key}(${desc})`).join(", "),
+                            }),
                             onOk(text, closePanel) {
                                 const validation = validateTemplate(text);
                                 if (!validation.valid) {
-                                    Toast.warn(validation.error || "模板格式错误");
+                                    Toast.warn(validation.error || t("basicSettings.fileNamingTemplateInvalid"));
                                     return;
                                 }
                                 Config.setConfig("basic.fileNamingCustom", text);
                                 closePanel();
-                                Toast.success("模板设置成功");
+                                Toast.success(t("basicSettings.fileNamingTemplateSaved"));
                             },
                         });
                     },
                 }] : []),
                 // 音乐标签设置
                 {
-                    title: "音乐标签设置",
+                    title: t("basicSettings.musicTagSettings"),
                     right: (
                         <ThemeText numberOfLines={1} fontSize="subTitle" style={styles.valueText}>
-                            自定义
+                            {t("basicSettings.custom")}
                         </ThemeText>
                     ),
                     onPress() {

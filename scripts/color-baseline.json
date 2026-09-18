@@ -417,28 +417,6 @@
                 "count": 1
             }
         ],
-        "src/components/panels/types/musicMetadataSettings.tsx": [
-            {
-                "literal": "#000",
-                "code": "shadowColor: '#000',",
-                "count": 1
-            },
-            {
-                "literal": "#ccc",
-                "code": "borderColor: '#ccc',",
-                "count": 1
-            },
-            {
-                "literal": "#e0e0e0",
-                "code": "borderTopColor: \"#e0e0e0\",",
-                "count": 1
-            },
-            {
-                "literal": "rgba(128,128,128,0.1)",
-                "code": "backgroundColor: 'rgba(128,128,128,0.1)',",
-                "count": 1
-            }
-        ],
         "src/components/panels/types/mvPlayer.tsx": [
             {
                 "literal": "#000",

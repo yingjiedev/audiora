@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { StyleSheet, View, TouchableOpacity } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import rpx, { fontRpx, vmax } from "@/utils/rpx";
-import { fontSizeConst } from "@/constants/uiConst";
+import rpx, { vmax } from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
 import ThemeText from "@/components/base/themeText";
 import PanelBase from "../base/panelBase";
@@ -12,14 +11,48 @@ import Config, { useAppConfig } from "@/core/appConfig";
 import ListItem from "@/components/base/listItem";
 import ThemeSwitch from "@/components/base/switch";
 import Checkbox from "@/components/base/checkbox";
+import Divider from "@/components/base/divider";
+import Icon from "@/components/base/icon";
 import Toast from "@/utils/toast";
+import { useI18N } from "@/core/i18n";
+import type { ILanguageData } from "@/types/core/i18n";
+import { showDialog } from "@/components/dialogs/useDialog";
+import SettingSection from "@/pages/setting/components/settingSection";
+import SettingRow from "@/pages/setting/components/settingRow";
+import { settingsLayout } from "@/pages/setting/components/settingsLayout";
 
 type LyricOrderItem = "original" | "translation" | "romanization";
 
-const lyricOrderLabels: Record<LyricOrderItem, { label: string; desc: string }> = {
-    original: { label: "原文歌词", desc: "歌曲原始语言的歌词" },
-    translation: { label: "翻译歌词", desc: "歌词的中文翻译" },
-    romanization: { label: "音译歌词", desc: "罗马音/拼音注音" },
+/** 歌词类型的展示顺序固定，用户勾选后按 lyricOrder 里的先后写入文件 */
+const lyricOrderItems: LyricOrderItem[] = [
+    "original",
+    "translation",
+    "romanization",
+];
+
+const lyricTypeTitleKey: Record<LyricOrderItem, keyof ILanguageData> = {
+    original: "panel.musicMetadata.lyricType.original",
+    translation: "panel.musicMetadata.lyricType.translation",
+    romanization: "panel.musicMetadata.lyricType.romanization",
+};
+
+const lyricTypeDescKey: Record<LyricOrderItem, keyof ILanguageData> = {
+    original: "panel.musicMetadata.lyricType.originalDesc",
+    translation: "panel.musicMetadata.lyricType.translationDesc",
+    romanization: "panel.musicMetadata.lyricType.romanizationDesc",
+};
+
+const defaultSettings = {
+    writeMetadata: false,
+    writeMetadataCover: true,
+    writeMetadataLyric: true,
+    writeMetadataExtended: false,
+    downloadLyricFile: false,
+    lyricFileFormat: "lrc" as "lrc" | "txt",
+    downloadCoverFile: false,
+    coverFileNaming: "sameAsAudio" as "sameAsAudio" | "fixedName",
+    lyricOrder: ["romanization", "original", "translation"] as LyricOrderItem[],
+    enableWordByWord: false,
 };
 
 interface IMusicMetadataSettingsProps {
@@ -28,8 +61,8 @@ interface IMusicMetadataSettingsProps {
 
 export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProps) {
     const colors = useColors();
+    const { t } = useI18N();
 
-    // Get current configuration values
     const currentWriteMetadata = useAppConfig("basic.writeMetadata");
     const currentWriteMetadataCover = useAppConfig("basic.writeMetadataCover");
     const currentWriteMetadataLyric = useAppConfig("basic.writeMetadataLyric");
@@ -41,25 +74,35 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
     const currentLyricOrder = useAppConfig("basic.lyricOrder");
     const currentEnableWordByWord = useAppConfig("basic.enableWordByWordLyric");
 
-    // Local state management
     const [settings, setSettings] = useState({
-        writeMetadata: currentWriteMetadata ?? false,
-        writeMetadataCover: currentWriteMetadataCover ?? true,
-        writeMetadataLyric: currentWriteMetadataLyric ?? true,
-        writeMetadataExtended: currentWriteMetadataExtended ?? false,
-        downloadLyricFile: currentDownloadLyricFile ?? false,
-        lyricFileFormat: currentLyricFileFormat ?? "lrc" as "lrc" | "txt",
-        downloadCoverFile: currentDownloadCoverFile ?? false,
-        coverFileNaming: currentCoverFileNaming ?? "sameAsAudio" as "sameAsAudio" | "fixedName",
-        lyricOrder: currentLyricOrder ?? ["romanization", "original", "translation"] as LyricOrderItem[],
-        enableWordByWord: currentEnableWordByWord ?? false,
+        writeMetadata: currentWriteMetadata ?? defaultSettings.writeMetadata,
+        writeMetadataCover:
+            currentWriteMetadataCover ?? defaultSettings.writeMetadataCover,
+        writeMetadataLyric:
+            currentWriteMetadataLyric ?? defaultSettings.writeMetadataLyric,
+        writeMetadataExtended:
+            currentWriteMetadataExtended ?? defaultSettings.writeMetadataExtended,
+        downloadLyricFile:
+            currentDownloadLyricFile ?? defaultSettings.downloadLyricFile,
+        lyricFileFormat:
+            currentLyricFileFormat ?? defaultSettings.lyricFileFormat,
+        downloadCoverFile:
+            currentDownloadCoverFile ?? defaultSettings.downloadCoverFile,
+        coverFileNaming:
+            currentCoverFileNaming ?? defaultSettings.coverFileNaming,
+        lyricOrder: currentLyricOrder ?? defaultSettings.lyricOrder,
+        enableWordByWord:
+            currentEnableWordByWord ?? defaultSettings.enableWordByWord,
     });
 
     const handleSave = () => {
         Config.setConfig("basic.writeMetadata", settings.writeMetadata);
         Config.setConfig("basic.writeMetadataCover", settings.writeMetadataCover);
         Config.setConfig("basic.writeMetadataLyric", settings.writeMetadataLyric);
-        Config.setConfig("basic.writeMetadataExtended", settings.writeMetadataExtended);
+        Config.setConfig(
+            "basic.writeMetadataExtended",
+            settings.writeMetadataExtended,
+        );
         Config.setConfig("basic.downloadLyricFile", settings.downloadLyricFile);
         Config.setConfig("basic.lyricFileFormat", settings.lyricFileFormat);
         Config.setConfig("basic.downloadCoverFile", settings.downloadCoverFile);
@@ -67,98 +110,27 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
         Config.setConfig("basic.lyricOrder", settings.lyricOrder);
         Config.setConfig("basic.enableWordByWordLyric", settings.enableWordByWord);
 
-        Toast.success("音乐标签设置已保存");
+        Toast.success(t("panel.musicMetadata.toastSaved"));
         hidePanel();
     };
 
     const handleReset = () => {
+        // lyricOrder 是数组，必须复制，否则后续排序会改到默认值本身
         setSettings({
-            writeMetadata: false,
-            writeMetadataCover: true,
-            writeMetadataLyric: true,
-            writeMetadataExtended: false,
-            downloadLyricFile: false,
-            lyricFileFormat: "lrc",
-            downloadCoverFile: false,
-            coverFileNaming: "sameAsAudio" as "sameAsAudio" | "fixedName",
-            lyricOrder: ["romanization", "original", "translation"],
-            enableWordByWord: false,
+            ...defaultSettings,
+            lyricOrder: [...defaultSettings.lyricOrder],
         });
-        Toast.success("已重置为默认值");
+        Toast.success(t("panel.musicMetadata.toastReset"));
     };
 
     const createSwitchHandler = (key: keyof typeof settings) => {
         return (value: boolean) => {
             setSettings(prev => ({
                 ...prev,
-                [key]: value
+                [key]: value,
             }));
         };
     };
-
-    const renderCard = (children: React.ReactNode, style?: any) => (
-        <View style={[styles.card, {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-        }, style]}>
-            {children}
-        </View>
-    );
-
-    const renderSwitchItem = (
-        title: string,
-        description: string,
-        value: boolean,
-        onValueChange: (value: boolean) => void,
-        options?: {
-            icon?: string;
-            level?: number;
-        }
-    ) => {
-        const level = options?.level ?? 0;
-
-        return (
-            <View
-                key={title}
-                style={[
-                    styles.itemContainer,
-                    level === 1 && styles.subItemContainer,
-                    level === 2 && styles.subSubItemContainer,
-                ]}
-            >
-                <View style={styles.switchRow}>
-                    <View style={styles.textContainer}>
-                        {options?.icon && (
-                            <ThemeText
-                                fontSize="content"
-                                style={styles.itemIcon}>
-                                {options.icon}
-                            </ThemeText>
-                        )}
-                        <View style={styles.textContent}>
-                            <ThemeText
-                                fontSize="content"
-                                fontWeight={level === 0 ? "semibold" : "regular"}
-                                style={level > 0 && styles.subItemTitle}>
-                                {title}
-                            </ThemeText>
-                            <ThemeText
-                                fontSize="description"
-                                fontColor="textSecondary"
-                                style={styles.descriptionText}>
-                                {description}
-                            </ThemeText>
-                        </View>
-                    </View>
-                    <ThemeSwitch value={value} onValueChange={onValueChange} />
-                </View>
-            </View>
-        );
-    };
-
-    const renderDivider = () => (
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-    );
 
     // Lyric order toggle handler
     const toggleLyricOrderItem = (item: LyricOrderItem) => {
@@ -168,15 +140,14 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
                 // Remove item (allow empty)
                 return {
                     ...prev,
-                    lyricOrder: currentOrder.filter(i => i !== item)
-                };
-            } else {
-                // Add item to end
-                return {
-                    ...prev,
-                    lyricOrder: [...currentOrder, item]
+                    lyricOrder: currentOrder.filter(i => i !== item),
                 };
             }
+            // Add item to end
+            return {
+                ...prev,
+                lyricOrder: [...currentOrder, item],
+            };
         });
     };
 
@@ -186,7 +157,10 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
             const currentOrder = [...prev.lyricOrder];
             const index = currentOrder.indexOf(item);
             if (index > 0) {
-                [currentOrder[index - 1], currentOrder[index]] = [currentOrder[index], currentOrder[index - 1]];
+                [currentOrder[index - 1], currentOrder[index]] = [
+                    currentOrder[index],
+                    currentOrder[index - 1],
+                ];
             }
             return { ...prev, lyricOrder: currentOrder };
         });
@@ -198,149 +172,117 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
             const currentOrder = [...prev.lyricOrder];
             const index = currentOrder.indexOf(item);
             if (index >= 0 && index < currentOrder.length - 1) {
-                [currentOrder[index], currentOrder[index + 1]] = [currentOrder[index + 1], currentOrder[index]];
+                [currentOrder[index], currentOrder[index + 1]] = [
+                    currentOrder[index + 1],
+                    currentOrder[index],
+                ];
             }
             return { ...prev, lyricOrder: currentOrder };
         });
     };
 
-    // Format type toggle handler
-    const setLyricFileFormat = (format: "lrc" | "txt") => {
-        setSettings(prev => ({
-            ...prev,
-            lyricFileFormat: format
-        }));
+    const pickLyricFileFormat = () => {
+        showDialog("RadioDialog", {
+            title: t("panel.musicMetadata.lyricFileFormat"),
+            content: [
+                { label: ".lrc", value: "lrc" },
+                { label: ".txt", value: "txt" },
+            ],
+            onOk(val) {
+                setSettings(prev => ({
+                    ...prev,
+                    lyricFileFormat: val as "lrc" | "txt",
+                }));
+            },
+        });
     };
 
-    // Render lyric order item with reorder buttons
+    const pickCoverFileNaming = () => {
+        showDialog("RadioDialog", {
+            title: t("panel.musicMetadata.coverFileNaming"),
+            content: [
+                {
+                    label: t("panel.musicMetadata.coverFileNaming.sameAsAudio"),
+                    value: "sameAsAudio",
+                },
+                {
+                    label: t("panel.musicMetadata.coverFileNaming.fixedName"),
+                    value: "fixedName",
+                },
+            ],
+            onOk(val) {
+                setSettings(prev => ({
+                    ...prev,
+                    coverFileNaming: val as "sameAsAudio" | "fixedName",
+                }));
+            },
+        });
+    };
+
     const renderLyricOrderItem = (item: LyricOrderItem) => {
         const isChecked = settings.lyricOrder.includes(item);
         const index = settings.lyricOrder.indexOf(item);
-        const { label, desc } = lyricOrderLabels[item];
+        const isFirst = index === 0;
+        const isLast = index === settings.lyricOrder.length - 1;
 
         return (
-            <View key={item} style={styles.lyricOrderItemRow}>
-                <TouchableOpacity
-                    style={styles.lyricOrderItemLeft}
+            <ListItem
+                key={item}
+                withHorizontalPadding
+                heightType="none"
+                style={styles.orderRow}
+                onPress={() => toggleLyricOrderItem(item)}>
+                <Checkbox
+                    checked={isChecked}
                     onPress={() => toggleLyricOrderItem(item)}
-                    activeOpacity={0.7}
-                >
-                    <Checkbox
-                        checked={isChecked}
-                        onPress={() => toggleLyricOrderItem(item)}
-                    />
-                    <View style={styles.lyricOrderTextContainer}>
-                        <ThemeText fontSize="content">{label}</ThemeText>
-                        <ThemeText
-                            fontSize="description"
-                            fontColor="textSecondary"
-                            style={styles.lyricOrderDescription}>
-                            {desc}
-                        </ThemeText>
-                    </View>
-                </TouchableOpacity>
-                {isChecked && (
+                />
+                <ListItem.Content
+                    title={t(lyricTypeTitleKey[item])}
+                    description={t(lyricTypeDescKey[item])}
+                    containerStyle={styles.orderContent}
+                />
+                {isChecked ? (
                     <View style={styles.reorderButtons}>
                         <TouchableOpacity
-                            style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
-                            onPress={() => moveLyricOrderUp(item)}
-                            disabled={index === 0}
-                        >
-                            <ThemeText fontSize="description" fontColor={index === 0 ? "textSecondary" : "text"}>▲</ThemeText>
+                            accessibilityLabel={t("panel.musicMetadata.moveUp")}
+                            disabled={isFirst}
+                            style={[
+                                styles.reorderButton,
+                                styles.rotateUp,
+                                isFirst && styles.reorderButtonDisabled,
+                            ]}
+                            onPress={() => moveLyricOrderUp(item)}>
+                            <Icon
+                                name="chevron-right"
+                                size={rpx(32)}
+                                color={colors.text}
+                            />
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.reorderButton, index === settings.lyricOrder.length - 1 && styles.reorderButtonDisabled]}
-                            onPress={() => moveLyricOrderDown(item)}
-                            disabled={index === settings.lyricOrder.length - 1}
-                        >
-                            <ThemeText fontSize="description" fontColor={index === settings.lyricOrder.length - 1 ? "textSecondary" : "text"}>▼</ThemeText>
+                            accessibilityLabel={t("panel.musicMetadata.moveDown")}
+                            disabled={isLast}
+                            style={[
+                                styles.reorderButton,
+                                styles.rotateDown,
+                                isLast && styles.reorderButtonDisabled,
+                            ]}
+                            onPress={() => moveLyricOrderDown(item)}>
+                            <Icon
+                                name="chevron-right"
+                                size={rpx(32)}
+                                color={colors.text}
+                            />
                         </TouchableOpacity>
                     </View>
-                )}
-            </View>
-        );
-    };
-
-    // Render format selector
-    const renderFormatSelector = () => {
-        return (
-            <View style={styles.formatSelectorContainer}>
-                <TouchableOpacity
-                    style={[
-                        styles.formatOption,
-                        settings.lyricFileFormat === "lrc" && {
-                            backgroundColor: colors.primary + '20',
-                            borderColor: colors.primary,
-                        }
-                    ]}
-                    onPress={() => setLyricFileFormat("lrc")}
-                    activeOpacity={0.7}
-                >
-                    <ThemeText
-                        fontSize="content"
-                        fontColor={settings.lyricFileFormat === "lrc" ? "primary" : "text"}>
-                        .lrc
-                    </ThemeText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[
-                        styles.formatOption,
-                        settings.lyricFileFormat === "txt" && {
-                            backgroundColor: colors.primary + '20',
-                            borderColor: colors.primary,
-                        }
-                    ]}
-                    onPress={() => setLyricFileFormat("txt")}
-                    activeOpacity={0.7}
-                >
-                    <ThemeText
-                        fontSize="content"
-                        fontColor={settings.lyricFileFormat === "txt" ? "primary" : "text"}>
-                        .txt
-                    </ThemeText>
-                </TouchableOpacity>
-            </View>
-        );
-    };
-
-    // Render cover file naming selector
-    const renderCoverNamingSelector = () => {
-        const options: Array<{ value: "sameAsAudio" | "fixedName"; label: string }> = [
-            { value: "sameAsAudio", label: "与音频同名" },
-            { value: "fixedName", label: "固定名 cover" },
-        ];
-
-        return (
-            <View style={styles.formatSelectorContainer}>
-                {options.map(option => (
-                    <TouchableOpacity
-                        key={option.value}
-                        style={[
-                            styles.formatOption,
-                            settings.coverFileNaming === option.value && {
-                                backgroundColor: colors.primary + '20',
-                                borderColor: colors.primary,
-                            },
-                        ]}
-                        onPress={() => setSettings(prev => ({
-                            ...prev,
-                            coverFileNaming: option.value,
-                        }))}
-                        activeOpacity={0.7}
-                    >
-                        <ThemeText
-                            fontSize="content"
-                            fontColor={settings.coverFileNaming === option.value ? "primary" : "text"}>
-                            {option.label}
-                        </ThemeText>
-                    </TouchableOpacity>
-                ))}
-            </View>
+                ) : null}
+            </ListItem>
         );
     };
 
     // Check if lyric features are enabled
-    const lyricFeaturesEnabled = (settings.writeMetadata && settings.writeMetadataLyric) || settings.downloadLyricFile;
+    const lyricFeaturesEnabled =
+        (settings.writeMetadata && settings.writeMetadataLyric) ||
+        settings.downloadLyricFile;
 
     return (
         <PanelBase
@@ -349,185 +291,218 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
             renderBody={() => (
                 <>
                     <PanelHeader
-                        title="音乐标签设置"
+                        title={t("panel.musicMetadata.title")}
                         onCancel={() => {
                             hidePanel();
                         }}
                         onOk={handleSave}
                     />
                     <ScrollView style={styles.scrollView}>
-                        {/* Header Description */}
-                        <View style={styles.headerSection}>
-                            <ThemeText
-                                fontSize="subTitle"
-                                fontColor="textSecondary"
-                                style={styles.headerDescription}>
-                                为下载的音乐自动写入标签信息，让音乐文件更加完整和专业
-                            </ThemeText>
-                        </View>
-
-                        {/* Main Switch Card */}
-                        {renderCard(
-                            renderSwitchItem(
-                                "下载时写入音乐标签",
-                                "启用后将自动为下载的音乐文件写入元数据",
-                                settings.writeMetadata,
-                                createSwitchHandler('writeMetadata'),
-                                { icon: "🏷️" }
-                            )
-                        )}
-
-                        {/* Detail Options - Only show when main switch is enabled */}
-                        {settings.writeMetadata && (
-                            <>
-                                {/* Cover & Extended Info Card */}
-                                {renderCard(
-                                    <>
-                                        {renderSwitchItem(
-                                            "写入封面",
-                                            "自动下载并嵌入高质量专辑封面图片",
-                                            settings.writeMetadataCover,
-                                            createSwitchHandler('writeMetadataCover'),
-                                            { icon: "🖼️", level: 1 }
-                                        )}
-                                        {renderDivider()}
-                                        {renderSwitchItem(
-                                            "获取扩展信息",
-                                            "写入更多详细标签（作曲者、发行年份、流派等）",
-                                            settings.writeMetadataExtended,
-                                            createSwitchHandler('writeMetadataExtended'),
-                                            { icon: "📝", level: 1 }
-                                        )}
-                                        {renderDivider()}
-                                        {renderSwitchItem(
-                                            "写入歌词",
-                                            "自动获取并嵌入歌词到音乐文件",
-                                            settings.writeMetadataLyric,
-                                            createSwitchHandler('writeMetadataLyric'),
-                                            { icon: "🎵", level: 1 }
-                                        )}
-                                    </>
+                        <SettingSection
+                            title={t("panel.musicMetadata.group.writeMetadata")}
+                            description={t("panel.musicMetadata.description")}>
+                            <SettingRow
+                                descriptionLines={2}
+                                title={t("panel.musicMetadata.writeMetadata")}
+                                description={t(
+                                    "panel.musicMetadata.writeMetadataDesc",
                                 )}
-                            </>
-                        )}
+                                right={
+                                    <ThemeSwitch
+                                        value={settings.writeMetadata}
+                                        onValueChange={createSwitchHandler(
+                                            "writeMetadata",
+                                        )}
+                                    />
+                                }
+                            />
+                        </SettingSection>
 
-                        {/* Lyric File Download Card */}
-                        {renderCard(
-                            renderSwitchItem(
-                                "下载歌词文件",
-                                "下载音乐时同时保存独立的歌词文件",
-                                settings.downloadLyricFile,
-                                createSwitchHandler('downloadLyricFile'),
-                                { icon: "📄" }
-                            )
-                        )}
+                        {settings.writeMetadata ? (
+                            <SettingSection
+                                title={t("panel.musicMetadata.group.writeContent")}>
+                                <SettingRow
+                                    descriptionLines={2}
+                                    title={t(
+                                        "panel.musicMetadata.writeMetadataCover",
+                                    )}
+                                    description={t(
+                                        "panel.musicMetadata.writeMetadataCoverDesc",
+                                    )}
+                                    right={
+                                        <ThemeSwitch
+                                            value={settings.writeMetadataCover}
+                                            onValueChange={createSwitchHandler(
+                                                "writeMetadataCover",
+                                            )}
+                                        />
+                                    }
+                                />
+                                <Divider style={styles.insetDivider} />
+                                <SettingRow
+                                    descriptionLines={2}
+                                    title={t(
+                                        "panel.musicMetadata.writeMetadataExtended",
+                                    )}
+                                    description={t(
+                                        "panel.musicMetadata.writeMetadataExtendedDesc",
+                                    )}
+                                    right={
+                                        <ThemeSwitch
+                                            value={settings.writeMetadataExtended}
+                                            onValueChange={createSwitchHandler(
+                                                "writeMetadataExtended",
+                                            )}
+                                        />
+                                    }
+                                />
+                                <Divider style={styles.insetDivider} />
+                                <SettingRow
+                                    descriptionLines={2}
+                                    title={t(
+                                        "panel.musicMetadata.writeMetadataLyric",
+                                    )}
+                                    description={t(
+                                        "panel.musicMetadata.writeMetadataLyricDesc",
+                                    )}
+                                    right={
+                                        <ThemeSwitch
+                                            value={settings.writeMetadataLyric}
+                                            onValueChange={createSwitchHandler(
+                                                "writeMetadataLyric",
+                                            )}
+                                        />
+                                    }
+                                />
+                            </SettingSection>
+                        ) : null}
 
-                        {/* Cover File Download Card */}
-                        {renderCard(
-                            <>
-                                {renderSwitchItem(
-                                    "下载封面文件",
-                                    "下载音乐时同时保存独立的封面图片，与音频文件同目录",
-                                    settings.downloadCoverFile,
-                                    createSwitchHandler('downloadCoverFile'),
-                                    { icon: "🖼️" }
+                        <SettingSection
+                            title={t("panel.musicMetadata.group.attachedFiles")}>
+                            <SettingRow
+                                descriptionLines={2}
+                                title={t(
+                                    "panel.musicItemLyricOptions.downloadLyricFile",
                                 )}
-                                {settings.downloadCoverFile && (
-                                    <>
-                                        {renderDivider()}
-                                        <View style={styles.formatSection}>
-                                            <ThemeText
-                                                fontSize="description"
-                                                fontColor="textSecondary"
-                                                style={styles.formatLabel}>
-                                                封面文件命名
-                                            </ThemeText>
-                                            {renderCoverNamingSelector()}
-                                            <ThemeText
-                                                fontSize="description"
-                                                fontColor="textSecondary"
-                                                style={styles.namingHint}>
-                                                {settings.coverFileNaming === "sameAsAudio"
-                                                    ? "与音频同名（如 歌曲名-歌手.jpg），多首歌放同一目录不会互相覆盖"
-                                                    : "固定为 cover.原图格式（jpg / png / webp 由封面原图决定），同一目录多首歌共用；已存在同名图片时不覆盖，删歌也不会连带删除"}
-                                            </ThemeText>
-                                        </View>
-                                    </>
+                                description={t(
+                                    "panel.musicMetadata.downloadLyricFileDesc",
                                 )}
-                            </>
-                        )}
+                                right={
+                                    <ThemeSwitch
+                                        value={settings.downloadLyricFile}
+                                        onValueChange={createSwitchHandler(
+                                            "downloadLyricFile",
+                                        )}
+                                    />
+                                }
+                            />
+                            <Divider style={styles.insetDivider} />
+                            <SettingRow
+                                descriptionLines={2}
+                                title={t("panel.musicMetadata.downloadCoverFile")}
+                                description={t(
+                                    "panel.musicMetadata.downloadCoverFileDesc",
+                                )}
+                                right={
+                                    <ThemeSwitch
+                                        value={settings.downloadCoverFile}
+                                        onValueChange={createSwitchHandler(
+                                            "downloadCoverFile",
+                                        )}
+                                    />
+                                }
+                            />
+                            {settings.downloadCoverFile ? (
+                                <>
+                                    <Divider style={styles.insetDivider} />
+                                    <SettingRow
+                                        descriptionLines={2}
+                                        title={t(
+                                            "panel.musicMetadata.coverFileNaming",
+                                        )}
+                                        description={t(
+                                            settings.coverFileNaming === "sameAsAudio"
+                                                ? "panel.musicMetadata.coverFileNaming.sameAsAudioHint"
+                                                : "panel.musicMetadata.coverFileNaming.fixedNameHint",
+                                        )}
+                                        value={t(
+                                            settings.coverFileNaming === "sameAsAudio"
+                                                ? "panel.musicMetadata.coverFileNaming.sameAsAudio"
+                                                : "panel.musicMetadata.coverFileNaming.fixedName",
+                                        )}
+                                        showChevron
+                                        onPress={pickCoverFileNaming}
+                                    />
+                                </>
+                            ) : null}
+                        </SettingSection>
 
-                        {/* Lyric Order Settings - Show when either lyric feature is enabled */}
-                        {lyricFeaturesEnabled && (
-                            renderCard(
-                                <View style={styles.lyricOrderContainer}>
-                                    <ThemeText
-                                        fontSize="content"
-                                        fontWeight="semibold"
-                                        style={styles.lyricOrderTitle}>
-                                        歌词内容设置
-                                    </ThemeText>
+                        {lyricFeaturesEnabled ? (
+                            <SettingSection
+                                title={t("panel.musicMetadata.group.lyricContent")}
+                                description={t(
+                                    "panel.musicMetadata.lyricContentDesc",
+                                )}>
+                                {lyricOrderItems.map(renderLyricOrderItem)}
+                                {settings.lyricOrder.length > 0 ? (
                                     <ThemeText
                                         fontSize="description"
                                         fontColor="textSecondary"
-                                        style={styles.lyricOrderSubtitle}>
-                                        选择要包含的歌词类型，可调整顺序
+                                        style={styles.orderHint}>
+                                        {t("panel.musicMetadata.currentOrder", {
+                                            order: settings.lyricOrder
+                                                .map(i => t(lyricTypeTitleKey[i]))
+                                                .join(" → "),
+                                        })}
                                     </ThemeText>
-
-                                    {renderLyricOrderItem("original")}
-                                    {renderLyricOrderItem("translation")}
-                                    {renderLyricOrderItem("romanization")}
-
-                                    {settings.lyricOrder.length > 0 && (
-                                        <ThemeText
-                                            fontSize="description"
-                                            fontColor="textSecondary"
-                                            style={styles.lyricOrderHint}>
-                                            当前顺序：{settings.lyricOrder.map(i => lyricOrderLabels[i].label).join(" → ")}
-                                        </ThemeText>
+                                ) : null}
+                                <Divider style={styles.insetDivider} />
+                                <SettingRow
+                                    descriptionLines={2}
+                                    title={t("panel.musicMetadata.enableWordByWord")}
+                                    description={t(
+                                        "panel.musicMetadata.enableWordByWordDesc",
                                     )}
-
-                                    {renderDivider()}
-                                    <View style={styles.wordByWordSection}>
-                                        {renderSwitchItem(
-                                            "逐字歌词",
-                                            "保留QRC格式的逐字时间戳（如有）",
-                                            settings.enableWordByWord,
-                                            createSwitchHandler('enableWordByWord'),
-                                            { level: 1 }
-                                        )}
-                                    </View>
-
-                                    {settings.downloadLyricFile && (
-                                        <>
-                                            {renderDivider()}
-                                            <View style={styles.formatSection}>
-                                                <ThemeText
-                                                    fontSize="description"
-                                                    fontColor="textSecondary"
-                                                    style={styles.formatLabel}>
-                                                    歌词文件格式
-                                                </ThemeText>
-                                                {renderFormatSelector()}
-                                            </View>
-                                        </>
-                                    )}
-                                </View>
-                            )
-                        )}
-
-                        {/* Reset Button */}
-                        <View style={styles.resetContainer}>
-                            <ListItem
-                                withHorizontalPadding
-                                heightType="small"
-                                onPress={handleReset}>
-                                <ListItem.Content
-                                    title="重置为默认值"
-                                    description="恢复所有设置为系统推荐配置"
+                                    right={
+                                        <ThemeSwitch
+                                            value={settings.enableWordByWord}
+                                            onValueChange={createSwitchHandler(
+                                                "enableWordByWord",
+                                            )}
+                                        />
+                                    }
                                 />
-                            </ListItem>
-                        </View>
+                                {settings.downloadLyricFile ? (
+                                    <>
+                                        <Divider style={styles.insetDivider} />
+                                        <SettingRow
+                                            descriptionLines={2}
+                                            title={t(
+                                                "panel.musicMetadata.lyricFileFormat",
+                                            )}
+                                            value={
+                                                settings.lyricFileFormat === "lrc"
+                                                    ? ".lrc"
+                                                    : ".txt"
+                                            }
+                                            showChevron
+                                            onPress={pickLyricFileFormat}
+                                        />
+                                    </>
+                                ) : null}
+                            </SettingSection>
+                        ) : null}
+
+                        <SettingSection>
+                            <SettingRow
+                                descriptionLines={2}
+                                title={t("panel.musicMetadata.resetToDefault")}
+                                description={t(
+                                    "panel.musicMetadata.resetToDefaultDesc",
+                                )}
+                                onPress={handleReset}
+                            />
+                        </SettingSection>
 
                         <View style={styles.bottomPadding} />
                     </ScrollView>
@@ -541,145 +516,40 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
     },
-    headerSection: {
-        paddingHorizontal: rpx(24),
-        paddingTop: rpx(20),
-        paddingBottom: rpx(16),
+    insetDivider: {
+        marginLeft: settingsLayout.rowPadding,
     },
-    headerDescription: {
-        lineHeight: fontRpx(40),
+    orderRow: {
+        minHeight: settingsLayout.rowMinHeight,
+        paddingVertical: rpx(12),
     },
-    card: {
-        marginHorizontal: rpx(16),
-        marginBottom: rpx(16),
-        borderRadius: rpx(16),
-        borderWidth: 1,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    itemContainer: {
-        paddingHorizontal: rpx(20),
-        paddingVertical: rpx(16),
-    },
-    subItemContainer: {
-        paddingLeft: rpx(20),
-        paddingRight: rpx(20),
-    },
-    subSubItemContainer: {
-        paddingLeft: rpx(32),
-        paddingRight: rpx(20),
-    },
-    switchRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    textContainer: {
-        flex: 1,
-        marginRight: rpx(16),
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    itemIcon: {
-        marginRight: rpx(12),
-        fontSize: fontRpx(40),
-    },
-    textContent: {
-        flex: 1,
-    },
-    subItemTitle: {
-        opacity: 0.9,
-    },
-    descriptionText: {
-        marginTop: rpx(6),
-        lineHeight: fontSizeConst.description * 1.5,
-    },
-    divider: {
-        height: 1,
-        marginHorizontal: rpx(20),
-        opacity: 0.3,
-    },
-    lyricOrderContainer: {
-        paddingHorizontal: rpx(20),
-        paddingVertical: rpx(16),
-    },
-    lyricOrderTitle: {
-        marginBottom: rpx(4),
-    },
-    lyricOrderSubtitle: {
-        marginBottom: rpx(12),
-    },
-    lyricOrderItemRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: rpx(10),
-    },
-    lyricOrderItemLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        gap: rpx(12),
-    },
-    lyricOrderTextContainer: {
-        flex: 1,
-    },
-    lyricOrderDescription: {
-        marginTop: rpx(2),
+    orderContent: {
+        marginLeft: settingsLayout.trailingGap,
     },
     reorderButtons: {
-        flexDirection: 'row',
+        flexDirection: "row",
         gap: rpx(8),
+        flexShrink: 0,
     },
     reorderButton: {
-        width: rpx(48),
-        height: rpx(48),
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: rpx(8),
-        backgroundColor: 'rgba(128,128,128,0.1)',
+        width: rpx(56),
+        height: rpx(56),
+        alignItems: "center",
+        justifyContent: "center",
     },
     reorderButtonDisabled: {
         opacity: 0.3,
     },
-    lyricOrderHint: {
+    rotateUp: {
+        transform: [{ rotate: "-90deg" }],
+    },
+    rotateDown: {
+        transform: [{ rotate: "90deg" }],
+    },
+    orderHint: {
+        marginHorizontal: settingsLayout.rowPadding,
         marginTop: rpx(12),
-        fontStyle: 'italic',
-    },
-    wordByWordSection: {
-        marginTop: rpx(8),
-    },
-    formatSection: {
-        paddingTop: rpx(16),
-    },
-    formatLabel: {
         marginBottom: rpx(8),
-    },
-    namingHint: {
-        marginTop: rpx(10),
-        lineHeight: fontSizeConst.description * 1.5,
-    },
-    formatSelectorContainer: {
-        flexDirection: 'row',
-        gap: rpx(16),
-    },
-    formatOption: {
-        paddingHorizontal: rpx(24),
-        paddingVertical: rpx(12),
-        borderRadius: rpx(8),
-        borderWidth: 1,
-        borderColor: '#ccc',
-    },
-    resetContainer: {
-        marginTop: rpx(8),
-        marginBottom: rpx(16),
-        borderTopWidth: 1,
-        borderTopColor: "#e0e0e0",
-        paddingTop: rpx(16),
     },
     bottomPadding: {
         height: rpx(80),
