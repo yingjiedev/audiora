@@ -19,6 +19,7 @@ import rpx, { fontRpx } from "@/utils/rpx";
 import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
 import Slider from "@react-native-community/slider";
+import Color from "color";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlatList, ScrollView } from "react-native-gesture-handler";
@@ -36,6 +37,9 @@ import {
 } from "@/utils/androidSaf";
 import SettingRow from "../components/settingRow";
 import { settingsLayout } from "../components/settingsLayout";
+
+/** Slider 未填充轨道的透明度：副文字色再压到 25% */
+const SLIDER_TRACK_ALPHA = 0.25;
 
 function createSwitch(
     title: string,
@@ -855,6 +859,11 @@ function LyricSetting() {
 
     const { t } = useI18N();
     const colors = useColors();
+    // textSecondary 是 rgba(...) 而不是 hex，原先写 `colors.textSecondary + "40"` 拼出来的
+    // 是非法颜色串，轨道色一直没生效，改用 color 包按透明度压暗
+    const sliderTrackColor = Color(colors.textSecondary)
+        .alpha(SLIDER_TRACK_ALPHA)
+        .toString();
 
     const autoSearchLyric = createSwitch(t("basicSettings.lyric.autoSearchLyric"), "lyric.autoSearchLyric", enableAutoSearchLyric ?? false);
     const wordByWordLyric = createSwitch("逐字歌词", "lyric.enableWordByWord", enableWordByWord ?? true, (newValue) => {
@@ -1069,7 +1078,7 @@ function LyricSetting() {
                             Config.setConfig("lyric.desktopSecondaryFontRatio", val);
                         }}
                         minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={colors.textSecondary + "40"}
+                        maximumTrackTintColor={sliderTrackColor}
                         thumbTintColor={colors.textHighlight}
                     />
                 </View>
@@ -1090,7 +1099,7 @@ function LyricSetting() {
                             Config.setConfig("lyric.desktopSecondaryAlphaRatio", val);
                         }}
                         minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={colors.textSecondary + "40"}
+                        maximumTrackTintColor={sliderTrackColor}
                         thumbTintColor={colors.textHighlight}
                     />
                 </View>
@@ -1114,7 +1123,7 @@ function LyricSetting() {
                             Config.setConfig("lyric.widthPercent", val);
                         }}
                         minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={colors.textSecondary + "40"}
+                        maximumTrackTintColor={sliderTrackColor}
                         thumbTintColor={colors.textHighlight}
                     />
                 </View>

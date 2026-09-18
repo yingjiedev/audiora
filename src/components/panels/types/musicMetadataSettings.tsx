@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
+import Color from "color";
 import rpx, { fontRpx, vmax } from "@/utils/rpx";
 import { fontSizeConst } from "@/constants/uiConst";
 import useColors from "@/hooks/useColors";
@@ -15,6 +16,12 @@ import Checkbox from "@/components/base/checkbox";
 import Toast from "@/utils/toast";
 
 type LyricOrderItem = "original" | "translation" | "romanization";
+
+/**
+ * 选中项的底色透明度。以前写成 `colors.primary + "20"`（拼 8 位 hex），
+ * 主色一旦不是 6 位 hex 就会拼出非法颜色；统一走 alpha()。
+ */
+const SELECTED_TINT_ALPHA = 0x20 / 0xff;
 
 const lyricOrderLabels: Record<LyricOrderItem, { label: string; desc: string }> = {
     original: { label: "原文歌词", desc: "歌曲原始语言的歌词" },
@@ -269,7 +276,9 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
                     style={[
                         styles.formatOption,
                         settings.lyricFileFormat === "lrc" && {
-                            backgroundColor: colors.primary + '20',
+                            backgroundColor: Color(colors.primary)
+                                .alpha(SELECTED_TINT_ALPHA)
+                                .toString(),
                             borderColor: colors.primary,
                         }
                     ]}
@@ -286,7 +295,9 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
                     style={[
                         styles.formatOption,
                         settings.lyricFileFormat === "txt" && {
-                            backgroundColor: colors.primary + '20',
+                            backgroundColor: Color(colors.primary)
+                                .alpha(SELECTED_TINT_ALPHA)
+                                .toString(),
                             borderColor: colors.primary,
                         }
                     ]}
@@ -318,7 +329,9 @@ export default function MusicMetadataSettings(_props: IMusicMetadataSettingsProp
                         style={[
                             styles.formatOption,
                             settings.coverFileNaming === option.value && {
-                                backgroundColor: colors.primary + '20',
+                                backgroundColor: Color(colors.primary)
+                                    .alpha(SELECTED_TINT_ALPHA)
+                                    .toString(),
                                 borderColor: colors.primary,
                             },
                         ]}
