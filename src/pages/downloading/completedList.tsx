@@ -16,14 +16,12 @@ import downloadHistory, { useDownloadHistory } from "@/core/downloadHistory";
 import downloader from "@/core/downloader";
 import LocalMusicSheet from "@/core/localMusicSheet";
 import TrackPlayer from "@/core/trackPlayer";
-import { getLocalPath } from "@/utils/mediaUtils";
 import { iconSizeConst } from "@/constants/uiConst";
 import {
     formatFileSize,
     formatQuality,
     formatRecordTime,
     groupRecordsByDate,
-    openDownloadFolder,
     type IDownloadRecordGroup,
 } from "./utils";
 
@@ -57,7 +55,6 @@ function CompletedRow(props: { record: IDownloadRecord }) {
             .join(" · ");
 
     const openMenu = useCallback(() => {
-        const localPath = getLocalPath(musicItem);
         showPanel("DownloadTaskOptions", {
             title: record.title,
             subtitle: [record.artist, qualityText, sizeText].filter(Boolean).join(" · "),
@@ -68,17 +65,6 @@ function CompletedRow(props: { record: IDownloadRecord }) {
                     icon: "play" as const,
                     onPress: () => {
                         TrackPlayer.play(musicItem);
-                    },
-                },
-                {
-                    key: "open-folder",
-                    title: t("downloading.action.openFolder"),
-                    icon: "folder-outline" as const,
-                    onPress: async () => {
-                        const opened = await openDownloadFolder(localPath);
-                        if (!opened) {
-                            Toast.warn(t("downloading.toast.openFolderUnsupported"));
-                        }
                     },
                 },
                 {
@@ -130,13 +116,6 @@ function CompletedRow(props: { record: IDownloadRecord }) {
         });
     }, [musicItem, record, qualityText, sizeText, t]);
 
-    const handleOpenFolder = async () => {
-        const opened = await openDownloadFolder(getLocalPath(musicItem));
-        if (!opened) {
-            Toast.warn(t("downloading.toast.openFolderUnsupported"));
-        }
-    };
-
     return (
         <ListItem
             withHorizontalPadding
@@ -183,15 +162,7 @@ function CompletedRow(props: { record: IDownloadRecord }) {
                         {t("downloading.action.redownload")}
                     </ThemeText>
                 </TouchableOpacity>
-            ) : (
-                <TouchableOpacity style={styles.actionButton} onPress={handleOpenFolder}>
-                    <Icon
-                        name="folder-outline"
-                        size={iconSizeConst.normal}
-                        color={colors.text}
-                    />
-                </TouchableOpacity>
-            )}
+            ) : null}
             <TouchableOpacity style={styles.actionButton} onPress={openMenu}>
                 <Icon
                     name="ellipsis-vertical"

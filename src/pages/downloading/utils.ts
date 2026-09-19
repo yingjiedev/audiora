@@ -1,7 +1,5 @@
-import { Linking } from "react-native";
 import { DownloadFailReason } from "@/core/downloadTypes";
 import type { IDownloadRecord } from "@/core/downloadHistory";
-import { isAndroidSafUri } from "@/utils/androidSaf";
 import type { ILanguageData } from "@/types/core/i18n";
 
 /** t() 的结构化类型，避免 utils 反向依赖 i18n 实现 */
@@ -141,30 +139,5 @@ export function getFailReasonIcon(reason?: DownloadFailReason): "link-slash" | "
         return "shield-keyhole-outline";
     default:
         return "exclamation-circle";
-    }
-}
-
-/**
- * 打开所在目录。
- *
- * Android 上保存位置可能是 SAF 授权目录（content://），也可能是普通文件路径，
- * 系统没有统一的「在文件管理器中显示」接口，这里尽力而为：
- * 能唤起就唤起，唤不起就让调用方提示不支持。
- */
-export async function openDownloadFolder(filePath?: string | null): Promise<boolean> {
-    if (!filePath) {
-        return false;
-    }
-    try {
-        if (isAndroidSafUri(filePath)) {
-            await Linking.openURL(filePath);
-            return true;
-        }
-        const directory = filePath.slice(0, Math.max(filePath.lastIndexOf("/"), 0));
-        const target = directory.startsWith("file://") ? directory : `file://${directory}`;
-        await Linking.openURL(target);
-        return true;
-    } catch {
-        return false;
     }
 }

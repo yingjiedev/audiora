@@ -244,7 +244,6 @@ export interface ILanguageData {
     "downloading.action.retry": string; // 重试
     "downloading.action.retryAll": string; // 全部重试
     "downloading.action.play": string; // 立即播放
-    "downloading.action.openFolder": string; // 打开所在目录
     "downloading.action.redownload": string; // 重新下载
     "downloading.action.removeRecord": string; // 移除记录
     "downloading.action.removeRecordHint": string; // 保留文件
@@ -262,7 +261,6 @@ export interface ILanguageData {
     "downloading.toast.pauseUnsupported": string; // 当前下载方式不支持暂停
     "downloading.toast.clearRecordsSuccess": string; // 已清除 {count} 条记录
     "downloading.toast.deleteFileSuccess": string; // 已删除本地文件
-    "downloading.toast.openFolderUnsupported": string; // 当前保存位置不支持打开目录
 
     // 艺术家详情相关
     "artistDetail.fansCount": string; // 粉丝数量
