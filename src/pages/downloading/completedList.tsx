@@ -48,16 +48,17 @@ function CompletedRow(props: { record: IDownloadRecord }) {
     const qualityText = formatQuality(record.quality);
     const sizeText = formatFileSize(record.fileSize);
 
+    // 音质已经由左侧标签展示，描述行只留「大小 · 时间」——否则同一行里 FLAC 会出现两次
     const meta = missing
         ? t("downloading.status.fileMissingDesc")
-        : [qualityText, sizeText, formatRecordTime(record.updatedAt)]
-            .filter(Boolean)
-            .join(" · ");
+        : [sizeText, formatRecordTime(record.updatedAt)].filter(Boolean).join(" · ");
 
     const openMenu = useCallback(() => {
         showPanel("DownloadTaskOptions", {
             title: record.title,
-            subtitle: [record.artist, qualityText, sizeText].filter(Boolean).join(" · "),
+            // 歌名已在面板标题、音质与大小已在列表行里展示过，
+            // 副标题只补行内没有的歌手，不再把音质 / 大小重复第二遍
+            subtitle: record.artist,
             options: [
                 {
                     key: "play",
@@ -114,7 +115,7 @@ function CompletedRow(props: { record: IDownloadRecord }) {
                 },
             ],
         });
-    }, [musicItem, record, qualityText, sizeText, t]);
+    }, [musicItem, record, sizeText, t]);
 
     return (
         <ListItem

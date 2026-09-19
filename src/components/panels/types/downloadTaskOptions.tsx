@@ -24,7 +24,7 @@ export interface IDownloadTaskOption {
 interface IDownloadTaskOptionsProps {
     /** 标题：歌曲名 */
     title: string;
-    /** 副标题：歌手 · 音质 · 大小 */
+    /** 副标题：只写列表行里没有的信息（下载页当前只传歌手），避免与行内重复 */
     subtitle?: string;
     options: IDownloadTaskOption[];
 }
