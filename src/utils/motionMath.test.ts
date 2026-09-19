@@ -3,10 +3,13 @@ import {
     DISMISS_VELOCITY,
     clamp,
     coverMorphTransform,
+    cubicBezier,
     dismissDecision,
     dragProgress,
     lerp,
+    motionDuration,
 } from "./motionMath";
+import { motion as motionTokens } from "@/constants/designSystem";
 
 const MINI: Parameters<typeof coverMorphTransform>[0] = {
     x: 24,
@@ -130,5 +133,64 @@ describe("dismissDecision", () => {
 
     it("cancels when the screen height is unknown", () => {
         expect(dismissDecision(600, 2000, 0)).toBe("cancel");
+    });
+});
+
+describe("cubicBezier", () => {
+    it("pins both endpoints and clamps outside 0..1", () => {
+        const easing = cubicBezier(0.2, 0, 0, 1);
+        expect(easing(0)).toBe(0);
+        expect(easing(1)).toBe(1);
+        // Reanimated can hand over tiny overshoots from a spring.
+        expect(easing(-0.5)).toBe(0);
+        expect(easing(1.5)).toBe(1);
+    });
+
+    it("matches a linear control polygon", () => {
+        const easing = cubicBezier(0.25, 0.25, 0.75, 0.75);
+        for (const t of [0.1, 0.25, 0.5, 0.75, 0.9]) {
+            expect(easing(t)).toBeCloseTo(t, 3);
+        }
+    });
+
+    it("is monotonically increasing for every token curve", () => {
+        for (const token of Object.values(motionTokens.easing)) {
+            const [x1, y1, x2, y2] = token as readonly [
+                number,
+                number,
+                number,
+                number,
+            ];
+            const easing = cubicBezier(x1, y1, x2, y2);
+            let previous = -1;
+            for (let i = 0; i <= 20; i++) {
+                const value = easing(i / 20);
+                expect(value).toBeGreaterThanOrEqual(previous);
+                previous = value;
+            }
+        }
+    });
+
+    it("front-loads decelerate and back-loads accelerate", () => {
+        const decelerate = cubicBezier(...motionTokens.easing.decelerate);
+        const accelerate = cubicBezier(...motionTokens.easing.accelerate);
+        expect(decelerate(0.25)).toBeGreaterThan(0.25);
+        expect(accelerate(0.25)).toBeLessThan(0.25);
+    });
+});
+
+describe("motionDuration", () => {
+    it("returns the token untouched when motion is allowed", () => {
+        expect(motionDuration("screen")).toBe(motionTokens.duration.screen);
+        expect(motionDuration("slow", false)).toBe(motionTokens.duration.slow);
+    });
+
+    it("caps long travel at the fast token under Reduce Motion", () => {
+        expect(motionDuration("screen", true)).toBe(motionTokens.duration.fast);
+        expect(motionDuration("slow", true)).toBe(motionTokens.duration.fast);
+    });
+
+    it("never lengthens a token that is already short", () => {
+        expect(motionDuration("micro", true)).toBe(motionTokens.duration.micro);
     });
 });

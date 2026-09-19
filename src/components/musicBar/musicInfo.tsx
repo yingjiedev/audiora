@@ -20,9 +20,9 @@ import Animated, {
     useSharedValue,
     withTiming,
 } from "react-native-reanimated";
-import { timingConfig } from "@/constants/commonConst";
-import { resolveArtwork } from "@/utils/artwork";
 import { useMediaExtraProperty } from "@/utils/mediaExtra";
+import useMotion from "@/hooks/useMotion";
+import { resolveArtwork } from "@/utils/artwork";
 import { armPlayerTransition, playerTransition } from "@/core/playerTransition";
 
 interface IBarMusicItemProps {
@@ -162,6 +162,17 @@ export default function MusicInfo(props: IMusicInfoProps) {
 
     const musicItemWidthValue = useSharedValue(0);
 
+    // Resolved on the JS side: the pan gesture runs as a worklet, so the
+    // timing config has to be captured as a plain object.
+    const motion = useMotion();
+    const skipTiming = useMemo(
+        () => ({
+            duration: motion.duration("fast"),
+            easing: motion.easing("standard"),
+        }),
+        [motion],
+    );
+
     // Shared-element source: the mini artwork's frame in window coordinates.
     // Kept fresh on every layout so tapping the bar never has to wait for an
     // async measurement before navigating.
@@ -207,10 +218,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
         .onEnd((e, success) => {
             if (!success) {
                 // 还原到原始位置
-                transformSharedValue.value = withTiming(
-                    0,
-                    timingConfig.animationFast,
-                );
+                transformSharedValue.value = withTiming(0, skipTiming);
             } else {
                 // fling
                 const deltaX = e.translationX;
@@ -225,7 +233,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
                         skip = vX > 0 ? 1 : -1;
                         transformSharedValue.value = withTiming(
                             skip,
-                            timingConfig.animationFast,
+                            skipTiming,
                             () => {
                                 runOnJS(skipMusicItem)(skip);
                             },
@@ -236,10 +244,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
                         transformSharedValue.value = skip;
                         runOnJS(skipMusicItem)(skip);
                     } else {
-                        transformSharedValue.value = withTiming(
-                            0,
-                            timingConfig.animationFast,
-                        );
+                        transformSharedValue.value = withTiming(0, skipTiming);
                     }
                 } else {
                     transformSharedValue.value = 0;

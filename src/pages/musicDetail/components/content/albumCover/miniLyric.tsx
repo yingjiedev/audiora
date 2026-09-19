@@ -9,15 +9,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-    Easing,
     Extrapolation,
     cancelAnimation,
     interpolate,
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
-    withTiming,
 } from "react-native-reanimated";
+import useMotion from "@/hooks/useMotion";
 import rpx from "@/utils/rpx";
 import { useCurrentLyricItem, useLyricState } from "@/core/lyricManager";
 import { fontSizeConst } from "@/constants/uiConst";
@@ -55,15 +54,13 @@ const MINI_WORD_FLOAT_EM = 0.05;
 const SLIDE_OUT = rpx(12);
 const SLIDE_IN = rpx(16);
 
-const HANDOFF_TIMING = {
-    duration: 260,
-    easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-};
+/** Token refs; resolved through useMotion() so Reduce Motion shortens them. */
+const HANDOFF_TIMING = { duration: "normal", easing: "standard" } as const;
 
 const SEEK_HANDOFF_TIMING = {
-    duration: 140,
-    easing: Easing.out(Easing.quad),
-};
+    duration: "fast",
+    easing: "decelerate",
+} as const;
 
 function MiniLyricLine(props: {
     lyric: IParsedLrcItem;
@@ -162,6 +159,7 @@ export default function MiniLyric(props: IMiniLyricProps) {
     const compact = layout === "compact";
 
     const currentLyricItem = useCurrentLyricItem();
+    const motion = useMotion();
     const { lyrics, loading, hasTranslation, hasRomanization, meta } =
         useLyricState();
     const orientation = useOrientation();
@@ -295,7 +293,7 @@ export default function MiniLyric(props: IMiniLyricProps) {
         setOutgoingIndex(prev);
         setActiveIndex(targetIndex);
         handoff.value = 0;
-        handoff.value = withTiming(
+        handoff.value = motion.timing(
             1,
             isAdjacent ? HANDOFF_TIMING : SEEK_HANDOFF_TIMING,
             finished => {
@@ -310,6 +308,7 @@ export default function MiniLyric(props: IMiniLyricProps) {
         handoff,
         hidden,
         lyrics,
+        motion,
         slideMotion,
         targetIndex,
     ]);

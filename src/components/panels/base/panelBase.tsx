@@ -21,11 +21,11 @@ import Animated, {
     useAnimatedReaction,
     useAnimatedStyle,
     useSharedValue,
-    withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { panelInfoStore } from "../usePanel";
 import useMotion from "@/hooks/useMotion";
+import { KEYBOARD_TIMING } from "@/utils/motion";
 
 interface IPanelBaseProps {
     borderTopRadius?: number;
@@ -158,9 +158,7 @@ export default function (props: IPanelBaseProps) {
             e => {
                 if (keyboardAvoidBehavior !== "none") {
                     if (keyboardAvoidMode === "off") {
-                        keyboardHeight.value = withTiming(0, {
-                            duration: Platform.OS === "ios" ? 250 : 150,
-                        });
+                        keyboardHeight.value = motion.timing(0, KEYBOARD_TIMING);
                         return;
                     }
                     const windowHeight = Dimensions.get("window").height;
@@ -179,9 +177,10 @@ export default function (props: IPanelBaseProps) {
                                 e.endCoordinates.height,
                                 effectiveKeyboardHeight,
                             );
-                    keyboardHeight.value = withTiming(targetHeight, {
-                        duration: Platform.OS === "ios" ? 250 : 150,
-                    });
+                    keyboardHeight.value = motion.timing(
+                        targetHeight,
+                        KEYBOARD_TIMING,
+                    );
                 }
             },
         );
@@ -189,9 +188,7 @@ export default function (props: IPanelBaseProps) {
         const keyboardHideListener = Keyboard.addListener(
             keyboardHideEvent,
             () => {
-                keyboardHeight.value = withTiming(0, {
-                    duration: Platform.OS === "ios" ? 250 : 150,
-                });
+                keyboardHeight.value = motion.timing(0, KEYBOARD_TIMING);
             },
         );
 
