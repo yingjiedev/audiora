@@ -209,14 +209,24 @@ export default function CompletedList() {
     }
 
     const clearGroup = (group: IDownloadRecordGroup) => {
-        const removed = downloadHistory.removeRecords(
-            group.data.map(item => item.mediaKey),
-        );
-        if (removed > 0) {
-            Toast.success(
-                t("downloading.toast.clearRecordsSuccess", { count: removed }),
-            );
-        }
+        // 只移除历史记录、不动音频文件，但一次删一整组还是要二次确认
+        showDialog("SimpleDialog", {
+            title: t("downloading.action.clearHistory"),
+            content: t("downloading.action.clearHistoryConfirm", {
+                date: group.title,
+                count: group.data.length,
+            }),
+            onOk() {
+                const removed = downloadHistory.removeRecords(
+                    group.data.map(item => item.mediaKey),
+                );
+                if (removed > 0) {
+                    Toast.success(
+                        t("downloading.toast.clearRecordsSuccess", { count: removed }),
+                    );
+                }
+            },
+        });
     };
 
     return (
