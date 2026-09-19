@@ -46,7 +46,9 @@ function CompletedRow(props: { record: IDownloadRecord }) {
     const musicItem = record.musicItem;
     const missing = !!record.fileMissing;
     const qualityText = formatQuality(record.quality);
-    const sizeText = formatFileSize(record.fileSize);
+    // 大小未知（旧记录 / 授权目录下无法 stat）时留空，别显示成误导性的「0B」
+    const sizeText =
+        record.fileSize && record.fileSize > 0 ? formatFileSize(record.fileSize) : "";
 
     // 音质已经由左侧标签展示，描述行只留「大小 · 时间」——否则同一行里 FLAC 会出现两次
     const meta = missing

@@ -1318,12 +1318,20 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 return;
             }
 
+            // 内部落盘副本的真实大小必须在这里取：一旦音频写进授权目录，
+            // 内部副本会被 cleanupInternalDownloadFiles 删掉，而 content:// 无法 stat，
+            // 两边都拿不到就只剩估算值兜底，估算值也没有时历史记录会显示成「0B」
+            const localAudioFileSize = await this.getFileSizeSafe(
+                runtimeInfo.targetDownloadPath,
+            );
+
             // 音频已经成功落盘：之后的一切都是后处理，失败只记日志，不改写任务状态
             const finalAudioPath = await this.runPostProcessing(task, runtimeInfo);
 
             // 期望大小来自音质信息，可能是估算值；落盘后以真实文件大小为准，
             // 历史记录里的「占用空间」才不会虚高或虚低（issue #87）
-            const completedFileSize = await this.getFileSizeSafe(finalAudioPath);
+            const completedFileSize =
+                (await this.getFileSizeSafe(finalAudioPath)) ?? localAudioFileSize;
 
             this.updateDownloadTask(task.musicItem, {
                 status: DownloadStatus.Completed,
