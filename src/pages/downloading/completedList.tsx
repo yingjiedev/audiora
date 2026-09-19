@@ -240,7 +240,7 @@ export default function CompletedList() {
                             </ThemeText>
                             <TouchableOpacity onPress={() => clearGroup(item.group)}>
                                 <ThemeText fontSize="description" fontColor="primary">
-                                    {t("downloading.action.clearThisSection")}
+                                    {t("downloading.action.clearHistory")}
                                 </ThemeText>
                             </TouchableOpacity>
                         </View>

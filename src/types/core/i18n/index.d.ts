@@ -252,7 +252,8 @@ export interface ILanguageData {
     "downloading.action.deleteFileConfirm": string; // 确认删除「{title}」的本地文件吗？此操作不可撤销。
     "downloading.action.clearRecords": string; // 清除已完成记录
     "downloading.action.clearRecordsConfirm": string; // 确认清除 {count} 条已完成记录吗？本地文件不会被删除。
-    "downloading.action.clearThisSection": string; // 清理这段
+    "downloading.action.clearHistory": string; // 清理历史（分组头按钮，只清该组记录）
+    "downloading.action.clearHistoryConfirm": string; // 将移除「{date}」的 {count} 条下载历史记录，音频文件不会被删除。
     "downloading.action.select": string; // 选择
     "downloading.action.selectedCount": string; // 已选 {count} 项
     "downloading.section.today": string; // 今天
