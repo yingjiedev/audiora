@@ -17,8 +17,6 @@ import {
     View,
 } from "react-native";
 import Animated, {
-    Easing,
-    EasingFunction,
     runOnJS,
     useAnimatedReaction,
     useAnimatedStyle,
@@ -27,14 +25,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { panelInfoStore } from "../usePanel";
-
-const ANIMATION_EASING: EasingFunction = Easing.out(Easing.exp);
-const ANIMATION_DURATION = 250;
-
-const timingConfig = {
-    duration: ANIMATION_DURATION,
-    easing: ANIMATION_EASING,
-};
+import useMotion from "@/hooks/useMotion";
 
 interface IPanelBaseProps {
     borderTopRadius?: number;
@@ -72,6 +63,7 @@ export default function (props: IPanelBaseProps) {
     const keyboardHeight = useSharedValue(0);
 
     const colors = useColors();
+    const motion = useMotion();
     const { dark } = useTheme();
     // 深色下 0.5 的纯黑压不住底下的卡片，面板会显得发飘；浅色保持原观感
     const resolvedMaskOpacity = maskOpacity ?? (dark ? 0.82 : 0.5);
@@ -107,19 +99,26 @@ export default function (props: IPanelBaseProps) {
             return;
         }
         closingRef.current = true;
-        snapPoint.value = withTiming(0, timingConfig, finished => {
-            if (finished) {
-                runOnJS(unmountPanel)();
-            } else {
-                // Animation interrupted — allow another close attempt.
-                closingRef.current = false;
-            }
-        });
-    }, [snapPoint, unmountPanel]);
+        snapPoint.value = motion.timing(
+            0,
+            { duration: "normal", easing: "accelerate" },
+            finished => {
+                if (finished) {
+                    runOnJS(unmountPanel)();
+                } else {
+                    // Animation interrupted — allow another close attempt.
+                    closingRef.current = false;
+                }
+            },
+        );
+    }, [snapPoint, unmountPanel, motion]);
 
     useEffect(() => {
         closingRef.current = false;
-        snapPoint.value = withTiming(1, timingConfig);
+        snapPoint.value = motion.timing(1, {
+            duration: "normal",
+            easing: "decelerate",
+        });
 
         timerRef.current = setTimeout(() => {
             if (loading) {
