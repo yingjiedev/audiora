@@ -232,6 +232,7 @@ export interface ILanguageData {
     "downloading.overview.resumeAll": string; // 全部继续
     "downloading.overview.lowStorage": string; // 剩余空间不足
     "downloading.overview.lowStorageDesc": string; // 仅剩 {free} · 已下载 {used}
+    "downloading.overview.lowStorageDescNoUsed": string; // 仅剩 {free}（占用大小未知时用）
     "downloading.overview.goCleanup": string; // 去清理
     "downloading.empty.downloading.title": string; // 当前没有下载任务
     "downloading.empty.downloading.desc": string; // 在歌曲或歌单上点「下载」，任务会出现在这里

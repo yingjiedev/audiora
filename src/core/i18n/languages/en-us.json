@@ -189,6 +189,7 @@
     "downloading.overview.resumeAll": "Resume all",
     "downloading.overview.lowStorage": "Low storage",
     "downloading.overview.lowStorageDesc": "Only {free} left · {used} downloaded",
+    "downloading.overview.lowStorageDescNoUsed": "Only {free} left",
     "downloading.overview.goCleanup": "Clean up",
     "downloading.empty.downloading.title": "No downloads in progress",
     "downloading.empty.downloading.desc": "Tap Download on a song or playlist and tasks will show up here",

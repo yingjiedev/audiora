@@ -1,4 +1,4 @@
-import { exists, unlink } from "react-native-fs";
+import { exists, stat, unlink } from "react-native-fs";
 import downloadHistory, {
     DownloadRecordStatus,
     MAX_DOWNLOAD_RECORDS,
@@ -43,6 +43,7 @@ jest.mock("@/utils/androidSaf", () => ({
 }));
 
 const mockedExists = exists as unknown as jest.Mock;
+const mockedStat = stat as unknown as jest.Mock;
 const mockedUnlink = unlink as unknown as jest.Mock;
 const mockedGetExtra = getMediaExtraProperty as unknown as jest.Mock;
 const mockedSafExists = androidSafUriExists as unknown as jest.Mock;
@@ -65,6 +66,7 @@ describe("downloadHistory 终态记录持久化", () => {
     beforeEach(() => {
         __resetForTest();
         mockedExists.mockReset();
+        mockedStat.mockReset();
         mockedSafExists.mockReset();
         mockedUnlink.mockClear();
         mockedGetExtra.mockReset();
@@ -215,6 +217,52 @@ describe("downloadHistory 终态记录持久化", () => {
         expect(mockedSafExists).toHaveBeenCalled();
         expect(changed).toBe(0);
         expect(downloadHistory.getRecord("test@6")?.fileMissing).toBe(false);
+    });
+
+    it("对账：把缺失的 fileSize 回填成真实大小，占用空间不再是 0", async () => {
+        mockedGetExtra.mockImplementation((_item: any, key: string) =>
+            key === "localPath" ? "/tmp/music/歌曲-7.flac" : null,
+        );
+        // 落盘时没拿到大小的记录（老数据 / 授权目录场景）
+        downloadHistory.recordCompleted(makeMusic("7"));
+        expect(downloadHistory.getCompletedTotalSize()).toBe(0);
+
+        mockedExists.mockResolvedValue(true);
+        mockedStat.mockResolvedValue({ size: 4096 });
+        const changed = await downloadHistory.reconcileCompletedFiles();
+
+        expect(changed).toBe(1);
+        expect(downloadHistory.getRecord("test@7")?.fileSize).toBe(4096);
+        expect(downloadHistory.getCompletedTotalSize()).toBe(4096);
+    });
+
+    it("对账：已知道大小的记录不再重复 stat", async () => {
+        mockedGetExtra.mockImplementation((_item: any, key: string) =>
+            key === "localPath" ? "/tmp/music/歌曲-8.flac" : null,
+        );
+        downloadHistory.recordCompleted(makeMusic("8"), { fileSize: 321 });
+
+        mockedExists.mockResolvedValue(true);
+        const changed = await downloadHistory.reconcileCompletedFiles();
+
+        expect(mockedStat).not.toHaveBeenCalled();
+        expect(changed).toBe(0);
+        expect(downloadHistory.getRecord("test@8")?.fileSize).toBe(321);
+    });
+
+    it("对账：授权目录读不到大小就保持未知，不会误写成 0B", async () => {
+        mockedGetExtra.mockImplementation((_item: any, key: string) =>
+            key === "localPath" ? "content://tree/doc/9" : null,
+        );
+        downloadHistory.recordCompleted(makeMusic("9"));
+
+        mockedSafExists.mockResolvedValue(true);
+        const changed = await downloadHistory.reconcileCompletedFiles();
+
+        expect(mockedStat).not.toHaveBeenCalled();
+        expect(changed).toBe(0);
+        expect(downloadHistory.getRecord("test@9")?.fileSize).toBeUndefined();
+        expect(downloadHistory.getCompletedTotalSize()).toBe(0);
     });
 });
 

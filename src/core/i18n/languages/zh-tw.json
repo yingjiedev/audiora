@@ -189,6 +189,7 @@
     "downloading.overview.resumeAll": "全部繼續",
     "downloading.overview.lowStorage": "剩餘空間不足",
     "downloading.overview.lowStorageDesc": "僅剩 {free} · 已下載 {used}",
+    "downloading.overview.lowStorageDescNoUsed": "僅剩 {free}",
     "downloading.overview.goCleanup": "去清理",
     "downloading.empty.downloading.title": "目前沒有下載任務",
     "downloading.empty.downloading.desc": "在歌曲或歌單上點「下載」，任務會出現在這裡",

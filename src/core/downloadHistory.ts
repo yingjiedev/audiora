@@ -12,7 +12,7 @@
  * 文件本体归本地歌单管，这里只留「下载过什么、什么时候、多大、成功还是失败」。
  */
 import { atom, getDefaultStore, useAtomValue } from "jotai";
-import { exists } from "react-native-fs";
+import { exists, stat } from "react-native-fs";
 import { removeFileScheme } from "@/utils/fileUtils";
 import getOrCreateMMKV from "@/utils/getOrCreateMMKV";
 import { safeParse, safeStringify } from "@/utils/jsonUtil";
@@ -111,6 +111,26 @@ async function pathExists(filePath?: string | null): Promise<boolean> {
 function resolveLocalPath(record: IDownloadRecord): string | null {
     // getLocalPath 已经覆盖了 musicItem[internalSerializeKey].localPath 与 mediaExtra
     return getLocalPath(record.musicItem) ?? null;
+}
+
+/**
+ * 读取落盘文件的真实大小。
+ *
+ * SAF 授权目录是 `content://`，RNFS 的 `stat` 拿不到 size，只能返回 `null`
+ * （与 `downloader.getFileSizeSafe` 同一套判断，那边是私有方法所以这里再写一遍）。
+ */
+async function statFileSize(filePath?: string | null): Promise<number | null> {
+    if (!filePath || isAndroidSafUri(filePath)) {
+        return null;
+    }
+    try {
+        const result = await stat(removeFileScheme(filePath));
+        return typeof result?.size === "number" && result.size > 0
+            ? result.size
+            : null;
+    } catch {
+        return null;
+    }
 }
 
 class DownloadHistory {
@@ -252,7 +272,12 @@ class DownloadHistory {
         commit([]);
     }
 
-    /** 已完成任务占用的总字节（不含已判定为文件缺失的） */
+    /**
+     * 已完成任务占用的总字节（不含已判定为文件缺失的）。
+     *
+     * 只累加**已知**大小：全都未知（如全部落在授权目录）时返回 0，
+     * 此时 0 表示「没数」而不是「零字节」，调用方不要直接渲染成 `0B`。
+     */
     getCompletedTotalSize(): number {
         return this.records.reduce((sum, item) => {
             if (item.status !== DownloadRecordStatus.Completed) {
@@ -266,8 +291,9 @@ class DownloadHistory {
     }
 
     /**
-     * 与本地文件对账：文件被外部删除的完成记录标记为 `fileMissing`。
-     * 返回本次新判定为缺失的条数。
+     * 与本地文件对账：文件被外部删除的完成记录标记为 `fileMissing`；
+     * 顺带把「落盘时没拿到大小」的记录的 `fileSize` 回填成真实值。
+     * 返回本次被改写的条数。
      */
     async reconcileCompletedFiles(): Promise<number> {
         const records = this.records;
@@ -279,14 +305,26 @@ class DownloadHistory {
         }
 
         const results = await Promise.all(
-            completed.map(async item => ({
-                mediaKey: item.mediaKey,
-                exists: await pathExists(resolveLocalPath(item)),
-            })),
+            completed.map(async item => {
+                const localPath = resolveLocalPath(item);
+                const fileExists = await pathExists(localPath);
+                // 只在「文件还在 + 记录里本来就没有大小」时才去 stat，避免白读盘。
+                // 授权目录下必然拿不到 → 保持未知，由 UI 留空而不是显示 0B。
+                const fileSize =
+                    fileExists && !(item.fileSize && item.fileSize > 0)
+                        ? await statFileSize(localPath)
+                        : null;
+                return { mediaKey: item.mediaKey, fileExists, fileSize };
+            }),
         );
 
         const missingKeys = new Set(
-            results.filter(item => !item.exists).map(item => item.mediaKey),
+            results.filter(item => !item.fileExists).map(item => item.mediaKey),
+        );
+        const backfilledSizes = new Map(
+            results
+                .filter(item => item.fileSize != null)
+                .map(item => [item.mediaKey, item.fileSize as number]),
         );
 
         let changed = 0;
@@ -295,11 +333,16 @@ class DownloadHistory {
                 return item;
             }
             const fileMissing = missingKeys.has(item.mediaKey);
-            if (item.fileMissing === fileMissing) {
+            const fileSize = backfilledSizes.get(item.mediaKey);
+            if (item.fileMissing === fileMissing && fileSize == null) {
                 return item;
             }
             changed++;
-            return { ...item, fileMissing };
+            return {
+                ...item,
+                fileMissing,
+                fileSize: fileSize ?? item.fileSize,
+            };
         });
 
         if (changed > 0) {

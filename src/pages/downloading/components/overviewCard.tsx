@@ -54,6 +54,9 @@ export default function OverviewCard(props: IOverviewCardProps) {
     }, []);
 
     const usedSize = downloadHistory.getCompletedTotalSize();
+    // 文件全在授权目录里时 stat 不到大小，usedSize 会是 0 —— 那是「没数」不是「零字节」，
+    // 这种情况只显示能确定的部分，别甩一个 0B 出来
+    const usedSizeText = usedSize > 0 ? formatFileSize(usedSize) : "";
     const lowStorage =
         typeof freeSpace === "number" && freeSpace < LOW_STORAGE_THRESHOLD;
 
@@ -93,10 +96,14 @@ export default function OverviewCard(props: IOverviewCardProps) {
                                 fontColor="textSecondary"
                                 style={styles.label}
                                 numberOfLines={1}>
-                                {t("downloading.overview.lowStorageDesc", {
-                                    free: formatFileSize(freeSpace ?? 0),
-                                    used: formatFileSize(usedSize),
-                                })}
+                                {usedSizeText
+                                    ? t("downloading.overview.lowStorageDesc", {
+                                        free: formatFileSize(freeSpace ?? 0),
+                                        used: usedSizeText,
+                                    })
+                                    : t("downloading.overview.lowStorageDescNoUsed", {
+                                        free: formatFileSize(freeSpace ?? 0),
+                                    })}
                             </ThemeText>
                         </View>
                     ) : (
@@ -119,7 +126,7 @@ export default function OverviewCard(props: IOverviewCardProps) {
                                     style={styles.label}
                                     numberOfLines={1}>
                                     {t("downloading.overview.downloaded")}
-                                    {` · ${formatFileSize(usedSize)}`}
+                                    {usedSizeText ? ` · ${usedSizeText}` : ""}
                                 </ThemeText>
                             </View>
                             <View>
