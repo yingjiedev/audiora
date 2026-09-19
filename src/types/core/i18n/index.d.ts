@@ -217,6 +217,52 @@ export interface ILanguageData {
     "downloading.clearErrorTasks": string; // 清除错误任务
     "downloading.clearErrorSuccess": string; // 已清除错误任务
     "downloading.noErrorTasksToClear": string; // 没有错误任务需要清除
+    "downloading.tab.downloading": string; // 正在下载
+    "downloading.tab.completed": string; // 已完成
+    "downloading.tab.failed": string; // 失败
+    "downloading.downloadStatus.paused": string; // 已暂停
+    "downloading.status.fileMissing": string; // 文件缺失
+    "downloading.status.fileMissingDesc": string; // 本地文件已被删除
+    "downloading.downloadFailReason.networkOffline": string; // 网络已离线
+    "downloading.downloadFailReason.notAllowToDownloadInCellular": string; // 已禁止移动网络下载
+    "downloading.overview.downloaded": string; // 已下载
+    "downloading.overview.queue": string; // 队列
+    "downloading.overview.concurrency": string; // 并发上限
+    "downloading.overview.pauseAll": string; // 全部暂停
+    "downloading.overview.resumeAll": string; // 全部继续
+    "downloading.overview.lowStorage": string; // 剩余空间不足
+    "downloading.overview.lowStorageDesc": string; // 仅剩 {free} · 已下载 {used}
+    "downloading.overview.lowStorageDescNoUsed": string; // 仅剩 {free}（占用大小未知时用）
+    "downloading.overview.goCleanup": string; // 去清理
+    "downloading.empty.downloading.title": string; // 当前没有下载任务
+    "downloading.empty.downloading.desc": string; // 在歌曲或歌单上点「下载」，任务会出现在这里
+    "downloading.empty.completed.title": string; // 还没有下载记录
+    "downloading.empty.completed.desc": string; // 下载完成的歌曲会保留在这里，方便查看音质、大小和保存位置
+    "downloading.empty.failed.title": string; // 没有失败的任务
+    "downloading.empty.failed.desc": string; // 下载失败的歌曲会留在这里，并给出具体原因和重试入口
+    "downloading.action.pause": string; // 暂停
+    "downloading.action.resume": string; // 继续
+    "downloading.action.retry": string; // 重试
+    "downloading.action.retryAll": string; // 全部重试
+    "downloading.action.play": string; // 立即播放
+    "downloading.action.redownload": string; // 重新下载
+    "downloading.action.removeRecord": string; // 移除记录
+    "downloading.action.removeRecordHint": string; // 保留文件
+    "downloading.action.deleteFile": string; // 删除文件
+    "downloading.action.deleteFileConfirm": string; // 确认删除「{title}」的本地文件吗？此操作不可撤销。
+    "downloading.action.clearRecords": string; // 清除已完成记录
+    "downloading.action.clearRecordsConfirm": string; // 确认清除 {count} 条已完成记录吗？本地文件不会被删除。
+    "downloading.action.clearHistory": string; // 清理历史（分组头按钮，只清该组记录）
+    "downloading.action.clearHistoryConfirm": string; // 将移除「{date}」的 {count} 条下载历史记录，音频文件不会被删除。
+    "downloading.action.select": string; // 选择
+    "downloading.action.selectedCount": string; // 已选 {count} 项
+    "downloading.section.today": string; // 今天
+    "downloading.section.yesterday": string; // 昨天
+    "downloading.toast.pauseAllSuccess": string; // 已暂停 {count} 个任务
+    "downloading.toast.resumeAllSuccess": string; // 已继续 {count} 个任务
+    "downloading.toast.pauseUnsupported": string; // 当前下载方式不支持暂停
+    "downloading.toast.clearRecordsSuccess": string; // 已清除 {count} 条记录
+    "downloading.toast.deleteFileSuccess": string; // 已删除本地文件
 
     // 艺术家详情相关
     "artistDetail.fansCount": string; // 粉丝数量

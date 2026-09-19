@@ -15,13 +15,14 @@ import { atom, getDefaultStore, useAtomValue } from "jotai";
 import path from "path-browserify";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { downloadFile, exists, moveFile, stopDownload, unlink } from "react-native-fs";
+import { downloadFile, exists, moveFile, stat, stopDownload, unlink } from "react-native-fs";
 import Mp3Util, {
     INativeDownloadTaskParams,
     INativeDownloadTaskStatus,
     NativeDownloadEmitter,
 } from "@/native/mp3Util";
 import Cenc from "@/native/cenc";
+import downloadHistory from "./downloadHistory";
 import LocalMusicSheet from "./localMusicSheet";
 import {
     getCompanionFileConfig,
@@ -41,28 +42,14 @@ import {
     requestAndroidDirectoryAccess,
 } from "@/utils/androidSaf";
 
-export enum DownloadStatus {
-    Pending,
-    Preparing,
-    Downloading,
-    Completed,
-    Error,
-}
-
-export enum DownloaderEvent {
-    DownloadError = "download-error",
-    DownloadTaskUpdate = "download-task-update",
-    DownloadTaskError = "download-task-error",
-    DownloadQueueCompleted = "download-queue-completed",
-}
-
-export enum DownloadFailReason {
-    NetworkOffline = "network-offline",
-    NotAllowToDownloadInCellular = "not-allow-to-download-in-cellular",
-    FailToFetchSource = "no-valid-source",
-    NoWritePermission = "no-write-permission",
-    Unknown = "unknown",
-}
+// 枚举本体已挪到 ./downloadTypes（避免 downloader ⇄ downloadHistory 循环依赖，
+// 也让只关心状态语义的测试不必拉起整条原生依赖链），这里保持原有导出面不变。
+import {
+    DownloadFailReason,
+    DownloadStatus,
+    DownloaderEvent,
+} from "./downloadTypes";
+export { DownloadStatus, DownloadFailReason, DownloaderEvent };
 
 interface IDownloadTaskInfo {
     status: DownloadStatus;
@@ -205,7 +192,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         return Array.from(downloadTasks.values()).some(task =>
             task.status === DownloadStatus.Pending ||
             task.status === DownloadStatus.Preparing ||
-            task.status === DownloadStatus.Downloading,
+            task.status === DownloadStatus.Downloading ||
+            // 暂停中的任务原生记录还在，同样需要对账，避免恢复后状态错位
+            task.status === DownloadStatus.Paused,
         );
     }
 
@@ -292,6 +281,15 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 };
                 downloadTasks.set(key, task);
                 this.emit(DownloaderEvent.DownloadTaskUpdate, task);
+                // 这里直接写 Map 绕过了 updateDownloadTask，网络受限导致的失败要自己落记录，
+                // 否则重启后「失败」分栏是空的
+                if (networkBlockedReason) {
+                    downloadHistory.recordError(extra.musicItem, {
+                        errorReason: networkBlockedReason,
+                        quality: extra.quality,
+                        filename: task.filename,
+                    });
+                }
 
                 if (!networkBlockedReason) {
                     restoredTasks.push({ musicItem: extra.musicItem, quality: extra.quality });
@@ -384,7 +382,7 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         case "DOWNLOADING":
             return DownloadStatus.Downloading;
         case "PAUSED":
-            return DownloadStatus.Pending;
+            return DownloadStatus.Paused;
         case "COMPLETED":
             return DownloadStatus.Completed;
         case "ERROR":
@@ -398,13 +396,68 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
 
     private updateDownloadTask(musicItem: IMusic.IMusicItem, patch: Partial<IDownloadTaskInfo>) {
         const key = getMediaUniqueKey(musicItem);
+        const previous = downloadTasks.get(key);
         const newValue = {
-            ...downloadTasks.get(key),
+            ...previous,
             ...patch,
         } as IDownloadTaskInfo;
         downloadTasks.set(key, newValue);
         this.emit(DownloaderEvent.DownloadTaskUpdate, newValue);
+        // 终态全部在这里收口落盘，省得在 10 多个 Error / Completed 分支里各写一遍
+        this.syncHistoryRecord(previous, newValue);
         return newValue;
+    }
+
+    /**
+     * 把任务状态变化同步到下载历史记录（issue #87）。
+     *
+     * - 进入 Completed / Error：写入记录（跨重启可见）
+     * - 从终态回到进行中（重试 / 重新下载）：删掉记录，避免同一首歌同时出现在两个分栏
+     * - 其余中间态：不动记录
+     *
+     * 注意 `cleanupTaskStateByKey()` 只清内存队列，不碰这里的记录，
+     * 所以「任务从队列消失」≠「记录消失」，这正是历史分栏能留下来的原因。
+     */
+    private syncHistoryRecord(previous: IDownloadTaskInfo | undefined, next: IDownloadTaskInfo) {
+        if (next.status === DownloadStatus.Completed) {
+            downloadHistory.recordCompleted(next.musicItem, {
+                quality: next.quality,
+                filename: next.filename,
+                fileSize: next.fileSize,
+            });
+            return;
+        }
+
+        if (next.status === DownloadStatus.Error) {
+            downloadHistory.recordError(next.musicItem, {
+                errorReason: next.errorReason,
+                quality: next.quality,
+                filename: next.filename,
+                fileSize: next.fileSize,
+            });
+            return;
+        }
+
+        if (
+            previous &&
+            (previous.status === DownloadStatus.Completed ||
+                previous.status === DownloadStatus.Error)
+        ) {
+            downloadHistory.removeRecord(getMediaUniqueKey(next.musicItem));
+        }
+    }
+
+    /** 读取落盘文件的真实大小；SAF 的 content:// 无法 stat，返回 undefined 由调用方兜底 */
+    private async getFileSizeSafe(filePath: string): Promise<number | undefined> {
+        try {
+            if (isAndroidSafUri(filePath)) {
+                return undefined;
+            }
+            const result = await stat(removeFileScheme(filePath));
+            return typeof result?.size === "number" ? result.size : undefined;
+        } catch {
+            return undefined;
+        }
     }
 
     private getExtensionName(url: string) {
@@ -1177,7 +1230,7 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             break;
         case "PAUSED":
             this.updateDownloadTask(musicItem, {
-                status: DownloadStatus.Pending,
+                status: DownloadStatus.Paused,
                 downloadedSize: rawTask.downloaded > 0 ? rawTask.downloaded : taskInfo.downloadedSize,
                 fileSize: rawTask.total > 0 ? rawTask.total : taskInfo.fileSize,
                 progressText: rawTask.progressText ?? taskInfo.progressText,
@@ -1265,13 +1318,25 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 return;
             }
 
+            // 内部落盘副本的真实大小必须在这里取：一旦音频写进授权目录，
+            // 内部副本会被 cleanupInternalDownloadFiles 删掉，而 content:// 无法 stat，
+            // 两边都拿不到就只剩估算值兜底，估算值也没有时历史记录会显示成「0B」
+            const localAudioFileSize = await this.getFileSizeSafe(
+                runtimeInfo.targetDownloadPath,
+            );
+
             // 音频已经成功落盘：之后的一切都是后处理，失败只记日志，不改写任务状态
-            await this.runPostProcessing(task, runtimeInfo);
+            const finalAudioPath = await this.runPostProcessing(task, runtimeInfo);
+
+            // 期望大小来自音质信息，可能是估算值；落盘后以真实文件大小为准，
+            // 历史记录里的「占用空间」才不会虚高或虚低（issue #87）
+            const completedFileSize =
+                (await this.getFileSizeSafe(finalAudioPath)) ?? localAudioFileSize;
 
             this.updateDownloadTask(task.musicItem, {
                 status: DownloadStatus.Completed,
                 downloadedSize: task.fileSize,
-                fileSize: task.fileSize,
+                fileSize: completedFileSize ?? task.fileSize,
                 progressText: task.progressText,
             });
         } finally {
@@ -1358,7 +1423,7 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
     private async runPostProcessing(
         task: IDownloadTaskInfo,
         runtimeInfo: IDownloadRuntimeInfo,
-    ) {
+    ): Promise<string> {
         const musicItem = task.musicItem;
         const audioPath = runtimeInfo.targetDownloadPath;
         const context: IPostProcessingContext = {
@@ -1367,6 +1432,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             id: musicItem.id,
             filePath: audioPath,
         };
+        // 音频最终落盘位置：写进授权目录时是 content:// uri，否则是内部路径。
+        // 提到 try 外面是为了让 catch 兜底时也能返回——上传历史记录要用它统计真实体积
+        let finalAudioPath = audioPath;
 
         try {
             // 写音乐标签。顺序说明（issue #64 待确认项）：读技术元数据排在写标签之后，
@@ -1404,7 +1472,6 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
 
             // 授权目录（SAF）拷贝。只有音频确实进了授权目录才清理内部临时文件，
             // 否则内部文件是本次下载唯一的副本，删掉用户就真的什么都没有了
-            let finalAudioPath = audioPath;
             let finalLyricPath = lyricPath;
             let finalCoverPath = coverPath;
             const safDirectoryUri = runtimeInfo.safDirectoryUri;
@@ -1480,12 +1547,15 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 localLyricPath: reconciledCompanionPaths.lyricPath ?? undefined,
                 localCoverPath: reconciledCompanionPaths.coverPath ?? undefined,
             });
+
+            return finalAudioPath;
         } catch (error) {
             // 兜底：后处理编排自身出问题也绝不能影响已经落盘的音频与任务状态
             errorLog("后处理失败：未知异常", {
                 ...context,
                 error: error instanceof Error ? error.message : String(error),
             });
+            return finalAudioPath;
         }
     }
 
@@ -1595,6 +1665,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             };
             downloadTasks.set(key, task);
             this.emit(DownloaderEvent.DownloadTaskUpdate, task);
+            // 重新入队就不再是「已完成 / 已失败」了：先撤掉终态记录，
+            // 等真正跑到终态时由 syncHistoryRecord 重新写入，避免同一首歌两个分栏各出现一次
+            downloadHistory.removeRecord(key);
             accepted.push(musicItem);
         }
 
@@ -1654,8 +1727,127 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         void Mp3Util.cancelDownloadTask(key).catch(() => {});
         void Mp3Util.removeDownloadTask(key).catch(() => {});
         this.cleanupTaskStateByKey(key, false);
+        // 「清除错误任务」走的就是这里：队列状态清了，历史记录也要跟着清
+        downloadHistory.removeRecord(key);
         this.maybeEmitQueueCompleted();
         return true;
+    }
+
+    /**
+     * 暂停单个任务。只有原生队列支持真暂停（断点续传），
+     * JS 回退下载没有暂停能力，返回 false 由 UI 决定降级提示。
+     */
+    async pause(musicItem: IMusic.IMusicItem): Promise<boolean> {
+        const key = getMediaUniqueKey(musicItem);
+        const task = downloadTasks.get(key);
+        if (!task) {
+            return false;
+        }
+        if (
+            task.status !== DownloadStatus.Pending &&
+            task.status !== DownloadStatus.Preparing &&
+            task.status !== DownloadStatus.Downloading
+        ) {
+            return false;
+        }
+
+        const paused = await Mp3Util.pauseDownloadTask(key).catch(() => false);
+        if (!paused) {
+            return false;
+        }
+        this.updateDownloadTask(musicItem, { status: DownloadStatus.Paused });
+        return true;
+    }
+
+    /** 继续被暂停的任务；原生恢复失败时把任务退回排队，交给队列重新驱动 */
+    async resume(musicItem: IMusic.IMusicItem): Promise<boolean> {
+        const key = getMediaUniqueKey(musicItem);
+        const task = downloadTasks.get(key);
+        if (!task || task.status !== DownloadStatus.Paused) {
+            return false;
+        }
+
+        const resumed = await Mp3Util.resumeDownloadTask(key).catch(() => false);
+        if (resumed) {
+            this.updateDownloadTask(musicItem, { status: DownloadStatus.Downloading });
+            return true;
+        }
+
+        // 原生侧已经没有这条任务（进程被杀过），重新 preparations 一次
+        this.updateDownloadTask(musicItem, { status: DownloadStatus.Pending });
+        this.pushPrepareTask({ musicItem: task.musicItem, quality: task.quality });
+        return true;
+    }
+
+    /** 全部暂停，返回实际暂停成功的条数 */
+    async pauseAll(): Promise<number> {
+        const candidates = Array.from(downloadTasks.values()).filter(
+            task =>
+                task.status === DownloadStatus.Pending ||
+                task.status === DownloadStatus.Preparing ||
+                task.status === DownloadStatus.Downloading,
+        );
+        let paused = 0;
+        for (const task of candidates) {
+            if (await this.pause(task.musicItem)) {
+                paused++;
+            }
+        }
+        return paused;
+    }
+
+    /** 全部继续，返回实际恢复的条数 */
+    async resumeAll(): Promise<number> {
+        const pausedTasks = Array.from(downloadTasks.values()).filter(
+            task => task.status === DownloadStatus.Paused,
+        );
+        let resumed = 0;
+        for (const task of pausedTasks) {
+            if (await this.resume(task.musicItem)) {
+                resumed++;
+            }
+        }
+        return resumed;
+    }
+
+    /**
+     * 重试一条失败任务。
+     * 无论失败任务是还活在内存队列里（当前会话），还是只剩历史记录（重启后），
+     * 都统一走 download()：download() 内部允许覆盖 Error 状态的任务重新入队。
+     */
+    retry(musicItem: IMusic.IMusicItem, quality?: IMusic.IQualityKey): boolean {
+        if (network.isOffline) {
+            this.emit(DownloaderEvent.DownloadError, DownloadFailReason.NetworkOffline);
+            return false;
+        }
+        if (network.isCellular && !this.configService.getConfig("basic.useCelluarNetworkDownload")) {
+            this.emit(
+                DownloaderEvent.DownloadError,
+                DownloadFailReason.NotAllowToDownloadInCellular,
+            );
+            return false;
+        }
+
+        this.download(musicItem, quality);
+        return true;
+    }
+
+    /** 当前队列里的活跃 / 暂停任务数，用于概览卡展示并发占用 */
+    getQueueStats() {
+        let active = 0;
+        let paused = 0;
+        for (const task of downloadTasks.values()) {
+            if (task.status === DownloadStatus.Paused) {
+                paused++;
+            } else if (
+                task.status === DownloadStatus.Pending ||
+                task.status === DownloadStatus.Preparing ||
+                task.status === DownloadStatus.Downloading
+            ) {
+                active++;
+            }
+        }
+        return { active, paused };
     }
 }
 
