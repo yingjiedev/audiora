@@ -472,6 +472,20 @@ export interface ILanguageData {
     "basicSettings.downloadQualityOrder": string; // 默认下载音质缺失时
     "basicSettings.downloadQualityOrder.asc": string; // 下载更高音质
     "basicSettings.downloadQualityOrder.desc": string; // 下载更低音质
+    "basicSettings.qualityManagement": string; // 音质管理
+    "basicSettings.musicTagSettings": string; // 音乐标签设置
+    "basicSettings.custom": string; // 自定义
+    "basicSettings.fileNaming": string; // 文件命名格式
+    "basicSettings.fileNamingType": string; // 文件命名格式类型
+    "basicSettings.fileNamingPreset": string; // 预设模板
+    "basicSettings.fileNamingPresetTitle": string; // 选择预设模板
+    "basicSettings.fileNamingCustom": string; // 自定义模板
+    "basicSettings.fileNamingCustomTitle": string; // 自定义文件命名模板
+    "basicSettings.fileNamingDefaultPreset": string; // 歌曲名-歌手
+    "basicSettings.fileNamingPlaceholder": string; // 例如: {title}-{artist}-{album}
+    "basicSettings.fileNamingVariables": string; // 可用变量：{variables}
+    "basicSettings.fileNamingTemplateInvalid": string; // 模板格式错误
+    "basicSettings.fileNamingTemplateSaved": string; // 模板设置成功
     
     "basicSettings.network": string; // 网络
     "basicSettings.useCelluarNetworkPlay": string; // 使用移动网络播放
@@ -873,6 +887,46 @@ export interface ILanguageData {
     "themeSettingsIndex.themeDescription": string;
     "themeSettingsIndex.backgroundDescription": string;
     "themeSettingsIndex.appearanceDescription": string;
+    "panel.musicMetadata.title": string; // 音乐标签设置
+    "panel.musicMetadata.description": string; // 为下载的音乐自动写入标签信息，让音乐文件更加完整和专业
+    "panel.musicMetadata.writeMetadata": string; // 下载时写入音乐标签
+    "panel.musicMetadata.writeMetadataDesc": string; // 启用后将自动为下载的音乐文件写入元数据
+    "panel.musicMetadata.group.writeContent": string; // 写入内容
+    "panel.musicMetadata.group.writeMetadata": string; // 音乐标签
+    "panel.musicMetadata.group.lyricContent": string; // 歌词内容设置
+    "panel.musicMetadata.writeMetadataCover": string; // 写入封面
+    "panel.musicMetadata.writeMetadataCoverDesc": string; // 自动下载并嵌入高质量专辑封面图片
+    "panel.musicMetadata.writeMetadataExtended": string; // 获取扩展信息
+    "panel.musicMetadata.writeMetadataExtendedDesc": string; // 写入更多详细标签（作曲者、发行年份、流派等）
+    "panel.musicMetadata.writeMetadataLyric": string; // 写入歌词
+    "panel.musicMetadata.writeMetadataLyricDesc": string; // 自动获取并嵌入歌词到音乐文件
+    "panel.musicMetadata.group.attachedFiles": string; // 附属文件
+    "panel.musicMetadata.downloadLyricFileDesc": string; // 下载音乐时同时保存独立的歌词文件
+    "panel.musicMetadata.downloadCoverFile": string; // 下载封面文件
+    "panel.musicMetadata.downloadCoverFileDesc": string; // 下载音乐时同时保存独立的封面图片，与音频文件同目录
+    "panel.musicMetadata.coverFileNaming": string; // 封面文件命名
+    "panel.musicMetadata.coverFileNaming.sameAsAudio": string; // 与音频同名
+    "panel.musicMetadata.coverFileNaming.fixedName": string; // 固定名 cover
+    "panel.musicMetadata.coverFileNaming.sameAsAudioHint": string; // 与音频同名的说明
+    "panel.musicMetadata.coverFileNaming.fixedNameHint": string; // 固定名 cover 的说明
+    "panel.musicMetadata.lyricContentDesc": string; // 选择要包含的歌词类型，可调整顺序
+    "panel.musicMetadata.lyricType.original": string; // 原文歌词
+    "panel.musicMetadata.lyricType.originalDesc": string; // 歌曲原始语言的歌词
+    "panel.musicMetadata.lyricType.translation": string; // 翻译歌词
+    "panel.musicMetadata.lyricType.translationDesc": string; // 歌词的中文翻译
+    "panel.musicMetadata.lyricType.romanization": string; // 音译歌词
+    "panel.musicMetadata.lyricType.romanizationDesc": string; // 罗马音/拼音注音
+    "panel.musicMetadata.currentOrder": string; // 当前顺序：{order}
+    "panel.musicMetadata.enableWordByWord": string; // 逐字歌词
+    "panel.musicMetadata.enableWordByWordDesc": string; // 保留 QRC 格式的逐字时间戳（如有）
+    "panel.musicMetadata.lyricFileFormat": string; // 歌词文件格式
+    "panel.musicMetadata.moveUp": string; // 上移
+    "panel.musicMetadata.moveDown": string; // 下移
+    "panel.musicMetadata.resetToDefault": string; // 重置为默认值
+    "panel.musicMetadata.resetToDefaultDesc": string; // 恢复所有设置为系统推荐配置
+    "panel.musicMetadata.toastSaved": string; // 音乐标签设置已保存
+    "panel.musicMetadata.toastReset": string; // 已重置为默认值
+    "panel.musicItemLyricOptions.downloadLyricFile": string; // 下载歌词文件
 }
 
 // 语言接口定义

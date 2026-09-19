@@ -110,4 +110,32 @@ describe("SettingRow", () => {
             renderer!.root.findAllByProps({ name: "chevron-right" }),
         ).toHaveLength(0);
     });
+
+    it("说明文字默认单行，descriptionLines 可放宽行数", () => {
+        const DESC = "一段很长的说明文字";
+        let renderer: TestRenderer.ReactTestRenderer;
+
+        const descriptionNode = () =>
+            renderer!.root
+                .findAllByType(Text)
+                .find(node => node.props.children === DESC);
+
+        act(() => {
+            renderer = TestRenderer.create(
+                <SettingRow title="标题" description={DESC} />,
+            );
+        });
+        expect(descriptionNode()?.props.numberOfLines).toBe(1);
+
+        act(() => {
+            renderer = TestRenderer.create(
+                <SettingRow
+                    title="标题"
+                    description={DESC}
+                    descriptionLines={3}
+                />,
+            );
+        });
+        expect(descriptionNode()?.props.numberOfLines).toBe(3);
+    });
 });

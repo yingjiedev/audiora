@@ -17,6 +17,12 @@ interface ISettingRowProps {
     title: ReactNode;
     /** 标题下方的次要说明 */
     description?: ReactNode;
+    /**
+     * 说明文字的最大行数，默认 1。
+     * 设置页行距紧凑，单行足够；面板里的长说明（如封面命名规则）可以放宽到 2~3 行，
+     * 避免像 #86 那样把文案裁掉。
+     */
+    descriptionLines?: number;
     /** 右侧「当前值」文本：超过可用宽度自动省略，不会挤压标题 */
     value?: ReactNode;
     /** 右侧控件（开关、按钮等）：不参与收缩，始终完整显示 */
@@ -47,6 +53,7 @@ export default function SettingRow(props: ISettingRowProps) {
     const {
         accessibilityLabel,
         description,
+        descriptionLines = 1,
         onLongPress,
         onPress,
         paddingHorizontal,
@@ -84,7 +91,7 @@ export default function SettingRow(props: ISettingRowProps) {
                 <ThemeText numberOfLines={2}>{title}</ThemeText>
                 {description ? (
                     <ThemeText
-                        numberOfLines={1}
+                        numberOfLines={descriptionLines}
                         fontSize="description"
                         fontColor="textSecondary"
                         style={styles.description}>

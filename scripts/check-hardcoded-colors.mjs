@@ -10,10 +10,19 @@
  * 基线按「颜色字面量 + 归一化代码行」记录，而不是给每个文件一个
  * 可以挪用的颜色数量额度。这样删除注释或旧样式后，不能在其他位置
  * 补上同色新样式而绕过检查。
+ *
+ * 注释剥离、`color-exempt` 豁免范围解析、文件遍历都走 `scripts/lib/sourceScan.mjs`，
+ * 与 `check-ui-conventions.mjs` 共用同一套语义。
  */
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+    collectExemptLines,
+    stripComments,
+    toPosix,
+    walkSourceFiles,
+} from "./lib/sourceScan.mjs";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = join(projectRoot, "src");
@@ -49,10 +58,6 @@ const args = process.argv.slice(2);
 const updateBaseline = args.includes("--update");
 const reportAll = args.includes("--all");
 
-function toPosix(value) {
-    return value.split(sep).join("/");
-}
-
 function isAllowed(relativePath) {
     if (ALLOWED_PATTERNS.some(pattern => pattern.test(relativePath))) {
         return true;
@@ -68,89 +73,6 @@ function isAllowed(relativePath) {
     });
 }
 
-function collectFiles(dir, result = []) {
-    readdirSync(dir).forEach(entry => {
-        const fullPath = join(dir, entry);
-        if (statSync(fullPath).isDirectory()) {
-            collectFiles(fullPath, result);
-            return;
-        }
-        if (/\.tsx?$/.test(entry)) {
-            result.push(fullPath);
-        }
-    });
-
-    return result;
-}
-
-/** 去掉真正的 JS/TS 注释，保留字符串和模板字符串内容。 */
-function stripComments(source) {
-    let result = "";
-    let state = "code";
-
-    for (let index = 0; index < source.length; index += 1) {
-        const char = source[index];
-        const next = source[index + 1];
-
-        if (state === "line-comment") {
-            if (char === "\n") {
-                result += char;
-                state = "code";
-            } else {
-                result += " ";
-            }
-            continue;
-        }
-
-        if (state === "block-comment") {
-            if (char === "*" && next === "/") {
-                result += "  ";
-                index += 1;
-                state = "code";
-            } else {
-                result += char === "\n" ? "\n" : " ";
-            }
-            continue;
-        }
-
-        if (state !== "code") {
-            result += char;
-            if (char === "\\" && next !== undefined) {
-                result += next;
-                index += 1;
-            } else if (
-                (state === "single-quote" && char === "'") ||
-                (state === "double-quote" && char === "\"") ||
-                (state === "template" && char === "`")
-            ) {
-                state = "code";
-            }
-            continue;
-        }
-
-        if (char === "/" && next === "/") {
-            result += "  ";
-            index += 1;
-            state = "line-comment";
-        } else if (char === "/" && next === "*") {
-            result += "  ";
-            index += 1;
-            state = "block-comment";
-        } else {
-            result += char;
-            if (char === "'") {
-                state = "single-quote";
-            } else if (char === "\"") {
-                state = "double-quote";
-            } else if (char === "`") {
-                state = "template";
-            }
-        }
-    }
-
-    return result;
-}
-
 function normalizeLiteral(value) {
     const unquoted = /^["'`].*["'`]$/.test(value)
         ? value.slice(1, -1)
@@ -164,12 +86,12 @@ function normalizeCode(line) {
 
 function scanFile(fullPath) {
     const source = readFileSync(fullPath, "utf-8");
-    const originalLines = source.split(/\r?\n/);
     const codeLines = stripComments(source).split(/\r?\n/);
+    const exemptLines = collectExemptLines(source, EXEMPT_MARK);
     const grouped = new Map();
 
     codeLines.forEach((line, index) => {
-        if (originalLines[index]?.includes(EXEMPT_MARK)) {
+        if (exemptLines.has(index)) {
             return;
         }
 
@@ -200,7 +122,7 @@ function scanFile(fullPath) {
 
 function collectCurrent() {
     const files = {};
-    collectFiles(srcDir).forEach(fullPath => {
+    walkSourceFiles(srcDir).forEach(fullPath => {
         const relativePath = toPosix(relative(projectRoot, fullPath));
         if (isAllowed(relativePath)) {
             return;
@@ -294,9 +216,20 @@ if (regressions.length > 0) {
     process.exit(1);
 }
 
+// 基线是「待还债清单」，因此除了「不许变多」，还要能看出「还了多少」。
+// 代码收敛后、重新落基线之前的这次运行，就是 PR 里「已减少 N 处」的证据。
+const baselineTotal = countEntries(baseline.files);
+const removedCount = baselineTotal - totalCount;
+const deltaText =
+    removedCount > 0
+        ? `已减少 ${removedCount} 处`
+        : removedCount === 0
+          ? "与基线持平"
+          : `较基线增加 ${-removedCount} 处`;
+
 if (reportAll) {
     console.log(
-        `check-hardcoded-colors: 存量 ${totalCount} 处 / ${Object.keys(current).length} 个文件（未超基线）`,
+        `check-hardcoded-colors: 存量 ${totalCount} 处 / ${Object.keys(current).length} 个文件（基线 ${baselineTotal} 处，${deltaText}）`,
     );
     Object.entries(current).forEach(([file, entries]) => {
         const colors = [...new Set(entries.map(entry => entry.literal))].join(" ");
@@ -306,5 +239,5 @@ if (reportAll) {
 }
 
 console.log(
-    `check-hardcoded-colors: 通过（存量 ${totalCount} 处未超基线）`,
+    `check-hardcoded-colors: 通过（存量 ${totalCount} 处，基线 ${baselineTotal} 处，${deltaText}）`,
 );
