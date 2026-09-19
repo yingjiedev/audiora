@@ -24,6 +24,7 @@ import ImageViewer from "./imageViewer";
 import MusicComment from "./musicComment";
 import MusicItemLyricOptions from "./musicItemLyricOptions";
 import EditMusicSheetInfo from "./editMusicSheetInfo";
+import DownloadTaskOptions from "./downloadTaskOptions";
 import QualityTranslation from "./qualityTranslation";
 import MusicMetadataSettings from "./musicMetadataSettings";
 
@@ -82,4 +83,6 @@ export default {
     QualityTranslationPanel: QualityTranslation,
     /** 音乐标签设置 */
     MusicMetadataSettingsPanel: MusicMetadataSettings,
+    /** 下载任务单条操作 */
+    DownloadTaskOptions,
 };

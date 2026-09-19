@@ -23,6 +23,8 @@ import { fontWeightConst } from "@/constants/uiConst";
 export type PillTabRoute = {
     key: string;
     title?: string;
+    /** 分栏计数，配合 `getBadge` 使用；不传默认取这个字段 */
+    count?: number | string;
 };
 
 export type PillTabBarVariant = "pill" | "underline";
@@ -34,6 +36,11 @@ interface IPillTabBarProps {
     /** pill = capsule chip; underline = text + bottom bar (default: pill) */
     variant?: PillTabBarVariant;
     getTitle?: (route: PillTabRoute, index: number) => string;
+    /**
+     * 分栏计数徽标。返回 null / undefined / 0 时不显示。
+     * issue #87：下载管理页的三个分栏都要带数量，否则用户看不出哪栏有内容。
+     */
+    getBadge?: (route: PillTabRoute, index: number) => number | string | null;
     style?: StyleProp<ViewStyle>;
     contentContainerStyle?: StyleProp<ViewStyle>;
 }
@@ -45,6 +52,7 @@ function PillTabBar(props: IPillTabBarProps) {
         onIndexChange,
         variant = "pill",
         getTitle,
+        getBadge,
         style,
         contentContainerStyle,
     } = props;
@@ -62,6 +70,32 @@ function PillTabBar(props: IPillTabBarProps) {
                 const focused = routeIndex === index;
                 const title =
                     getTitle?.(route, routeIndex) ?? route.title ?? route.key;
+                const rawBadge = getBadge?.(route, routeIndex);
+                const badge = rawBadge === 0 ? null : rawBadge;
+                const badgeNode = badge ? (
+                    <View
+                        style={[
+                            styles.badge,
+                            focused
+                                ? { backgroundColor: colors.primary }
+                                : {
+                                    backgroundColor: Color(colors.text)
+                                        .alpha(0.12)
+                                        .toString(),
+                                },
+                        ]}>
+                        <Text
+                            numberOfLines={1}
+                            style={[
+                                styles.badgeText,
+                                {
+                                    color: focused ? colors.onPrimary : colors.textSecondary ?? colors.text,
+                                },
+                            ]}>
+                            {badge}
+                        </Text>
+                    </View>
+                ) : null;
 
                 if (variant === "underline") {
                     return (
@@ -71,22 +105,25 @@ function PillTabBar(props: IPillTabBarProps) {
                             accessibilityState={{ selected: focused }}
                             onPress={() => onIndexChange(routeIndex)}
                             style={styles.underlineItem}>
-                            <Text
-                                numberOfLines={1}
-                                style={[
-                                    styles.underlineLabel,
-                                    {
-                                        fontWeight: focused
-                                            ? fontWeightConst.bolder
-                                            : fontWeightConst.medium,
-                                        color: focused
-                                            ? colors.primary
-                                            : colors.textSecondary ??
-                                              colors.text,
-                                    },
-                                ]}>
-                                {title}
-                            </Text>
+                            <View style={styles.labelRow}>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.underlineLabel,
+                                        {
+                                            fontWeight: focused
+                                                ? fontWeightConst.bolder
+                                                : fontWeightConst.medium,
+                                            color: focused
+                                                ? colors.primary
+                                                : colors.textSecondary ??
+                                                  colors.text,
+                                        },
+                                    ]}>
+                                    {title}
+                                </Text>
+                                {badgeNode}
+                            </View>
                             <View
                                 style={[
                                     styles.underlineIndicator,
@@ -114,21 +151,24 @@ function PillTabBar(props: IPillTabBarProps) {
                                 borderColor: activeBorder,
                             },
                         ]}>
-                        <Text
-                            numberOfLines={1}
-                            style={[
-                                styles.pillLabel,
-                                {
-                                    fontWeight: focused
-                                        ? fontWeightConst.bolder
-                                        : fontWeightConst.medium,
-                                    color: focused
-                                        ? colors.primary
-                                        : colors.textSecondary ?? colors.text,
-                                },
-                            ]}>
-                            {title}
-                        </Text>
+                        <View style={styles.labelRow}>
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.pillLabel,
+                                    {
+                                        fontWeight: focused
+                                            ? fontWeightConst.bolder
+                                            : fontWeightConst.medium,
+                                        color: focused
+                                            ? colors.primary
+                                            : colors.textSecondary ?? colors.text,
+                                    },
+                                ]}>
+                                {title}
+                            </Text>
+                            {badgeNode}
+                        </View>
                     </Pressable>
                 );
             })}
@@ -171,6 +211,25 @@ const styles = StyleSheet.create({
     },
     underlineLabel: {
         fontSize: fontRpx(28),
+        textAlign: "center",
+    },
+    labelRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        maxWidth: "100%",
+    },
+    badge: {
+        marginLeft: rpx(6),
+        paddingHorizontal: rpx(8),
+        paddingVertical: rpx(1),
+        borderRadius: rpx(999),
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    badgeText: {
+        fontSize: fontRpx(20),
+        fontWeight: fontWeightConst.bold,
         textAlign: "center",
     },
     underlineIndicator: {
