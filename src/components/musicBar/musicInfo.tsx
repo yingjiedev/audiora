@@ -1,4 +1,4 @@
-import React, { memo, useLayoutEffect, useMemo } from "react";
+import React, { memo, useCallback, useLayoutEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import FastImage from "../base/fastImage";
@@ -10,8 +10,12 @@ import { ROUTE_PATH, useNavigate } from "@/core/router";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import TrackPlayer from "@/core/trackPlayer";
 import Animated, {
+    AnimatedRef,
     SharedValue,
+    measure,
     runOnJS,
+    runOnUI,
+    useAnimatedRef,
     useAnimatedStyle,
     useSharedValue,
     withTiming,
@@ -19,14 +23,18 @@ import Animated, {
 import { timingConfig } from "@/constants/commonConst";
 import { resolveArtwork } from "@/utils/artwork";
 import { useMediaExtraProperty } from "@/utils/mediaExtra";
+import { armPlayerTransition, playerTransition } from "@/core/playerTransition";
 
 interface IBarMusicItemProps {
     musicItem: IMusic.IMusicItem | null;
     activeIndex: number; // 当前展示的是0/1/2
     transformSharedValue: SharedValue<number>;
+    /** Only the visible (current) item carries the shared-element frame. */
+    artworkRef?: AnimatedRef<Animated.View>;
+    onArtworkLayout?: () => void;
 }
 function BarMusicItemView(props: IBarMusicItemProps) {
-    const { musicItem, activeIndex, transformSharedValue } = props;
+    const { musicItem, activeIndex, transformSharedValue, artworkRef, onArtworkLayout } = props;
     const colors = useColors();
     // Subscribe so minibar updates when cover is associated/restored
     useMediaExtraProperty(musicItem, "associatedArtwork");
@@ -51,14 +59,14 @@ function BarMusicItemView(props: IBarMusicItemProps) {
                 styles.containerPadding,
                 animatedStyles,
             ]}>
-            <View collapsable={false}>
+            <Animated.View collapsable={false} ref={artworkRef} onLayout={onArtworkLayout}>
                 <FastImage
                     key={displayArtwork ?? "default"}
                     style={styles.artworkImg}
                     source={displayArtwork}
                     placeholderSource={ImgAsset.albumDefault}
                 />
-            </View>
+            </Animated.View>
             <View accessible={false} style={styles.textWrapper}>
                 <ThemeText
                     fontSize="subTitle"
@@ -154,8 +162,31 @@ export default function MusicInfo(props: IMusicInfoProps) {
 
     const musicItemWidthValue = useSharedValue(0);
 
+    // Shared-element source: the mini artwork's frame in window coordinates.
+    // Kept fresh on every layout so tapping the bar never has to wait for an
+    // async measurement before navigating.
+    const artworkRef = useAnimatedRef<Animated.View>();
+    const measureArtwork = useCallback(() => {
+        runOnUI(() => {
+            const frame = measure(artworkRef);
+            if (!frame || frame.width <= 0 || frame.height <= 0) {
+                return;
+            }
+            playerTransition().origin.value = {
+                x: frame.pageX,
+                y: frame.pageY,
+                width: frame.width,
+                height: frame.height,
+            };
+        })();
+    }, [artworkRef]);
+
     const tapGesture = Gesture.Tap()
         .onStart(() => {
+            measureArtwork();
+            // Arms the morph (or reports "no shared element") before the screen
+            // mounts, so the full player's first frame already knows its origin.
+            armPlayerTransition();
             navigate(ROUTE_PATH.MUSIC_DETAIL);
         })
         .runOnJS(true);
@@ -234,6 +265,8 @@ export default function MusicInfo(props: IMusicInfoProps) {
                     transformSharedValue={transformSharedValue}
                     musicItem={musicItem}
                     activeIndex={0}
+                    artworkRef={artworkRef}
+                    onArtworkLayout={measureArtwork}
                 />
                 <BarMusicItem
                     transformSharedValue={transformSharedValue}

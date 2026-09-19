@@ -5,7 +5,19 @@ import FastImage from "@/components/base/fastImage";
 import useOrientation from "@/hooks/useOrientation";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useCurrentMusic, useMusicState, MusicState } from "@/core/trackPlayer";
-import { Animated, Easing, useWindowDimensions, View } from "react-native";
+import Animated, {
+    cancelAnimation,
+    Easing,
+    measure,
+    runOnUI,
+    useAnimatedRef,
+    useAnimatedStyle,
+    useDerivedValue,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from "react-native-reanimated";
+import { useWindowDimensions, View } from "react-native";
 import Operations from "./operations";
 import { showPanel } from "@/components/panels/usePanel.ts";
 import { useAppConfig } from "@/core/appConfig";
@@ -19,6 +31,9 @@ import {
 } from "../../immersiveCover";
 import { resolveArtwork } from "@/utils/artwork";
 import { useMediaExtraProperty } from "@/utils/mediaExtra";
+import useMotion from "@/hooks/useMotion";
+import { playerTransition } from "@/core/playerTransition";
+import { coverMorphTransform, MotionRect } from "@/utils/motionMath";
 
 const ROTATION_DURATION = 25000; // 25秒转一圈
 export const COVER_SIZE = rpx(600); // 大封面尺寸
@@ -163,81 +178,100 @@ export default function AlbumCover(props: IProps) {
             }
         };
     }, []);
-    // 旋转动画
-    const spinValue = useRef(new Animated.Value(0)).current;
-    const animationRef = useRef<Animated.CompositeAnimation | null>(null);
-    const isAnimatingRef = useRef(false);
+    // 旋转动画 — Reanimated, so it shares one animation runtime with the
+    // Mini ↔ Full transition (the old RN Core loop could not be interrupted).
+    const rotation = useSharedValue(0);
     const lastAnimatedMusicIdRef = useRef(musicItem?.id);
+    const motion = useMotion();
+    const spin = useDerivedValue(() => `${(rotation.value % 1) * 360}deg`);
 
-    const createAnimation = useCallback(
-        (fromValue: number) => {
-            return Animated.timing(spinValue, {
-                toValue: 1,
-                duration: ROTATION_DURATION * (1 - fromValue),
-                easing: Easing.linear,
-                useNativeDriver: true,
-            });
-        },
-        [spinValue]
-    );
-
-    const startAnimation = useCallback(() => {
-        if (isAnimatingRef.current || !isCircle) return;
-        isAnimatingRef.current = true;
-        spinValue.stopAnimation(value => {
-            animationRef.current = createAnimation(value);
-            animationRef.current.start(({ finished }) => {
-                if (finished && isAnimatingRef.current) {
-                    spinValue.setValue(0);
-                    isAnimatingRef.current = false;
-                    startAnimation();
-                }
-            });
-        });
-    }, [spinValue, createAnimation, isCircle]);
-
-    const stopAnimation = useCallback(() => {
-        if (!isAnimatingRef.current) return;
-        isAnimatingRef.current = false;
-        animationRef.current?.stop();
-        animationRef.current = null;
-        spinValue.stopAnimation();
-    }, [spinValue]);
-
-    // 控制播放/暂停时的动画
     useEffect(() => {
-        if (isActive && isPlaying && isCircle) {
-            startAnimation();
-        } else {
-            stopAnimation();
+        // Track change restarts the vinyl from the top, as before.
+        if (lastAnimatedMusicIdRef.current !== musicItem?.id) {
+            lastAnimatedMusicIdRef.current = musicItem?.id;
+            cancelAnimation(rotation);
+            rotation.value = 0;
         }
-    }, [isActive, isPlaying, isCircle, startAnimation, stopAnimation]);
-
-    // 切换歌曲时重置
-    useEffect(() => {
-        if (lastAnimatedMusicIdRef.current === musicItem?.id) {
+        if (!isActive || !isPlaying || !isCircle || motion.reduceMotion) {
+            cancelAnimation(rotation);
             return;
         }
-        lastAnimatedMusicIdRef.current = musicItem?.id;
-        stopAnimation();
-        spinValue.setValue(0);
-        if (isActive && isPlaying && isCircle) {
-            startAnimation();
-        }
+        // One revolution every ROTATION_DURATION; resuming starts from the
+        // current angle, so the angular speed stays constant.
+        rotation.value = withRepeat(
+            withTiming(rotation.value + 1, {
+                duration: ROTATION_DURATION,
+                easing: Easing.linear,
+            }),
+            -1,
+        );
+        return () => {
+            cancelAnimation(rotation);
+        };
     }, [
         isActive,
-        isCircle,
         isPlaying,
+        isCircle,
+        motion.reduceMotion,
         musicItem?.id,
-        spinValue,
-        startAnimation,
-        stopAnimation,
+        rotation,
     ]);
 
-    const spin = spinValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: ["0deg", "360deg"],
-    });
+    // ---- Shared element (Mini ↔ Full) -------------------------------------
+    // The resting frame of the artwork is derived from *layout* metrics plus an
+    // untransformed parent, never from `measure()` on the artwork itself: once
+    // the morph transform is applied, a measured frame would feed the moving
+    // position back into the animation.
+    const { progress: transitionProgress, origin: transitionOrigin } =
+        playerTransition();
+    const coverAreaRef = useAnimatedRef<Animated.View>();
+    const coverLayout = useSharedValue<MotionRect | null>(null);
+    const coverTarget = useSharedValue<MotionRect | null>(null);
+
+    const syncCoverTarget = useCallback(() => {
+        runOnUI(() => {
+            const area = measure(coverAreaRef);
+            const layout = coverLayout.value;
+            if (!area || !layout) {
+                return;
+            }
+            coverTarget.value = {
+                x: area.pageX + layout.x,
+                y: area.pageY + layout.y,
+                width: layout.width,
+                height: layout.height,
+            };
+        })();
+    }, [coverAreaRef, coverLayout, coverTarget]);
+
+    const coverMorphStyle = useAnimatedStyle(() => {
+        const origin = transitionOrigin.value;
+        const target = coverTarget.value;
+        const p = transitionProgress.value;
+        if (p >= 1 || !origin) {
+            return { opacity: 1 };
+        }
+        if (!target) {
+            // Frame not measured yet — stay hidden instead of popping in.
+            return { opacity: 0 };
+        }
+        const { translateX, translateY, scale } = coverMorphTransform(
+            origin,
+            target,
+            p,
+        );
+        return {
+            opacity: 1,
+            transform: isCircle
+                ? [
+                    { translateX },
+                    { translateY },
+                    { scale },
+                    { rotate: spin.value },
+                ]
+                : [{ translateX }, { translateY }, { scale }],
+        };
+    }, [isCircle]);
 
     const immersiveCoverHeight = useMemo(
         () => getImmersiveCoverHeight(windowWidth),
@@ -366,15 +400,27 @@ export default function AlbumCover(props: IProps) {
 
     return (
         <View style={styles.verticalRoot} onLayout={onRootLayout}>
-            <View style={containerStyle}>
+            <Animated.View
+                ref={coverAreaRef}
+                style={containerStyle}
+                collapsable={false}>
                 <GestureDetector gesture={combineGesture}>
                     <Animated.View
                         collapsable={false}
+                        onLayout={event => {
+                            const layout = event.nativeEvent.layout;
+                            coverLayout.value = {
+                                x: layout.x,
+                                y: layout.y,
+                                width: layout.width,
+                                height: layout.height,
+                            };
+                            syncCoverTarget();
+                        }}
                         style={[
                             !isCircle ? styles.coverShadow : null,
-                            isCircle
-                                ? { transform: [{ rotate: spin }] }
-                                : undefined,
+                            isCircle ? { transform: [{ rotate: spin }] } : null,
+                            coverMorphStyle,
                         ]}>
                         <FastImage
                             key={displayArtwork ?? "default"}
@@ -384,7 +430,7 @@ export default function AlbumCover(props: IProps) {
                         />
                     </Animated.View>
                 </GestureDetector>
-            </View>
+            </Animated.View>
             <SongInfo showHeart />
             <View style={miniLyricLayout === "hidden" ? styles.hidden : null}>
                 <MiniLyric

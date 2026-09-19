@@ -12,25 +12,15 @@ import {
 } from "react-native";
 
 import Animated, {
-    Easing,
-    EasingFunction,
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
-    withTiming,
 } from "react-native-reanimated";
 import Theme from "@/core/theme";
 import PageBackground from "@/components/base/pageBackground";
 import { panelInfoStore } from "../usePanel";
 import { vh } from "@/utils/rpx.ts";
-
-const ANIMATION_EASING: EasingFunction = Easing.out(Easing.exp);
-const ANIMATION_DURATION = 250;
-
-const timingConfig = {
-    duration: ANIMATION_DURATION,
-    easing: ANIMATION_EASING,
-};
+import useMotion from "@/hooks/useMotion";
 
 interface IPanelFullScreenProps {
     hasMask?: boolean;
@@ -73,6 +63,7 @@ export default function (props: IPanelFullScreenProps) {
     const closingRef = useRef(false);
 
     const windowHeight = useMemo(() => vh(100), []);
+    const motion = useMotion();
 
     const unmountPanel = useCallback(() => {
         closingRef.current = false;
@@ -97,18 +88,25 @@ export default function (props: IPanelFullScreenProps) {
             return;
         }
         closingRef.current = true;
-        snapPoint.value = withTiming(0, timingConfig, finished => {
-            if (finished) {
-                runOnJS(unmountPanel)();
-            } else {
-                closingRef.current = false;
-            }
-        });
-    }, [snapPoint, unmountPanel]);
+        snapPoint.value = motion.timing(
+            0,
+            { duration: "normal", easing: "accelerate" },
+            finished => {
+                if (finished) {
+                    runOnJS(unmountPanel)();
+                } else {
+                    closingRef.current = false;
+                }
+            },
+        );
+    }, [snapPoint, unmountPanel, motion]);
 
     useEffect(() => {
         closingRef.current = false;
-        snapPoint.value = withTiming(1, timingConfig);
+        snapPoint.value = motion.timing(1, {
+            duration: "normal",
+            easing: "decelerate",
+        });
 
         if (backHandlerRef.current) {
             backHandlerRef.current?.remove();
