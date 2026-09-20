@@ -130,16 +130,21 @@ describe("RoundActionButton", () => {
         expect(stopPropagation).toHaveBeenCalledTimes(1);
     });
 
-    it("叠加层渲染在图标下方且不拦截点击", () => {
+    it("叠加层与图标都在绝对定位层里，不拦截点击", () => {
         const renderer = render("solid", {
             onPress: jest.fn(),
             accessibilityLabel: "p",
             children: <React.Fragment>ring</React.Fragment>,
         });
 
-        const overlay = renderer.root.findByProps({ pointerEvents: "none" });
-        expect(overlay.props.pointerEvents).toBe("none");
-        // 叠加层先于图标渲染，图标压在它上面
+        // children 叠加层 + 图标层，两层 absolute-fill 锁死同一个圆心；
+        // 图标一旦走流内布局，在带进度环的实机上会被顶出圆心。
+        const layers = renderer.root.findAllByProps({ pointerEvents: "none" });
+        const absoluteLayers = layers.filter(layer => {
+            const style = StyleSheet.flatten(layer.props.style);
+            return style?.position === "absolute";
+        });
+        expect(absoluteLayers.length).toBeGreaterThanOrEqual(2);
         expect(renderer.toJSON()).toBeTruthy();
     });
 });

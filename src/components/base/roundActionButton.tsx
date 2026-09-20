@@ -100,6 +100,9 @@ export default function RoundActionButton(props: IRoundActionButtonProps) {
         iconColor = colors.primary;
     }
 
+    // 图标也走绝对定位层：与 children 叠加层共用同一个圆心。图标如果作为
+    // 流内子节点，在有叠加层（音乐栏进度环）的机器上实测会被顶出圆心，
+    // 两层全部 absolute-fill 才能保证几何上锁死在同一个方框里。
     const body = (
         <>
             {children ? (
@@ -108,14 +111,18 @@ export default function RoundActionButton(props: IRoundActionButtonProps) {
                 </View>
             ) : null}
             {loading ? (
-                <ActivityIndicator size="small" color={iconColor} />
+                <View style={styles.overlay} pointerEvents="none">
+                    <ActivityIndicator size="small" color={iconColor} />
+                </View>
             ) : (
-                <Icon
-                    name={iconName}
-                    size={iconSize}
-                    color={iconColor}
-                    style={iconStyle}
-                />
+                <View style={styles.overlay} pointerEvents="none">
+                    <Icon
+                        name={iconName}
+                        size={iconSize}
+                        color={iconColor}
+                        style={iconStyle}
+                    />
+                </View>
             )}
         </>
     );
@@ -156,7 +163,13 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     overlay: {
-        ...StyleSheet.absoluteFillObject,
+        // RN 0.86 移除了 StyleSheet.absoluteFillObject，展开 undefined 会静默
+        // 丢失 position（实机翻过车），这里显式写全，别再改回展开写法。
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         alignItems: "center",
         justifyContent: "center",
     },

@@ -87,7 +87,11 @@ const styles = StyleSheet.create({
         borderRadius: rpx(28),
     },
     shade: {
-        ...StyleSheet.absoluteFillObject,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: "rgba(10,34,91,0.08)",
     },
     // 深色模式下 hero 图过亮会跟整页脱节，压一层深色蒙版
