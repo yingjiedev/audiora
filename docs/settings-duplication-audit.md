@@ -17,11 +17,18 @@
 
 | 配置键 | 收敛前写入口 | 现在 | 权威写入点 |
 |---|---|---|---|
-| `lyric.showStatusBarLyric` | 4（设置页 ×2、面板 ×2、原生工具层、引导层） | 1（+1 引导层例外） | `src/core/desktopLyric.ts` |
-| `lyric.isLocked` | 3（设置页、面板 ×2、引导层） | 1（+1 引导层例外） | `src/core/desktopLyric.ts` |
-| `lyric.enableWordByWord` | 2（设置页、面板） | 1 | `src/core/desktopLyric.ts` |
-| `basic.downloadPath` | 3（设置页、歌词面板、下载器） | 1 | `src/core/downloadPath.ts` |
-| `theme.followSystem` | 3（显示风格页、选择主题页 ×3） | 1 | `Theme.setFollowSystem()`（`src/core/theme.ts`） |
+| `lyric.showStatusBarLyric` | 设置页 ×2、面板 ×2、原生工具层（`native/lyricUtil`）、引导层 | **1** + 2 处合法例外 | `src/core/desktopLyric.ts` |
+| `lyric.isLocked` | 设置页、面板 ×2、引导层 | **1** + 2 处合法例外 | `src/core/desktopLyric.ts` |
+| `lyric.enableWordByWord` | 设置页、面板 | **1** | `src/core/desktopLyric.ts` |
+| `basic.downloadPath` | 设置页、歌词面板、下载器 | **1** | `src/core/downloadPath.ts` |
+| `theme.followSystem` | 显示风格页、选择主题页 ×3 | **1** | `Theme.setFollowSystem()`（`src/core/theme.ts`） |
+
+「合法例外」具体是本节开头列出的两类：`entry/bootstrap/bootstrap.ts`（Android 上桌面歌词已下线，
+启动时清标记）与 `core/lyricManager.ts`（原生回调回写用户可见状态），两处代码里都有注释说明。
+
+复核口径（`grep -n 'setConfig("<key>"' src`）：除上述权威写入点与两处例外外，不应再有命中；
+`basicSetting.tsx` 里传给 `createSwitch` 的 key 都带了 callback，而 `createSwitch` 在**给了 callback 时
+不再自己写配置**（只调 callback），所以那些调用点不算第二个写入口。
 
 ### 1. 桌面歌词：`src/core/desktopLyric.ts`
 
@@ -94,9 +101,14 @@
 
 ## 五、i18n 僵尸键与硬编码中文
 
-- 本次为设置页补入 27 个键（三语 + `types/core/i18n/index.d.ts` 同步），
-  覆盖原先直接写死的中文字面量：文件命名格式、预设/自定义模板、音质管理、音乐标签设置、
-  逐字歌词/浮动动画/纯白模式/呼吸灯/桌面歌词翻译与罗马音/颜色反转、副行字号与透明度、自定义预设颜色对话框。
+- 本次为设置页补入 **15 个 `basicSettings.lyric.*` 键**（三语 + `types/core/i18n/index.d.ts` 同步），
+  覆盖原先直接写死的中文字面量：逐字歌词 / 逐字歌词浮动动画 / 纯白模式 / 空歌词行呼吸灯特效 /
+  桌面歌词显示翻译与罗马音 / 颜色反转 / 副行字号比例 / 副行透明度比例 / 自定义预设颜色对话框 /
+  桌面歌词小标题与解锁；`basicSettings.lyric.width` 改为带 `{value}` 占位符的格式串。
+- 文件命名格式、预设/自定义模板、音质管理、音乐标签设置这批文案，由**上游 PR #97** 用
+  **扁平键名**（`basicSettings.fileNamingPreset` / `qualityManagement` / `musicTagSettings` …）落了地。
+  本次 rebase 到 `7a6ede2a84` 时**一律采用上游键名**，撤掉自己重复定义的嵌套
+  `basicSettings.fileNaming.*`，避免同一份文案挂在两个键名下分叉。
 - 设置域仍存在的僵尸键（未引用且无计划复用）已确认清单，**本 PR 未删除**，
   避免与文案改动混在一个 diff 里；见「待办」。
 
