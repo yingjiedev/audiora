@@ -740,6 +740,7 @@ export interface ILanguageData {
     "toast.shiyinStarted": string;
     "toast.shiyinNoSource": string;
     "toast.shiyinNoMusic": string;
+    "toast.shiyinPoolEmpty": string;
 
     "settingsGroup.playback": string;
     "settingsGroup.download": string;

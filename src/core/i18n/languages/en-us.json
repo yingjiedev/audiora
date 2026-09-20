@@ -628,6 +628,7 @@
     "toast.shiyinStarted": "Shuffle Hits · playing {count} tracks",
     "toast.shiyinNoSource": "No chart source available",
     "toast.shiyinNoMusic": "Could not pick any track, try again later",
+    "toast.shiyinPoolEmpty": "Could not load any chart, check network or source",
     "settingsGroup.playback": "Playback",
     "settingsGroup.download": "Downloads",
     "settingsGroup.lyrics": "Lyrics",
