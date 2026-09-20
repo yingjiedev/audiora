@@ -38,10 +38,10 @@ import {
 import SettingRow from "../components/settingRow";
 import { settingsLayout } from "../components/settingsLayout";
 
-function createSwitch(
 /** Slider 未填充轨道的透明度：副文字色再压到 25% */
 const SLIDER_TRACK_ALPHA = 0.25;
 
+function createSwitch(
     title: string,
     changeKey: AppConfigPropertyKey,
     value: boolean,
