@@ -65,6 +65,7 @@ jest.mock("@/core/randomPlay", () => ({
         boardCount: 3,
         pluginCount: 1,
         poolSize: 120,
+        fallbackLevel: 0,
     })),
     SHIYIN_QUEUE_SIZE: 30,
 }));

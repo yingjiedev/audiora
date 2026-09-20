@@ -728,6 +728,7 @@
     "toast.shiyinStarted": "拾音 · 已播放 {count} 首熱門",
     "toast.shiyinNoSource": "還沒有可用的榜單音源",
     "toast.shiyinNoMusic": "暫時沒能挑出歌曲，稍後再試試",
+    "toast.shiyinPoolEmpty": "榜單沒抓到歌，檢查網路或音源後再試",
     "settingsGroup.playback": "播放",
     "settingsGroup.download": "下載",
     "settingsGroup.lyrics": "歌詞",

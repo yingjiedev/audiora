@@ -24,15 +24,21 @@ function getMediaUniqueKey(musicItem: IMusic.IMusicItem) {
 export const SHIYIN_QUEUE_SIZE = 30;
 
 const MAX_PLUGINS = 2;
-const BOARDS_PER_PLUGIN = 3;
+const BOARDS_PER_PLUGIN = 4;
 const MAX_BOARDS = 5;
-const SONGS_PER_BOARD = 30;
+const SONGS_PER_BOARD = 50;
 const REQUEST_TIMEOUT = 5000;
 const CONCURRENCY = 3;
 /** 池子缓存时间：连续点击时不重复打网络 */
 const POOL_TTL = 5 * 60 * 1000;
 /** 已推记录的保留时间 */
 const PUSHED_TTL = 24 * 60 * 60 * 1000;
+/**
+ * 已推记录最多保留的条数。
+ * 记录按 24h 滚动，而池子只有一两百首 —— 不封顶的话，连点几次就会把
+ * 整个池子标成「推过」，之后一整天都挑不出歌。
+ */
+const PUSHED_MAX = 120;
 /** 同一歌手在队列里的最小间隔 */
 const MIN_ARTIST_GAP = 3;
 
@@ -76,6 +82,11 @@ export interface IShiYinResult {
     pluginCount: number;
     /** 去重后的候选池大小 */
     poolSize: number;
+    /**
+     * 实际生效的排除档位：0 = 完整去重，1 = 放弃 24h 去重，
+     * 2 = 只排除播放列表。大于 0 说明正常档把候选吃光了，走了兜底。
+     */
+    fallbackLevel: number;
 }
 
 export interface IShiYinOptions {
@@ -265,18 +276,20 @@ function getPushedKeys() {
     const raw = shiyinStore.getString("pushed");
     const parsed = safeParse(raw ?? "{}") as Record<string, number>;
     const now = Date.now();
-    const alive: Record<string, number> = {};
-    const keys = new Set<string>();
 
-    Object.entries(parsed ?? {}).forEach(([key, time]) => {
-        if (typeof time === "number" && now - time < PUSHED_TTL) {
-            alive[key] = time;
-            keys.add(key);
-        }
-    });
-    shiyinStore.set("pushed", safeStringify(alive));
+    // 未过期的按时间倒序，只留最近的 PUSHED_MAX 条：
+    // 记录无限增长会把整个池子堵死。
+    const alive = Object.entries(parsed ?? {})
+        .filter(
+            ([, time]) =>
+                typeof time === "number" && now - time < PUSHED_TTL,
+        )
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, PUSHED_MAX);
 
-    return keys;
+    shiyinStore.set("pushed", safeStringify(Object.fromEntries(alive)));
+
+    return new Set(alive.map(([key]) => key));
 }
 
 function markPushed(musicList: IMusic.IMusicItem[]) {
@@ -354,6 +367,40 @@ export function mergeBoardMusicList(
     });
 
     return Array.from(pool.values());
+}
+
+/**
+ * 按「由严到宽」的排除集合逐档挑候选，保证池子里有歌时一定挑得出来。
+ *
+ * - 档 0：播放列表 + 最近播放 + 24h 已推过（正常档）
+ * - 档 1：放弃 24h 去重（宁可重复几首，也不要挑不出歌）
+ * - 档 2：只排除当前播放列表（兜底）
+ */
+export function pickCandidates(
+    pool: IShiYinPoolItem[],
+    excludeTiers: Array<Set<string>>,
+): { candidates: IShiYinPoolItem[]; fallbackLevel: number } {
+    let fallbackLevel = 0;
+
+    for (let level = 0; level < excludeTiers.length; level += 1) {
+        const excluded = excludeTiers[level];
+        let candidates: IShiYinPoolItem[];
+
+        if (excluded.size) {
+            candidates = pool.filter(
+                item => !excluded.has(getMediaUniqueKey(item.musicItem)),
+            );
+        } else {
+            candidates = pool.slice();
+        }
+
+        if (candidates.length) {
+            return { candidates, fallbackLevel: level };
+        }
+        fallbackLevel = level;
+    }
+
+    return { candidates: [], fallbackLevel };
 }
 
 async function buildPool(options: IShiYinOptions) {
@@ -439,26 +486,40 @@ export async function buildShiYinQueue(
 
     if (!poolCache || poolCache.expireAt <= now || options.forceRefresh) {
         const { pool, boardCount, pluginCount } = await buildPool(options);
-        poolCache = {
-            pool,
-            boardCount,
-            pluginCount,
-            expireAt: now + POOL_TTL,
-        };
+        if (pool.length) {
+            poolCache = {
+                pool,
+                boardCount,
+                pluginCount,
+                expireAt: now + POOL_TTL,
+            };
+        } else {
+            // 拉不到歌（插件挂了 / 没网）就别写缓存：否则接下来 5 分钟连点都是
+            // 秒失败，而且不会再重试网络。
+            poolCache = null;
+        }
     }
 
-    const { pool, boardCount, pluginCount } = poolCache;
-    const excluded = new Set<string>();
+    const { pool, boardCount, pluginCount } = poolCache ?? {
+        pool: [] as IShiYinPoolItem[],
+        boardCount: 0,
+        pluginCount: 0,
+    };
+
+    const excludeBase = new Set<string>();
     (options.excludeMusicItems ?? []).forEach(item => {
         if (item) {
-            excluded.add(getMediaUniqueKey(item));
+            excludeBase.add(getMediaUniqueKey(item));
         }
     });
-    getPushedKeys().forEach(key => excluded.add(key));
+    const pushedKeys = getPushedKeys();
 
-    const candidates = pool.filter(
-        item => !excluded.has(getMediaUniqueKey(item.musicItem)),
-    );
+    // 由严到宽三档，哪一档有货用哪一档，避免「挑不出歌」。
+    const { candidates, fallbackLevel } = pickCandidates(pool, [
+        new Set([...excludeBase, ...pushedKeys]),
+        excludeBase,
+        new Set<string>(),
+    ]);
 
     const sampled = weightedSample(candidates, queueSize, rng);
     const spreaded = spreadByArtist(
@@ -474,5 +535,6 @@ export async function buildShiYinQueue(
         boardCount,
         pluginCount,
         poolSize: pool.length,
+        fallbackLevel,
     };
 }
