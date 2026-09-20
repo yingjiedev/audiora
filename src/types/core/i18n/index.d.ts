@@ -509,6 +509,21 @@ export interface ILanguageData {
     "basicSettings.lyric.colorPreset": string;
     "basicSettings.lyric.unlock": string;
     "basicSettings.lyric.lock": string;
+    "basicSettings.lyric.wordByWord": string;
+    "basicSettings.lyric.wordByWordFloat": string;
+    "basicSettings.lyric.pureWhiteMode": string;
+    "basicSettings.lyric.breathingDots": string;
+    "basicSettings.lyric.desktopShowTranslation": string;
+    "basicSettings.lyric.desktopShowRomanization": string;
+    "basicSettings.lyric.invertColors": string;
+    "basicSettings.lyric.desktopOnlyNote": string;
+    "basicSettings.lyric.secondaryFontRatio": string;
+    "basicSettings.lyric.secondaryAlphaRatio": string;
+    "basicSettings.lyric.colorCustomizeTitle": string;
+    "basicSettings.lyric.colorUnsung": string;
+    "basicSettings.lyric.colorSung": string;
+    "basicSettings.lyric.colorBackground": string;
+    "basicSettings.lyric.colorResetDefault": string;
     
     "basicSettings.cache": string; // 缓存
     "basicSettings.cache.musicCacheLimit": string; // 音乐缓存上限

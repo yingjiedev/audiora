@@ -6,10 +6,11 @@ import { showPanel } from "@/components/panels/usePanel";
 import { SortType } from "@/constants/commonConst.ts";
 import { getDownloadMusicPath } from "@/constants/pathConst";
 import Config, { useAppConfig } from "@/core/appConfig";
+import DesktopLyric from "@/core/desktopLyric";
+import DownloadPath from "@/core/downloadPath";
 import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
 import LyricUtil, { LYRIC_COLOR_PRESETS } from "@/native/lyricUtil";
-import { resolveLyricPresets } from "@/utils/lyricPreset";
 import { AppConfigPropertyKey } from "@/types/core/config";
 import { useParams } from "@/core/router";
 import { clearCache, getCacheSize, sizeFormatter } from "@/utils/fileUtils";
@@ -21,20 +22,15 @@ import Clipboard from "@react-native-clipboard/clipboard";
 import Slider from "@react-native-community/slider";
 import Color from "color";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Platform, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlatList, ScrollView } from "react-native-gesture-handler";
-import lyricManager from "@/core/lyricManager";
 import {
     getPresetTemplates,
     validateTemplate,
     DEFAULT_FILE_NAMING_CONFIG,
     TEMPLATE_VARIABLES,
 } from "@/utils/fileNamingFormatter";
-import {
-    getAndroidSafDirectoryLabel,
-    isAndroidSafUri,
-    requestAndroidDirectoryAccess,
-} from "@/utils/androidSaf";
+import { getAndroidSafDirectoryLabel } from "@/utils/androidSaf";
 import SettingRow from "../components/settingRow";
 import { settingsLayout } from "../components/settingsLayout";
 
@@ -336,16 +332,6 @@ export default function BasicSetting() {
                     },
                 ),
                 createRadio(
-                    t("basicSettings.musicDetailDefault"),
-                    "basic.musicDetailDefault",
-                    ["album", "lyric"],
-                    musicDetailDefault ?? "album",
-                    {
-                        album: t("basicSettings.musicDetailDefault.album"),
-                        lyric: t("basicSettings.musicDetailDefault.lyric"),
-                    },
-                ),
-                createRadio(
                     t("basicSettings.musicOrderInLocalSheet"),
                     "basic.musicOrderInLocalSheet",
                     [
@@ -407,22 +393,9 @@ export default function BasicSetting() {
                         if (Platform.OS !== "android") {
                             return;
                         }
-                        try {
-                            const directoryUri = await requestAndroidDirectoryAccess(
-                                isAndroidSafUri(downloadPath)
-                                    ? downloadPath
-                                    : undefined,
-                            );
-                            if (directoryUri) {
-                                Config.setConfig("basic.downloadPath", directoryUri);
-                            }
-                        } catch (error) {
-                            Toast.warn(
-                                error instanceof Error
-                                    ? error.message
-                                    : String(error),
-                            );
-                        }
+                        // basic.downloadPath 的唯一写入口在 core/downloadPath，
+                        // 这里只负责触发一次目录选择
+                        await DownloadPath.choose();
                     },
                 },
                 createRadio(
@@ -868,41 +841,25 @@ function LyricSetting() {
         .toString();
 
     const autoSearchLyric = createSwitch(t("basicSettings.lyric.autoSearchLyric"), "lyric.autoSearchLyric", enableAutoSearchLyric ?? false);
-    const wordByWordLyric = createSwitch("逐字歌词", "lyric.enableWordByWord", enableWordByWord ?? true, (newValue) => {
-        Config.setConfig("lyric.enableWordByWord", newValue);
-        // 开关只影响歌词解析（QRC 是否保留逐字时间轴），
-        // 切换后必须重载当前歌词，否则要等下一首歌才生效
-        lyricManager.reloadCurrentLyric();
-    });
-    const wordByWordFloat = createSwitch("逐字歌词浮动动画", "lyric.enableWordByWordFloat", enableWordByWordFloat ?? true);
-    const highlightColor = createSwitch("纯白模式", "lyric.pureWhiteMode", pureWhiteMode ?? true);
-    const breathingDots = createSwitch("空歌词行呼吸灯特效", "lyric.enableBreathingDots", enableBreathingDots ?? true);
+    const wordByWordLyric = createSwitch(
+        t("basicSettings.lyric.wordByWord"),
+        "lyric.enableWordByWord",
+        enableWordByWord ?? true,
+        // 重载当前歌词由 DesktopLyric 统一负责：这个开关只影响歌词解析
+        // （QRC 是否保留逐字时间轴），不重载就得等到下一首歌才生效
+        newValue => DesktopLyric.setWordByWordEnabled(newValue),
+    );
+    const wordByWordFloat = createSwitch(t("basicSettings.lyric.wordByWordFloat"), "lyric.enableWordByWordFloat", enableWordByWordFloat ?? true);
+    const highlightColor = createSwitch(t("basicSettings.lyric.pureWhiteMode"), "lyric.pureWhiteMode", pureWhiteMode ?? true);
+    const breathingDots = createSwitch(t("basicSettings.lyric.breathingDots"), "lyric.enableBreathingDots", enableBreathingDots ?? true);
     const hideWhenPaused = createSwitch(t("basicSettings.lyric.hideDesktopLyricWhenPaused"), "lyric.hideDesktopLyricWhenPaused", hideDesktopLyricWhenPaused ?? true);
-    const desktopTranslation = createSwitch("桌面歌词显示翻译", "lyric.desktopShowTranslation", desktopShowTranslation ?? true);
-    const desktopRomanization = createSwitch("桌面歌词显示罗马音", "lyric.desktopShowRomanization", desktopShowRomanization ?? false);
-    const invertColorsSwitch = createSwitch("颜色反转（已唱白色/未唱彩色）", "lyric.invertColors", invertColors ?? false, (newValue) => {
+    const desktopTranslation = createSwitch(t("basicSettings.lyric.desktopShowTranslation"), "lyric.desktopShowTranslation", desktopShowTranslation ?? true);
+    const desktopRomanization = createSwitch(t("basicSettings.lyric.desktopShowRomanization"), "lyric.desktopShowRomanization", desktopShowRomanization ?? false);
+    const invertColorsSwitch = createSwitch(t("basicSettings.lyric.invertColors"), "lyric.invertColors", invertColors ?? false, (newValue) => {
         Config.setConfig("lyric.invertColors", newValue);
         if (showStatusBarLyric) {
-            // 刷新桌面歌词以应用反转
-            LyricUtil.hideStatusBarLyric().then(() => {
-                LyricUtil.showStatusBarLyric("Audiora", {
-                    topPercent: Config.getConfig("lyric.topPercent"),
-                    leftPercent: Config.getConfig("lyric.leftPercent"),
-                    align: Config.getConfig("lyric.align"),
-                    color: Config.getConfig("lyric.color"),
-                    sungColor: Config.getConfig("lyric.sungColor"),
-                    backgroundColor: Config.getConfig("lyric.backgroundColor"),
-                    widthPercent: Config.getConfig("lyric.widthPercent"),
-                    fontSize: Config.getConfig("lyric.fontSize"),
-                    presetIndex: Config.getConfig("lyric.presetIndex") ?? 0,
-                    presets: resolveLyricPresets(),
-                    secondaryFontRatio: Config.getConfig("lyric.desktopSecondaryFontRatio") ?? 0.85,
-                    secondaryAlphaRatio: Config.getConfig("lyric.desktopSecondaryAlphaRatio") ?? 0.90,
-                }).then(() => {
-                    // Resync lyric line data + playback state to restore word-by-word
-                    lyricManager.resyncDesktopLyric();
-                });
-            });
+            // 用最新预设重开桌面歌词以应用颜色反转
+            void DesktopLyric.relaunch();
         }
     });
 
@@ -918,63 +875,14 @@ function LyricSetting() {
         return custom ? custom.sungColor : LYRIC_COLOR_PRESETS[idx]?.sungColor ?? "#FFFFFF";
     };
 
-    // 打开桌面歌词：有权限直接开；没权限跳系统设置，回到应用时自动检测并打开
-    const enableDesktopLyric = async () => {
-        try {
-            const hasPermission = await LyricUtil.checkSystemAlertPermission();
-            if (!hasPermission) {
-                Toast.warn(t("toast.noFloatWindowPermission"));
-                LyricUtil.requestSystemAlertPermission().finally(() => {
-                    const subscription = AppState.addEventListener(
-                        "change",
-                        async state => {
-                            if (state !== "active") {
-                                return;
-                            }
-                            subscription.remove();
-                            if (await LyricUtil.checkSystemAlertPermission()) {
-                                enableDesktopLyric();
-                            }
-                        },
-                    );
-                });
-                return;
-            }
-            const opened = await LyricUtil.showStatusBarLyric("Audiora", {
-                topPercent: Config.getConfig("lyric.topPercent"),
-                leftPercent: Config.getConfig("lyric.leftPercent"),
-                align: Config.getConfig("lyric.align"),
-                color: Config.getConfig("lyric.color"),
-                sungColor: Config.getConfig("lyric.sungColor"),
-                backgroundColor: Config.getConfig("lyric.backgroundColor"),
-                widthPercent: Config.getConfig("lyric.widthPercent"),
-                fontSize: Config.getConfig("lyric.fontSize"),
-                presetIndex: Config.getConfig("lyric.presetIndex") ?? 0,
-                presets: resolveLyricPresets(),
-                secondaryFontRatio: Config.getConfig("lyric.desktopSecondaryFontRatio") ?? 0.85,
-                secondaryAlphaRatio: Config.getConfig("lyric.desktopSecondaryAlphaRatio") ?? 0.90,
-            });
-            if (opened) {
-                Config.setConfig("lyric.showStatusBarLyric", true);
-                // 立刻同步当前歌词行和播放进度，避免刚打开时空白/滞后
-                lyricManager.resyncDesktopLyric();
-            }
-        } catch { }
-    };
-
+    // 桌面歌词开关：写状态、弹窗检测权限、回前台自动重开全都在
+    // core/desktopLyric 里，这里是它的唯一 UI 入口
     const openStatusBarLyric = createSwitch(
         t("basicSettings.lyric.showStatusBarLyric"),
         "lyric.showStatusBarLyric",
         showStatusBarLyric ?? false,
-        async newValue => {
-            try {
-                if (newValue) {
-                    await enableDesktopLyric();
-                } else {
-                    LyricUtil.hideStatusBarLyric();
-                    Config.setConfig("lyric.showStatusBarLyric", false);
-                }
-            } catch { }
+        newValue => {
+            void DesktopLyric.setDesktopLyricEnabled(newValue);
         },
     );
 
@@ -994,12 +902,12 @@ function LyricSetting() {
         const current = custom ?? base;
 
         showDialog("RadioDialog", {
-            title: `自定义预设 ${idx + 1}`,
+            title: t("basicSettings.lyric.colorCustomizeTitle", { index: idx + 1 }),
             content: [
-                { label: "未播放颜色", value: "unsungColor" },
-                { label: "已播放颜色", value: "sungColor" },
-                { label: "背景颜色", value: "backgroundColor" },
-                { label: "恢复默认", value: "reset" },
+                { label: t("basicSettings.lyric.colorUnsung"), value: "unsungColor" },
+                { label: t("basicSettings.lyric.colorSung"), value: "sungColor" },
+                { label: t("basicSettings.lyric.colorBackground"), value: "backgroundColor" },
+                { label: t("basicSettings.lyric.colorResetDefault"), value: "reset" },
             ],
             onOk(val) {
                 if (val === "reset") {
@@ -1012,8 +920,13 @@ function LyricSetting() {
                     return;
                 }
                 const colorKey = val as "unsungColor" | "sungColor" | "backgroundColor";
+                const colorLabelKey: Record<typeof colorKey, string> = {
+                    unsungColor: "basicSettings.lyric.colorUnsung",
+                    sungColor: "basicSettings.lyric.colorSung",
+                    backgroundColor: "basicSettings.lyric.colorBackground",
+                };
                 openColorPicker(
-                    colorKey === "unsungColor" ? "未播放颜色" : colorKey === "sungColor" ? "已播放颜色" : "背景颜色",
+                    t(colorLabelKey[colorKey]),
                     current[colorKey],
                     (hex) => {
                         const newCustom = [...(customPresets ?? Array(LYRIC_COLOR_PRESETS.length).fill(null))];
@@ -1023,21 +936,7 @@ function LyricSetting() {
                         Config.setConfig("lyric.customPresets", newCustom);
                         // 如果当前正在使用这个预设，立即刷新
                         if (showStatusBarLyric && (presetIndex ?? 0) === idx) {
-                            LyricUtil.hideStatusBarLyric().then(() => {
-                                LyricUtil.showStatusBarLyric("Audiora", {
-                                    topPercent: Config.getConfig("lyric.topPercent"),
-                                    leftPercent: Config.getConfig("lyric.leftPercent"),
-                                    align: Config.getConfig("lyric.align"),
-                                    widthPercent: Config.getConfig("lyric.widthPercent"),
-                                    fontSize: Config.getConfig("lyric.fontSize"),
-                                    presetIndex: idx,
-                                    presets: resolveLyricPresets(),
-                                    secondaryFontRatio: Config.getConfig("lyric.desktopSecondaryFontRatio") ?? 0.85,
-                                    secondaryAlphaRatio: Config.getConfig("lyric.desktopSecondaryAlphaRatio") ?? 0.90,
-                                }).then(() => {
-                                    lyricManager.resyncDesktopLyric();
-                                });
-                            });
+                            void DesktopLyric.relaunch({ presetIndex: idx });
                         }
                     }
                 );
@@ -1057,7 +956,7 @@ function LyricSetting() {
             {Platform.OS !== "android" && <>
                 {/* 桌面歌词设置（以下仅对悬浮在桌面/状态栏的歌词生效） */}
                 <ThemeText style={lyricStyles.subHeader}>
-                    桌面歌词（仅对悬浮歌词生效）
+                    {t("basicSettings.lyric.desktopOnlyNote")}
                 </ThemeText>
                 <SettingRow title={openStatusBarLyric.title} right={openStatusBarLyric.right} onPress={openStatusBarLyric.onPress} />
                 <SettingRow title={hideWhenPaused.title} right={hideWhenPaused.right} onPress={hideWhenPaused.onPress} />
@@ -1084,7 +983,7 @@ function LyricSetting() {
                         thumbTintColor={colors.textHighlight}
                     />
                 </View>
-                <SettingRow title={`副行透明度比例  ${((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0)}%`} />
+                <SettingRow title={t("basicSettings.lyric.secondaryAlphaRatio", { value: ((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0) })} />
                 <View style={lyricStyles.sliderContainer}>
                     <Slider
                         style={lyricStyles.slider}
@@ -1159,8 +1058,7 @@ function LyricSetting() {
                     <SettingRow
                         title={t("basicSettings.lyric.unlock")}
                         onPress={() => {
-                            LyricUtil.unlockDesktopLyric();
-                            Config.setConfig("lyric.isLocked", false);
+                            DesktopLyric.setDesktopLyricLocked(false);
                         }}
                     />
                 )}
