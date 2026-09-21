@@ -135,11 +135,8 @@ export default function MyMusicOverview() {
             <ScrollView
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("home.aboutAndUpdate")}
-                    style={[styles.profileCard, { backgroundColor: colors.card }]}
-                    onPress={() => navigate(ROUTE_PATH.SETTING, { type: "about" })}>
+                <View
+                    style={[styles.profileCard, { backgroundColor: colors.card }]}>
                     <View
                         style={[
                             styles.avatarWrap,
@@ -167,7 +164,7 @@ export default function MyMusicOverview() {
                             {t("home.personalTagline")}
                         </ThemeText>
                     </View>
-                </Pressable>
+                </View>
 
                 <View style={styles.quickGrid}>
                     {quickEntries.map(entry => (

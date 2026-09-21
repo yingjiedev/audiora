@@ -89,17 +89,38 @@ iOS 的 stub 段）、全部相关配置键与 i18n 键，本次一并删除。�
 
 ---
 
-## 四、功能多入口（现状，本次未改 UI）
+## 四、功能多入口（本次已执行）
 
-> 下表是逐项核对出的现状与**拟定处置**。本 PR 只做写入口与重复实现层面的收敛，
-> 入口的增删会改动用户可感知的导航，放在下一个 PR 单独做，避免和本次重构混在一个 diff 里。
+判定口径：**同一个动作允许多个「就近触发点」，但不允许「同一屏内重复」或「入口语义与该动作的层级不符」。**
+触发点是否重复，用 `showPanel("X")` / `navigate(ROUTE_PATH.X)` 的**同一目标**是否出现在同一文件来判定。
 
-| 功能 | 现状入口数 | 拟定处置 | 依据 |
+| 功能 | 收敛前 | 现在 | 处置与依据 |
 |---|---|---|---|
-| 关于与更新 | 3 处（设置总览、「我的」资料卡、「我的」管理卡片） | 权威入口 = 设置总览；「我的」Tab 内两份纯重复只保留一份（管理卡片），资料卡不再跳关于 | 同一 Tab 内两份纯重复 |
-| 备份与恢复 | 2 处（设置总览、「我的」） | 权威入口 = 设置总览；「我的」为跳转到同一路由的快捷入口（不写第二份状态，保留） | 目标路由唯一 |
-| 下载管理 | 2 处（设置总览、「我的」） | 同上 | 同上 |
-| 定时关闭 | 3 处（设置总览、首页顶栏、歌曲菜单） | 权威入口 = 播放上下文（首页顶栏计时器 + 歌曲菜单）；设置总览中的条目移除 | 定时关闭是**会话级动作**而非长期偏好；Spotify 的 Sleep Timer 同样只存在于 Now Playing，不进设置 |
+| 关于与更新 | 3 处（设置总览、「我的」管理卡片、「我的」资料卡） | **2 处** | 「我的」Tab 内两份纯重复，只保留权威快捷入口（管理卡片）；资料卡降级为纯展示（去掉 `Pressable`/`accessibilityRole`/`onPress`），不再作为 about 入口 |
+| 定时关闭 | 3 处（设置总览、首页顶栏、歌曲菜单） | **2 处** | 权威入口 = 播放上下文（首页顶栏闹钟 + 歌曲菜单）；**设置总览中的条目移除**。定时关闭是**会话级动作**而非长期偏好（Spotify 的 Sleep Timer 同样只在 Now Playing，不进设置） |
+| 备份与恢复 | 2 处（设置总览、「我的」管理卡片） | 2 处 | 保留。「我的」是跳转到**同一路由**的快捷入口，不写第二份状态 |
+| 下载管理 | 2 处（设置总览、「我的」快捷卡） | **1 处** | 权威入口 = 「我的」Tab 的快捷卡（带数量与说明，信息量高于设置里的纯导航行）；**设置总览中的条目移除** |
+| 音质 | 5 个调用点 | 5 个调用点 | 保留。只在两处呈「同参数重复」：`musicItemOptions.tsx` 与 `operations.tsx` 各有一次 try/catch **失败回退**（成功用增强后的 musicItem，失败用原始 musicItem），非重复；`operations.tsx:91` 是「切换当前播放音质」、另两处是「下载音质」，**动作不同** |
+| 歌词 | 4 处 | 4 处 | 保留。`SearchLrc` 出现在歌曲长按菜单、歌词页、歌词操作面板，属各上下文各自的**就近操作**；`MusicItemLyricOptions` 仅 1 处入口 |
+
+三个入口（首页顶栏、歌曲菜单、设置总览）打开的是**同一个** `showPanel("TimingClose")` ——
+`components/panels/types/timingClose.tsx` 始终只有一份实现，重复的只是触发点。
+
+`settingsOverview.tsx` 里剩下的 `download-options`（→ 基本设置的下载分组：下载目录、文件名格式等）
+与 `plugin-manager`（→ 插件管理页）、`plugin-options`（→ 基本设置的插件开关组）**都不是重复**：
+一个是偏好设置、一个是功能页，目标不同。同组的 `download-manager` 已在本次移除。
+
+### 本次增量发现（不在 issue §4 范围，未处理）
+
+`MusicLibraryOverview.tsx` 有三处 `navigate(ROUTE_PATH.LOCAL)`，其中两处语义可疑：
+
+- `:216` 按钮文案是「扫描音乐」（`musicLibrary.scanMusic`，`accessibilityLabel` 为 `localMusic.scanLocalMusic`），
+  但 `onPress` 只做 `navigate(ROUTE_PATH.LOCAL)` —— 用户落地本地页后还要再点右上角菜单才能真的扫描。
+  直接修需要把 `localMusic/mainPage` 里那段 `FILE_SELECTOR + LoadingDialog + LocalMusicSheet.importLocal`
+  抽成共享函数，否则会把同一流程复制成第二份（正是本 issue 要消除的问题）。
+- `:231` 分类行（曲目/艺术家/专辑/文件夹）点击同样只 `navigate(ROUTE_PATH.LOCAL)`，**不带分类参数**；
+  而 `browserMode` 是该组件自己的 `useState`，不跨页面，所以落地后看到的不是刚点的那一类。
+
 
 ---
 
@@ -133,9 +154,14 @@ iOS 的 stub 段）、全部相关配置键与 i18n 键，本次一并删除。�
    `sidebar.{backToDesktop,exitApp,currentVersion}`、`toast.{artistNotSupported,albumNotSupported}`、
    `settingsOverview.*Description`、`themeSettingsIndex.*Description`；
 3. 移除悬空键 `basic.pluginCacheControl`；
-4. 引入「键 → 容器 → 分组」注册表，支撑入口唯一性回归测试（本轮先用源码级扫描测试兜底）；
+4. 引入「键 → 容器 → 分组」注册表，并补**入口唯一性回归测试** —— 仓库里目前没有这类测试：
+   `settingsOverview.test.tsx` 只覆盖设置分组的导航行为（push 层级 / chevron / 语言选择器），
+   做源码扫描的测试只有 `src/androidPolicy.test.ts`、`src/core/i18n/__tests__/languageFiles.test.ts`、
+   `src/components/panels/modalTouchSafety.test.ts`；
 5. `src/pages/setting/settingTypes/index.ts` 的死字段 `title`（`AppBar` 只用 `i18nKey`）删除；
-6. `LyricUtil.decryptKuwoLyric` 三端均无调用者（`utils/musicDecrypter.ts` 顶部注释已说明酷我歌词由插件解密），
+6. `MusicLibraryOverview.tsx` 的本地音乐入口语义（`:216` 名为「扫描」实为跳转、`:231` 分类行不传分类参数）
+   —— 见第四节「本次增量发现」，需先把扫描流程抽成共享函数再改，否则会造成新的重复实现；
+7. `LyricUtil.decryptKuwoLyric` 三端均无调用者（`utils/musicDecrypter.ts` 顶部注释已说明酷我歌词由插件解密），
    可连同其辅助函数与 iOS 侧同名实现一起删除——本次为控制 diff 范围没有动它。
 
 ---
