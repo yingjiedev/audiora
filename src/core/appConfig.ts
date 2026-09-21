@@ -84,14 +84,6 @@ class AppConfig implements IAppConfig {
                 ],
 
                 // Lyric
-                ["setting.lyric.showStatusBarLyric", "lyric.showStatusBarLyric"],
-                ["setting.lyric.topPercent", "lyric.topPercent"],
-                ["setting.lyric.leftPercent", "lyric.leftPercent"],
-                ["setting.lyric.align", "lyric.align"],
-                ["setting.lyric.color", "lyric.color"],
-                ["setting.lyric.backgroundColor", "lyric.backgroundColor"],
-                ["setting.lyric.widthPercent", "lyric.widthPercent"],
-                ["setting.lyric.fontSize", "lyric.fontSize"],
                 ["setting.lyric.detailFontSize", "lyric.detailFontSize"],
                 ["setting.lyric.autoSearchLyric", "lyric.autoSearchLyric"],
 
@@ -202,15 +194,10 @@ class AppConfig implements IAppConfig {
         }
 
         if (schemaVersion < 4) {
-            // Add lyric.widthPercent config (default 0.8)
-            // leftPercent is kept for saving user drag position, but no longer shown in settings UI
-            if (this.getConfig("lyric.widthPercent") === undefined) {
-                this.setConfig("lyric.widthPercent", 0.8);
-            }
-            // Ensure leftPercent has a default value for drag position
-            if (this.getConfig("lyric.leftPercent") === undefined) {
-                this.setConfig("lyric.leftPercent", 0.5);
-            }
+            // schema 4 originally seeded lyric.widthPercent / lyric.leftPercent for the
+            // desktop lyric window. That feature is gone and both keys were dropped from
+            // the config types, so only advance the schema marker here. Old profiles keep
+            // the stale values in their config file, which is harmless.
 
             configStore.set("$schema", "4");
         }

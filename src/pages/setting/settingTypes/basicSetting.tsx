@@ -6,21 +6,18 @@ import { showPanel } from "@/components/panels/usePanel";
 import { SortType } from "@/constants/commonConst.ts";
 import { getDownloadMusicPath } from "@/constants/pathConst";
 import Config, { useAppConfig } from "@/core/appConfig";
-import DesktopLyric from "@/core/desktopLyric";
 import DownloadPath from "@/core/downloadPath";
+import lyricManager from "@/core/lyricManager";
 import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
-import LyricUtil, { LYRIC_COLOR_PRESETS } from "@/native/lyricUtil";
 import { AppConfigPropertyKey } from "@/types/core/config";
 import { useParams } from "@/core/router";
 import { clearCache, getCacheSize, sizeFormatter } from "@/utils/fileUtils";
 import { clearLog, getErrorLogContent } from "@/utils/log";
 import { getQualityKeys, getQualityText } from "@/utils/qualities";
-import rpx, { fontRpx } from "@/utils/rpx";
+import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
-import Slider from "@react-native-community/slider";
-import Color from "color";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlatList, ScrollView } from "react-native-gesture-handler";
@@ -33,9 +30,6 @@ import {
 import { getAndroidSafDirectoryLabel } from "@/utils/androidSaf";
 import SettingRow from "../components/settingRow";
 import { settingsLayout } from "../components/settingsLayout";
-
-/** Slider 未填充轨道的透明度：副文字色再压到 25% */
-const SLIDER_TRACK_ALPHA = 0.25;
 
 function createSwitch(
     title: string,
@@ -816,133 +810,27 @@ const styles = StyleSheet.create({
 });
 
 function LyricSetting() {
-    const showStatusBarLyric = useAppConfig("lyric.showStatusBarLyric");
-    const isLocked = useAppConfig("lyric.isLocked");
-    const presetIndex = useAppConfig("lyric.presetIndex");
     const enableAutoSearchLyric = useAppConfig("lyric.autoSearchLyric");
-    const hideDesktopLyricWhenPaused = useAppConfig("lyric.hideDesktopLyricWhenPaused");
     const enableWordByWord = useAppConfig("lyric.enableWordByWord");
     const enableWordByWordFloat = useAppConfig("lyric.enableWordByWordFloat");
     const pureWhiteMode = useAppConfig("lyric.pureWhiteMode");
     const enableBreathingDots = useAppConfig("lyric.enableBreathingDots");
-    const desktopShowTranslation = useAppConfig("lyric.desktopShowTranslation");
-    const desktopShowRomanization = useAppConfig("lyric.desktopShowRomanization");
-    const desktopSecondaryFontRatio = useAppConfig("lyric.desktopSecondaryFontRatio");
-    const desktopSecondaryAlphaRatio = useAppConfig("lyric.desktopSecondaryAlphaRatio");
-    const invertColors = useAppConfig("lyric.invertColors");
-    const widthPercent = useAppConfig("lyric.widthPercent");
 
     const { t } = useI18N();
     const colors = useColors();
-    // textSecondary 是 rgba(...) 而不是 hex，原先写 `colors.textSecondary + "40"` 拼出来的
-    // 是非法颜色串，轨道色一直没生效，改用 color 包按透明度压暗
-    const sliderTrackColor = Color(colors.textSecondary)
-        .alpha(SLIDER_TRACK_ALPHA)
-        .toString();
 
     const autoSearchLyric = createSwitch(t("basicSettings.lyric.autoSearchLyric"), "lyric.autoSearchLyric", enableAutoSearchLyric ?? false);
     const wordByWordLyric = createSwitch(
         t("basicSettings.lyric.wordByWord"),
         "lyric.enableWordByWord",
         enableWordByWord ?? true,
-        // 重载当前歌词由 DesktopLyric 统一负责：这个开关只影响歌词解析
+        // 重载当前歌词由 lyricManager 统一负责：这个开关只影响歌词解析
         // （QRC 是否保留逐字时间轴），不重载就得等到下一首歌才生效
-        newValue => DesktopLyric.setWordByWordEnabled(newValue),
+        newValue => lyricManager.setWordByWordEnabled(newValue),
     );
     const wordByWordFloat = createSwitch(t("basicSettings.lyric.wordByWordFloat"), "lyric.enableWordByWordFloat", enableWordByWordFloat ?? true);
     const highlightColor = createSwitch(t("basicSettings.lyric.pureWhiteMode"), "lyric.pureWhiteMode", pureWhiteMode ?? true);
     const breathingDots = createSwitch(t("basicSettings.lyric.breathingDots"), "lyric.enableBreathingDots", enableBreathingDots ?? true);
-    const hideWhenPaused = createSwitch(t("basicSettings.lyric.hideDesktopLyricWhenPaused"), "lyric.hideDesktopLyricWhenPaused", hideDesktopLyricWhenPaused ?? true);
-    const desktopTranslation = createSwitch(t("basicSettings.lyric.desktopShowTranslation"), "lyric.desktopShowTranslation", desktopShowTranslation ?? true);
-    const desktopRomanization = createSwitch(t("basicSettings.lyric.desktopShowRomanization"), "lyric.desktopShowRomanization", desktopShowRomanization ?? false);
-    const invertColorsSwitch = createSwitch(t("basicSettings.lyric.invertColors"), "lyric.invertColors", invertColors ?? false, (newValue) => {
-        Config.setConfig("lyric.invertColors", newValue);
-        if (showStatusBarLyric) {
-            // 用最新预设重开桌面歌词以应用颜色反转
-            void DesktopLyric.relaunch();
-        }
-    });
-
-    // 获取当前预设的颜色（考虑自定义覆盖）
-    const customPresets = Config.getConfig("lyric.customPresets") as Array<{
-        unsungColor: string;
-        sungColor: string;
-        backgroundColor: string;
-    } | null> | undefined;
-
-    const getPresetColor = (idx: number) => {
-        const custom = customPresets?.[idx];
-        return custom ? custom.sungColor : LYRIC_COLOR_PRESETS[idx]?.sungColor ?? "#FFFFFF";
-    };
-
-    // 桌面歌词开关：写状态、弹窗检测权限、回前台自动重开全都在
-    // core/desktopLyric 里，这里是它的唯一 UI 入口
-    const openStatusBarLyric = createSwitch(
-        t("basicSettings.lyric.showStatusBarLyric"),
-        "lyric.showStatusBarLyric",
-        showStatusBarLyric ?? false,
-        newValue => {
-            void DesktopLyric.setDesktopLyricEnabled(newValue);
-        },
-    );
-
-    const openColorPicker = (title: string, currentColor: string, onSelected: (hex: string) => void) => {
-        showPanel("ColorPicker", {
-            defaultColor: currentColor,
-            onSelected: (color: any) => {
-                const hex = color.rgb().hexa().toString();
-                onSelected(hex);
-            },
-        });
-    };
-
-    const handleCustomizePreset = (idx: number) => {
-        const custom = customPresets?.[idx];
-        const base = LYRIC_COLOR_PRESETS[idx];
-        const current = custom ?? base;
-
-        showDialog("RadioDialog", {
-            title: t("basicSettings.lyric.colorCustomizeTitle", { index: idx + 1 }),
-            content: [
-                { label: t("basicSettings.lyric.colorUnsung"), value: "unsungColor" },
-                { label: t("basicSettings.lyric.colorSung"), value: "sungColor" },
-                { label: t("basicSettings.lyric.colorBackground"), value: "backgroundColor" },
-                { label: t("basicSettings.lyric.colorResetDefault"), value: "reset" },
-            ],
-            onOk(val) {
-                if (val === "reset") {
-                    const newCustom = [...(customPresets ?? Array(LYRIC_COLOR_PRESETS.length).fill(null))];
-                    newCustom[idx] = null;
-                    Config.setConfig("lyric.customPresets", newCustom);
-                    if (showStatusBarLyric && (presetIndex ?? 0) === idx) {
-                        LyricUtil.setColorPreset(idx);
-                    }
-                    return;
-                }
-                const colorKey = val as "unsungColor" | "sungColor" | "backgroundColor";
-                const colorLabelKey: Record<typeof colorKey, string> = {
-                    unsungColor: "basicSettings.lyric.colorUnsung",
-                    sungColor: "basicSettings.lyric.colorSung",
-                    backgroundColor: "basicSettings.lyric.colorBackground",
-                };
-                openColorPicker(
-                    t(colorLabelKey[colorKey]),
-                    current[colorKey],
-                    (hex) => {
-                        const newCustom = [...(customPresets ?? Array(LYRIC_COLOR_PRESETS.length).fill(null))];
-                        const existing = newCustom[idx] ?? { ...base };
-                        (existing as any)[colorKey] = hex;
-                        newCustom[idx] = existing;
-                        Config.setConfig("lyric.customPresets", newCustom);
-                        // 如果当前正在使用这个预设，立即刷新
-                        if (showStatusBarLyric && (presetIndex ?? 0) === idx) {
-                            void DesktopLyric.relaunch({ presetIndex: idx });
-                        }
-                    }
-                );
-            },
-        });
-    };
 
     return (
         <View style={[lyricStyles.card, { backgroundColor: colors.card }]}>
@@ -952,117 +840,6 @@ function LyricSetting() {
             <SettingRow title={wordByWordFloat.title} right={wordByWordFloat.right} onPress={wordByWordFloat.onPress} />
             <SettingRow title={highlightColor.title} right={highlightColor.right} onPress={highlightColor.onPress} />
             <SettingRow title={breathingDots.title} right={breathingDots.right} onPress={breathingDots.onPress} />
-
-            {Platform.OS !== "android" && <>
-                {/* 桌面歌词设置（以下仅对悬浮在桌面/状态栏的歌词生效） */}
-                <ThemeText style={lyricStyles.subHeader}>
-                    {t("basicSettings.lyric.desktopOnlyNote")}
-                </ThemeText>
-                <SettingRow title={openStatusBarLyric.title} right={openStatusBarLyric.right} onPress={openStatusBarLyric.onPress} />
-                <SettingRow title={hideWhenPaused.title} right={hideWhenPaused.right} onPress={hideWhenPaused.onPress} />
-                <SettingRow title={desktopTranslation.title} right={desktopTranslation.right} onPress={desktopTranslation.onPress} />
-                <SettingRow title={desktopRomanization.title} right={desktopRomanization.right} onPress={desktopRomanization.onPress} />
-                <SettingRow title={`副行字号比例  ${((desktopSecondaryFontRatio ?? 0.85) * 100).toFixed(0)}%`} />
-                <View style={lyricStyles.sliderContainer}>
-                    <Slider
-                        style={lyricStyles.slider}
-                        minimumValue={0.5}
-                        maximumValue={1}
-                        step={0.01}
-                        value={desktopSecondaryFontRatio ?? 0.85}
-                        onValueChange={(val: number) => {
-                            if (showStatusBarLyric) {
-                                LyricUtil.setSecondaryFontRatio(val);
-                            }
-                        }}
-                        onSlidingComplete={(val: number) => {
-                            Config.setConfig("lyric.desktopSecondaryFontRatio", val);
-                        }}
-                        minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={sliderTrackColor}
-                        thumbTintColor={colors.textHighlight}
-                    />
-                </View>
-                <SettingRow title={t("basicSettings.lyric.secondaryAlphaRatio", { value: ((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0) })} />
-                <View style={lyricStyles.sliderContainer}>
-                    <Slider
-                        style={lyricStyles.slider}
-                        minimumValue={0.3}
-                        maximumValue={1}
-                        step={0.01}
-                        value={desktopSecondaryAlphaRatio ?? 0.90}
-                        onValueChange={(val: number) => {
-                            if (showStatusBarLyric) {
-                                LyricUtil.setSecondaryAlphaRatio(val);
-                            }
-                        }}
-                        onSlidingComplete={(val: number) => {
-                            Config.setConfig("lyric.desktopSecondaryAlphaRatio", val);
-                        }}
-                        minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={sliderTrackColor}
-                        thumbTintColor={colors.textHighlight}
-                    />
-                </View>
-                <SettingRow title={invertColorsSwitch.title} right={invertColorsSwitch.right} onPress={invertColorsSwitch.onPress} />
-
-                {/* 位置控制 */}
-                <SettingRow title={`歌词宽度  ${Math.round((widthPercent ?? 0.8) * 100)}%`} />
-                <View style={lyricStyles.sliderContainer}>
-                    <Slider
-                        style={lyricStyles.slider}
-                        minimumValue={0.3}
-                        maximumValue={1}
-                        step={0.01}
-                        value={widthPercent ?? 0.8}
-                        onValueChange={(val: number) => {
-                            if (showStatusBarLyric) {
-                                LyricUtil.setStatusBarLyricWidth(val);
-                            }
-                        }}
-                        onSlidingComplete={(val: number) => {
-                            Config.setConfig("lyric.widthPercent", val);
-                        }}
-                        minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={sliderTrackColor}
-                        thumbTintColor={colors.textHighlight}
-                    />
-                </View>
-
-                {/* 预设颜色方案（纯圆点，长按自定义） */}
-                <SettingRow title={t("basicSettings.lyric.colorPreset")} />
-                <View style={lyricStyles.presetRow}>
-                    {LYRIC_COLOR_PRESETS.map((preset, idx) => (
-                        <TouchableOpacity
-                            key={idx}
-                            style={[
-                                lyricStyles.presetDotWrapper,
-                                (presetIndex ?? 0) === idx && lyricStyles.presetDotActive,
-                            ]}
-                            onPress={() => {
-                                Config.setConfig("lyric.presetIndex", idx);
-                                if (showStatusBarLyric) {
-                                    LyricUtil.setColorPreset(idx);
-                                }
-                            }}
-                            onLongPress={() => {
-                                handleCustomizePreset(idx);
-                            }}>
-                            <View style={[lyricStyles.presetDot, { backgroundColor: getPresetColor(idx).slice(0, 7) }]} />
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* 锁定时显示解锁按钮 */}
-                {isLocked && showStatusBarLyric && (
-                    <SettingRow
-                        title={t("basicSettings.lyric.unlock")}
-                        onPress={() => {
-                            DesktopLyric.setDesktopLyricLocked(false);
-                        }}
-                    />
-                )}
-            </>}
         </View>
     );
 }
@@ -1072,50 +849,5 @@ const lyricStyles = StyleSheet.create({
         borderRadius: settingsLayout.cardRadius,
         marginHorizontal: settingsLayout.groupMargin,
         overflow: "hidden",
-    },
-    subHeader: {
-        marginTop: rpx(24),
-        marginBottom: rpx(8),
-        paddingHorizontal: settingsLayout.rowPadding,
-        opacity: 0.6,
-        fontSize: fontRpx(24),
-    },
-    slider: {
-        flex: 1,
-        marginLeft: rpx(24),
-    },
-    sliderContainer: {
-        height: rpx(96),
-        width: "100%",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: settingsLayout.rowPadding,
-    },
-    presetRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        paddingHorizontal: settingsLayout.rowPadding,
-        paddingBottom: rpx(16),
-        gap: rpx(20),
-        alignItems: "center",
-    },
-    presetDotWrapper: {
-        alignItems: "center",
-        justifyContent: "center",
-        width: rpx(56),
-        height: rpx(56),
-        borderRadius: rpx(28),
-        borderWidth: 2,
-        borderColor: "transparent",
-    },
-    presetDotActive: {
-        borderColor: "#FFFFFFCC",
-    },
-    presetDot: {
-        width: rpx(40),
-        height: rpx(40),
-        borderRadius: rpx(20),
-        borderWidth: 1,
-        borderColor: "rgba(128,128,128,0.3)",
     },
 });

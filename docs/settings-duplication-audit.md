@@ -10,34 +10,38 @@
 ## 一、写入口收敛（本次已完成）
 
 约定：**同一个配置键只允许一处写入路径**，其余调用方必须调用该处。
-合法例外只有两类，均已在代码中注释说明：
-
-- 引导层修正（`entry/bootstrap/bootstrap.ts`）：Android 上桌面歌词已下线，启动时清标记；
-- 原生 → JS 状态同步（`core/lyricManager.ts`）：原生回调（关窗、拖拽、换预设、改字号）回写用户可见状态。
 
 | 配置键 | 收敛前写入口 | 现在 | 权威写入点 |
 |---|---|---|---|
-| `lyric.showStatusBarLyric` | 设置页 ×2、面板 ×2、原生工具层（`native/lyricUtil`）、引导层 | **1** + 2 处合法例外 | `src/core/desktopLyric.ts` |
-| `lyric.isLocked` | 设置页、面板 ×2、引导层 | **1** + 2 处合法例外 | `src/core/desktopLyric.ts` |
-| `lyric.enableWordByWord` | 设置页、面板 | **1** | `src/core/desktopLyric.ts` |
+| `lyric.enableWordByWord` | 设置页、面板 | **1** | `lyricManager.setWordByWordEnabled()`（`src/core/lyricManager.ts`） |
 | `basic.downloadPath` | 设置页、歌词面板、下载器 | **1** | `src/core/downloadPath.ts` |
 | `theme.followSystem` | 显示风格页、选择主题页 ×3 | **1** | `Theme.setFollowSystem()`（`src/core/theme.ts`） |
+| `lyric.showStatusBarLyric`、`lyric.isLocked` | 设置页 ×2、面板 ×2、原生工具层、引导层 | — | **功能已移除，键一并删除**（见下节 1） |
 
-「合法例外」具体是本节开头列出的两类：`entry/bootstrap/bootstrap.ts`（Android 上桌面歌词已下线，
-启动时清标记）与 `core/lyricManager.ts`（原生回调回写用户可见状态），两处代码里都有注释说明。
+收敛后**不再存在「合法例外」**。桌面歌词还在时，`entry/bootstrap/bootstrap.ts`（启动清标记）与
+`core/lyricManager.ts`（原生回调回写用户可见状态）是仅有的两处合法例外；随着该功能移除，
+两个键、原生回调订阅与那处引导层修正一起删掉了。
 
-复核口径（`grep -n 'setConfig("<key>"' src`）：除上述权威写入点与两处例外外，不应再有命中；
+复核口径（`grep -n 'setConfig("<key>"' src`）：除上述权威写入点外，不应再有命中；
 `basicSetting.tsx` 里传给 `createSwitch` 的 key 都带了 callback，而 `createSwitch` 在**给了 callback 时
 不再自己写配置**（只调 callback），所以那些调用点不算第二个写入口。
 
-### 1. 桌面歌词：`src/core/desktopLyric.ts`
+### 1. 桌面歌词：写入口收敛后**整体移除**
 
-- 原生参数快照**只在这里构造**（`buildDesktopLyricOptions`）。
-  收敛前同一份 payload 被手写了 5 遍，其中 4 份键集不一致（两份漏 `color`/`sungColor`/`backgroundColor`，
-  两份漏 `secondaryFontRatio`/`secondaryAlphaRatio`）——原生新增任一参数必漏改。
-- 悬浮窗权限流程**只在这里实现**：权限不足 → 提示 → 跳系统设置 → 回到前台自动重试。
-  收敛前设置页有 AppState 回跳重开、面板里只弹一句提示，行为不一致。
-- 「开成功后立刻同步当前歌词行/播放进度」也收在一处，避免刚打开时空白。
+收敛过程中确认了这个功能其实已经两端都不可达：
+
+- Android：`AndroidManifest.xml` 用 `tools:node="remove"` 移除了 `SYSTEM_ALERT_WINDOW`，
+  `entry/bootstrap/bootstrap.ts` 启动时还会把标记清零；
+- iOS：`ios/MusicFree/LyricUtil.m` 的同名方法全是 no-op stub；
+- 设置页与歌曲长按面板的相关 UI 又都被 `Platform.OS !== "android"` 挡住。
+
+所以不再保留：`src/core/desktopLyric.ts`、原生悬浮窗实现（Android `lyricUtil/{LyricView,LyricContainerView,DesktopLyricView}.kt`、
+iOS 的 stub 段）、全部相关配置键与 i18n 键，本次一并删除。保留的只有与歌词解析/解密无关不了的
+`decryptKuwoLyric` / `decryptQRCLyric` 与 compact notification 的收藏动作。
+
+收敛本身的价值保留在别处：`lyric.enableWordByWord`（逐字歌词）的写入口移到
+`lyricManager.setWordByWordEnabled()`——它就在歌词解析的管理者上，写配置 + 重载当前歌词一步到位，
+设置页与长按面板都调它。
 
 ### 2. 下载目录：`src/core/downloadPath.ts`
 
@@ -80,7 +84,7 @@
 | 配置键 | 结论 |
 |---|---|
 | `basic.pluginCacheControl` | 有迁移映射、有类型，但**全仓库无 UI 写入**，实际生效值来自 `plugin.instance.cacheControl`。判定为**悬空键**，待从键空间移除（迁移映射一并向后兼容处理） |
-| `lyric.fontSize` / `topPercent` / `leftPercent` / `align` / `color` / `sungColor` / `backgroundColor` | 只读不写，全部由**原生拖拽 / 预设**隐式管理。结论：不补 UI，保留为原生状态存储（`lyric.widthPercent` 例外，设置页有滑杆） |
+| `lyric.fontSize` / `topPercent` / `leftPercent` / `align` / `color` / `sungColor` / `backgroundColor` / `widthPercent` / `presetIndex` / `customPresets` / `invertColors` / `isLocked` / `showStatusBarLyric` / `desktopShowTranslation` / `desktopShowRomanization` / `desktopSecondaryFontRatio` / `desktopSecondaryAlphaRatio` / `hideDesktopLyricWhenPaused` | 桌面歌词的原生状态存储（未被任何 UI 直接读写，由原生拖拽 / 预设隐式管理）。**已随桌面歌词整体移除，键从键空间删除**；老用户 MMKV 里的残留值不再被读取，无害 |
 | `theme.backgroundMask` | 有入口，但仅当「背景图已配置 **且** 当前主题显示壁纸」时出现（`backgroundTuning.tsx` 提前 `return null`）。属于**条件隐藏**，不是无入口 |
 
 ---
@@ -101,10 +105,18 @@
 
 ## 五、i18n 僵尸键与硬编码中文
 
-- 本次为设置页补入 **15 个 `basicSettings.lyric.*` 键**（三语 + `types/core/i18n/index.d.ts` 同步），
-  覆盖原先直接写死的中文字面量：逐字歌词 / 逐字歌词浮动动画 / 纯白模式 / 空歌词行呼吸灯特效 /
-  桌面歌词显示翻译与罗马音 / 颜色反转 / 副行字号比例 / 副行透明度比例 / 自定义预设颜色对话框 /
-  桌面歌词小标题与解锁；`basicSettings.lyric.width` 改为带 `{value}` 占位符的格式串。
+- 本次为设置页补入 **15 个 `basicSettings.lyric.*` 键**（三语 + `types/core/i18n/index.d.ts` 同步）。
+  其中 4 个保留至今：逐字歌词 / 逐字歌词浮动动画 / 纯白模式 / 空歌词行呼吸灯特效；
+  其余 11 个（桌面歌词显示翻译与罗马音、颜色反转、副行字号比例、副行透明度比例、
+  自定义预设颜色对话框、桌面歌词小标题）随桌面歌词移除而删除。
+- 桌面歌词移除时一并清掉 **29 个**只服务它的 i18n 键：上述 11 个新增键，加上历史键
+  `showStatusBarLyric` / `hideDesktopLyricWhenPaused` / `width` / `fontSize` / `textColor` /
+  `sungColor` / `backgroundColor` / `colorPreset` / `lock` / `unlock` / `align` / `leftRightDistance` /
+  `topBottomDistance`，以及 `toast.noFloatWindowPermission`、
+  `panel.musicItemLyricOptions.{toggle,enable,disable}DesktopLyric` 与 `desktopLyricPermissionError`。
+  三语各 830 → **801** 键，键集合仍完全一致。
+  注意 `basicSettings.lyric.align.{left,center,right}` 是**保留**的——它服务歌曲详情页的
+  `lyric.detailAlign`，与桌面歌词无关（无后缀的 `lyric.align` 才是桌面歌词的位置对齐，已删）。
 - 文件命名格式、预设/自定义模板、音质管理、音乐标签设置这批文案，由**上游 PR #97** 用
   **扁平键名**（`basicSettings.fileNamingPreset` / `qualityManagement` / `musicTagSettings` …）落了地。
   本次 rebase 到 `7a6ede2a84` 时**一律采用上游键名**，撤掉自己重复定义的嵌套
@@ -122,7 +134,9 @@
    `settingsOverview.*Description`、`themeSettingsIndex.*Description`；
 3. 移除悬空键 `basic.pluginCacheControl`；
 4. 引入「键 → 容器 → 分组」注册表，支撑入口唯一性回归测试（本轮先用源码级扫描测试兜底）；
-5. `src/pages/setting/settingTypes/index.ts` 的死字段 `title`（`AppBar` 只用 `i18nKey`）删除。
+5. `src/pages/setting/settingTypes/index.ts` 的死字段 `title`（`AppBar` 只用 `i18nKey`）删除；
+6. `LyricUtil.decryptKuwoLyric` 三端均无调用者（`utils/musicDecrypter.ts` 顶部注释已说明酷我歌词由插件解密），
+   可连同其辅助函数与 iOS 侧同名实现一起删除——本次为控制 diff 范围没有动它。
 
 ---
 

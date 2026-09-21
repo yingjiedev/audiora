@@ -15,7 +15,6 @@ import { IIconName } from "@/components/base/icon.tsx";
 import { hidePanel } from "@/components/panels/usePanel.ts";
 import { iconSizeConst } from "@/constants/uiConst";
 import Config, { useAppConfig } from "@/core/appConfig";
-import DesktopLyric from "@/core/desktopLyric";
 import DownloadPath from "@/core/downloadPath";
 import lyricManager from "@/core/lyricManager";
 import mediaCache from "@/core/mediaCache";
@@ -170,36 +169,6 @@ export default function MusicItemLyricOptions(
             },
         },
         {
-            icon: "lyric", title: t("panel.musicItemLyricOptions.toggleDesktopLyric", {
-                status: Config.getConfig("lyric.showStatusBarLyric")
-                    ? t("panel.musicItemLyricOptions.disableDesktopLyric")
-                    : t("panel.musicItemLyricOptions.enableDesktopLyric"),
-            }),
-            show: Platform.OS !== "android",
-            async onPress() {
-                // 走 core/desktopLyric 的同一条路径：写状态、检测权限、
-                // 回前台自动重开都收敛在那一个地方，这里不再自己实现一遍
-                await DesktopLyric.toggleDesktopLyric();
-                hidePanel();
-            },
-        },
-        {
-            icon: "shield-keyhole-outline",
-            title: Config.getConfig("lyric.isLocked")
-                ? t("basicSettings.lyric.unlock")
-                : t("basicSettings.lyric.lock"),
-            show: Platform.OS !== "android" && !!Config.getConfig("lyric.showStatusBarLyric"),
-            onPress() {
-                const locked = DesktopLyric.toggleDesktopLyricLocked();
-                Toast.success(
-                    locked
-                        ? t("basicSettings.lyric.lock")
-                        : t("basicSettings.lyric.unlock"),
-                );
-                hidePanel();
-            },
-        },
-        {
             icon: "font-size",
             title: t("panel.musicItemLyricOptions.toggleWordByWord", {
                 status: Config.getConfig("lyric.enableWordByWord")
@@ -207,9 +176,9 @@ export default function MusicItemLyricOptions(
                     : t("panel.musicItemLyricOptions.enableWordByWord"),
             }),
             onPress: () => {
-                // 逐字歌词的写入 + 重载当前歌词由 DesktopLyric 统一负责
+                // 逐字歌词的写入 + 重载当前歌词统一由 lyricManager 负责
                 const next = !(Config.getConfig("lyric.enableWordByWord") ?? false);
-                DesktopLyric.setWordByWordEnabled(next);
+                lyricManager.setWordByWordEnabled(next);
                 Toast.success(next
                     ? t("panel.musicItemLyricOptions.wordByWordEnabled")
                     : t("panel.musicItemLyricOptions.wordByWordDisabled")
