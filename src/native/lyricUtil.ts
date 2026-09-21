@@ -1,252 +1,31 @@
-import { NativeEventEmitter, NativeModules } from 'react-native';
-import { devLog } from "@/utils/log";
+import { NativeModules } from "react-native";
 
 /**
- * 文本对齐方式枚举
+ * 原生歌词工具模块的 JS 包装。
+ *
+ * 只保留歌词解密 / 解析相关能力（QQ 音乐 QRC）。
+ * 桌面歌词（悬浮窗）相关 API 已随该功能一并移除。
  */
-export enum NativeTextAlignment {
-  LEFT = 3,
-  RIGHT = 5,
-  CENTER = 17,
-}
-
-/** 桌面歌词预设颜色方案 */
-export interface ILyricColorPreset {
-  name: string;
-  unsungColor: string;
-  sungColor: string;
-  backgroundColor: string;
-}
-
-export const LYRIC_COLOR_PRESETS: ILyricColorPreset[] = [
-  { name: '烈焰红',   unsungColor: '#FFFFFFB3', sungColor: '#FF2D55FF', backgroundColor: '#00000000' },
-  { name: '海洋蓝',   unsungColor: '#E6E6E6CC', sungColor: '#2979FFFF', backgroundColor: '#00000099' },
-  { name: '翡翠绿',   unsungColor: '#F2F2F2B3', sungColor: '#00C853FF', backgroundColor: '#001A1A99' },
-  { name: '落日橙',   unsungColor: '#FFFFFF99', sungColor: '#FF6D00FF', backgroundColor: '#00000066' },
-  { name: '幻紫',     unsungColor: '#E0E0E0CC', sungColor: '#AA00FFFF', backgroundColor: '#12001899' },
-  { name: '琥珀金',   unsungColor: '#D9D9D9CC', sungColor: '#FFD600FF', backgroundColor: '#00000099' },
-];
-
-/** 桌面逐字歌词行数据 */
-export interface IDesktopLyricLineData {
-  lineId: string;
-  primaryText: string;
-  primaryWords?: Array<{
-    text: string;
-    startTime: number;
-    duration: number;
-    space?: boolean;
-  }> | null;
-  secondaryLines?: Array<{
-    type: 'translation' | 'romanization' | 'original';
-    text: string;
-  }>;
-  lineStartMs: number;
-  lineDurationMs?: number | null;
-}
-
-/** 播放状态同步数据 */
-export interface IPlaybackSyncData {
-  status: 'playing' | 'paused' | 'stopped';
-  positionMs: number;
-  speed?: number;
-  isSeek?: boolean;
-}
 
 const { LyricUtil: NativeLyricUtil } = NativeModules;
 
 class LyricUtilManager {
-  private nativeModule = NativeLyricUtil;
-  private emitter: NativeEventEmitter | null = null;
+    private nativeModule = NativeLyricUtil;
 
-  private getEmitter(): NativeEventEmitter | null {
-    if (!this.emitter && this.nativeModule) {
-      this.emitter = new NativeEventEmitter(this.nativeModule);
+    private canCall(methodName: string): boolean {
+        return !!this.nativeModule && typeof this.nativeModule[methodName] === "function";
     }
 
-    return this.emitter;
-  }
-
-  private canCall(methodName: string): boolean {
-    return !!this.nativeModule && typeof this.nativeModule[methodName] === "function";
-  }
-
-  async checkSystemAlertPermission(): Promise<boolean> {
-    if (!this.canCall("checkSystemAlertPermission")) {
-      return false;
+    async decryptQRCLyric(encryptedHex: string): Promise<string> {
+        if (!this.canCall("decryptQRCLyric")) {
+            throw new Error("decryptQRCLyric not available in native module");
+        }
+        return this.nativeModule.decryptQRCLyric(encryptedHex);
     }
-    return this.nativeModule.checkSystemAlertPermission();
-  }
 
-  async requestSystemAlertPermission(): Promise<boolean> {
-    if (!this.canCall("requestSystemAlertPermission")) {
-      return false;
+    isAvailable(): boolean {
+        return !!this.nativeModule;
     }
-    return this.nativeModule.requestSystemAlertPermission();
-  }
-
-  async showStatusBarLyric(
-    initLyric?: string | null,
-    options?: {
-      topPercent?: number;
-      leftPercent?: number;
-      align?: number;
-      color?: string;
-      backgroundColor?: string;
-      sungColor?: string;
-      widthPercent?: number;
-      fontSize?: number;
-      presetIndex?: number;
-      presets?: ILyricColorPreset[];
-      secondaryFontRatio?: number;
-      secondaryAlphaRatio?: number;
-    }
-  ): Promise<boolean> {
-    if (!this.canCall("showStatusBarLyric")) {
-      return false;
-    }
-    try {
-      return await this.nativeModule.showStatusBarLyric(initLyric || null, options || null);
-    } catch (error) {
-      devLog("warn", "[LyricUtil] showStatusBarLyric failed", String(error));
-      return false;
-    }
-  }
-
-  async hideStatusBarLyric(): Promise<boolean> {
-    if (!this.canCall("hideStatusBarLyric")) {
-      return false;
-    }
-    return this.nativeModule.hideStatusBarLyric();
-  }
-
-  async setStatusBarLyricText(lyric: string): Promise<boolean> {
-    if (!this.canCall("setStatusBarLyricText")) {
-      return false;
-    }
-    return this.nativeModule.setStatusBarLyricText(lyric);
-  }
-
-  async setDesktopLyricLine(data: IDesktopLyricLineData): Promise<boolean> {
-    if (!this.canCall("setDesktopLyricLine")) {
-      return false;
-    }
-    return this.nativeModule.setDesktopLyricLine(data);
-  }
-
-  async syncPlaybackState(state: IPlaybackSyncData): Promise<boolean> {
-    if (!this.canCall("syncPlaybackState")) {
-      return false;
-    }
-    return this.nativeModule.syncPlaybackState(state);
-  }
-
-  async setSungColor(color: string): Promise<boolean> {
-    if (!this.canCall("setSungColor")) {
-      return false;
-    }
-    return this.nativeModule.setSungColor(color);
-  }
-
-  async setStatusBarLyricAlign(alignment: number): Promise<boolean> {
-    if (!this.canCall("setStatusBarLyricAlign")) {
-      return false;
-    }
-    return this.nativeModule.setStatusBarLyricAlign(alignment);
-  }
-
-  async setStatusBarLyricTop(pct: number): Promise<boolean> {
-    if (!this.canCall("setStatusBarLyricTop")) {
-      return false;
-    }
-    return this.nativeModule.setStatusBarLyricTop(pct);
-  }
-
-  async setStatusBarLyricLeft(pct: number): Promise<boolean> {
-    if (!this.canCall("setStatusBarLyricLeft")) {
-      return false;
-    }
-    return this.nativeModule.setStatusBarLyricLeft(pct);
-  }
-
-  async setStatusBarLyricWidth(pct: number): Promise<boolean> {
-    if (!this.canCall("setStatusBarLyricWidth")) {
-      return false;
-    }
-    return this.nativeModule.setStatusBarLyricWidth(pct);
-  }
-
-  async setStatusBarLyricFontSize(fontSize: number): Promise<boolean> {
-    if (!this.canCall("setStatusBarLyricFontSize")) {
-      return false;
-    }
-    return this.nativeModule.setStatusBarLyricFontSize(fontSize);
-  }
-
-  async setSecondaryFontRatio(ratio: number): Promise<boolean> {
-    if (!this.canCall("setSecondaryFontRatio")) {
-      return false;
-    }
-    return this.nativeModule.setSecondaryFontRatio(ratio);
-  }
-
-  async setSecondaryAlphaRatio(ratio: number): Promise<boolean> {
-    if (!this.canCall("setSecondaryAlphaRatio")) {
-      return false;
-    }
-    return this.nativeModule.setSecondaryAlphaRatio(ratio);
-  }
-
-  async setStatusBarColors(textColor?: string | null, backgroundColor?: string | null): Promise<boolean> {
-    if (!this.canCall("setStatusBarColors")) {
-      return false;
-    }
-    return this.nativeModule.setStatusBarColors(textColor || null, backgroundColor || null);
-  }
-
-  /** 锁定桌面歌词（触摸穿透） */
-  async lockDesktopLyric(): Promise<boolean> {
-    if (!this.canCall("lockDesktopLyric")) {
-      return false;
-    }
-    return this.nativeModule.lockDesktopLyric();
-  }
-
-  /** 解锁桌面歌词（可拖拽/点击） */
-  async unlockDesktopLyric(): Promise<boolean> {
-    if (!this.canCall("unlockDesktopLyric")) {
-      return false;
-    }
-    return this.nativeModule.unlockDesktopLyric();
-  }
-
-  /** 切换预设颜色方案 */
-  async setColorPreset(index: number): Promise<boolean> {
-    if (!this.canCall("setColorPreset")) {
-      return false;
-    }
-    return this.nativeModule.setColorPreset(index);
-  }
-
-  /** 监听原生事件（锁定状态/预设/字号/位置变化） */
-  addListener(
-    event: 'LyricUtil:onLockStateChanged' | 'LyricUtil:onPresetChanged' | 'LyricUtil:onFontSizeChanged' | 'LyricUtil:onPositionChanged' | 'LyricUtil:onClose' | 'LyricUtil:onPresetLongPress',
-    handler: (payload: any) => void,
-  ): { remove: () => void } {
-    const sub = this.getEmitter()?.addListener(event, handler);
-    return sub ?? { remove: () => {} };
-  }
-
-  async decryptQRCLyric(encryptedHex: string): Promise<string> {
-    if (!this.canCall("decryptQRCLyric")) {
-      throw new Error('decryptQRCLyric not available in native module');
-    }
-    return this.nativeModule.decryptQRCLyric(encryptedHex);
-  }
-
-  isAvailable(): boolean {
-    return !!this.nativeModule;
-  }
 }
 
 export const LyricUtil = new LyricUtilManager();

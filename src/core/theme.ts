@@ -777,6 +777,26 @@ function getOpaquePageBackgroundColor() {
     }
 }
 
+/**
+ * `theme.followSystem` 的唯一写入口（issue #96）。
+ *
+ * 之前这个键在「显示风格」页写一次、在「选择主题」页手动置 false 三次，
+ * 且两处的联动逻辑（跟随系统打开时要把当前主题换成系统深色/浅色）
+ * 只有一处写了。现在统一到这里：
+ *
+ *  - 打开跟随：立刻把当前主题换成系统深色/浅色；
+ *  - 关闭跟随：只改标记，当前已经在用的主题保持不变——用户是「选了具体主题」
+ *    才走到这一步的，不该再被打回去。
+ */
+function setFollowSystem(follow: boolean) {
+    Config.setConfig("theme.followSystem", follow);
+
+    if (follow) {
+        const systemTheme = Appearance.getColorScheme();
+        setTheme(systemTheme === "dark" ? "p-dark" : "p-light");
+    }
+}
+
 function setBackground(backgroundInfo: IBackgroundInput) {
     const currentBackgroundInfo = backgroundStore.getValue();
     let newBgInfo: IBackgroundInfo = {
@@ -822,6 +842,7 @@ const configableColorKey: Array<keyof CustomizedColors> = [
 const Theme = {
     setup,
     setTheme,
+    setFollowSystem,
     setBackground,
     setColors,
     setSurfaceOpacity,

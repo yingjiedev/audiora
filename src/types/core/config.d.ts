@@ -71,35 +71,13 @@ export interface IAppConfigProperties {
     "basic.downloadProgressBatchIntervalMs": number;
 
     // Lyric
-    "lyric.showStatusBarLyric": boolean;
-    "lyric.topPercent": number;
-    "lyric.leftPercent": number;  // 保存用户拖拽位置，不在设置页面显示
-    "lyric.align": number;
-    "lyric.color": string;
-    "lyric.sungColor": string;
-    "lyric.backgroundColor": string;
-    "lyric.widthPercent": number;
-    "lyric.fontSize": number;
     "lyric.detailFontSize": number;
     "lyric.autoSearchLyric": boolean;
-    "lyric.hideDesktopLyricWhenPaused": boolean;
     "lyric.enableWordByWord": boolean;
     "lyric.enableWordByWordFloat": boolean;
     "lyric.pureWhiteMode": boolean;
     "lyric.enableBreathingDots": boolean;
     "lyric.detailAlign": "left" | "center" | "right";
-    "lyric.desktopShowTranslation": boolean;
-    "lyric.desktopShowRomanization": boolean;
-    "lyric.desktopSecondaryFontRatio": number;
-    "lyric.desktopSecondaryAlphaRatio": number;
-    "lyric.presetIndex": number;
-    "lyric.isLocked": boolean;
-    "lyric.customPresets": Array<{
-        unsungColor: string;
-        sungColor: string;
-        backgroundColor: string;
-    } | null>;
-    "lyric.invertColors": boolean;
 
     // Font
     /** 全局字体：default = 系统字体；其余为内置字体（思源宋体/霞鹜新致宋/志莽行书） */

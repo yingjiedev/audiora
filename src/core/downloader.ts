@@ -22,6 +22,7 @@ import Mp3Util, {
     NativeDownloadEmitter,
 } from "@/native/mp3Util";
 import Cenc from "@/native/cenc";
+import DownloadPath from "./downloadPath";
 import downloadHistory from "./downloadHistory";
 import LocalMusicSheet from "./localMusicSheet";
 import {
@@ -39,7 +40,6 @@ import type { IDownloadMetadataConfig, IDownloadTaskMetadata } from "@/types/met
 import {
     copyLocalFileToAndroidDirectory,
     isAndroidSafUri,
-    requestAndroidDirectoryAccess,
 } from "@/utils/androidSaf";
 
 // 枚举本体已挪到 ./downloadTypes（避免 downloader ⇄ downloadHistory 循环依赖，
@@ -115,7 +115,6 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
     private activePrepareCount = 0;
 
     private queueBusy = false;
-    private androidDirectoryRequest: Promise<string | null> | null = null;
 
     // 有原生队列时，准备阶段（解析音源）并发固定为 3，真正的下载并发由原生按 basic.maxDownload 控制；
     // 无原生队列（JS 回退下载）时，准备阶段即下载阶段，并发跟随 basic.maxDownload 配置。
@@ -1608,13 +1607,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             Platform.OS === "android" &&
             !isAndroidSafUri(this.configService.getConfig("basic.downloadPath"))
         ) {
-            if (!this.androidDirectoryRequest) {
-                this.androidDirectoryRequest = requestAndroidDirectoryAccess()
-                    .finally(() => {
-                        this.androidDirectoryRequest = null;
-                    });
-            }
-            this.androidDirectoryRequest.then(directoryUri => {
+            // basic.downloadPath 的唯一写入口在 DownloadPath 里，它内部做了
+            // 单飞，这里不用再自己判重
+            DownloadPath.ensure().then(directoryUri => {
                 if (!directoryUri) {
                     const firstItem = Array.isArray(musicItems)
                         ? musicItems[0]
@@ -1629,7 +1624,6 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                     }
                     return;
                 }
-                this.configService.setConfig("basic.downloadPath", directoryUri);
                 this.download(musicItems, quality);
             }).catch(error => {
                 this.emit(

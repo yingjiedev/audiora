@@ -493,22 +493,13 @@ export interface ILanguageData {
     
     "basicSettings.lyric": string; // 歌词
     "basicSettings.lyric.autoSearchLyric": string; // 歌词缺失时自动搜索歌词
-    "basicSettings.lyric.showStatusBarLyric": string; // 开启桌面歌词
-    "basicSettings.lyric.hideDesktopLyricWhenPaused": string; // 暂停时隐藏桌面歌词
-    "basicSettings.lyric.align": string; // 对齐方式
     "basicSettings.lyric.align.left": string; // 左对齐
     "basicSettings.lyric.align.center": string; // 居中对齐
     "basicSettings.lyric.align.right": string; // 右对齐
-    "basicSettings.lyric.leftRightDistance": string; // 左右距离
-    "basicSettings.lyric.topBottomDistance": string; // 上下距离
-    "basicSettings.lyric.width": string; // 歌词宽度
-    "basicSettings.lyric.fontSize": string; // 字体大小
-    "basicSettings.lyric.textColor": string; // 文本颜色
-    "basicSettings.lyric.sungColor": string;
-    "basicSettings.lyric.backgroundColor": string;
-    "basicSettings.lyric.colorPreset": string;
-    "basicSettings.lyric.unlock": string;
-    "basicSettings.lyric.lock": string;
+    "basicSettings.lyric.wordByWord": string;
+    "basicSettings.lyric.wordByWordFloat": string;
+    "basicSettings.lyric.pureWhiteMode": string;
+    "basicSettings.lyric.breathingDots": string;
     
     "basicSettings.cache": string; // 缓存
     "basicSettings.cache.musicCacheLimit": string; // 音乐缓存上限
@@ -550,7 +541,6 @@ export interface ILanguageData {
     "toast.lyricCacheCleared": string; // 已清除歌词缓存
     "toast.imageCacheCleared": string; // 已清除图片缓存
     "toast.logCleared": string; // 日志已清空
-    "toast.noFloatWindowPermission": string; // 无悬浮窗权限
     "toast.folderNotExistOrNoPermission": string; // 文件夹不存在或无权限
     
     // 播放全部栏相关
@@ -664,10 +654,6 @@ export interface ILanguageData {
     // 面板相关 - 音乐项歌词选项
     "panel.musicItemLyricOptions.author": string; // 作者
     "panel.musicItemLyricOptions.album": string; // 专辑
-    "panel.musicItemLyricOptions.toggleDesktopLyric": string; // 桌面歌词开关
-    "panel.musicItemLyricOptions.enableDesktopLyric": string; // 开启
-    "panel.musicItemLyricOptions.disableDesktopLyric": string; // 关闭
-    "panel.musicItemLyricOptions.desktopLyricPermissionError": string; // 桌面歌词权限错误
     "panel.musicItemLyricOptions.uploadLocalLyric": string; // 上传本地歌词
     "panel.musicItemLyricOptions.uploadLocalLyricTranslation": string; // 上传本地歌词翻译
     "panel.musicItemLyricOptions.deleteLocalLyric": string; // 删除本地歌词
