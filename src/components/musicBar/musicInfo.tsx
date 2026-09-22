@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
         position: "absolute",
     },
     containerPadding: {
-        paddingLeft: rpx(16),
+        paddingLeft: rpx(18),
         paddingRight: rpx(8),
     },
     textWrapper: {
@@ -109,14 +109,14 @@ const styles = StyleSheet.create({
         minWidth: 0,
     },
     artworkImg: {
-        width: rpx(74),
-        height: rpx(74),
-        borderRadius: rpx(18),
+        width: rpx(80),
+        height: rpx(80),
+        borderRadius: rpx(20),
         marginRight: rpx(14),
         flexShrink: 0,
     },
     artist: {
-        marginTop: rpx(7),
+        marginTop: rpx(10),
     },
 });
 

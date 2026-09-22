@@ -346,7 +346,8 @@ export default function AlbumCover(props: IProps) {
                             paddingTop: immersiveContentPaddingTop,
                         },
                     ]}>
-                    <SongInfo showHeart immersive />
+                    {/* 收藏入口统一收进顶部导航栏，避免竖屏出现两颗爱心 */}
+                    <SongInfo immersive />
                     <View style={miniLyricLayout === "hidden" ? styles.hidden : null}>
                         <MiniLyric
                             onPress={onTurnPageClick}
@@ -385,7 +386,7 @@ export default function AlbumCover(props: IProps) {
                     </Animated.View>
                 </GestureDetector>
             </View>
-            <SongInfo showHeart />
+            <SongInfo />
             <View style={miniLyricLayout === "hidden" ? styles.hidden : null}>
                 <MiniLyric
                     onPress={onTurnPageClick}
