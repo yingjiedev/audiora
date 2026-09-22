@@ -1,6 +1,11 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
-import Theme, { isPresetThemeId, resolveActiveBackground } from "@/core/theme";
+import Theme, {
+    darkTheme,
+    isPresetThemeId,
+    lightTheme,
+    resolveActiveBackground,
+} from "@/core/theme";
 
 const mockConfigStore: Record<string, unknown> = {};
 
@@ -88,13 +93,11 @@ describe("切换主题模式时的自定义背景", () => {
         Theme.setTheme("custom", { background: { url: BACKGROUND_URL } });
 
         Theme.setTheme("p-light");
-        expect(Theme.getTheme().colors.pageBackground).toBe("#F6F9FF");
-        expect(Theme.getTheme().colors.card).toBe("#FFFFFF");
+        expect(Theme.getTheme().colors).toEqual(lightTheme.colors);
 
         Theme.setTheme("custom", { background: { url: BACKGROUND_URL } });
         Theme.setTheme("p-dark");
-        expect(Theme.getTheme().colors.pageBackground).toBe("#090F1F");
-        expect(Theme.getTheme().colors.card).toBe("#121D33");
+        expect(Theme.getTheme().colors).toEqual(darkTheme.colors);
     });
 
     it("切回自定义主题后背景自动恢复，不需要重新选图", () => {
