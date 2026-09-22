@@ -868,6 +868,27 @@ export interface ILanguageData {
     "musicLibrary.emptyOnlineTitle": string;
     "musicLibrary.emptyOnlineDescription": string;
     "musicLibrary.searchMusic": string;
+    // 播放页与 Mini Player 的文案 / 无障碍标签（issue #88）
+    "musicDetail.playingNow": string; // 正在播放
+    "musicDetail.a11y.back": string; // 返回
+    "musicDetail.a11y.toggleRepeatMode": string; // 切换循环模式
+    "musicDetail.a11y.skipToPrevious": string; // 上一首
+    "musicDetail.a11y.play": string; // 播放
+    "musicDetail.a11y.pause": string; // 暂停
+    "musicDetail.a11y.skipToNext": string; // 下一首
+    "musicDetail.a11y.playlist": string; // 播放列表
+    "musicDetail.a11y.seek": string; // 播放进度
+    "musicDetail.a11y.quality": string; // 选择音质
+    "musicDetail.a11y.download": string; // 下载这首歌曲
+    "musicDetail.a11y.downloaded": string; // 这首歌曲已下载
+    "musicDetail.a11y.playRate": string; // 调整播放速度
+    "musicDetail.a11y.comment": string; // 查看评论
+    "musicDetail.a11y.more": string; // 更多操作
+    "musicDetail.a11y.favorite": string; // 收藏这首歌曲
+    "musicDetail.a11y.unfavorite": string; // 取消收藏这首歌曲
+    "musicBar.a11y.playOrPause": string; // 播放或暂停当前歌曲
+    "musicBar.a11y.playlist": string; // 打开播放列表
+    "musicBar.a11y.nowPlaying": string; // 正在播放 {title}，歌手 {artist}
     "themeSettingsIndex.modeDescription": string;
     "themeSettingsIndex.coverDescription": string;
     "themeSettingsIndex.fontDescription": string;

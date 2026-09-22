@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo } from "react";
 import { Image, StyleSheet, useWindowDimensions, View } from "react-native";
+import Color from "color";
 import { ImgAsset } from "@/constants/assetsConst";
+import useColors from "@/hooks/useColors";
+import { mediaScrim } from "@/constants/designSystem";
 import { useCurrentMusic } from "@/core/trackPlayer";
+import rpx from "@/utils/rpx";
 import MaskedView from "@react-native-masked-view/masked-view";
 import LinearGradient from "react-native-linear-gradient";
 import {
@@ -29,8 +33,19 @@ export default function Background(props: IBackgroundProps) {
         "associatedArtwork",
     );
     const { width: windowWidth } = useWindowDimensions();
+    const colors = useColors();
 
     const resolvedArtwork = resolveArtwork(musicItem);
+
+    /** 顶部压暗：状态栏时间/图标与导航栏常压在封面亮部，靠这层保证任意封面都可读 */
+    const topScrimColors = useMemo(() => {
+        const scrim = Color(colors.onMediaScrim ?? mediaScrim);
+        return [
+            scrim.alpha(0.62).toString(),
+            scrim.alpha(0.3).toString(),
+            scrim.alpha(0).toString(),
+        ];
+    }, [colors.onMediaScrim]);
 
     // associatedArtwork forces refresh when mediaExtra changes (resolvedArtwork
     // string may be identical when switching back after unassociate in edge cases)
@@ -195,6 +210,12 @@ export default function Background(props: IBackgroundProps) {
                 locations={[0, 0.52, 1]}
                 style={style.readabilityFade}
             />
+            <LinearGradient
+                pointerEvents="none"
+                colors={topScrimColors}
+                locations={[0, 0.42, 1]}
+                style={style.topScrim}
+            />
         </>
     );
 }
@@ -236,6 +257,13 @@ const style = StyleSheet.create({
         right: 0,
         bottom: 0,
         left: 0,
+    },
+    topScrim: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        left: 0,
+        height: rpx(260),
     },
     immersiveLayer: {
         position: "absolute",

@@ -1,5 +1,5 @@
 import Icon, { IIconName } from "@/components/base/icon.tsx";
-import { radius } from "@/constants/designSystem";
+import { elevation, radius } from "@/constants/designSystem";
 import repeatModeConst from "@/constants/repeatModeConst";
 import { showPanel } from "@/components/panels/usePanel";
 import TrackPlayer, { useMusicState, useRepeatMode } from "@/core/trackPlayer";
@@ -7,6 +7,8 @@ import useOrientation from "@/hooks/useOrientation";
 import delay from "@/utils/delay";
 import { musicIsPaused } from "@/utils/trackUtils";
 import rpx from "@/utils/rpx";
+import useColors from "@/hooks/useColors";
+import { useI18N } from "@/core/i18n";
 import React, { ReactNode } from "react";
 import { InteractionManager, Pressable, StyleSheet, View } from "react-native";
 
@@ -17,6 +19,7 @@ function ControlButton(props: {
     onPress: () => void;
 }) {
     const { accessibilityLabel, children, primary, onPress } = props;
+    const colors = useColors();
 
     return (
         <Pressable
@@ -25,6 +28,14 @@ function ControlButton(props: {
             onPress={onPress}
             style={({ pressed }) => [
                 primary ? styles.primaryButton : styles.controlButton,
+                // 主操作按钮与 Mini Player 同源：主色底 + onPrimary 前景
+                primary
+                    ? {
+                        backgroundColor: colors.primary,
+                        shadowColor: colors.shadow ?? colors.text,
+                    }
+                    : null,
+                primary ? elevation.mid : null,
                 pressed && styles.pressed,
             ]}>
             {children}
@@ -32,12 +43,26 @@ function ControlButton(props: {
     );
 }
 
-function ControlIcon(props: { name: IIconName; size: number; dark?: boolean }) {
+/**
+ * 控制区图标统一走「沉浸层前景色」；主按钮内部改用 onPrimary，
+ * 与 Mini Player 的 CircularPlayBtn 保持同一套配色规则。
+ */
+function ControlIcon(props: {
+    name: IIconName;
+    size: number;
+    onPrimary?: boolean;
+}) {
+    const colors = useColors();
+
     return (
         <Icon
             name={props.name}
             size={props.size}
-            color={props.dark ? "#315FEA" : "#FFFFFF"}
+            color={
+                props.onPrimary
+                    ? colors.onPrimary ?? colors.primary
+                    : colors.onMedia ?? colors.text
+            }
         />
     );
 }
@@ -46,6 +71,7 @@ export default function PlayControl() {
     const repeatMode = useRepeatMode();
     const musicState = useMusicState();
     const orientation = useOrientation();
+    const { t } = useI18N();
     const isPaused = musicIsPaused(musicState);
 
     return (
@@ -55,7 +81,7 @@ export default function PlayControl() {
                 orientation === "horizontal" && styles.horizontalWrapper,
             ]}>
             <ControlButton
-                accessibilityLabel="切换循环模式"
+                accessibilityLabel={t("musicDetail.a11y.toggleRepeatMode")}
                 onPress={() => {
                     InteractionManager.runAfterInteractions(async () => {
                         await delay(20, false);
@@ -68,13 +94,17 @@ export default function PlayControl() {
                 />
             </ControlButton>
             <ControlButton
-                accessibilityLabel="上一首"
+                accessibilityLabel={t("musicDetail.a11y.skipToPrevious")}
                 onPress={() => TrackPlayer.skipToPrevious()}>
                 <ControlIcon name="skip-left" size={rpx(58)} />
             </ControlButton>
             <ControlButton
                 primary
-                accessibilityLabel={isPaused ? "播放" : "暂停"}
+                accessibilityLabel={
+                    isPaused
+                        ? t("musicDetail.a11y.play")
+                        : t("musicDetail.a11y.pause")
+                }
                 onPress={() => {
                     if (isPaused) {
                         TrackPlayer.play();
@@ -85,16 +115,16 @@ export default function PlayControl() {
                 <ControlIcon
                     name={isPaused ? "play" : "pause"}
                     size={rpx(58)}
-                    dark
+                    onPrimary
                 />
             </ControlButton>
             <ControlButton
-                accessibilityLabel="下一首"
+                accessibilityLabel={t("musicDetail.a11y.skipToNext")}
                 onPress={() => TrackPlayer.skipToNext()}>
                 <ControlIcon name="skip-right" size={rpx(58)} />
             </ControlButton>
             <ControlButton
-                accessibilityLabel="播放列表"
+                accessibilityLabel={t("musicDetail.a11y.playlist")}
                 onPress={() => showPanel("PlayList")}>
                 <ControlIcon name="playlist" size={rpx(42)} />
             </ControlButton>
@@ -106,7 +136,7 @@ const styles = StyleSheet.create({
     wrapper: {
         width: "100%",
         height: rpx(116),
-        marginTop: rpx(22),
+        marginTop: rpx(12),
         paddingHorizontal: rpx(24),
         flexDirection: "row",
         justifyContent: "space-between",
@@ -126,14 +156,8 @@ const styles = StyleSheet.create({
         width: rpx(108),
         height: rpx(108),
         borderRadius: radius.pill,
-        backgroundColor: "#FFFFFF",
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#08132D",
-        shadowOffset: { width: 0, height: rpx(10) },
-        shadowOpacity: 0.22,
-        shadowRadius: rpx(18),
-        elevation: 8,
     },
     pressed: {
         opacity: 0.72,
