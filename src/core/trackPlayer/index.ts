@@ -17,7 +17,12 @@ import { getQualityText } from "@/utils/qualities";
 import i18n from "@/core/i18n";
 import Network from "@/utils/network";
 import PersistStatus from "@/utils/persistStatus";
-import { getQualityOrder, getSmartQuality } from "@/utils/qualities";
+import {
+    getPluginQualityScope,
+    getQualityOrder,
+    getSmartQuality,
+    pickSupportedQuality,
+} from "@/utils/qualities";
 import { mapLocalQuality, resolveLocalAudioMeta } from "@/utils/localQuality";
 import { musicIsPaused } from "@/utils/trackUtils";
 import EventEmitter from "eventemitter3";
@@ -55,6 +60,12 @@ const currentMusicAtom = atom<IMusic.IMusicItem | null>(null);
 const repeatModeAtom = atom<MusicRepeatMode>(MusicRepeatMode.QUEUE);
 const qualityAtom = atom<IMusic.IQualityKey>("320k");
 const playListAtom = atom<IMusic.IMusicItem[]>([]);
+
+/**
+ * 首选音质拿不到源时，降级遍历其它音质的总时间预算（毫秒）。
+ * 逐档请求是串行的，插件/后端异常时会把整张音质表打满，这里兜住最坏耗时。
+ */
+const QUALITY_FALLBACK_BUDGET_MS = 5000;
 
 function isLoopbackHttpUrl(url?: string) {
     if (!url) {
@@ -184,7 +195,7 @@ class TrackPlayer extends EventEmitter<{
                       (track.qualities || track.source) as
                           | IMusic.IQuality
                           | undefined,
-                      restorePlugin?.supportedQualities,
+                      getPluginQualityScope(restorePlugin?.instance),
                 )
                 : preferredQuality;
 
@@ -647,6 +658,11 @@ class TrackPlayer extends EventEmitter<{
 
             // 5.1 通过插件获取音源
             const plugin = this.pluginManagerService.getByName(musicItem.platform);
+
+            // 5.1.1 插件音质档位范围：官方协议插件只认 MusicFree 的 4 档
+            // （low/standard/high/super），扩展协议插件按自己的 supportedQualities。
+            // 全部选择与降级都限制在这个范围内，避免拿插件根本不认识的档位去请求。
+            const pluginQualityScope = getPluginQualityScope(plugin?.instance);
             
             // 5.2 智能音质选择
             const preferredQuality = this.configService.getConfig("basic.defaultPlayQuality") ?? "master";
@@ -662,17 +678,23 @@ class TrackPlayer extends EventEmitter<{
                 selectedQuality = getSmartQuality(
                     preferredQuality,
                     (musicItem.qualities || musicItem.source) as IMusic.IQuality | undefined,
-                    plugin?.supportedQualities // 假设插件提供支持的音质列表
+                    pluginQualityScope,
                 );
             } else {
-                // 回退到传统的音质排序方法
-                selectedQuality = preferredQuality;
+                // 歌曲没有任何音质信息，没法智能降级。就在插件档位范围内挑一个最接近
+                // 偏好的，别拿插件根本不支持的档位去试。
+                selectedQuality =
+                    pickSupportedQuality(
+                        preferredQuality,
+                        pluginQualityScope,
+                    ) ?? preferredQuality;
             }
             
-            // 5.3 获取音质排序作为后备
+            // 5.3 获取音质排序作为后备（同样收窄到插件档位范围内）
             const qualityOrder = getQualityOrder(
                 selectedQuality,
                 this.configService.getConfig("basic.playQualityOrder") ?? "asc",
+                pluginQualityScope,
             );
             
             // 5.4 插件返回音源
@@ -709,11 +731,31 @@ class TrackPlayer extends EventEmitter<{
                     } catch {}
                     this.setQuality(selectedQuality);
                 } else {
-                    // 智能选择失败，回退到遍历所有音质
+                    // 智能选择失败，回退到遍历其它音质。
+                    // 只在插件档位范围内找（插件明确不支持的档位不可能拿到源），
+                    // 并跳过刚单独试过的 selectedQuality，避免把同一个请求重复打给后端。
+                    const candidateQualities = qualityOrder.filter(
+                        quality =>
+                            quality !== selectedQuality &&
+                            (!pluginQualityScope.length ||
+                                pluginQualityScope.includes(quality)),
+                    );
+                    const triedQualities: IMusic.IQualityKey[] = [selectedQuality];
                     let fallbackQuality: IMusic.IQualityKey | null = null;
+                    // 逐档发请求很慢：插件或后端异常时能把整张音质表打满、让用户干等十几秒。
+                    // 给一个总时间预算，超了就按"取不到源"处理。
+                    const fallbackDeadline = Date.now() + QUALITY_FALLBACK_BUDGET_MS;
                     
-                    for (let quality of qualityOrder) {
+                    for (const quality of candidateQualities) {
+                        if (Date.now() > fallbackDeadline) {
+                            devLog("warn", "[TrackPlayer] 音质降级探测超时，停止继续尝试", {
+                                title: musicItem.title,
+                                tried: triedQualities,
+                            });
+                            break;
+                        }
                         if (this.isCurrentMusic(musicItem)) {
+                            triedQualities.push(quality);
                             source = (await plugin?.methods?.getMediaSource(
                                 musicItem,
                                 quality,
@@ -739,7 +781,17 @@ class TrackPlayer extends EventEmitter<{
                         }
                     }
                     
-                    // 显示音质不支持提示，包含降级结果
+                    if (!fallbackQuality) {
+                        // 一档都没取到源：写进面包屑，便于离线区分"插件/后端挂了"与"音质不支持"
+                        void appendStartupBreadcrumb("trackplayer-source-not-found", {
+                            title: musicItem.title,
+                            platform: musicItem.platform,
+                            requested: selectedQuality,
+                            tried: triedQualities,
+                        });
+                    }
+
+                    // 显示音质提示：能降级就报降级，全部取不到源就报取源失败
                     this.showQualityNotSupportedToast(selectedQuality, musicItem, fallbackQuality);
                 }
             }
@@ -1318,19 +1370,27 @@ class TrackPlayer extends EventEmitter<{
         const languageData = i18n.getLanguage().languageData;
         const qualityTextI18n = getQualityText(languageData, customQualityTranslations);
         
-        const requestedDisplayName = qualityTextI18n[requestedQuality];
         const platformPrefix = musicItem.platform ? `[${musicItem.platform}] ` : "";
-        
-        let message: string;
+
         if (fallbackQuality) {
-            const fallbackDisplayName = qualityTextI18n[fallbackQuality];
-            message = `${platformPrefix}歌曲不支持${requestedDisplayName}，已降级至${fallbackDisplayName}`;
-        } else {
-            message = `${platformPrefix}歌曲不支持${requestedDisplayName}，无法播放该音质`;
+            // 确实降级了：这首歌没有首选音质，但还有别的档位可放
+            Toast.warn(
+                `${platformPrefix}${i18n.t("toast.musicQualityDowngraded", {
+                    quality: qualityTextI18n[requestedQuality],
+                    alternative: qualityTextI18n[fallbackQuality],
+                })}`,
+            );
+            return;
         }
-        
-        // 显示Toast提示
-        Toast.warn(message);
+
+        // 一档都没取到源：通常是插件/音源服务异常（网络、后端失效、歌曲下架），
+        // 与"这首歌不支持某音质"是两回事。把责任推给音质会把排查方向带偏。
+        errorLog("获取音源失败（全部音质均无源）", {
+            platform: musicItem.platform,
+            title: musicItem.title,
+            requestedQuality,
+        });
+        Toast.warn(`${platformPrefix}${i18n.t("toast.mediaSourceUnavailable")}`);
     }
 
 

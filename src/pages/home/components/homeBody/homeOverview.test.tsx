@@ -38,11 +38,40 @@ jest.mock("@/core/router", () => ({
     },
     useNavigate: () => mockNavigate,
 }));
+const shiyinMusic = {
+    id: "shiyin-1",
+    platform: "test",
+    artist: "someone",
+    title: "hot song",
+    duration: 100,
+};
+const mockReplacePlayList = jest.fn();
+
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
-    default: { pause: jest.fn(), play: jest.fn() },
+    default: {
+        pause: jest.fn(),
+        play: jest.fn(),
+        playList: [],
+        playWithReplacePlayList: (...args: unknown[]) =>
+            mockReplacePlayList(...(args as [])),
+    },
     useMusicState: () => null,
     useProgress: () => ({ position: 0, duration: 0 }),
+}));
+jest.mock("@/core/randomPlay", () => ({
+    buildShiYinQueue: jest.fn(async () => ({
+        musicList: [shiyinMusic],
+        boardCount: 3,
+        pluginCount: 1,
+        poolSize: 120,
+        fallbackLevel: 0,
+    })),
+    SHIYIN_QUEUE_SIZE: 30,
+}));
+jest.mock("@/utils/toast", () => ({
+    __esModule: true,
+    default: { success: jest.fn(), warn: jest.fn() },
 }));
 jest.mock("@/hooks/useColors", () => () => ({
     card: "#FFFFFF",
@@ -53,6 +82,7 @@ jest.mock("@/hooks/useColors", () => () => ({
 jest.mock("@/utils/rpx", () => ({
     __esModule: true,
     default: (value: number) => value,
+    fontRpx: (value: number) => value,
 }));
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => true }));
 jest.mock("./useHomeDiscovery", () => () => ({
@@ -66,7 +96,10 @@ jest.mock("./useHomeOverview", () => () => ({
     featuredMusic: null,
     historyCount: 11,
     recentMusics: [],
-    topListPlugins: [],
+    topListPlugins: [{ hash: "plugin-1", name: "demo" }],
+    topListCache: {},
+    recentHistory: [],
+    tasteArtists: [],
 }));
 jest.mock("../HomeHero", () => "HomeHero");
 
@@ -121,5 +154,25 @@ describe("HomeOverview quick access", () => {
             expect(style.minWidth).toBe(0);
             expect(style.marginRight).toBeUndefined();
         });
+    });
+
+    it("plays a shuffled hot queue from the Shiyin card", async () => {
+        const { buildShiYinQueue } = jest.requireMock("@/core/randomPlay");
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+
+        const card = renderer!.root.findByProps({
+            accessibilityLabel: "home.shiyin",
+        });
+
+        await act(async () => {
+            await card.props.onPress();
+        });
+
+        expect(buildShiYinQueue).toHaveBeenCalledTimes(1);
+        expect(mockReplacePlayList).toHaveBeenCalledWith(shiyinMusic, [shiyinMusic]);
+        expect(mockNavigate).not.toHaveBeenCalled();
     });
 });

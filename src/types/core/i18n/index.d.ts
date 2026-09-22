@@ -114,6 +114,9 @@ export interface ILanguageData {
     "home.manageSources.short": string;
     "home.favoriteSheet": string;
     "home.playlistCount": string;
+    // 拾音
+    "home.shiyin": string;
+    "home.shiyinSubtitle": string;
     "home.playById.a11y": string; // 通过ID播放
 
     // 对话框相关
@@ -131,6 +134,8 @@ export interface ILanguageData {
     "toast.saveSuccess": string; // 保存成功
     "toast.sortHasBeenUpdated": string; // 排序已更新
     "toast.currentQualityNotAvailableForCurrentMusic": string; // 当前音乐的质量在此设备上不可用
+    "toast.musicQualityDowngraded": string; // 歌曲不支持{quality}，已降级至{alternative}
+    "toast.mediaSourceUnavailable": string; // 取不到音源（插件/音源服务异常）
     "toast.commmentNotAvaliableForCurrentMusic": string; // 当前音乐无法进行评论
     "toast.addToNextPlay": string; // 添加到下一曲
     "toast.beginDownload": string; // 开始下载
@@ -212,6 +217,52 @@ export interface ILanguageData {
     "downloading.clearErrorTasks": string; // 清除错误任务
     "downloading.clearErrorSuccess": string; // 已清除错误任务
     "downloading.noErrorTasksToClear": string; // 没有错误任务需要清除
+    "downloading.tab.downloading": string; // 正在下载
+    "downloading.tab.completed": string; // 已完成
+    "downloading.tab.failed": string; // 失败
+    "downloading.downloadStatus.paused": string; // 已暂停
+    "downloading.status.fileMissing": string; // 文件缺失
+    "downloading.status.fileMissingDesc": string; // 本地文件已被删除
+    "downloading.downloadFailReason.networkOffline": string; // 网络已离线
+    "downloading.downloadFailReason.notAllowToDownloadInCellular": string; // 已禁止移动网络下载
+    "downloading.overview.downloaded": string; // 已下载
+    "downloading.overview.queue": string; // 队列
+    "downloading.overview.concurrency": string; // 并发上限
+    "downloading.overview.pauseAll": string; // 全部暂停
+    "downloading.overview.resumeAll": string; // 全部继续
+    "downloading.overview.lowStorage": string; // 剩余空间不足
+    "downloading.overview.lowStorageDesc": string; // 仅剩 {free} · 已下载 {used}
+    "downloading.overview.lowStorageDescNoUsed": string; // 仅剩 {free}（占用大小未知时用）
+    "downloading.overview.goCleanup": string; // 去清理
+    "downloading.empty.downloading.title": string; // 当前没有下载任务
+    "downloading.empty.downloading.desc": string; // 在歌曲或歌单上点「下载」，任务会出现在这里
+    "downloading.empty.completed.title": string; // 还没有下载记录
+    "downloading.empty.completed.desc": string; // 下载完成的歌曲会保留在这里，方便查看音质、大小和保存位置
+    "downloading.empty.failed.title": string; // 没有失败的任务
+    "downloading.empty.failed.desc": string; // 下载失败的歌曲会留在这里，并给出具体原因和重试入口
+    "downloading.action.pause": string; // 暂停
+    "downloading.action.resume": string; // 继续
+    "downloading.action.retry": string; // 重试
+    "downloading.action.retryAll": string; // 全部重试
+    "downloading.action.play": string; // 立即播放
+    "downloading.action.redownload": string; // 重新下载
+    "downloading.action.removeRecord": string; // 移除记录
+    "downloading.action.removeRecordHint": string; // 保留文件
+    "downloading.action.deleteFile": string; // 删除文件
+    "downloading.action.deleteFileConfirm": string; // 确认删除「{title}」的本地文件吗？此操作不可撤销。
+    "downloading.action.clearRecords": string; // 清除已完成记录
+    "downloading.action.clearRecordsConfirm": string; // 确认清除 {count} 条已完成记录吗？本地文件不会被删除。
+    "downloading.action.clearHistory": string; // 清理历史（分组头按钮，只清该组记录）
+    "downloading.action.clearHistoryConfirm": string; // 将移除「{date}」的 {count} 条下载历史记录，音频文件不会被删除。
+    "downloading.action.select": string; // 选择
+    "downloading.action.selectedCount": string; // 已选 {count} 项
+    "downloading.section.today": string; // 今天
+    "downloading.section.yesterday": string; // 昨天
+    "downloading.toast.pauseAllSuccess": string; // 已暂停 {count} 个任务
+    "downloading.toast.resumeAllSuccess": string; // 已继续 {count} 个任务
+    "downloading.toast.pauseUnsupported": string; // 当前下载方式不支持暂停
+    "downloading.toast.clearRecordsSuccess": string; // 已清除 {count} 条记录
+    "downloading.toast.deleteFileSuccess": string; // 已删除本地文件
 
     // 艺术家详情相关
     "artistDetail.fansCount": string; // 粉丝数量
@@ -421,6 +472,20 @@ export interface ILanguageData {
     "basicSettings.downloadQualityOrder": string; // 默认下载音质缺失时
     "basicSettings.downloadQualityOrder.asc": string; // 下载更高音质
     "basicSettings.downloadQualityOrder.desc": string; // 下载更低音质
+    "basicSettings.qualityManagement": string; // 音质管理
+    "basicSettings.musicTagSettings": string; // 音乐标签设置
+    "basicSettings.custom": string; // 自定义
+    "basicSettings.fileNaming": string; // 文件命名格式
+    "basicSettings.fileNamingType": string; // 文件命名格式类型
+    "basicSettings.fileNamingPreset": string; // 预设模板
+    "basicSettings.fileNamingPresetTitle": string; // 选择预设模板
+    "basicSettings.fileNamingCustom": string; // 自定义模板
+    "basicSettings.fileNamingCustomTitle": string; // 自定义文件命名模板
+    "basicSettings.fileNamingDefaultPreset": string; // 歌曲名-歌手
+    "basicSettings.fileNamingPlaceholder": string; // 例如: {title}-{artist}-{album}
+    "basicSettings.fileNamingVariables": string; // 可用变量：{variables}
+    "basicSettings.fileNamingTemplateInvalid": string; // 模板格式错误
+    "basicSettings.fileNamingTemplateSaved": string; // 模板设置成功
     
     "basicSettings.network": string; // 网络
     "basicSettings.useCelluarNetworkPlay": string; // 使用移动网络播放
@@ -428,22 +493,13 @@ export interface ILanguageData {
     
     "basicSettings.lyric": string; // 歌词
     "basicSettings.lyric.autoSearchLyric": string; // 歌词缺失时自动搜索歌词
-    "basicSettings.lyric.showStatusBarLyric": string; // 开启桌面歌词
-    "basicSettings.lyric.hideDesktopLyricWhenPaused": string; // 暂停时隐藏桌面歌词
-    "basicSettings.lyric.align": string; // 对齐方式
     "basicSettings.lyric.align.left": string; // 左对齐
     "basicSettings.lyric.align.center": string; // 居中对齐
     "basicSettings.lyric.align.right": string; // 右对齐
-    "basicSettings.lyric.leftRightDistance": string; // 左右距离
-    "basicSettings.lyric.topBottomDistance": string; // 上下距离
-    "basicSettings.lyric.width": string; // 歌词宽度
-    "basicSettings.lyric.fontSize": string; // 字体大小
-    "basicSettings.lyric.textColor": string; // 文本颜色
-    "basicSettings.lyric.sungColor": string;
-    "basicSettings.lyric.backgroundColor": string;
-    "basicSettings.lyric.colorPreset": string;
-    "basicSettings.lyric.unlock": string;
-    "basicSettings.lyric.lock": string;
+    "basicSettings.lyric.wordByWord": string;
+    "basicSettings.lyric.wordByWordFloat": string;
+    "basicSettings.lyric.pureWhiteMode": string;
+    "basicSettings.lyric.breathingDots": string;
     
     "basicSettings.cache": string; // 缓存
     "basicSettings.cache.musicCacheLimit": string; // 音乐缓存上限
@@ -485,7 +541,6 @@ export interface ILanguageData {
     "toast.lyricCacheCleared": string; // 已清除歌词缓存
     "toast.imageCacheCleared": string; // 已清除图片缓存
     "toast.logCleared": string; // 日志已清空
-    "toast.noFloatWindowPermission": string; // 无悬浮窗权限
     "toast.folderNotExistOrNoPermission": string; // 文件夹不存在或无权限
     
     // 播放全部栏相关
@@ -599,10 +654,6 @@ export interface ILanguageData {
     // 面板相关 - 音乐项歌词选项
     "panel.musicItemLyricOptions.author": string; // 作者
     "panel.musicItemLyricOptions.album": string; // 专辑
-    "panel.musicItemLyricOptions.toggleDesktopLyric": string; // 桌面歌词开关
-    "panel.musicItemLyricOptions.enableDesktopLyric": string; // 开启
-    "panel.musicItemLyricOptions.disableDesktopLyric": string; // 关闭
-    "panel.musicItemLyricOptions.desktopLyricPermissionError": string; // 桌面歌词权限错误
     "panel.musicItemLyricOptions.uploadLocalLyric": string; // 上传本地歌词
     "panel.musicItemLyricOptions.uploadLocalLyricTranslation": string; // 上传本地歌词翻译
     "panel.musicItemLyricOptions.deleteLocalLyric": string; // 删除本地歌词
@@ -732,6 +783,10 @@ export interface ILanguageData {
 
     "toast.artistNotSupported": string;
     "toast.albumNotSupported": string;
+    "toast.shiyinStarted": string;
+    "toast.shiyinNoSource": string;
+    "toast.shiyinNoMusic": string;
+    "toast.shiyinPoolEmpty": string;
 
     "settingsGroup.playback": string;
     "settingsGroup.download": string;
@@ -819,6 +874,46 @@ export interface ILanguageData {
     "themeSettingsIndex.themeDescription": string;
     "themeSettingsIndex.backgroundDescription": string;
     "themeSettingsIndex.appearanceDescription": string;
+    "panel.musicMetadata.title": string; // 音乐标签设置
+    "panel.musicMetadata.description": string; // 为下载的音乐自动写入标签信息，让音乐文件更加完整和专业
+    "panel.musicMetadata.writeMetadata": string; // 下载时写入音乐标签
+    "panel.musicMetadata.writeMetadataDesc": string; // 启用后将自动为下载的音乐文件写入元数据
+    "panel.musicMetadata.group.writeContent": string; // 写入内容
+    "panel.musicMetadata.group.writeMetadata": string; // 音乐标签
+    "panel.musicMetadata.group.lyricContent": string; // 歌词内容设置
+    "panel.musicMetadata.writeMetadataCover": string; // 写入封面
+    "panel.musicMetadata.writeMetadataCoverDesc": string; // 自动下载并嵌入高质量专辑封面图片
+    "panel.musicMetadata.writeMetadataExtended": string; // 获取扩展信息
+    "panel.musicMetadata.writeMetadataExtendedDesc": string; // 写入更多详细标签（作曲者、发行年份、流派等）
+    "panel.musicMetadata.writeMetadataLyric": string; // 写入歌词
+    "panel.musicMetadata.writeMetadataLyricDesc": string; // 自动获取并嵌入歌词到音乐文件
+    "panel.musicMetadata.group.attachedFiles": string; // 附属文件
+    "panel.musicMetadata.downloadLyricFileDesc": string; // 下载音乐时同时保存独立的歌词文件
+    "panel.musicMetadata.downloadCoverFile": string; // 下载封面文件
+    "panel.musicMetadata.downloadCoverFileDesc": string; // 下载音乐时同时保存独立的封面图片，与音频文件同目录
+    "panel.musicMetadata.coverFileNaming": string; // 封面文件命名
+    "panel.musicMetadata.coverFileNaming.sameAsAudio": string; // 与音频同名
+    "panel.musicMetadata.coverFileNaming.fixedName": string; // 固定名 cover
+    "panel.musicMetadata.coverFileNaming.sameAsAudioHint": string; // 与音频同名的说明
+    "panel.musicMetadata.coverFileNaming.fixedNameHint": string; // 固定名 cover 的说明
+    "panel.musicMetadata.lyricContentDesc": string; // 选择要包含的歌词类型，可调整顺序
+    "panel.musicMetadata.lyricType.original": string; // 原文歌词
+    "panel.musicMetadata.lyricType.originalDesc": string; // 歌曲原始语言的歌词
+    "panel.musicMetadata.lyricType.translation": string; // 翻译歌词
+    "panel.musicMetadata.lyricType.translationDesc": string; // 歌词的中文翻译
+    "panel.musicMetadata.lyricType.romanization": string; // 音译歌词
+    "panel.musicMetadata.lyricType.romanizationDesc": string; // 罗马音/拼音注音
+    "panel.musicMetadata.currentOrder": string; // 当前顺序：{order}
+    "panel.musicMetadata.enableWordByWord": string; // 逐字歌词
+    "panel.musicMetadata.enableWordByWordDesc": string; // 保留 QRC 格式的逐字时间戳（如有）
+    "panel.musicMetadata.lyricFileFormat": string; // 歌词文件格式
+    "panel.musicMetadata.moveUp": string; // 上移
+    "panel.musicMetadata.moveDown": string; // 下移
+    "panel.musicMetadata.resetToDefault": string; // 重置为默认值
+    "panel.musicMetadata.resetToDefaultDesc": string; // 恢复所有设置为系统推荐配置
+    "panel.musicMetadata.toastSaved": string; // 音乐标签设置已保存
+    "panel.musicMetadata.toastReset": string; // 已重置为默认值
+    "panel.musicItemLyricOptions.downloadLyricFile": string; // 下载歌词文件
 }
 
 // 语言接口定义

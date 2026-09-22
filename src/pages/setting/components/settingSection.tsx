@@ -1,12 +1,15 @@
 import ThemeText from "@/components/base/themeText";
 import useColors from "@/hooks/useColors";
-import rpx from "@/utils/rpx";
 import React, { ReactNode } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { settingsLayout } from "./settingsLayout";
+import rpx from "@/utils/rpx";
 
 interface ISettingSectionProps {
     children: ReactNode;
     title?: ReactNode;
+    /** 标题下方的说明行，用来承载「这组是干什么的」的长句，避免把长句塞进标题 */
+    description?: ReactNode;
     cardStyle?: StyleProp<ViewStyle>;
     style?: StyleProp<ViewStyle>;
 }
@@ -16,7 +19,7 @@ interface ISettingSectionProps {
  * one place prevents the overview and nested settings from drifting apart.
  */
 export default function SettingSection(props: ISettingSectionProps) {
-    const { cardStyle, children, style, title } = props;
+    const { cardStyle, children, description, style, title } = props;
     const colors = useColors();
 
     return (
@@ -25,8 +28,18 @@ export default function SettingSection(props: ISettingSectionProps) {
                 <ThemeText
                     fontColor="textSecondary"
                     fontSize="description"
-                    style={styles.title}>
+                    style={
+                        description ? styles.titleWithDescription : styles.title
+                    }>
                     {title}
+                </ThemeText>
+            ) : null}
+            {description ? (
+                <ThemeText
+                    fontColor="textSecondary"
+                    fontSize="caption"
+                    style={styles.description}>
+                    {description}
                 </ThemeText>
             ) : null}
             <View
@@ -43,15 +56,24 @@ export default function SettingSection(props: ISettingSectionProps) {
 
 const styles = StyleSheet.create({
     section: {
-        marginHorizontal: rpx(24),
-        marginTop: rpx(24),
+        marginHorizontal: settingsLayout.groupMargin,
+        marginTop: settingsLayout.groupMargin,
     },
     title: {
-        marginBottom: rpx(12),
+        marginBottom: settingsLayout.titleGap,
+        marginHorizontal: rpx(14),
+    },
+    /** 有说明行时，标题自己少留空，两行一起当作「标题块」 */
+    titleWithDescription: {
+        marginBottom: rpx(4),
+        marginHorizontal: rpx(14),
+    },
+    description: {
+        marginBottom: settingsLayout.titleGap,
         marginHorizontal: rpx(14),
     },
     card: {
-        borderRadius: rpx(16),
+        borderRadius: settingsLayout.cardRadius,
         overflow: "hidden",
     },
 });

@@ -1,4 +1,5 @@
 import { ViewStyle } from "react-native";
+import { useTheme } from "@react-navigation/native";
 import useColors from "@/hooks/useColors";
 import useHasCustomBackground from "@/hooks/useHasCustomBackground";
 import { useAppConfig } from "@/core/appConfig";
@@ -23,6 +24,7 @@ export default function useCardStyle(
     options: ICardStyleOptions = {},
 ): ViewStyle {
     const colors = useColors();
+    const { dark } = useTheme();
     const hasCustomBackground = useHasCustomBackground();
     // 阴影强度，1 为原有观感，0 为完全扁平
     const shadowStrength = useAppConfig("theme.cardShadowStrength") ?? 1;
@@ -41,7 +43,9 @@ export default function useCardStyle(
         borderWidth: options.borderWidth,
         borderColor: colors.border,
         shadowColor: options.shadowColor ?? colors.shadow ?? "#000",
-        shadowOpacity: (options.shadowOpacity ?? 0.08) * shadowStrength,
+        // 深色下投影几乎是隐形的一层，加大不透明度才撑得起层级；
+        // 浅色保持原本的轻投影，避免观感变化
+        shadowOpacity: (options.shadowOpacity ?? (dark ? 0.28 : 0.08)) * shadowStrength,
         elevation: Math.round((options.elevation ?? 3) * shadowStrength),
     };
 }

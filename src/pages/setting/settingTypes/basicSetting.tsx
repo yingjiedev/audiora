@@ -1,4 +1,3 @@
-import ListItem from "@/components/base/listItem";
 import Paragraph from "@/components/base/paragraph";
 import ThemeSwitch from "@/components/base/switch";
 import ThemeText from "@/components/base/themeText";
@@ -7,34 +6,30 @@ import { showPanel } from "@/components/panels/usePanel";
 import { SortType } from "@/constants/commonConst.ts";
 import { getDownloadMusicPath } from "@/constants/pathConst";
 import Config, { useAppConfig } from "@/core/appConfig";
+import DownloadPath from "@/core/downloadPath";
+import lyricManager from "@/core/lyricManager";
 import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
-import LyricUtil, { LYRIC_COLOR_PRESETS } from "@/native/lyricUtil";
-import { resolveLyricPresets } from "@/utils/lyricPreset";
 import { AppConfigPropertyKey } from "@/types/core/config";
 import { useParams } from "@/core/router";
 import { clearCache, getCacheSize, sizeFormatter } from "@/utils/fileUtils";
 import { clearLog, getErrorLogContent } from "@/utils/log";
 import { getQualityKeys, getQualityText } from "@/utils/qualities";
-import rpx, { fontRpx } from "@/utils/rpx";
+import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
-import Slider from "@react-native-community/slider";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Platform, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlatList, ScrollView } from "react-native-gesture-handler";
-import lyricManager from "@/core/lyricManager";
 import {
     getPresetTemplates,
     validateTemplate,
     DEFAULT_FILE_NAMING_CONFIG,
     TEMPLATE_VARIABLES,
 } from "@/utils/fileNamingFormatter";
-import {
-    getAndroidSafDirectoryLabel,
-    isAndroidSafUri,
-    requestAndroidDirectoryAccess,
-} from "@/utils/androidSaf";
+import { getAndroidSafDirectoryLabel } from "@/utils/androidSaf";
+import SettingRow from "../components/settingRow";
+import { settingsLayout } from "../components/settingsLayout";
 
 function createSwitch(
     title: string,
@@ -82,7 +77,7 @@ const createRadio = function (
     return {
         title,
         right: (
-            <ThemeText style={styles.centerText}>
+            <ThemeText numberOfLines={1} style={styles.valueText}>
                 {valueMap ? valueMap[value] : value}
             </ThemeText>
         ),
@@ -294,10 +289,10 @@ export default function BasicSetting() {
                     showExitOnNotification ?? false,
                 ),
                 {
-                    title: "音质管理",
+                    title: t("basicSettings.qualityManagement"),
                     right: (
-                        <ThemeText fontSize="subTitle" style={styles.centerText}>
-                            自定义
+                        <ThemeText numberOfLines={1} fontSize="subTitle" style={styles.valueText}>
+                            {t("basicSettings.custom")}
                         </ThemeText>
                     ),
                     onPress() {
@@ -328,16 +323,6 @@ export default function BasicSetting() {
                     {
                         playMusic: t("basicSettings.clickMusicInAlbum.playMusic"),
                         playAlbum: t("basicSettings.clickMusicInAlbum.playAlbum"),
-                    },
-                ),
-                createRadio(
-                    t("basicSettings.musicDetailDefault"),
-                    "basic.musicDetailDefault",
-                    ["album", "lyric"],
-                    musicDetailDefault ?? "album",
-                    {
-                        album: t("basicSettings.musicDetailDefault.album"),
-                        lyric: t("basicSettings.musicDetailDefault.lyric"),
                     },
                 ),
                 createRadio(
@@ -391,7 +376,7 @@ export default function BasicSetting() {
                     right: (
                         <ThemeText
                             fontSize="subTitle"
-                            style={styles.centerText}
+                            style={styles.valueText}
                             numberOfLines={3}>
                             {Platform.OS === "android"
                                 ? getAndroidSafDirectoryLabel(downloadPath)
@@ -402,22 +387,9 @@ export default function BasicSetting() {
                         if (Platform.OS !== "android") {
                             return;
                         }
-                        try {
-                            const directoryUri = await requestAndroidDirectoryAccess(
-                                isAndroidSafUri(downloadPath)
-                                    ? downloadPath
-                                    : undefined,
-                            );
-                            if (directoryUri) {
-                                Config.setConfig("basic.downloadPath", directoryUri);
-                            }
-                        } catch (error) {
-                            Toast.warn(
-                                error instanceof Error
-                                    ? error.message
-                                    : String(error),
-                            );
-                        }
+                        // basic.downloadPath 的唯一写入口在 core/downloadPath，
+                        // 这里只负责触发一次目录选择
+                        await DownloadPath.choose();
                     },
                 },
                 createRadio(
@@ -445,20 +417,20 @@ export default function BasicSetting() {
                 ),
                 // 文件命名格式设置
                 {
-                    title: "文件命名格式",
+                    title: t("basicSettings.fileNaming"),
                     right: (
-                        <ThemeText
+                        <ThemeText numberOfLines={1}
                             fontSize="subTitle"
-                            style={styles.centerText}>
-                            {fileNamingType === "custom" ? "自定义" : (fileNamingPreset || "歌曲名-歌手")}
+                            style={styles.valueText}>
+                            {fileNamingType === "custom" ? t("basicSettings.custom") : (fileNamingPreset || t("basicSettings.fileNamingDefaultPreset"))}
                         </ThemeText>
                     ),
                     onPress() {
                         showDialog("RadioDialog", {
-                            title: "文件命名格式类型",
+                            title: t("basicSettings.fileNamingType"),
                             content: [
-                                { label: "预设模板", value: "preset" },
-                                { label: "自定义模板", value: "custom" },
+                                { label: t("basicSettings.fileNamingPreset"), value: "preset" },
+                                { label: t("basicSettings.fileNamingCustom"), value: "custom" },
                             ],
                             onOk(val) {
                                 Config.setConfig("basic.fileNamingType", val as "preset" | "custom");
@@ -474,18 +446,18 @@ export default function BasicSetting() {
                 },
                 // 预设模板选择（仅当选择预设模板时显示）
                 ...(fileNamingType === "preset" || !fileNamingType ? [{
-                    title: "预设模板",
+                    title: t("basicSettings.fileNamingPreset"),
                     right: (
-                        <ThemeText
+                        <ThemeText numberOfLines={1}
                             fontSize="subTitle"
-                            style={styles.centerText}>
-                            {fileNamingPreset || "歌曲名-歌手"}
+                            style={styles.valueText}>
+                            {fileNamingPreset || t("basicSettings.fileNamingDefaultPreset")}
                         </ThemeText>
                     ),
                     onPress() {
                         const presetTemplates = getPresetTemplates();
                         showDialog("RadioDialog", {
-                            title: "选择预设模板",
+                            title: t("basicSettings.fileNamingPresetTitle"),
                             content: presetTemplates.map(template => ({
                                 label: template,
                                 value: template,
@@ -498,40 +470,42 @@ export default function BasicSetting() {
                 }] : []),
                 // 自定义模板输入（仅当选择自定义模板时显示）
                 ...(fileNamingType === "custom" ? [{
-                    title: "自定义模板",
+                    title: t("basicSettings.fileNamingCustom"),
                     right: (
                         <ThemeText
                             fontSize="subTitle"
-                            style={styles.centerText}
+                            style={styles.valueText}
                             numberOfLines={2}>
                             {fileNamingCustom || "{title}-{artist}"}
                         </ThemeText>
                     ),
                     onPress() {
                         showPanel("SimpleInput", {
-                            title: "自定义文件命名模板",
-                            placeholder: "例如: {title}-{artist}-{album}",
+                            title: t("basicSettings.fileNamingCustomTitle"),
+                            placeholder: t("basicSettings.fileNamingPlaceholder"),
                             defaultValue: fileNamingCustom || "{title}-{artist}",
-                            tips: `可用变量：${Object.entries(TEMPLATE_VARIABLES).map(([key, desc]) => `${key}(${desc})`).join(", ")}`,
+                            tips: t("basicSettings.fileNamingVariables", {
+                                variables: Object.entries(TEMPLATE_VARIABLES).map(([key, desc]) => `${key}(${desc})`).join(", "),
+                            }),
                             onOk(text, closePanel) {
                                 const validation = validateTemplate(text);
                                 if (!validation.valid) {
-                                    Toast.warn(validation.error || "模板格式错误");
+                                    Toast.warn(validation.error || t("basicSettings.fileNamingTemplateInvalid"));
                                     return;
                                 }
                                 Config.setConfig("basic.fileNamingCustom", text);
                                 closePanel();
-                                Toast.success("模板设置成功");
+                                Toast.success(t("basicSettings.fileNamingTemplateSaved"));
                             },
                         });
                     },
                 }] : []),
                 // 音乐标签设置
                 {
-                    title: "音乐标签设置",
+                    title: t("basicSettings.musicTagSettings"),
                     right: (
-                        <ThemeText fontSize="subTitle" style={styles.centerText}>
-                            自定义
+                        <ThemeText numberOfLines={1} fontSize="subTitle" style={styles.valueText}>
+                            {t("basicSettings.custom")}
                         </ThemeText>
                     ),
                     onPress() {
@@ -569,7 +543,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.musicCacheLimit"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {maxCacheSize
                                 ? sizeFormatter(maxCacheSize)
                                 : "512M"}
@@ -602,7 +576,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.clearMusicCache"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {sizeFormatter(cacheSize.music)}
                         </ThemeText>
                     ),
@@ -621,7 +595,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.clearLyricCache"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {sizeFormatter(cacheSize.lyric)}
                         </ThemeText>
                     ),
@@ -640,7 +614,7 @@ export default function BasicSetting() {
                 {
                     title: t("basicSettings.cache.clearImageCache"),
                     right: (
-                        <ThemeText style={styles.centerText}>
+                        <ThemeText numberOfLines={1} style={styles.valueText}>
                             {sizeFormatter(cacheSize.image)}
                         </ThemeText>
                     ),
@@ -766,9 +740,10 @@ export default function BasicSetting() {
                     const isLast = index === section.data.length - 1;
 
                     return (
-                        <ListItem
-                            withHorizontalPadding
-                            heightType="small"
+                        <SettingRow
+                            title={item.title}
+                            right={Right}
+                            onPress={item.onPress}
                             style={[
                                 styles.sectionItem,
                                 {
@@ -777,10 +752,7 @@ export default function BasicSetting() {
                                 isFirst ? styles.sectionItemFirst : null,
                                 isLast ? styles.sectionItemLast : null,
                             ]}
-                            onPress={item.onPress}>
-                            <ListItem.Content title={item.title} />
-                            {Right}
-                        </ListItem>
+                        />
                     );
                 }}
             />
@@ -794,23 +766,24 @@ const styles = StyleSheet.create({
         paddingBottom: rpx(24),
         flex: 1,
     },
-    centerText: {
+    valueText: {
         textAlignVertical: "center",
-        maxWidth: rpx(400),
+        // 交给外层控件槽做宽度约束，这里只负责自己能收缩
+        flexShrink: 1,
     },
     sectionListContent: {
         paddingBottom: rpx(48),
     },
     sectionHeader: {
-        paddingHorizontal: rpx(38),
+        // 与设置行文字左边缘对齐：分组卡片外边距 + 行内边距
+        paddingHorizontal: settingsLayout.groupMargin + settingsLayout.rowPadding,
         height: rpx(64),
         flexDirection: "row",
         alignItems: "center",
         marginTop: rpx(12),
     },
     sectionItem: {
-        marginHorizontal: rpx(24),
-        paddingHorizontal: rpx(24),
+        marginHorizontal: settingsLayout.groupMargin,
     },
     sectionItemFirst: {
         borderTopLeftRadius: rpx(16),
@@ -837,416 +810,44 @@ const styles = StyleSheet.create({
 });
 
 function LyricSetting() {
-    const showStatusBarLyric = useAppConfig("lyric.showStatusBarLyric");
-    const isLocked = useAppConfig("lyric.isLocked");
-    const presetIndex = useAppConfig("lyric.presetIndex");
     const enableAutoSearchLyric = useAppConfig("lyric.autoSearchLyric");
-    const hideDesktopLyricWhenPaused = useAppConfig("lyric.hideDesktopLyricWhenPaused");
     const enableWordByWord = useAppConfig("lyric.enableWordByWord");
     const enableWordByWordFloat = useAppConfig("lyric.enableWordByWordFloat");
     const pureWhiteMode = useAppConfig("lyric.pureWhiteMode");
     const enableBreathingDots = useAppConfig("lyric.enableBreathingDots");
-    const desktopShowTranslation = useAppConfig("lyric.desktopShowTranslation");
-    const desktopShowRomanization = useAppConfig("lyric.desktopShowRomanization");
-    const desktopSecondaryFontRatio = useAppConfig("lyric.desktopSecondaryFontRatio");
-    const desktopSecondaryAlphaRatio = useAppConfig("lyric.desktopSecondaryAlphaRatio");
-    const invertColors = useAppConfig("lyric.invertColors");
-    const widthPercent = useAppConfig("lyric.widthPercent");
 
     const { t } = useI18N();
     const colors = useColors();
 
     const autoSearchLyric = createSwitch(t("basicSettings.lyric.autoSearchLyric"), "lyric.autoSearchLyric", enableAutoSearchLyric ?? false);
-    const wordByWordLyric = createSwitch("逐字歌词", "lyric.enableWordByWord", enableWordByWord ?? true, (newValue) => {
-        Config.setConfig("lyric.enableWordByWord", newValue);
-        // 开关只影响歌词解析（QRC 是否保留逐字时间轴），
-        // 切换后必须重载当前歌词，否则要等下一首歌才生效
-        lyricManager.reloadCurrentLyric();
-    });
-    const wordByWordFloat = createSwitch("逐字歌词浮动动画", "lyric.enableWordByWordFloat", enableWordByWordFloat ?? true);
-    const highlightColor = createSwitch("纯白模式", "lyric.pureWhiteMode", pureWhiteMode ?? true);
-    const breathingDots = createSwitch("空歌词行呼吸灯特效", "lyric.enableBreathingDots", enableBreathingDots ?? true);
-    const hideWhenPaused = createSwitch(t("basicSettings.lyric.hideDesktopLyricWhenPaused"), "lyric.hideDesktopLyricWhenPaused", hideDesktopLyricWhenPaused ?? true);
-    const desktopTranslation = createSwitch("桌面歌词显示翻译", "lyric.desktopShowTranslation", desktopShowTranslation ?? true);
-    const desktopRomanization = createSwitch("桌面歌词显示罗马音", "lyric.desktopShowRomanization", desktopShowRomanization ?? false);
-    const invertColorsSwitch = createSwitch("颜色反转（已唱白色/未唱彩色）", "lyric.invertColors", invertColors ?? false, (newValue) => {
-        Config.setConfig("lyric.invertColors", newValue);
-        if (showStatusBarLyric) {
-            // 刷新桌面歌词以应用反转
-            LyricUtil.hideStatusBarLyric().then(() => {
-                LyricUtil.showStatusBarLyric("Audiora", {
-                    topPercent: Config.getConfig("lyric.topPercent"),
-                    leftPercent: Config.getConfig("lyric.leftPercent"),
-                    align: Config.getConfig("lyric.align"),
-                    color: Config.getConfig("lyric.color"),
-                    sungColor: Config.getConfig("lyric.sungColor"),
-                    backgroundColor: Config.getConfig("lyric.backgroundColor"),
-                    widthPercent: Config.getConfig("lyric.widthPercent"),
-                    fontSize: Config.getConfig("lyric.fontSize"),
-                    presetIndex: Config.getConfig("lyric.presetIndex") ?? 0,
-                    presets: resolveLyricPresets(),
-                    secondaryFontRatio: Config.getConfig("lyric.desktopSecondaryFontRatio") ?? 0.85,
-                    secondaryAlphaRatio: Config.getConfig("lyric.desktopSecondaryAlphaRatio") ?? 0.90,
-                }).then(() => {
-                    // Resync lyric line data + playback state to restore word-by-word
-                    lyricManager.resyncDesktopLyric();
-                });
-            });
-        }
-    });
-
-    // 获取当前预设的颜色（考虑自定义覆盖）
-    const customPresets = Config.getConfig("lyric.customPresets") as Array<{
-        unsungColor: string;
-        sungColor: string;
-        backgroundColor: string;
-    } | null> | undefined;
-
-    const getPresetColor = (idx: number) => {
-        const custom = customPresets?.[idx];
-        return custom ? custom.sungColor : LYRIC_COLOR_PRESETS[idx]?.sungColor ?? "#FFFFFF";
-    };
-
-    // 打开桌面歌词：有权限直接开；没权限跳系统设置，回到应用时自动检测并打开
-    const enableDesktopLyric = async () => {
-        try {
-            const hasPermission = await LyricUtil.checkSystemAlertPermission();
-            if (!hasPermission) {
-                Toast.warn(t("toast.noFloatWindowPermission"));
-                LyricUtil.requestSystemAlertPermission().finally(() => {
-                    const subscription = AppState.addEventListener(
-                        "change",
-                        async state => {
-                            if (state !== "active") {
-                                return;
-                            }
-                            subscription.remove();
-                            if (await LyricUtil.checkSystemAlertPermission()) {
-                                enableDesktopLyric();
-                            }
-                        },
-                    );
-                });
-                return;
-            }
-            const opened = await LyricUtil.showStatusBarLyric("Audiora", {
-                topPercent: Config.getConfig("lyric.topPercent"),
-                leftPercent: Config.getConfig("lyric.leftPercent"),
-                align: Config.getConfig("lyric.align"),
-                color: Config.getConfig("lyric.color"),
-                sungColor: Config.getConfig("lyric.sungColor"),
-                backgroundColor: Config.getConfig("lyric.backgroundColor"),
-                widthPercent: Config.getConfig("lyric.widthPercent"),
-                fontSize: Config.getConfig("lyric.fontSize"),
-                presetIndex: Config.getConfig("lyric.presetIndex") ?? 0,
-                presets: resolveLyricPresets(),
-                secondaryFontRatio: Config.getConfig("lyric.desktopSecondaryFontRatio") ?? 0.85,
-                secondaryAlphaRatio: Config.getConfig("lyric.desktopSecondaryAlphaRatio") ?? 0.90,
-            });
-            if (opened) {
-                Config.setConfig("lyric.showStatusBarLyric", true);
-                // 立刻同步当前歌词行和播放进度，避免刚打开时空白/滞后
-                lyricManager.resyncDesktopLyric();
-            }
-        } catch { }
-    };
-
-    const openStatusBarLyric = createSwitch(
-        t("basicSettings.lyric.showStatusBarLyric"),
-        "lyric.showStatusBarLyric",
-        showStatusBarLyric ?? false,
-        async newValue => {
-            try {
-                if (newValue) {
-                    await enableDesktopLyric();
-                } else {
-                    LyricUtil.hideStatusBarLyric();
-                    Config.setConfig("lyric.showStatusBarLyric", false);
-                }
-            } catch { }
-        },
+    const wordByWordLyric = createSwitch(
+        t("basicSettings.lyric.wordByWord"),
+        "lyric.enableWordByWord",
+        enableWordByWord ?? true,
+        // 重载当前歌词由 lyricManager 统一负责：这个开关只影响歌词解析
+        // （QRC 是否保留逐字时间轴），不重载就得等到下一首歌才生效
+        newValue => lyricManager.setWordByWordEnabled(newValue),
     );
-
-    const openColorPicker = (title: string, currentColor: string, onSelected: (hex: string) => void) => {
-        showPanel("ColorPicker", {
-            defaultColor: currentColor,
-            onSelected: (color: any) => {
-                const hex = color.rgb().hexa().toString();
-                onSelected(hex);
-            },
-        });
-    };
-
-    const handleCustomizePreset = (idx: number) => {
-        const custom = customPresets?.[idx];
-        const base = LYRIC_COLOR_PRESETS[idx];
-        const current = custom ?? base;
-
-        showDialog("RadioDialog", {
-            title: `自定义预设 ${idx + 1}`,
-            content: [
-                { label: "未播放颜色", value: "unsungColor" },
-                { label: "已播放颜色", value: "sungColor" },
-                { label: "背景颜色", value: "backgroundColor" },
-                { label: "恢复默认", value: "reset" },
-            ],
-            onOk(val) {
-                if (val === "reset") {
-                    const newCustom = [...(customPresets ?? Array(LYRIC_COLOR_PRESETS.length).fill(null))];
-                    newCustom[idx] = null;
-                    Config.setConfig("lyric.customPresets", newCustom);
-                    if (showStatusBarLyric && (presetIndex ?? 0) === idx) {
-                        LyricUtil.setColorPreset(idx);
-                    }
-                    return;
-                }
-                const colorKey = val as "unsungColor" | "sungColor" | "backgroundColor";
-                openColorPicker(
-                    colorKey === "unsungColor" ? "未播放颜色" : colorKey === "sungColor" ? "已播放颜色" : "背景颜色",
-                    current[colorKey],
-                    (hex) => {
-                        const newCustom = [...(customPresets ?? Array(LYRIC_COLOR_PRESETS.length).fill(null))];
-                        const existing = newCustom[idx] ?? { ...base };
-                        (existing as any)[colorKey] = hex;
-                        newCustom[idx] = existing;
-                        Config.setConfig("lyric.customPresets", newCustom);
-                        // 如果当前正在使用这个预设，立即刷新
-                        if (showStatusBarLyric && (presetIndex ?? 0) === idx) {
-                            LyricUtil.hideStatusBarLyric().then(() => {
-                                LyricUtil.showStatusBarLyric("Audiora", {
-                                    topPercent: Config.getConfig("lyric.topPercent"),
-                                    leftPercent: Config.getConfig("lyric.leftPercent"),
-                                    align: Config.getConfig("lyric.align"),
-                                    widthPercent: Config.getConfig("lyric.widthPercent"),
-                                    fontSize: Config.getConfig("lyric.fontSize"),
-                                    presetIndex: idx,
-                                    presets: resolveLyricPresets(),
-                                    secondaryFontRatio: Config.getConfig("lyric.desktopSecondaryFontRatio") ?? 0.85,
-                                    secondaryAlphaRatio: Config.getConfig("lyric.desktopSecondaryAlphaRatio") ?? 0.90,
-                                }).then(() => {
-                                    lyricManager.resyncDesktopLyric();
-                                });
-                            });
-                        }
-                    }
-                );
-            },
-        });
-    };
+    const wordByWordFloat = createSwitch(t("basicSettings.lyric.wordByWordFloat"), "lyric.enableWordByWordFloat", enableWordByWordFloat ?? true);
+    const highlightColor = createSwitch(t("basicSettings.lyric.pureWhiteMode"), "lyric.pureWhiteMode", pureWhiteMode ?? true);
+    const breathingDots = createSwitch(t("basicSettings.lyric.breathingDots"), "lyric.enableBreathingDots", enableBreathingDots ?? true);
 
     return (
         <View style={[lyricStyles.card, { backgroundColor: colors.card }]}>
             {/* 详情页歌词设置 */}
-            <ListItem withHorizontalPadding heightType="small" onPress={autoSearchLyric.onPress}>
-                <ListItem.Content title={autoSearchLyric.title} />
-                {autoSearchLyric.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={wordByWordLyric.onPress}>
-                <ListItem.Content title={wordByWordLyric.title} />
-                {wordByWordLyric.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={wordByWordFloat.onPress}>
-                <ListItem.Content title={wordByWordFloat.title} />
-                {wordByWordFloat.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={highlightColor.onPress}>
-                <ListItem.Content title={highlightColor.title} />
-                {highlightColor.right}
-            </ListItem>
-            <ListItem withHorizontalPadding heightType="small" onPress={breathingDots.onPress}>
-                <ListItem.Content title={breathingDots.title} />
-                {breathingDots.right}
-            </ListItem>
-
-            {Platform.OS !== "android" && <>
-                {/* 桌面歌词设置（以下仅对悬浮在桌面/状态栏的歌词生效） */}
-                <ThemeText style={lyricStyles.subHeader}>
-                    桌面歌词（仅对悬浮歌词生效）
-                </ThemeText>
-                <ListItem withHorizontalPadding heightType="small" onPress={openStatusBarLyric.onPress}>
-                    <ListItem.Content title={openStatusBarLyric.title} />
-                    {openStatusBarLyric.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small" onPress={hideWhenPaused.onPress}>
-                    <ListItem.Content title={hideWhenPaused.title} />
-                    {hideWhenPaused.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small" onPress={desktopTranslation.onPress}>
-                    <ListItem.Content title={desktopTranslation.title} />
-                    {desktopTranslation.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small" onPress={desktopRomanization.onPress}>
-                    <ListItem.Content title={desktopRomanization.title} />
-                    {desktopRomanization.right}
-                </ListItem>
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={`副行字号比例  ${((desktopSecondaryFontRatio ?? 0.85) * 100).toFixed(0)}%`} />
-                </ListItem>
-                <View style={lyricStyles.sliderContainer}>
-                    <Slider
-                        style={lyricStyles.slider}
-                        minimumValue={0.5}
-                        maximumValue={1}
-                        step={0.01}
-                        value={desktopSecondaryFontRatio ?? 0.85}
-                        onValueChange={(val: number) => {
-                            if (showStatusBarLyric) {
-                                LyricUtil.setSecondaryFontRatio(val);
-                            }
-                        }}
-                        onSlidingComplete={(val: number) => {
-                            Config.setConfig("lyric.desktopSecondaryFontRatio", val);
-                        }}
-                        minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={colors.textSecondary + "40"}
-                        thumbTintColor={colors.textHighlight}
-                    />
-                </View>
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={`副行透明度比例  ${((desktopSecondaryAlphaRatio ?? 0.90) * 100).toFixed(0)}%`} />
-                </ListItem>
-                <View style={lyricStyles.sliderContainer}>
-                    <Slider
-                        style={lyricStyles.slider}
-                        minimumValue={0.3}
-                        maximumValue={1}
-                        step={0.01}
-                        value={desktopSecondaryAlphaRatio ?? 0.90}
-                        onValueChange={(val: number) => {
-                            if (showStatusBarLyric) {
-                                LyricUtil.setSecondaryAlphaRatio(val);
-                            }
-                        }}
-                        onSlidingComplete={(val: number) => {
-                            Config.setConfig("lyric.desktopSecondaryAlphaRatio", val);
-                        }}
-                        minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={colors.textSecondary + "40"}
-                        thumbTintColor={colors.textHighlight}
-                    />
-                </View>
-                <ListItem withHorizontalPadding heightType="small" onPress={invertColorsSwitch.onPress}>
-                    <ListItem.Content title={invertColorsSwitch.title} />
-                    {invertColorsSwitch.right}
-                </ListItem>
-
-                {/* 位置控制 */}
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={`歌词宽度  ${Math.round((widthPercent ?? 0.8) * 100)}%`} />
-                </ListItem>
-                <View style={lyricStyles.sliderContainer}>
-                    <Slider
-                        style={lyricStyles.slider}
-                        minimumValue={0.3}
-                        maximumValue={1}
-                        step={0.01}
-                        value={widthPercent ?? 0.8}
-                        onValueChange={(val: number) => {
-                            if (showStatusBarLyric) {
-                                LyricUtil.setStatusBarLyricWidth(val);
-                            }
-                        }}
-                        onSlidingComplete={(val: number) => {
-                            Config.setConfig("lyric.widthPercent", val);
-                        }}
-                        minimumTrackTintColor={colors.textHighlight}
-                        maximumTrackTintColor={colors.textSecondary + "40"}
-                        thumbTintColor={colors.textHighlight}
-                    />
-                </View>
-
-                {/* 预设颜色方案（纯圆点，长按自定义） */}
-                <ListItem withHorizontalPadding heightType="small">
-                    <ListItem.Content title={t("basicSettings.lyric.colorPreset")} />
-                </ListItem>
-                <View style={lyricStyles.presetRow}>
-                    {LYRIC_COLOR_PRESETS.map((preset, idx) => (
-                        <TouchableOpacity
-                            key={idx}
-                            style={[
-                                lyricStyles.presetDotWrapper,
-                                (presetIndex ?? 0) === idx && lyricStyles.presetDotActive,
-                            ]}
-                            onPress={() => {
-                                Config.setConfig("lyric.presetIndex", idx);
-                                if (showStatusBarLyric) {
-                                    LyricUtil.setColorPreset(idx);
-                                }
-                            }}
-                            onLongPress={() => {
-                                handleCustomizePreset(idx);
-                            }}>
-                            <View style={[lyricStyles.presetDot, { backgroundColor: getPresetColor(idx).slice(0, 7) }]} />
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* 锁定时显示解锁按钮 */}
-                {isLocked && showStatusBarLyric && (
-                    <ListItem
-                        withHorizontalPadding
-                        heightType="small"
-                        onPress={() => {
-                            LyricUtil.unlockDesktopLyric();
-                            Config.setConfig("lyric.isLocked", false);
-                        }}>
-                        <ListItem.Content title={t("basicSettings.lyric.unlock")} />
-                    </ListItem>
-                )}
-            </>}
+            <SettingRow title={autoSearchLyric.title} right={autoSearchLyric.right} onPress={autoSearchLyric.onPress} />
+            <SettingRow title={wordByWordLyric.title} right={wordByWordLyric.right} onPress={wordByWordLyric.onPress} />
+            <SettingRow title={wordByWordFloat.title} right={wordByWordFloat.right} onPress={wordByWordFloat.onPress} />
+            <SettingRow title={highlightColor.title} right={highlightColor.right} onPress={highlightColor.onPress} />
+            <SettingRow title={breathingDots.title} right={breathingDots.right} onPress={breathingDots.onPress} />
         </View>
     );
 }
 
 const lyricStyles = StyleSheet.create({
     card: {
-        borderRadius: rpx(16),
-        marginHorizontal: rpx(24),
+        borderRadius: settingsLayout.cardRadius,
+        marginHorizontal: settingsLayout.groupMargin,
         overflow: "hidden",
-    },
-    subHeader: {
-        marginTop: rpx(24),
-        marginBottom: rpx(8),
-        paddingHorizontal: rpx(36),
-        opacity: 0.6,
-        fontSize: fontRpx(24),
-    },
-    slider: {
-        flex: 1,
-        marginLeft: rpx(24),
-    },
-    sliderContainer: {
-        height: rpx(96),
-        width: "100%",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: rpx(24),
-    },
-    presetRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        paddingHorizontal: rpx(24),
-        paddingBottom: rpx(16),
-        gap: rpx(20),
-        alignItems: "center",
-    },
-    presetDotWrapper: {
-        alignItems: "center",
-        justifyContent: "center",
-        width: rpx(56),
-        height: rpx(56),
-        borderRadius: rpx(28),
-        borderWidth: 2,
-        borderColor: "transparent",
-    },
-    presetDotActive: {
-        borderColor: "#FFFFFFCC",
-    },
-    presetDot: {
-        width: rpx(40),
-        height: rpx(40),
-        borderRadius: rpx(20),
-        borderWidth: 1,
-        borderColor: "rgba(128,128,128,0.3)",
     },
 });

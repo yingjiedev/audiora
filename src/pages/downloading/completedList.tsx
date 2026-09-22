@@ -1,0 +1,304 @@
+import React, { useCallback, useEffect } from "react";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
+import rpx from "@/utils/rpx";
+import ListItem from "@/components/base/listItem";
+import Icon from "@/components/base/icon";
+import ThemeText from "@/components/base/themeText";
+import Empty from "@/components/base/empty";
+import useColors from "@/hooks/useColors";
+import { useI18N } from "@/core/i18n";
+import Toast from "@/utils/toast";
+import { showDialog } from "@/components/dialogs/useDialog";
+import { showPanel } from "@/components/panels/usePanel";
+import type { IDownloadRecord } from "@/core/downloadHistory";
+import downloadHistory, { useDownloadHistory } from "@/core/downloadHistory";
+import downloader from "@/core/downloader";
+import LocalMusicSheet from "@/core/localMusicSheet";
+import TrackPlayer from "@/core/trackPlayer";
+import { iconSizeConst } from "@/constants/uiConst";
+import {
+    formatFileSize,
+    formatQuality,
+    formatRecordTime,
+    groupRecordsByDate,
+    type IDownloadRecordGroup,
+} from "./utils";
+
+/** 已完成的单条：展示音质 / 大小 / 完成时间，文件缺失时整行转警示态 */
+interface ICompletedRowRecord {
+    kind: "record";
+    record: IDownloadRecord;
+}
+
+interface ICompletedRowHeader {
+    kind: "header";
+    group: IDownloadRecordGroup;
+}
+
+type ICompletedRow = ICompletedRowRecord | ICompletedRowHeader;
+
+function CompletedRow(props: { record: IDownloadRecord }) {
+    const { record } = props;
+    const { t } = useI18N();
+    const colors = useColors();
+
+    const musicItem = record.musicItem;
+    const missing = !!record.fileMissing;
+    const qualityText = formatQuality(record.quality);
+    // 大小未知（旧记录 / 授权目录下无法 stat）时留空，别显示成误导性的「0B」
+    const sizeText =
+        record.fileSize && record.fileSize > 0 ? formatFileSize(record.fileSize) : "";
+
+    // 音质已经由左侧标签展示，描述行只留「大小 · 时间」——否则同一行里 FLAC 会出现两次
+    const meta = missing
+        ? t("downloading.status.fileMissingDesc")
+        : [sizeText, formatRecordTime(record.updatedAt)].filter(Boolean).join(" · ");
+
+    const openMenu = useCallback(() => {
+        showPanel("DownloadTaskOptions", {
+            title: record.title,
+            // 歌名已在面板标题、音质与大小已在列表行里展示过，
+            // 副标题只补行内没有的歌手，不再把音质 / 大小重复第二遍
+            subtitle: record.artist,
+            options: [
+                {
+                    key: "play",
+                    title: t("downloading.action.play"),
+                    icon: "play" as const,
+                    onPress: () => {
+                        TrackPlayer.play(musicItem);
+                    },
+                },
+                {
+                    key: "redownload",
+                    title: t("downloading.action.redownload"),
+                    icon: "arrow-down-tray" as const,
+                    onPress: () => {
+                        downloader.download(musicItem, record.quality);
+                    },
+                },
+                {
+                    key: "remove-record",
+                    title: t("downloading.action.removeRecord"),
+                    icon: "trash-outline" as const,
+                    hint: t("downloading.action.removeRecordHint"),
+                    onPress: () => {
+                        downloadHistory.removeRecord(record.mediaKey);
+                    },
+                },
+                {
+                    key: "delete-file",
+                    title: t("downloading.action.deleteFile"),
+                    icon: "trash-outline" as const,
+                    hint: sizeText,
+                    danger: true,
+                    onPress: () => {
+                        showDialog("SimpleDialog", {
+                            title: t("downloading.action.deleteFile"),
+                            content: t("downloading.action.deleteFileConfirm", {
+                                title: record.title,
+                            }),
+                            async onOk() {
+                                try {
+                                    // 删除本地文件走 LocalMusicSheet：音频本体 + 附属歌词/封面，
+                                    // 并且封面会先过「目录共享 / 仍被引用」两道校验（issue #63 / #68）
+                                    await LocalMusicSheet.removeMusic(musicItem, true);
+                                    downloadHistory.removeRecord(record.mediaKey);
+                                    Toast.success(t("downloading.toast.deleteFileSuccess"));
+                                } catch (e: any) {
+                                    Toast.warn(
+                                        `${t("panel.musicItemOptions.deleteFailed")} ${e?.message ?? e}`,
+                                    );
+                                }
+                            },
+                        });
+                    },
+                },
+            ],
+        });
+    }, [musicItem, record, sizeText, t]);
+
+    return (
+        <ListItem
+            withHorizontalPadding
+            style={missing ? { backgroundColor: colors.listActive } : undefined}>
+            <ListItem.ListItemImage uri={musicItem.artwork} position="left" />
+            <ListItem.Content
+                title={record.title}
+                description={
+                    <View style={styles.descRow}>
+                        {missing ? (
+                            <View style={[styles.missingTag, { backgroundColor: colors.danger }]}>
+                                <ThemeText
+                                    fontSize="caption"
+                                    fontWeight="bold"
+                                    style={{ color: colors.onPrimary }}>
+                                    {t("downloading.status.fileMissing")}
+                                </ThemeText>
+                            </View>
+                        ) : qualityText ? (
+                            <View style={[styles.qualityTag, { backgroundColor: colors.listActive }]}>
+                                <ThemeText
+                                    fontSize="caption"
+                                    fontWeight="bold"
+                                    style={{ color: colors.primary }}>
+                                    {qualityText}
+                                </ThemeText>
+                            </View>
+                        ) : null}
+                        <ThemeText
+                            numberOfLines={1}
+                            fontSize="description"
+                            fontColor={missing ? "danger" : "textSecondary"}
+                            style={styles.descText}>
+                            {meta}
+                        </ThemeText>
+                    </View>
+                }
+            />
+            {missing ? (
+                <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => downloader.download(musicItem, record.quality)}>
+                    <ThemeText fontSize="description" fontWeight="medium" style={{ color: colors.primary }}>
+                        {t("downloading.action.redownload")}
+                    </ThemeText>
+                </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity style={styles.actionButton} onPress={openMenu}>
+                <Icon
+                    name="ellipsis-vertical"
+                    size={iconSizeConst.normal}
+                    color={colors.text}
+                />
+            </TouchableOpacity>
+        </ListItem>
+    );
+}
+
+export default function CompletedList() {
+    const records = useDownloadHistory();
+    const { t } = useI18N();
+
+    // 进页面对一次账：文件被外部删掉的要标成「文件缺失」
+    useEffect(() => {
+        void downloadHistory.reconcileCompletedFiles();
+    }, [records.length]);
+
+    const completed = records.filter(item => item.status === "completed");
+
+    if (completed.length === 0) {
+        return (
+            <Empty
+                content={`${t("downloading.empty.completed.title")}\n${t(
+                    "downloading.empty.completed.desc",
+                )}`}
+            />
+        );
+    }
+
+    const groups = groupRecordsByDate(completed, t);
+
+    const rows: ICompletedRow[] = [];
+    for (const group of groups) {
+        rows.push({ kind: "header", group });
+        for (const record of group.data) {
+            rows.push({ kind: "record", record });
+        }
+    }
+
+    const clearGroup = (group: IDownloadRecordGroup) => {
+        // 只移除历史记录、不动音频文件，但一次删一整组还是要二次确认
+        showDialog("SimpleDialog", {
+            title: t("downloading.action.clearHistory"),
+            content: t("downloading.action.clearHistoryConfirm", {
+                date: group.title,
+                count: group.data.length,
+            }),
+            onOk() {
+                const removed = downloadHistory.removeRecords(
+                    group.data.map(item => item.mediaKey),
+                );
+                if (removed > 0) {
+                    Toast.success(
+                        t("downloading.toast.clearRecordsSuccess", { count: removed }),
+                    );
+                }
+            },
+        });
+    };
+
+    return (
+        <View style={styles.wrapper}>
+            <FlashList
+                data={rows}
+                keyExtractor={(item: ICompletedRow) =>
+                    item.kind === "header"
+                        ? `h-${item.group.from}`
+                        : `r-${item.record.mediaKey}`
+                }
+                getItemType={(item: ICompletedRow) => item.kind}
+                renderItem={({ item }: { item: ICompletedRow }) =>
+                    item.kind === "header" ? (
+                        <View style={styles.groupHeader}>
+                            <ThemeText
+                                fontSize="description"
+                                fontWeight="bold"
+                                fontColor="textSecondary">
+                                {item.group.title}
+                            </ThemeText>
+                            <TouchableOpacity onPress={() => clearGroup(item.group)}>
+                                <ThemeText fontSize="description" fontColor="primary">
+                                    {t("downloading.action.clearHistory")}
+                                </ThemeText>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <CompletedRow record={item.record} />
+                    )
+                }
+            />
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    wrapper: {
+        width: "100%",
+        flex: 1,
+    },
+    descRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: rpx(4),
+    },
+    descText: {
+        flexShrink: 1,
+    },
+    qualityTag: {
+        paddingHorizontal: rpx(8),
+        paddingVertical: rpx(1),
+        borderRadius: rpx(6),
+        marginRight: rpx(8),
+    },
+    missingTag: {
+        paddingHorizontal: rpx(8),
+        paddingVertical: rpx(1),
+        borderRadius: rpx(6),
+        marginRight: rpx(8),
+    },
+    actionButton: {
+        paddingHorizontal: rpx(10),
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    groupHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: rpx(24),
+        paddingTop: rpx(20),
+        paddingBottom: rpx(8),
+    },
+});

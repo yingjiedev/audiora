@@ -1,5 +1,6 @@
 import Icon, { IIconName } from "@/components/base/icon";
 import PillTabBar from "@/components/base/pillTabBar";
+import { TONAL_ALPHA } from "@/components/base/roundActionButton";
 import ThemeText from "@/components/base/themeText";
 import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
@@ -20,7 +21,6 @@ type LocalEntry = {
     title: string;
     count: number;
     unit: string;
-    accent: string;
 };
 
 type BrowserItem = {
@@ -77,10 +77,11 @@ function buildBrowserItems(
 
 function EmptyLocalBrowser() {
     const { t } = useI18N();
+    const colors = useColors();
 
     return (
         <View style={styles.emptyState}>
-            <Icon name="folder-music-outline" size={rpx(48)} color="#7892C9" />
+            <Icon name="folder-music-outline" size={rpx(48)} color={colors.textSecondary} />
             <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.emptyTitle}>
                 {t("musicLibrary.emptyLocalTitle")}
             </ThemeText>
@@ -98,6 +99,9 @@ function LocalMusicContent() {
     const locale = getLanguage().locale;
     const localMusics = LocalMusicSheet.useMusicList();
     const [browserMode, setBrowserMode] = useState<LocalBrowserMode>("tracks");
+    // 同层级功能块共用中性卡片，主色只用于图标容器与选中态。
+    const iconTint =
+        colors.listActive ?? Color(colors.primary).alpha(0.12).toString();
 
     const artistCount = useMemo(
         () => new Set(localMusics.map(item => item.artist).filter(Boolean)).size,
@@ -129,7 +133,6 @@ function LocalMusicContent() {
             title: t("home.localMusic"),
             count: localMusics.length,
             unit: t("musicLibrary.unit.track"),
-            accent: "#5B72FF",
         },
         {
             key: "artists",
@@ -137,7 +140,6 @@ function LocalMusicContent() {
             title: t("musicLibrary.artists"),
             count: artistCount,
             unit: t("musicLibrary.unit.artist"),
-            accent: "#8563F2",
         },
         {
             key: "albums",
@@ -145,7 +147,6 @@ function LocalMusicContent() {
             title: t("common.album"),
             count: albumCount,
             unit: t("musicLibrary.unit.album"),
-            accent: "#1F9DF0",
         },
         {
             key: "folders",
@@ -153,7 +154,6 @@ function LocalMusicContent() {
             title: t("musicLibrary.folders"),
             count: folderCount,
             unit: t("musicLibrary.unit.folder"),
-            accent: "#18BFA3",
         },
     ];
 
@@ -164,7 +164,7 @@ function LocalMusicContent() {
                 accessibilityLabel={t("musicLibrary.viewAllLocal")}
                 style={[styles.localHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
                 onPress={() => navigate(ROUTE_PATH.LOCAL)}>
-                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(0.16).toString() }]}>
+                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
                     <Icon name="folder-music-outline" size={rpx(48)} color={colors.primary} />
                 </View>
                 <View style={styles.heroText}>
@@ -185,10 +185,16 @@ function LocalMusicContent() {
                             key={entry.key}
                             accessibilityRole="button"
                             accessibilityLabel={t("musicLibrary.browseEntry", { name: entry.title })}
-                            style={[styles.localCard, { backgroundColor: Color(entry.accent).alpha(selected ? 0.16 : 0.08).toString() }]}
+                            style={[
+                                styles.localCard,
+                                {
+                                    backgroundColor: selected ? iconTint : colors.card,
+                                    borderColor: selected ? colors.primary : colors.border,
+                                },
+                            ]}
                             onPress={() => setBrowserMode(entry.key)}>
-                            <View style={[styles.localIcon, { backgroundColor: Color(entry.accent).alpha(0.16).toString() }]}>
-                                <Icon name={entry.icon} size={rpx(32)} color={entry.accent} />
+                            <View style={[styles.localIcon, { backgroundColor: iconTint }]}>
+                                <Icon name={entry.icon} size={rpx(32)} color={colors.primary} />
                             </View>
                             <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>
                                 {entry.title}
@@ -246,7 +252,7 @@ function OnlineMusicContent() {
     return (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={[styles.onlineHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
-                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(0.16).toString() }]}>
+                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
                     <Icon name="circle-stack" size={rpx(48)} color={colors.primary} />
                 </View>
                 <View style={styles.heroText}>
@@ -299,7 +305,7 @@ function OnlineMusicContent() {
                     </Pressable>
                 )) : (
                     <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.addSource")} style={styles.emptyState} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
-                        <Icon name="javascript" size={rpx(48)} color="#7892C9" />
+                        <Icon name="javascript" size={rpx(48)} color={colors.textSecondary} />
                         <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.emptyTitle}>
                             {t("musicLibrary.emptyOnlineTitle")}
                         </ThemeText>
@@ -363,8 +369,8 @@ const styles = StyleSheet.create({
     heroIcon: { width: rpx(76), height: rpx(76), borderRadius: rpx(22), alignItems: "center", justifyContent: "center" },
     heroText: { flex: 1, minWidth: 0, marginLeft: rpx(16) },
     heroDescription: { marginTop: rpx(8) },
-    localGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: rpx(18) },
-    localCard: { width: "48.5%", minHeight: rpx(126), padding: rpx(16), borderRadius: rpx(18), marginBottom: rpx(12) },
+    localGrid: { flexDirection: "row", flexWrap: "wrap", gap: rpx(12), marginTop: rpx(18) },
+    localCard: { width: "46%", flexGrow: 1, minHeight: rpx(126), padding: rpx(16), borderRadius: rpx(20), borderWidth: StyleSheet.hairlineWidth },
     localIcon: { width: rpx(52), height: rpx(52), borderRadius: rpx(16), alignItems: "center", justifyContent: "center", marginBottom: rpx(10) },
     cardCount: { marginTop: rpx(5) },
     sectionHeader: { minHeight: rpx(64), marginTop: rpx(14), flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

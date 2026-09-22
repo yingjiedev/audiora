@@ -7,55 +7,49 @@ import { errorLog, devLog } from "@/utils/log";
 import { getMediaExtraProperty, patchMediaExtra } from "@/utils/mediaExtra";
 import { getMediaUniqueKey, isSameMediaItem } from "@/utils/mediaUtils";
 import network from "@/utils/network";
-import { getQualityOrder } from "@/utils/qualities";
+import { getPluginQualityScope, getQualityOrder, pickSupportedQuality } from "@/utils/qualities";
 import { generateFileNameFromConfig, DEFAULT_FILE_NAMING_CONFIG } from "@/utils/fileNamingFormatter";
-import { formatLyricsByTimestamp } from "@/utils/lrcParser";
 import { isMflacUrl, normalizeEkey } from "@/utils/mflac";
 import EventEmitter from "eventemitter3";
 import { atom, getDefaultStore, useAtomValue } from "jotai";
 import path from "path-browserify";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { downloadFile, exists, moveFile, stopDownload, unlink } from "react-native-fs";
+import { downloadFile, exists, moveFile, stat, stopDownload, unlink } from "react-native-fs";
 import Mp3Util, {
     INativeDownloadTaskParams,
     INativeDownloadTaskStatus,
     NativeDownloadEmitter,
 } from "@/native/mp3Util";
 import Cenc from "@/native/cenc";
+import DownloadPath from "./downloadPath";
+import downloadHistory from "./downloadHistory";
 import LocalMusicSheet from "./localMusicSheet";
+import {
+    getCompanionFileConfig,
+    readCompanionPaths,
+    reconcileCompanionPaths,
+    writeCoverFile,
+    writeLyricFile,
+} from "./downloadCompanionFiles";
+import { runPostProcessingStep } from "./downloadPostProcessing";
+import type { IPostProcessingContext } from "./downloadPostProcessing";
 import { IPluginManager } from "@/types/core/pluginManager";
 import musicMetadataManager from "./musicMetadataManager";
 import type { IDownloadMetadataConfig, IDownloadTaskMetadata } from "@/types/metadata";
-import { normalizeLyric } from "@/utils/lyricFormat";
 import {
     copyLocalFileToAndroidDirectory,
     isAndroidSafUri,
-    requestAndroidDirectoryAccess,
 } from "@/utils/androidSaf";
 
-export enum DownloadStatus {
-    Pending,
-    Preparing,
-    Downloading,
-    Completed,
-    Error,
-}
-
-export enum DownloaderEvent {
-    DownloadError = "download-error",
-    DownloadTaskUpdate = "download-task-update",
-    DownloadTaskError = "download-task-error",
-    DownloadQueueCompleted = "download-queue-completed",
-}
-
-export enum DownloadFailReason {
-    NetworkOffline = "network-offline",
-    NotAllowToDownloadInCellular = "not-allow-to-download-in-cellular",
-    FailToFetchSource = "no-valid-source",
-    NoWritePermission = "no-write-permission",
-    Unknown = "unknown",
-}
+// 枚举本体已挪到 ./downloadTypes（避免 downloader ⇄ downloadHistory 循环依赖，
+// 也让只关心状态语义的测试不必拉起整条原生依赖链），这里保持原有导出面不变。
+import {
+    DownloadFailReason,
+    DownloadStatus,
+    DownloaderEvent,
+} from "./downloadTypes";
+export { DownloadStatus, DownloadFailReason, DownloaderEvent };
 
 interface IDownloadTaskInfo {
     status: DownloadStatus;
@@ -121,7 +115,6 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
     private activePrepareCount = 0;
 
     private queueBusy = false;
-    private androidDirectoryRequest: Promise<string | null> | null = null;
 
     // 有原生队列时，准备阶段（解析音源）并发固定为 3，真正的下载并发由原生按 basic.maxDownload 控制；
     // 无原生队列（JS 回退下载）时，准备阶段即下载阶段，并发跟随 basic.maxDownload 配置。
@@ -198,7 +191,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         return Array.from(downloadTasks.values()).some(task =>
             task.status === DownloadStatus.Pending ||
             task.status === DownloadStatus.Preparing ||
-            task.status === DownloadStatus.Downloading,
+            task.status === DownloadStatus.Downloading ||
+            // 暂停中的任务原生记录还在，同样需要对账，避免恢复后状态错位
+            task.status === DownloadStatus.Paused,
         );
     }
 
@@ -285,6 +280,15 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                 };
                 downloadTasks.set(key, task);
                 this.emit(DownloaderEvent.DownloadTaskUpdate, task);
+                // 这里直接写 Map 绕过了 updateDownloadTask，网络受限导致的失败要自己落记录，
+                // 否则重启后「失败」分栏是空的
+                if (networkBlockedReason) {
+                    downloadHistory.recordError(extra.musicItem, {
+                        errorReason: networkBlockedReason,
+                        quality: extra.quality,
+                        filename: task.filename,
+                    });
+                }
 
                 if (!networkBlockedReason) {
                     restoredTasks.push({ musicItem: extra.musicItem, quality: extra.quality });
@@ -377,7 +381,7 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         case "DOWNLOADING":
             return DownloadStatus.Downloading;
         case "PAUSED":
-            return DownloadStatus.Pending;
+            return DownloadStatus.Paused;
         case "COMPLETED":
             return DownloadStatus.Completed;
         case "ERROR":
@@ -391,13 +395,68 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
 
     private updateDownloadTask(musicItem: IMusic.IMusicItem, patch: Partial<IDownloadTaskInfo>) {
         const key = getMediaUniqueKey(musicItem);
+        const previous = downloadTasks.get(key);
         const newValue = {
-            ...downloadTasks.get(key),
+            ...previous,
             ...patch,
         } as IDownloadTaskInfo;
         downloadTasks.set(key, newValue);
         this.emit(DownloaderEvent.DownloadTaskUpdate, newValue);
+        // 终态全部在这里收口落盘，省得在 10 多个 Error / Completed 分支里各写一遍
+        this.syncHistoryRecord(previous, newValue);
         return newValue;
+    }
+
+    /**
+     * 把任务状态变化同步到下载历史记录（issue #87）。
+     *
+     * - 进入 Completed / Error：写入记录（跨重启可见）
+     * - 从终态回到进行中（重试 / 重新下载）：删掉记录，避免同一首歌同时出现在两个分栏
+     * - 其余中间态：不动记录
+     *
+     * 注意 `cleanupTaskStateByKey()` 只清内存队列，不碰这里的记录，
+     * 所以「任务从队列消失」≠「记录消失」，这正是历史分栏能留下来的原因。
+     */
+    private syncHistoryRecord(previous: IDownloadTaskInfo | undefined, next: IDownloadTaskInfo) {
+        if (next.status === DownloadStatus.Completed) {
+            downloadHistory.recordCompleted(next.musicItem, {
+                quality: next.quality,
+                filename: next.filename,
+                fileSize: next.fileSize,
+            });
+            return;
+        }
+
+        if (next.status === DownloadStatus.Error) {
+            downloadHistory.recordError(next.musicItem, {
+                errorReason: next.errorReason,
+                quality: next.quality,
+                filename: next.filename,
+                fileSize: next.fileSize,
+            });
+            return;
+        }
+
+        if (
+            previous &&
+            (previous.status === DownloadStatus.Completed ||
+                previous.status === DownloadStatus.Error)
+        ) {
+            downloadHistory.removeRecord(getMediaUniqueKey(next.musicItem));
+        }
+    }
+
+    /** 读取落盘文件的真实大小；SAF 的 content:// 无法 stat，返回 undefined 由调用方兜底 */
+    private async getFileSizeSafe(filePath: string): Promise<number | undefined> {
+        try {
+            if (isAndroidSafUri(filePath)) {
+                return undefined;
+            }
+            const result = await stat(removeFileScheme(filePath));
+            return typeof result?.size === "number" ? result.size : undefined;
+        } catch {
+            return undefined;
+        }
     }
 
     private getExtensionName(url: string) {
@@ -438,6 +497,10 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         };
     }
 
+    /**
+     * 写入音乐标签。失败直接向上抛，由 runPostProcessing 统一记录 ——
+     * 标签写不进去不应该让已经落盘的音频变成「下载失败」（issue #64）。
+     */
     private async writeMetadataToFile(musicItem: IMusic.IMusicItem, filePath: string): Promise<void> {
         const config = this.getMetadataConfig();
         if (!config.enabled) {
@@ -448,83 +511,13 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             return;
         }
 
-        try {
-            const taskMetadata: IDownloadTaskMetadata = {
-                musicItem,
-                filePath,
-                coverUrl: typeof musicItem.artwork === "string" ? musicItem.artwork : undefined,
-            };
+        const taskMetadata: IDownloadTaskMetadata = {
+            musicItem,
+            filePath,
+            coverUrl: typeof musicItem.artwork === "string" ? musicItem.artwork : undefined,
+        };
 
-            await musicMetadataManager.writeMetadataForDownloadTask(taskMetadata, config);
-        } catch (error) {
-            errorLog("音乐元数据写入失败", {
-                musicItem: {
-                    id: musicItem.id,
-                    title: musicItem.title,
-                    artist: musicItem.artist,
-                    platform: musicItem.platform,
-                },
-                filePath,
-                error: error instanceof Error ? error.message : String(error),
-            });
-        }
-    }
-
-    private async downloadLyricFile(
-        musicItem: IMusic.IMusicItem,
-        musicFilePath: string,
-    ): Promise<string | null> {
-        const downloadLyricFile = this.configService.getConfig("basic.downloadLyricFile") ?? false;
-        if (!downloadLyricFile) {
-            return null;
-        }
-
-        const lyricFileFormat = this.configService.getConfig("basic.lyricFileFormat") ?? "lrc";
-        const lyricOrder = this.configService.getConfig("basic.lyricOrder") ?? ["romanization", "original", "translation"];
-        const enableWordByWord = this.configService.getConfig("basic.enableWordByWordLyric") ?? false;
-
-        try {
-            const plugin = this.pluginManagerService.getByName(musicItem.platform);
-            if (!plugin) {
-                return null;
-            }
-
-            const lyricSource = await plugin.methods.getLyric(musicItem);
-            if (!lyricSource) {
-                return null;
-            }
-
-            const rawLrc = lyricSource.rawLrc ? await normalizeLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
-            const translation = lyricSource.translation ? await normalizeLyric(lyricSource.translation, enableWordByWord) : undefined;
-            const romanization = lyricSource.romanization ? await normalizeLyric(lyricSource.romanization, enableWordByWord) : undefined;
-
-            if (!rawLrc) {
-                return null;
-            }
-
-            const lyricContent = formatLyricsByTimestamp(
-                rawLrc,
-                translation,
-                romanization,
-                lyricOrder,
-                { enableWordByWord },
-            );
-
-            if (!lyricContent) {
-                return null;
-            }
-
-            const lyricFilePath = `${musicFilePath.replace(/\.[^.]+$/, "")}.${lyricFileFormat}`;
-            const { writeFile } = require("react-native-fs");
-            await writeFile(removeFileScheme(lyricFilePath), lyricContent, "utf8");
-            return lyricFilePath;
-        } catch (error) {
-            errorLog("歌词文件下载失败", {
-                musicItem: musicItem.title,
-                error: error instanceof Error ? error.message : String(error),
-            });
-            return null;
-        }
+        await musicMetadataManager.writeMetadataForDownloadTask(taskMetadata, config);
     }
 
     private parseQualityFileSize(size: unknown): number {
@@ -984,9 +977,15 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
 
         const plugin = this.pluginManagerService.getByName(musicItem.platform);
         if (plugin) {
+            // 下载与播放保持一致：档位范围由插件协议决定（官方协议插件只有 4 档），
+            // 默认下载音质（多数是 master）若不在范围内，先落到范围内的最高档再逐档降。
+            const pluginQualityScope = getPluginQualityScope(plugin.instance);
+            const scopedStartQuality =
+                pickSupportedQuality(actualQuality, pluginQualityScope) ?? actualQuality;
             const qualityOrder = getQualityOrder(
-                actualQuality,
+                scopedStartQuality,
                 this.configService.getConfig("basic.downloadQualityOrder") ?? "desc",
+                pluginQualityScope,
             );
 
             for (const currentQuality of qualityOrder) {
@@ -1230,7 +1229,7 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             break;
         case "PAUSED":
             this.updateDownloadTask(musicItem, {
-                status: DownloadStatus.Pending,
+                status: DownloadStatus.Paused,
                 downloadedSize: rawTask.downloaded > 0 ? rawTask.downloaded : taskInfo.downloadedSize,
                 fileSize: rawTask.total > 0 ? rawTask.total : taskInfo.fileSize,
                 progressText: rawTask.progressText ?? taskInfo.progressText,
@@ -1259,6 +1258,31 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         this.maybeEmitQueueCompleted();
     }
 
+    /**
+     * 把附属文件（歌词 / 封面）复制到 SAF 授权目录，返回目标 uri。
+     * 没有文件时返回 null；拷贝失败只记日志并返回 null ——
+     * 附属文件写不进去不应该让已经落盘的音频变成「下载失败」（issue #64）。
+     */
+    private async copyCompanionFileToSaf(
+        filePath: string | null,
+        safDirectoryUri: string,
+        context: IPostProcessingContext,
+    ): Promise<string | null> {
+        if (!filePath) {
+            return null;
+        }
+        return (await runPostProcessingStep(
+            "后处理失败：附属文件写入授权目录",
+            { ...context, filePath },
+            () =>
+                copyLocalFileToAndroidDirectory(
+                    filePath,
+                    safDirectoryUri,
+                    getFileName(filePath),
+                ),
+        )) ?? null;
+    }
+
     private async completeTaskAfterDownload(taskId: string, removeNativeTask: boolean) {
         if (this.postProcessingTaskIds.has(taskId)) {
             return;
@@ -1280,117 +1304,40 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
 
         this.postProcessingTaskIds.add(taskId);
         try {
-            if (runtimeInfo.willDownloadEncrypted) {
-                // 解密输出前清掉旧目标文件（重新下载场景），避免解密实现对已存在文件行为不确定
-                try {
-                    const decryptTarget = removeFileScheme(runtimeInfo.targetDownloadPath);
-                    if (await exists(decryptTarget)) {
-                        await unlink(decryptTarget);
-                    }
-                } catch {
-                }
-                if (runtimeInfo.cencCek) {
-                    await Cenc.decryptFile(
-                        removeFileScheme(runtimeInfo.tempEncryptedPath),
-                        removeFileScheme(runtimeInfo.targetDownloadPath),
-                        runtimeInfo.cencCek,
-                    );
-                } else {
-                    const cleaned = normalizeEkey(runtimeInfo.mflacEkey);
-                    if (!cleaned) {
-                        throw new Error("missing ekey for encrypted media");
-                    }
-                    await Mp3Util.decryptMflacToFlac(
-                        removeFileScheme(runtimeInfo.tempEncryptedPath),
-                        removeFileScheme(runtimeInfo.targetDownloadPath),
-                        cleaned,
-                    );
-                }
-                if (runtimeInfo.tempEncryptedPath !== runtimeInfo.targetDownloadPath) {
-                    try {
-                        await unlink(removeFileScheme(runtimeInfo.tempEncryptedPath));
-                    } catch {
-                    }
-                }
-            } else if (runtimeInfo.tempEncryptedPath !== runtimeInfo.targetDownloadPath) {
-                // 未加密下载写入的是 .part 临时文件，成功后移动到目标路径
-                const target = removeFileScheme(runtimeInfo.targetDownloadPath);
-                try {
-                    if (await exists(target)) {
-                        await unlink(target);
-                    }
-                } catch {
-                }
-                await moveFile(removeFileScheme(runtimeInfo.tempEncryptedPath), target);
+            // 关键路径：音频落盘（解密 / 从 .part 移动）。只有这一步失败才算「下载失败」
+            try {
+                await this.flushDownloadedAudio(runtimeInfo);
+            } catch (error) {
+                await this.cleanupFailedDownloadAudio(runtimeInfo);
+                this.updateDownloadTask(task.musicItem, {
+                    status: DownloadStatus.Error,
+                    errorReason: DownloadFailReason.Unknown,
+                });
+                this.emit(DownloaderEvent.DownloadTaskError, DownloadFailReason.Unknown, task.musicItem, error as Error);
+                return;
             }
 
-            await this.writeMetadataToFile(task.musicItem, runtimeInfo.targetDownloadPath);
-            const lyricFilePath = await this.downloadLyricFile(
-                task.musicItem,
+            // 内部落盘副本的真实大小必须在这里取：一旦音频写进授权目录，
+            // 内部副本会被 cleanupInternalDownloadFiles 删掉，而 content:// 无法 stat，
+            // 两边都拿不到就只剩估算值兜底，估算值也没有时历史记录会显示成「0B」
+            const localAudioFileSize = await this.getFileSizeSafe(
                 runtimeInfo.targetDownloadPath,
             );
 
-            let completedFilePath = runtimeInfo.targetDownloadPath;
-            if (runtimeInfo.safDirectoryUri) {
-                completedFilePath = await copyLocalFileToAndroidDirectory(
-                    runtimeInfo.targetDownloadPath,
-                    runtimeInfo.safDirectoryUri,
-                    getFileName(runtimeInfo.targetDownloadPath),
-                );
-                if (lyricFilePath) {
-                    try {
-                        await copyLocalFileToAndroidDirectory(
-                            lyricFilePath,
-                            runtimeInfo.safDirectoryUri,
-                            getFileName(lyricFilePath),
-                        );
-                    } catch (error) {
-                        errorLog("歌词文件写入授权目录失败", error);
-                    }
-                }
-                await unlink(removeFileScheme(runtimeInfo.targetDownloadPath)).catch(error => {
-                    errorLog("授权目录写入成功，但下载临时文件清理失败", error);
-                });
-                if (lyricFilePath) {
-                    await unlink(removeFileScheme(lyricFilePath)).catch(() => {});
-                }
-            }
+            // 音频已经成功落盘：之后的一切都是后处理，失败只记日志，不改写任务状态
+            const finalAudioPath = await this.runPostProcessing(task, runtimeInfo);
 
-            const localAudioMeta = await Mp3Util.getAudioMeta(completedFilePath);
-            LocalMusicSheet.addMusic({
-                ...task.musicItem,
-                [internalSerializeKey]: {
-                    localPath: completedFilePath,
-                    audioMeta: localAudioMeta,
-                },
-            });
-
-            patchMediaExtra(task.musicItem, {
-                downloaded: true,
-                localPath: completedFilePath,
-            });
+            // 期望大小来自音质信息，可能是估算值；落盘后以真实文件大小为准，
+            // 历史记录里的「占用空间」才不会虚高或虚低（issue #87）
+            const completedFileSize =
+                (await this.getFileSizeSafe(finalAudioPath)) ?? localAudioFileSize;
 
             this.updateDownloadTask(task.musicItem, {
                 status: DownloadStatus.Completed,
                 downloadedSize: task.fileSize,
-                fileSize: task.fileSize,
+                fileSize: completedFileSize ?? task.fileSize,
                 progressText: task.progressText,
             });
-        } catch (error) {
-            // 解密/移动失败时清理残留：临时文件一定是垃圾；
-            // 加密流程中目标文件可能是不完整的解密产物，一并删除
-            if (runtimeInfo.tempEncryptedPath !== runtimeInfo.targetDownloadPath) {
-                void unlink(removeFileScheme(runtimeInfo.tempEncryptedPath)).catch(() => {});
-                if (runtimeInfo.willDownloadEncrypted) {
-                    void unlink(removeFileScheme(runtimeInfo.targetDownloadPath)).catch(() => {});
-                }
-            }
-            this.updateDownloadTask(task.musicItem, {
-                status: DownloadStatus.Error,
-                errorReason: DownloadFailReason.Unknown,
-            });
-            this.emit(DownloaderEvent.DownloadTaskError, DownloadFailReason.Unknown, task.musicItem, error as Error);
-            return;
         } finally {
             this.postProcessingTaskIds.delete(taskId);
             if (removeNativeTask) {
@@ -1399,6 +1346,231 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         }
 
         this.cleanupTaskStateByKey(taskId, false);
+    }
+
+    /**
+     * 关键路径：把下载产物落成真正可用的音频文件（解密，或从 .part 临时文件移动）。
+     * 只有这里抛错才算「这次下载失败」，才允许清理已经产出的文件。
+     */
+    private async flushDownloadedAudio(runtimeInfo: IDownloadRuntimeInfo) {
+        if (runtimeInfo.willDownloadEncrypted) {
+            // 解密输出前清掉旧目标文件（重新下载场景），避免解密实现对已存在文件行为不确定
+            try {
+                const decryptTarget = removeFileScheme(runtimeInfo.targetDownloadPath);
+                if (await exists(decryptTarget)) {
+                    await unlink(decryptTarget);
+                }
+            } catch {
+            }
+            if (runtimeInfo.cencCek) {
+                await Cenc.decryptFile(
+                    removeFileScheme(runtimeInfo.tempEncryptedPath),
+                    removeFileScheme(runtimeInfo.targetDownloadPath),
+                    runtimeInfo.cencCek,
+                );
+            } else {
+                const cleaned = normalizeEkey(runtimeInfo.mflacEkey);
+                if (!cleaned) {
+                    throw new Error("missing ekey for encrypted media");
+                }
+                await Mp3Util.decryptMflacToFlac(
+                    removeFileScheme(runtimeInfo.tempEncryptedPath),
+                    removeFileScheme(runtimeInfo.targetDownloadPath),
+                    cleaned,
+                );
+            }
+            if (runtimeInfo.tempEncryptedPath !== runtimeInfo.targetDownloadPath) {
+                try {
+                    await unlink(removeFileScheme(runtimeInfo.tempEncryptedPath));
+                } catch {
+                }
+            }
+        } else if (runtimeInfo.tempEncryptedPath !== runtimeInfo.targetDownloadPath) {
+            // 未加密下载写入的是 .part 临时文件，成功后移动到目标路径
+            const target = removeFileScheme(runtimeInfo.targetDownloadPath);
+            try {
+                if (await exists(target)) {
+                    await unlink(target);
+                }
+            } catch {
+            }
+            await moveFile(removeFileScheme(runtimeInfo.tempEncryptedPath), target);
+        }
+    }
+
+    /**
+     * 音频没有落成时的残留清理：临时文件一定是垃圾；
+     * 加密流程中目标文件可能是不完整的解密产物，一并删除。
+     */
+    private async cleanupFailedDownloadAudio(runtimeInfo: IDownloadRuntimeInfo) {
+        if (runtimeInfo.tempEncryptedPath === runtimeInfo.targetDownloadPath) {
+            return;
+        }
+        void unlink(removeFileScheme(runtimeInfo.tempEncryptedPath)).catch(() => {});
+        if (runtimeInfo.willDownloadEncrypted) {
+            void unlink(removeFileScheme(runtimeInfo.targetDownloadPath)).catch(() => {});
+        }
+    }
+
+    /**
+     * 下载完成后的后处理：写标签、附属文件（歌词 / 封面）、写入授权目录、入库、记录对账。
+     *
+     * 进入这里时音频已经成功落盘（含解密），所以这里**任何一步失败都不能把任务改成 Error**：
+     * 音频成功就是成功，附属文件缺失只留日志（issue #64）。
+     * 每个子步骤各自 best-effort，单个失败不影响其余子步骤。
+     */
+    private async runPostProcessing(
+        task: IDownloadTaskInfo,
+        runtimeInfo: IDownloadRuntimeInfo,
+    ): Promise<string> {
+        const musicItem = task.musicItem;
+        const audioPath = runtimeInfo.targetDownloadPath;
+        const context: IPostProcessingContext = {
+            title: musicItem.title,
+            platform: musicItem.platform,
+            id: musicItem.id,
+            filePath: audioPath,
+        };
+        // 音频最终落盘位置：写进授权目录时是 content:// uri，否则是内部路径。
+        // 提到 try 外面是为了让 catch 兜底时也能返回——上传历史记录要用它统计真实体积
+        let finalAudioPath = audioPath;
+
+        try {
+            // 写音乐标签。顺序说明（issue #64 待确认项）：读技术元数据排在写标签之后，
+            // 读到的就是最终落盘的文件；getAudioMeta 走原生技术信息扫描，
+            // 与标签区互不干扰，因此维持既有顺序，避免改动引出的音质识别回归。
+            await runPostProcessingStep(
+                "后处理失败：写入音乐标签",
+                context,
+                () => this.writeMetadataToFile(musicItem, audioPath),
+            );
+
+            // 歌词与封面是两次独立的后处理，任意一个失败不影响另一个
+            const previousCompanionPaths = readCompanionPaths(musicItem);
+            const companionConfig = getCompanionFileConfig(this.configService);
+            const lyricPath = companionConfig.downloadLyricFile
+                ? (await runPostProcessingStep(
+                    "后处理失败：写入歌词文件",
+                    context,
+                    () =>
+                        writeLyricFile(
+                            musicItem,
+                            audioPath,
+                            companionConfig,
+                            this.pluginManagerService,
+                        ),
+                )) ?? null
+                : null;
+            const coverPath = companionConfig.downloadCoverFile
+                ? (await runPostProcessingStep(
+                    "后处理失败：写入封面文件",
+                    context,
+                    () => writeCoverFile(musicItem, audioPath, companionConfig),
+                )) ?? null
+                : null;
+
+            // 授权目录（SAF）拷贝。只有音频确实进了授权目录才清理内部临时文件，
+            // 否则内部文件是本次下载唯一的副本，删掉用户就真的什么都没有了
+            let finalLyricPath = lyricPath;
+            let finalCoverPath = coverPath;
+            const safDirectoryUri = runtimeInfo.safDirectoryUri;
+            if (safDirectoryUri) {
+                const safAudioPath = await runPostProcessingStep(
+                    "后处理失败：音频写入授权目录",
+                    context,
+                    () =>
+                        copyLocalFileToAndroidDirectory(
+                            audioPath,
+                            safDirectoryUri,
+                            getFileName(audioPath),
+                        ),
+                );
+                if (safAudioPath) {
+                    finalAudioPath = safAudioPath;
+                    finalLyricPath =
+                        (await this.copyCompanionFileToSaf(
+                            lyricPath,
+                            safDirectoryUri,
+                            context,
+                        )) ?? lyricPath;
+                    finalCoverPath =
+                        (await this.copyCompanionFileToSaf(
+                            coverPath,
+                            safDirectoryUri,
+                            context,
+                        )) ?? coverPath;
+                    await this.cleanupInternalDownloadFiles([
+                        audioPath,
+                        finalLyricPath === lyricPath ? null : lyricPath,
+                        finalCoverPath === coverPath ? null : coverPath,
+                    ]);
+                }
+            }
+
+            const localAudioMeta = await runPostProcessingStep(
+                "后处理失败：读取音频元数据",
+                context,
+                () => Mp3Util.getAudioMeta(finalAudioPath),
+            );
+            await runPostProcessingStep(
+                "后处理失败：写入本地音乐库",
+                context,
+                () =>
+                    LocalMusicSheet.addMusic({
+                        ...musicItem,
+                        [internalSerializeKey]: {
+                            localPath: finalAudioPath,
+                            audioMeta: localAudioMeta,
+                        },
+                    }),
+            );
+
+            // 对账失败时退回「本次结果优先、否则沿用旧记录」，避免旧文件失去追踪变成无主垃圾
+            const reconciledCompanionPaths =
+                (await runPostProcessingStep(
+                    "后处理失败：附属文件记录对账",
+                    context,
+                    () =>
+                        reconcileCompanionPaths(musicItem, previousCompanionPaths, {
+                            lyricPath: finalLyricPath,
+                            coverPath: finalCoverPath,
+                        }),
+                )) ?? {
+                    lyricPath: finalLyricPath ?? previousCompanionPaths.lyricPath,
+                    coverPath: finalCoverPath ?? previousCompanionPaths.coverPath,
+                };
+
+            patchMediaExtra(musicItem, {
+                downloaded: true,
+                localPath: finalAudioPath,
+                localLyricPath: reconciledCompanionPaths.lyricPath ?? undefined,
+                localCoverPath: reconciledCompanionPaths.coverPath ?? undefined,
+            });
+
+            return finalAudioPath;
+        } catch (error) {
+            // 兜底：后处理编排自身出问题也绝不能影响已经落盘的音频与任务状态
+            errorLog("后处理失败：未知异常", {
+                ...context,
+                error: error instanceof Error ? error.message : String(error),
+            });
+            return finalAudioPath;
+        }
+    }
+
+    /** 清理已经搬进授权目录后的内部临时文件，失败只记日志 */
+    private async cleanupInternalDownloadFiles(paths: Array<string | null>) {
+        for (const tempPath of paths) {
+            if (!tempPath) {
+                continue;
+            }
+            await unlink(removeFileScheme(tempPath)).catch(error => {
+                errorLog("授权目录写入成功，但下载临时文件清理失败", {
+                    filePath: tempPath,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            });
+        }
     }
 
     private cleanupTaskStateByKey(taskId: string, removeNativeTask: boolean) {
@@ -1435,13 +1607,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             Platform.OS === "android" &&
             !isAndroidSafUri(this.configService.getConfig("basic.downloadPath"))
         ) {
-            if (!this.androidDirectoryRequest) {
-                this.androidDirectoryRequest = requestAndroidDirectoryAccess()
-                    .finally(() => {
-                        this.androidDirectoryRequest = null;
-                    });
-            }
-            this.androidDirectoryRequest.then(directoryUri => {
+            // basic.downloadPath 的唯一写入口在 DownloadPath 里，它内部做了
+            // 单飞，这里不用再自己判重
+            DownloadPath.ensure().then(directoryUri => {
                 if (!directoryUri) {
                     const firstItem = Array.isArray(musicItems)
                         ? musicItems[0]
@@ -1456,7 +1624,6 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                     }
                     return;
                 }
-                this.configService.setConfig("basic.downloadPath", directoryUri);
                 this.download(musicItems, quality);
             }).catch(error => {
                 this.emit(
@@ -1492,6 +1659,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             };
             downloadTasks.set(key, task);
             this.emit(DownloaderEvent.DownloadTaskUpdate, task);
+            // 重新入队就不再是「已完成 / 已失败」了：先撤掉终态记录，
+            // 等真正跑到终态时由 syncHistoryRecord 重新写入，避免同一首歌两个分栏各出现一次
+            downloadHistory.removeRecord(key);
             accepted.push(musicItem);
         }
 
@@ -1551,8 +1721,127 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         void Mp3Util.cancelDownloadTask(key).catch(() => {});
         void Mp3Util.removeDownloadTask(key).catch(() => {});
         this.cleanupTaskStateByKey(key, false);
+        // 「清除错误任务」走的就是这里：队列状态清了，历史记录也要跟着清
+        downloadHistory.removeRecord(key);
         this.maybeEmitQueueCompleted();
         return true;
+    }
+
+    /**
+     * 暂停单个任务。只有原生队列支持真暂停（断点续传），
+     * JS 回退下载没有暂停能力，返回 false 由 UI 决定降级提示。
+     */
+    async pause(musicItem: IMusic.IMusicItem): Promise<boolean> {
+        const key = getMediaUniqueKey(musicItem);
+        const task = downloadTasks.get(key);
+        if (!task) {
+            return false;
+        }
+        if (
+            task.status !== DownloadStatus.Pending &&
+            task.status !== DownloadStatus.Preparing &&
+            task.status !== DownloadStatus.Downloading
+        ) {
+            return false;
+        }
+
+        const paused = await Mp3Util.pauseDownloadTask(key).catch(() => false);
+        if (!paused) {
+            return false;
+        }
+        this.updateDownloadTask(musicItem, { status: DownloadStatus.Paused });
+        return true;
+    }
+
+    /** 继续被暂停的任务；原生恢复失败时把任务退回排队，交给队列重新驱动 */
+    async resume(musicItem: IMusic.IMusicItem): Promise<boolean> {
+        const key = getMediaUniqueKey(musicItem);
+        const task = downloadTasks.get(key);
+        if (!task || task.status !== DownloadStatus.Paused) {
+            return false;
+        }
+
+        const resumed = await Mp3Util.resumeDownloadTask(key).catch(() => false);
+        if (resumed) {
+            this.updateDownloadTask(musicItem, { status: DownloadStatus.Downloading });
+            return true;
+        }
+
+        // 原生侧已经没有这条任务（进程被杀过），重新 preparations 一次
+        this.updateDownloadTask(musicItem, { status: DownloadStatus.Pending });
+        this.pushPrepareTask({ musicItem: task.musicItem, quality: task.quality });
+        return true;
+    }
+
+    /** 全部暂停，返回实际暂停成功的条数 */
+    async pauseAll(): Promise<number> {
+        const candidates = Array.from(downloadTasks.values()).filter(
+            task =>
+                task.status === DownloadStatus.Pending ||
+                task.status === DownloadStatus.Preparing ||
+                task.status === DownloadStatus.Downloading,
+        );
+        let paused = 0;
+        for (const task of candidates) {
+            if (await this.pause(task.musicItem)) {
+                paused++;
+            }
+        }
+        return paused;
+    }
+
+    /** 全部继续，返回实际恢复的条数 */
+    async resumeAll(): Promise<number> {
+        const pausedTasks = Array.from(downloadTasks.values()).filter(
+            task => task.status === DownloadStatus.Paused,
+        );
+        let resumed = 0;
+        for (const task of pausedTasks) {
+            if (await this.resume(task.musicItem)) {
+                resumed++;
+            }
+        }
+        return resumed;
+    }
+
+    /**
+     * 重试一条失败任务。
+     * 无论失败任务是还活在内存队列里（当前会话），还是只剩历史记录（重启后），
+     * 都统一走 download()：download() 内部允许覆盖 Error 状态的任务重新入队。
+     */
+    retry(musicItem: IMusic.IMusicItem, quality?: IMusic.IQualityKey): boolean {
+        if (network.isOffline) {
+            this.emit(DownloaderEvent.DownloadError, DownloadFailReason.NetworkOffline);
+            return false;
+        }
+        if (network.isCellular && !this.configService.getConfig("basic.useCelluarNetworkDownload")) {
+            this.emit(
+                DownloaderEvent.DownloadError,
+                DownloadFailReason.NotAllowToDownloadInCellular,
+            );
+            return false;
+        }
+
+        this.download(musicItem, quality);
+        return true;
+    }
+
+    /** 当前队列里的活跃 / 暂停任务数，用于概览卡展示并发占用 */
+    getQueueStats() {
+        let active = 0;
+        let paused = 0;
+        for (const task of downloadTasks.values()) {
+            if (task.status === DownloadStatus.Paused) {
+                paused++;
+            } else if (
+                task.status === DownloadStatus.Pending ||
+                task.status === DownloadStatus.Preparing ||
+                task.status === DownloadStatus.Downloading
+            ) {
+                active++;
+            }
+        }
+        return { active, paused };
     }
 }
 

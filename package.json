@@ -11,6 +11,10 @@
     "ios": "react-native run-ios",
     "lint": "eslint src --fix",
     "typecheck:runtime": "node ./scripts/check-runtime-references.js",
+    "check:colors": "node ./scripts/check-hardcoded-colors.mjs",
+    "check:colors:baseline": "node ./scripts/check-hardcoded-colors.mjs --update",
+    "check:ui": "node ./scripts/check-ui-conventions.mjs",
+    "check:ui:baseline": "node ./scripts/check-ui-conventions.mjs --update",
     "start": "react-native start",
     "preview:web": "expo start --web",
     "clean": "node ./scripts/clean-android.js",
@@ -147,6 +151,9 @@
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
       "eslint --fix"
+    ],
+    "src/**/*.tsx": [
+      "node ./scripts/check-hardcoded-colors.mjs"
     ]
   },
   "repository": {
