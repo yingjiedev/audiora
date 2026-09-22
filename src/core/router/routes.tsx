@@ -27,6 +27,8 @@ export type RoutePaths = ValueOf<typeof ROUTE_PATH>;
 type IRoutes = {
   path: RoutePaths;
   component: ComponentType<any>;
+  /** Extra native-stack options (animation, gestures) for this screen. */
+  options?: Record<string, unknown>;
 };
 
 
@@ -38,6 +40,14 @@ export const routes: Array<IRoutes> = [
     {
         path: ROUTE_PATH.MUSIC_DETAIL,
         component: MusicDetail,
+        // The player owns its own transition (see core/playerTransition): the
+        // cover morphs out of the mini player while the page cross-fades. A
+        // native slide on top of that would move the measured frames mid-flight,
+        // and the native swipe-to-pop would fight the drag-down dismiss.
+        options: {
+            animation: "none",
+            gestureEnabled: false,
+        },
     },
     {
         path: ROUTE_PATH.TOP_LIST,

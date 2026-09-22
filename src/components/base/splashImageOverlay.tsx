@@ -3,6 +3,7 @@ import { Animated, Image, StyleSheet } from "react-native";
 import { useAppConfig } from "@/core/appConfig";
 import { getDefaultStore } from "jotai";
 import bootstrapAtom from "@/entry/bootstrap/bootstrap.atom";
+import { motionDuration } from "@/utils/motion";
 
 /**
  * 自定义启动图覆盖层。
@@ -42,7 +43,7 @@ export default function SplashImageOverlay() {
         // 启动结束后淡出并卸载覆盖层
         Animated.timing(fadeAnim, {
             toValue: 0,
-            duration: 320,
+            duration: motionDuration("screen"),
             useNativeDriver: true,
         }).start(() => {
             setVisible(false);

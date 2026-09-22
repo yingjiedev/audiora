@@ -19,9 +19,10 @@ import Animated, {
     useSharedValue,
     withTiming,
 } from "react-native-reanimated";
-import { timingConfig } from "@/constants/commonConst";
 import useColors from "@/hooks/useColors";
+import useMotion from "@/hooks/useMotion";
 import useHasCustomBackground from "@/hooks/useHasCustomBackground";
+import { KEYBOARD_TIMING } from "@/utils/motion";
 import ThemeText from "@/components/base/themeText";
 import Divider from "@/components/base/divider";
 import { fontSizeConst } from "@/constants/uiConst";
@@ -46,11 +47,22 @@ function Dialog(props: IDialogProps) {
     const sharedShowValue = useSharedValue(0);
     const keyboardHeight = useSharedValue(0);
     const colors = useColors();
+    const motion = useMotion();
     const hasCustomBackground = useHasCustomBackground();
     const backHandlerRef = useRef<NativeEventSubscription | null>(null);
     const orientation = useOrientation();
     const keyboardAvoidMode =
         Config.getConfig("basic.keyboardAvoidMode") ?? "auto";
+
+    // Resolved outside the worklets below: calling helpers from inside a
+    // worklet is not safe, so the config is captured as a plain object.
+    const dialogTiming = useMemo(
+        () => ({
+            duration: motion.duration("fast"),
+            easing: motion.easing("decelerate"),
+        }),
+        [motion],
+    );
 
     // 对话框宽度
     const dialogContainerStyle: ViewStyle =
@@ -86,9 +98,7 @@ function Dialog(props: IDialogProps) {
             keyboardShowEvent,
             e => {
                 if (keyboardAvoidMode === "off") {
-                    keyboardHeight.value = withTiming(0, {
-                        duration: Platform.OS === "ios" ? 250 : 150,
-                    });
+                    keyboardHeight.value = motion.timing(0, KEYBOARD_TIMING);
                     return;
                 }
                 const windowHeight = Dimensions.get("window").height;
@@ -107,18 +117,17 @@ function Dialog(props: IDialogProps) {
                             e.endCoordinates.height,
                             effectiveKeyboardHeight,
                         );
-                keyboardHeight.value = withTiming(targetHeight / 2, {
-                    duration: Platform.OS === "ios" ? 250 : 150,
-                });
+                keyboardHeight.value = motion.timing(
+                    targetHeight / 2,
+                    KEYBOARD_TIMING,
+                );
             },
         );
 
         const keyboardHideListener = Keyboard.addListener(
             keyboardHideEvent,
             () => {
-                keyboardHeight.value = withTiming(0, {
-                    duration: Platform.OS === "ios" ? 250 : 150,
-                });
+                keyboardHeight.value = motion.timing(0, KEYBOARD_TIMING);
             },
         );
 
@@ -131,14 +140,18 @@ function Dialog(props: IDialogProps) {
             keyboardShowListener.remove();
             keyboardHideListener.remove();
         };
-    }, [onDismiss, sharedShowValue, keyboardHeight, keyboardAvoidMode]);
+    }, [
+        dialogTiming,
+        keyboardAvoidMode,
+        keyboardHeight,
+        motion,
+        onDismiss,
+        sharedShowValue,
+    ]);
 
     const containerStyle = useAnimatedStyle(() => {
         return {
-            opacity: withTiming(
-                sharedShowValue.value,
-                timingConfig.animationFast,
-            ),
+            opacity: withTiming(sharedShowValue.value, dialogTiming),
         };
     });
 
@@ -148,7 +161,7 @@ function Dialog(props: IDialogProps) {
                 {
                     scale: withTiming(
                         0.9 + sharedShowValue.value * 0.1,
-                        timingConfig.animationFast,
+                        dialogTiming,
                     ),
                 },
                 {

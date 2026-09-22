@@ -4,8 +4,8 @@ import rpx from "@/utils/rpx";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
-    withTiming,
 } from "react-native-reanimated";
+import useMotion from "@/hooks/useMotion";
 import { useAtomValue } from "jotai";
 import { scrollToTopAtom } from "../store/atoms";
 import ThemeText from "@/components/base/themeText";
@@ -19,6 +19,9 @@ import useCardStyle from "@/hooks/useCardStyle";
 import Color from "color";
 
 const headerHeight = rpx(350);
+
+/** Header collapse is a small spatial move — standard curve, normal token. */
+const HEADER_TIMING = { duration: "normal", easing: "standard" } as const;
 
 interface IHeaderProps {
     neverFold?: boolean;
@@ -35,6 +38,7 @@ export default function Header(props: IHeaderProps) {
 
     const { t } = useI18N();
     const colors = useColors();
+    const motion = useMotion();
     const cardStyle = useCardStyle({
         borderWidth: 0,
         elevation: 3,
@@ -56,18 +60,18 @@ export default function Header(props: IHeaderProps) {
     /** 折叠 */
     useEffect(() => {
         if (neverFold) {
-            heightValue.value = withTiming(headerHeight);
-            opacityValue.value = withTiming(1);
+            heightValue.value = motion.timing(headerHeight, HEADER_TIMING);
+            opacityValue.value = motion.timing(1, HEADER_TIMING);
             return;
         }
         if (scrollToTopState) {
-            heightValue.value = withTiming(headerHeight);
-            opacityValue.value = withTiming(1);
+            heightValue.value = motion.timing(headerHeight, HEADER_TIMING);
+            opacityValue.value = motion.timing(1, HEADER_TIMING);
         } else {
-            heightValue.value = withTiming(0);
-            opacityValue.value = withTiming(0);
+            heightValue.value = motion.timing(0, HEADER_TIMING);
+            opacityValue.value = motion.timing(0, HEADER_TIMING);
         }
-    }, [scrollToTopState, neverFold, heightValue, opacityValue]);
+    }, [motion, neverFold, opacityValue, heightValue, scrollToTopState]);
 
     return (
         <Animated.View style={[styles.wrapper, heightStyle]}>
