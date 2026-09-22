@@ -1,4 +1,5 @@
 import React from "react";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import HomeHero from "./HomeHero";
@@ -29,10 +30,17 @@ jest.mock("@/utils/rpx", () => ({
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => true }));
 
 describe("HomeHero layout", () => {
-    it("stretches horizontally without deriving width from an aspect ratio", () => {
+    it.each([
+        ["light", DefaultTheme],
+        ["dark", DarkTheme],
+    ])("stretches horizontally without deriving width from an aspect ratio (%s)", (_mode, theme) => {
         let renderer: TestRenderer.ReactTestRenderer;
         act(() => {
-            renderer = TestRenderer.create(<HomeHero />);
+            renderer = TestRenderer.create(
+                <ThemeProvider value={theme}>
+                    <HomeHero />
+                </ThemeProvider>,
+            );
         });
 
         const card = renderer!.root.findByProps({
@@ -44,5 +52,9 @@ describe("HomeHero layout", () => {
         expect(style.height).toBe(268);
         expect(style.marginHorizontal).toBe(24);
         expect(style.aspectRatio).toBeUndefined();
+
+        act(() => {
+            renderer!.unmount();
+        });
     });
 });
