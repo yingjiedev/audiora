@@ -132,6 +132,9 @@ jobs:
                   NODE
 
             # 🔨 生成构建信息
+            - name: Check bundled key material in sources
+              run: python3 scripts/check-release-key-material.py
+
             - name: Generate build info
               id: build-info
               run: |
@@ -313,6 +316,9 @@ jobs:
                   ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
             # 🔍 产物签名校验：任何 Release APK 都不得使用仓库内 debug.keystore 签名（issue #3）
+            - name: Check bundled key material in release APKs
+              run: python3 scripts/check-release-key-material.py android/app/build/outputs/apk/release/*.apk
+
             - name: Verify APK signing
               run: |
                   set -euo pipefail

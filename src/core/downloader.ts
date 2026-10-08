@@ -9,7 +9,8 @@ import { getMediaUniqueKey, isSameMediaItem } from "@/utils/mediaUtils";
 import network from "@/utils/network";
 import { getPluginQualityScope, getQualityOrder, pickSupportedQuality } from "@/utils/qualities";
 import { generateFileNameFromConfig, DEFAULT_FILE_NAMING_CONFIG } from "@/utils/fileNamingFormatter";
-import { isMflacUrl, normalizeEkey } from "@/utils/mflac";
+import { isMflacUrl } from "@/utils/mflac";
+import { QmcKeyError, resolveSongKey } from "@/service/mflac/songKey";
 import EventEmitter from "eventemitter3";
 import { atom, getDefaultStore, useAtomValue } from "jotai";
 import path from "path-browserify";
@@ -67,7 +68,7 @@ interface IDownloadRuntimeInfo {
     targetDownloadPath: string;
     tempEncryptedPath: string;
     willDownloadEncrypted: boolean;
-    mflacEkey?: string;
+    mflacRawSongKey?: string;
     cencCek?: string;
     extension: string;
     encryptedExtension: string;
@@ -966,7 +967,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
     ): Promise<IResolveTaskResult> {
         let url = musicItem.url;
         let headers = musicItem.headers;
-        let mflacEkey: string | undefined;
+        let mflacRawSongKey: string | undefined;
+        let keyRejected = false;
+        let sourceSelected = false;
         let cencCek: string | undefined;
         let actualQuality = quality ??
             this.configService.getConfig("basic.defaultDownloadQuality") ??
@@ -1004,15 +1007,15 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                     }
 
                     const candidateCek = data.cek;
-                    const candidateEkey = normalizeEkey(data.ekey as string | undefined) || undefined;
-                    const encrypted = !!candidateCek || !!candidateEkey || isMflacUrl(data.url);
+                    const candidateRawKey = resolveSongKey(data);
+                    const encrypted = !!candidateCek || !!candidateRawKey || isMflacUrl(data.url);
                     if (encrypted) {
                         // 加密源必须具备密钥且当前平台支持解密，否则下载完也无法解密，
                         // 提前跳过该音质，尝试下一档
                         if (candidateCek && !cencDecryptSupported) {
                             continue;
                         }
-                        if (!candidateCek && (!candidateEkey || !mflacDecryptSupported)) {
+                        if (!candidateCek && (!candidateRawKey || !mflacDecryptSupported)) {
                             continue;
                         }
                     }
@@ -1023,13 +1026,31 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                     if (userAgent && !headers?.["User-Agent"] && !headers?.["user-agent"]) {
                         headers = { ...(headers ?? {}), "User-Agent": userAgent };
                     }
-                    mflacEkey = candidateEkey;
+                    mflacRawSongKey = candidateRawKey;
                     cencCek = candidateCek;
                     actualQuality = currentQuality;
+                    sourceSelected = true;
                     break;
-                } catch {
+                } catch (error) {
+                    keyRejected ||= error instanceof QmcKeyError;
                     continue;
                 }
+            }
+        }
+
+        if (!sourceSelected) {
+            if (keyRejected) {
+                return { failReason: DownloadFailReason.MissingDecryptionKey };
+            }
+            try {
+                const fallback = musicItem as IPlugin.IMediaSourceResult;
+                mflacRawSongKey = resolveSongKey(fallback);
+                cencCek = fallback.cek;
+            } catch (error) {
+                if (error instanceof QmcKeyError) {
+                    return { failReason: DownloadFailReason.MissingDecryptionKey };
+                }
+                throw error;
             }
         }
 
@@ -1038,6 +1059,10 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         }
 
         if (url.startsWith("file://") || url.startsWith("/")) {
+            // Local encrypted files must be converted by their owner before import.
+            if (mflacRawSongKey || cencCek || isMflacUrl(url)) {
+                return { failReason: DownloadFailReason.MissingDecryptionKey };
+            }
             return {
                 localFilePath: removeFileScheme(url),
                 quality: actualQuality,
@@ -1045,12 +1070,12 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         }
 
         // 兜底 URL（musicItem.url）同样要过加密源校验
-        const fallbackEncrypted = !!cencCek || !!mflacEkey || isMflacUrl(url);
+        const fallbackEncrypted = !!cencCek || !!mflacRawSongKey || isMflacUrl(url);
         if (fallbackEncrypted) {
             if (cencCek && !cencDecryptSupported) {
                 return { failReason: DownloadFailReason.FailToFetchSource };
             }
-            if (!cencCek && (!mflacEkey || !mflacDecryptSupported)) {
+            if (!cencCek && (!mflacRawSongKey || !mflacDecryptSupported)) {
                 return { failReason: DownloadFailReason.FailToFetchSource };
             }
         }
@@ -1085,7 +1110,7 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             }
         }
 
-        const willDownloadEncrypted = !!cencCek || !!mflacEkey || isMflacUrl(url);
+        const willDownloadEncrypted = !!cencCek || !!mflacRawSongKey || isMflacUrl(url);
 
         let encryptedExtension = cencCek ? "cenc" : "mflac";
         if (!cencCek && urlLower.endsWith(".mgg")) {
@@ -1121,7 +1146,7 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             targetDownloadPath,
             tempEncryptedPath,
             willDownloadEncrypted,
-            mflacEkey,
+            mflacRawSongKey,
             cencCek,
             extension,
             encryptedExtension,
@@ -1308,12 +1333,17 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
             try {
                 await this.flushDownloadedAudio(runtimeInfo);
             } catch (error) {
-                await this.cleanupFailedDownloadAudio(runtimeInfo);
+                const reason = error instanceof QmcKeyError
+                    ? DownloadFailReason.MissingDecryptionKey
+                    : DownloadFailReason.Unknown;
+                if (!(error instanceof QmcKeyError)) {
+                    await this.cleanupFailedDownloadAudio(runtimeInfo);
+                }
                 this.updateDownloadTask(task.musicItem, {
                     status: DownloadStatus.Error,
-                    errorReason: DownloadFailReason.Unknown,
+                    errorReason: reason,
                 });
-                this.emit(DownloaderEvent.DownloadTaskError, DownloadFailReason.Unknown, task.musicItem, error as Error);
+                this.emit(DownloaderEvent.DownloadTaskError, reason, task.musicItem, error as Error);
                 return;
             }
 
@@ -1354,6 +1384,9 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
      */
     private async flushDownloadedAudio(runtimeInfo: IDownloadRuntimeInfo) {
         if (runtimeInfo.willDownloadEncrypted) {
+            if (!runtimeInfo.cencCek && !runtimeInfo.mflacRawSongKey) {
+                throw new QmcKeyError();
+            }
             // 解密输出前清掉旧目标文件（重新下载场景），避免解密实现对已存在文件行为不确定
             try {
                 const decryptTarget = removeFileScheme(runtimeInfo.targetDownloadPath);
@@ -1369,14 +1402,14 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
                     runtimeInfo.cencCek,
                 );
             } else {
-                const cleaned = normalizeEkey(runtimeInfo.mflacEkey);
-                if (!cleaned) {
-                    throw new Error("missing ekey for encrypted media");
+                const rawSongKey = runtimeInfo.mflacRawSongKey;
+                if (!rawSongKey) {
+                    throw new QmcKeyError();
                 }
                 await Mp3Util.decryptMflacToFlac(
                     removeFileScheme(runtimeInfo.tempEncryptedPath),
                     removeFileScheme(runtimeInfo.targetDownloadPath),
-                    cleaned,
+                    rawSongKey,
                 );
             }
             if (runtimeInfo.tempEncryptedPath !== runtimeInfo.targetDownloadPath) {

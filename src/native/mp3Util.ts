@@ -176,11 +176,11 @@ class Mp3UtilManager implements IMp3Util {
     /**
    * Decrypt an encrypted .mflac file to .flac using native decoder.
    */
-    async decryptMflacToFlac(inputPath: string, outputPath: string, ekey: string): Promise<boolean> {
+    async decryptMflacToFlac(inputPath: string, outputPath: string, rawSongKey: string): Promise<boolean> {
         if (!this.nativeModule?.decryptMflacToFlac) {
             throw new Error("decryptMflacToFlac not available");
         }
-        return this.nativeModule.decryptMflacToFlac(inputPath, outputPath, ekey);
+        return this.nativeModule.decryptMflacToFlac(inputPath, outputPath, rawSongKey);
     }
 
     /**
@@ -196,11 +196,11 @@ class Mp3UtilManager implements IMp3Util {
     /**
    * Register a streaming session and return local URL.
    */
-    async registerMflacStream(src: string, ekey: string, headers?: Record<string, string> | null): Promise<string> {
+    async registerMflacStream(src: string, rawSongKey: string, headers?: Record<string, string> | null): Promise<string> {
         if (!this.nativeModule?.registerMflacStream) {
             throw new Error("registerMflacStream not available");
         }
-        return this.nativeModule.registerMflacStream(src, ekey, headers ?? null);
+        return this.nativeModule.registerMflacStream(src, rawSongKey, headers ?? null);
     }
 
     async addDownloadTask(params: INativeDownloadTaskParams): Promise<boolean> {

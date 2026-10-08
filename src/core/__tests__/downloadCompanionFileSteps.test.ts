@@ -1,3 +1,4 @@
+import { formatLyricsByTimestamp } from "@/utils/lrcParser";
 import { downloadFile, exists, stat, unlink, writeFile } from "react-native-fs";
 import {
     writeCoverFile,
@@ -38,10 +39,6 @@ jest.mock("@/core/localMusicSheet", () => ({
 
 jest.mock("@/utils/lrcParser", () => ({
     formatLyricsByTimestamp: jest.fn(() => "[00:00.000]测试歌词"),
-}));
-
-jest.mock("@/utils/musicDecrypter", () => ({
-    autoDecryptLyric: jest.fn(async (lrc: string) => lrc),
 }));
 
 const mockedWriteFile = writeFile as unknown as jest.Mock;
@@ -94,6 +91,29 @@ describe("下载附属文件步骤", () => {
     });
 
     describe("writeLyricFile", () => {
+        it.each([false, true])("规范化原文、翻译与音译，逐字模式 %s", async enableWordByWord => {
+            const xml = (text: string) =>
+                `<QrcInfos><LyricInfo LyricContent="[1000,500]${text}(1000,500)" /></QrcInfos>`;
+            const getLyric = jest.fn(async () => ({
+                rawLrc: xml("原文"),
+                translation: xml("翻译"),
+                romanization: xml("音译"),
+            }));
+            await writeLyricFile(
+                musicItem,
+                audioFilePath,
+                { ...lyricConfig, enableWordByWord },
+                createPluginManager(getLyric),
+            );
+            const expected = (text: string) => enableWordByWord
+                ? `[00:01.000]<00:01.000>${text}<00:01.500>`
+                : `[00:01.00]${text}`;
+            expect(formatLyricsByTimestamp).toHaveBeenLastCalledWith(
+                expected("原文"), expected("翻译"), expected("音译"),
+                lyricConfig.lyricOrder, { enableWordByWord },
+            );
+        });
+
         it("插件不支持时返回 null，不算失败", async () => {
             const result = await writeLyricFile(
                 musicItem,

@@ -24,6 +24,7 @@ export enum DownloadFailReason {
     NotAllowToDownloadInCellular = "not-allow-to-download-in-cellular",
     FailToFetchSource = "no-valid-source",
     NoWritePermission = "no-write-permission",
+    MissingDecryptionKey = "missing-decryption-key",
     Unknown = "unknown",
 }
 

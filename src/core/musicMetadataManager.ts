@@ -145,14 +145,14 @@ class MusicMetadataManager {
           歌曲: musicItem.title
         });
 
-        // Fix: 加密歌词自动解密（QQ音乐QRC格式 - Native异步解密）
-        const { autoDecryptLyric } = require('@/utils/musicDecrypter');
+        // 统一歌词格式（带逐字时间轴的 XML -> LRC）
+        const { normalizeLyric } = require('@/utils/lyricFormat');
         const enableWordByWord = config?.enableWordByWord ?? false;
-        const rawLrc = lyricSource.rawLrc ? await autoDecryptLyric(lyricSource.rawLrc, enableWordByWord) : lyricSource.rawLrc;
-        const translation = lyricSource.translation ? await autoDecryptLyric(lyricSource.translation, enableWordByWord) : lyricSource.translation;
-        const romanization = lyricSource.romanization ? await autoDecryptLyric(lyricSource.romanization, enableWordByWord) : lyricSource.romanization;
+        const rawLrc = lyricSource.rawLrc ? await normalizeLyric(lyricSource.rawLrc, enableWordByWord) : lyricSource.rawLrc;
+        const translation = lyricSource.translation ? await normalizeLyric(lyricSource.translation, enableWordByWord) : lyricSource.translation;
+        const romanization = lyricSource.romanization ? await normalizeLyric(lyricSource.romanization, enableWordByWord) : lyricSource.romanization;
 
-        devLog('info', '[元数据管理器] 解密后的歌词数据', {
+        devLog('info', '[元数据管理器] 规范化后的歌词数据', {
           rawLrc长度: rawLrc?.length,
           translation长度: translation?.length,
           romanization长度: romanization?.length,
@@ -163,7 +163,7 @@ class MusicMetadataManager {
         // 如果没有原始歌词，尝试使用旧的lrc字段
         if (!rawLrc) {
           if (lyricSource.lrc && !lyricSource.lrc.startsWith('http')) {
-            return await autoDecryptLyric(lyricSource.lrc, enableWordByWord);
+            return await normalizeLyric(lyricSource.lrc, enableWordByWord);
           }
           return undefined;
         }

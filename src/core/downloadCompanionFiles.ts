@@ -21,7 +21,7 @@ import {
     isSharedCoverPath,
 } from "@/utils/mediaCompanion";
 import { getMediaExtraProperty } from "@/utils/mediaExtra";
-import { autoDecryptLyric } from "@/utils/musicDecrypter";
+import { normalizeLyric } from "@/utils/lyricFormat";
 import { downloadFile, exists, moveFile, stat, unlink, writeFile } from "react-native-fs";
 import { PostProcessingStepError } from "./downloadPostProcessing";
 import LocalMusicSheet from "./localMusicSheet";
@@ -102,13 +102,13 @@ export async function writeLyricFile(
         }
 
         const rawLrc = lyricSource.rawLrc
-            ? await autoDecryptLyric(lyricSource.rawLrc, config.enableWordByWord)
+            ? await normalizeLyric(lyricSource.rawLrc, config.enableWordByWord)
             : undefined;
         const translation = lyricSource.translation
-            ? await autoDecryptLyric(lyricSource.translation, config.enableWordByWord)
+            ? await normalizeLyric(lyricSource.translation, config.enableWordByWord)
             : undefined;
         const romanization = lyricSource.romanization
-            ? await autoDecryptLyric(lyricSource.romanization, config.enableWordByWord)
+            ? await normalizeLyric(lyricSource.romanization, config.enableWordByWord)
             : undefined;
 
         if (!rawLrc) {
