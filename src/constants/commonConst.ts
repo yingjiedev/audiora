@@ -1,4 +1,4 @@
-import { Easing, EasingFunction } from "react-native-reanimated";
+import { motionDuration, motionEasing } from "@/utils/motion";
 
 export const internalSymbolKey = Symbol.for("$");
 // 加入播放列表的时间；app内使用，无法被序列化
@@ -49,28 +49,22 @@ export const CacheControl = {
 
 export { supportLocalMediaType } from "./mediaConst";
 
-const ANIMATION_EASING: EasingFunction = Easing.out(Easing.exp);
-const ANIMATION_DURATION = 150;
-
-const animationFast = {
-    duration: ANIMATION_DURATION,
-    easing: ANIMATION_EASING,
-};
-
-const animationNormal = {
-    duration: 250,
-    easing: ANIMATION_EASING,
-};
-
-const animationSlow = {
-    duration: 500,
-    easing: ANIMATION_EASING,
-};
-
+// Motion durations/easings now live in `designSystem.motion` (single source of
+// truth). These presets only map the legacy names onto the tokens so existing
+// call sites keep compiling; new code should use `useMotion()` instead.
 export const timingConfig = {
-    animationFast,
-    animationNormal,
-    animationSlow,
+    animationFast: {
+        duration: motionDuration("fast"),
+        easing: motionEasing.decelerate,
+    },
+    animationNormal: {
+        duration: motionDuration("normal"),
+        easing: motionEasing.decelerate,
+    },
+    animationSlow: {
+        duration: motionDuration("slow"),
+        easing: motionEasing.decelerate,
+    },
 };
 
 export const enum SortType {

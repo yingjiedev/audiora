@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
     StyleSheet,
     SwitchProps,
@@ -13,7 +13,7 @@ import Animated, {
     useSharedValue,
     withTiming,
 } from "react-native-reanimated";
-import { timingConfig } from "@/constants/commonConst";
+import useMotion from "@/hooks/useMotion";
 
 interface ISwitchProps extends SwitchProps {
     activeTrackColor?: string;
@@ -38,8 +38,19 @@ export default function ThemeSwitch(props: ISwitchProps) {
         value,
     } = props;
     const colors = useColors();
+    const motion = useMotion();
     const thumbInset = (trackHeight - thumbSize) / 2;
     const thumbTravelDistance = trackWidth - thumbSize - thumbInset * 2;
+
+    // Resolved on the JS side: the config object is captured by the worklet
+    // below, and calling helpers from inside a worklet is not safe.
+    const thumbTiming = useMemo(
+        () => ({
+            duration: motion.duration("fast"),
+            easing: motion.easing("standard"),
+        }),
+        [motion],
+    );
 
     const sharedValue = useSharedValue(value ? 1 : 0);
 
@@ -67,7 +78,7 @@ export default function ThemeSwitch(props: ISwitchProps) {
                 {
                     translateX: withTiming(
                         sharedValue.value * thumbTravelDistance,
-                        timingConfig.animationNormal,
+                        thumbTiming,
                     ),
                 },
             ],

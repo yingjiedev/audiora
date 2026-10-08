@@ -238,21 +238,21 @@ class LyricManager implements IInjectable {
     setup() {
         // 更新歌词 - 延迟异步执行，完全不阻塞播放
         this.trackPlayer.on(TrackPlayerEvents.CurrentMusicChanged, (musicItem) => {
-            devLog('info', '[LyricManager] Music changed event triggered', {
+            devLog("info", "[LyricManager] Music changed event triggered", {
                 title: musicItem?.title,
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
 
             // CRITICAL FIX: Delay lyric loading to ensure playback starts immediately
             // Use setTimeout to push lyric loading to end of event queue
             setTimeout(() => {
-                devLog('info', '[LyricManager] Starting delayed lyric load', {
+                devLog("info", "[LyricManager] Starting delayed lyric load", {
                     title: musicItem?.title,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
                 });
 
                 this.refreshLyric(true, true).catch(err => {
-                    devLog('warn', 'Lyric loading failed but playback continues', err);
+                    devLog("warn", "Lyric loading failed but playback continues", err);
                 });
             }, 0);
         });
@@ -346,7 +346,7 @@ class LyricManager implements IInjectable {
 
         // Initial async lyric load - non-blocking
         this.refreshLyric(true).catch(err => {
-            devLog('warn', 'Initial lyric load failed', err);
+            devLog("warn", "Initial lyric load failed", err);
         });
     }
 
@@ -368,7 +368,7 @@ class LyricManager implements IInjectable {
             if (this.trackPlayer.isCurrentMusic(musicItem)) {
                 // Async refresh, non-blocking
                 this.refreshLyric(false).catch(err => {
-                    devLog('warn', 'Lyric refresh after association failed', err);
+                    devLog("warn", "Lyric refresh after association failed", err);
                 });
             }
             return true;
@@ -387,7 +387,7 @@ class LyricManager implements IInjectable {
         if (this.trackPlayer.isCurrentMusic(musicItem)) {
             // Async refresh, non-blocking
             this.refreshLyric(false).catch(err => {
-                devLog('warn', 'Lyric refresh after unassociation failed', err);
+                devLog("warn", "Lyric refresh after unassociation failed", err);
             });
         }
     }
@@ -416,7 +416,7 @@ class LyricManager implements IInjectable {
         if (this.trackPlayer.isCurrentMusic(musicItem)) {
             // Async refresh, non-blocking
             this.refreshLyric(false, false).catch(err => {
-                devLog('warn', 'Lyric refresh after upload failed', err);
+                devLog("warn", "Lyric refresh after upload failed", err);
             });
         }
     }
@@ -443,7 +443,7 @@ class LyricManager implements IInjectable {
         if (this.trackPlayer.isCurrentMusic(musicItem)) {
             // Async refresh, non-blocking
             this.refreshLyric(false, false).catch(err => {
-                devLog('warn', 'Lyric refresh after removal failed', err);
+                devLog("warn", "Lyric refresh after removal failed", err);
             });
         }
 
@@ -452,7 +452,7 @@ class LyricManager implements IInjectable {
     // Force reload current lyric (used when config changes like enableWordByWord)
     reloadCurrentLyric() {
         this.refreshLyric(false, false).catch(err => {
-            devLog('warn', 'Lyric reload failed', err);
+            devLog("warn", "Lyric reload failed", err);
         });
     }
 
@@ -540,11 +540,11 @@ class LyricManager implements IInjectable {
     private async refreshLyric(skipFetchLyricSourceIfSame: boolean = true, ignoreProgress: boolean = false) {
         const currentMusicItem = this.trackPlayer.currentMusic;
 
-        devLog('info', 'Lyric refresh started', {
+        devLog("info", "Lyric refresh started", {
             hasMusic: !!currentMusicItem,
             title: currentMusicItem?.title,
             skipFetchLyricSourceIfSame,
-            ignoreProgress
+            ignoreProgress,
         });
 
         // 如果没有当前音乐项，重置歌词状态
@@ -558,27 +558,27 @@ class LyricManager implements IInjectable {
 
             if (skipFetchLyricSourceIfSame && this.lyricParser && this.trackPlayer.isCurrentMusic(this.lyricParser.musicItem)) {
                 lrcSource = this.lyricParser.lyricSource ?? null;
-                devLog('info', 'Using cached lyric source', { hasSource: !!lrcSource });
+                devLog("info", "Using cached lyric source", { hasSource: !!lrcSource });
             } else {
                 // 重置歌词状态
                 this.setLyricAsLoadingState();
 
-                devLog('info', 'Fetching lyric from plugin', { platform: currentMusicItem.platform });
+                devLog("info", "Fetching lyric from plugin", { platform: currentMusicItem.platform });
                 const fetchStartTime = Date.now();
 
                 lrcSource = (await this.pluginManager.getByMedia(currentMusicItem)?.methods?.getLyric(currentMusicItem)) ?? null;
 
                 const fetchDuration = Date.now() - fetchStartTime;
-                devLog('info', 'Plugin lyric fetch completed', {
+                devLog("info", "Plugin lyric fetch completed", {
                     duration: fetchDuration,
                     hasSource: !!lrcSource,
-                    hasRawLrc: !!lrcSource?.rawLrc
+                    hasRawLrc: !!lrcSource?.rawLrc,
                 });
             }
 
             // 切换到其他歌曲了, 直接返回
             if (!this.trackPlayer.isCurrentMusic(currentMusicItem)) {
-                devLog('info', 'Music changed during lyric fetch, aborting');
+                devLog("info", "Music changed during lyric fetch, aborting");
                 return;
             }
 
@@ -587,19 +587,19 @@ class LyricManager implements IInjectable {
                 // 重置歌词状态
                 this.setLyricAsLoadingState();
 
-                devLog('info', 'Auto-searching similar lyric');
+                devLog("info", "Auto-searching similar lyric");
                 lrcSource = await this.searchSimilarLyric(currentMusicItem);
             }
 
             // 切换到其他歌曲了, 直接返回
             if (!this.trackPlayer.isCurrentMusic(currentMusicItem)) {
-                devLog('info', 'Music changed during lyric search, aborting');
+                devLog("info", "Music changed during lyric search, aborting");
                 return;
             }
 
             // 如果源不存在，恢复默认设置
             if (!lrcSource) {
-                devLog('info', 'No lyric source found, setting no-lyric state');
+                devLog("info", "No lyric source found, setting no-lyric state");
                 this.setLyricAsNoLyricState();
                 this.lyricParser = null;
                 return;
@@ -607,10 +607,10 @@ class LyricManager implements IInjectable {
 
             // CRITICAL FIX: Defer CPU-intensive decryption to prevent blocking playback
             // QRC decryption involves Triple-DES + Zlib which can take 100-500ms+ synchronously
-            devLog('info', 'Processing lyric data', {
+            devLog("info", "Processing lyric data", {
                 hasRawLrc: !!lrcSource.rawLrc,
                 hasTranslation: !!lrcSource.translation,
-                hasRomanization: !!lrcSource.romanization
+                hasRomanization: !!lrcSource.romanization,
             });
 
             // Defer decryption to next event loop cycle to allow playback to start
@@ -620,7 +620,7 @@ class LyricManager implements IInjectable {
 
             // Get word-by-word setting from config
             const enableWordByWord = this.appConfig.getConfig("lyric.enableWordByWord") ?? true;
-            devLog('info', '[Lyric] Word-by-word config', { enableWordByWord });
+            devLog("info", "[Lyric] Word-by-word config", { enableWordByWord });
 
             // 统一歌词格式（带逐字时间轴的 XML -> LRC）
             // enableWordByWord 用于保留逐字时间轴
@@ -629,11 +629,11 @@ class LyricManager implements IInjectable {
             const romanization = lrcSource.romanization ? await normalizeLyric(lrcSource.romanization, enableWordByWord) : lrcSource.romanization;
 
             const normalizeDuration = Date.now() - normalizeStartTime;
-            devLog('info', '歌词格式规范化完成', {
+            devLog("info", "歌词格式规范化完成", {
                 duration: normalizeDuration,
                 rawLrcLength: rawLrc?.length,
                 translationLength: translation?.length,
-                romanizationLength: romanization?.length
+                romanizationLength: romanization?.length,
             });
 
             this.lyricParser = new LyricParser(rawLrc!, {
@@ -660,14 +660,14 @@ class LyricManager implements IInjectable {
                 : this.lyricParser.getPosition(progress.position);
             getDefaultStore().set(currentLyricItemAtom, currentLyric || null);
 
-            devLog('info', 'Lyric refresh completed successfully', {
+            devLog("info", "Lyric refresh completed successfully", {
                 lyricCount: this.lyricParser.getLyricItems().length,
                 hasTranslation: !!lrcSource.translation,
-                hasRomanization: !!lrcSource.romanization
+                hasRomanization: !!lrcSource.romanization,
             });
 
         } catch (err) {
-            devLog('error', 'Lyric refresh failed', err);
+            devLog("error", "Lyric refresh failed", err);
             if (this.trackPlayer.isCurrentMusic(currentMusicItem)) {
                 this.lyricParser = null;
                 this.setLyricAsNoLyricState();

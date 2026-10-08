@@ -12,15 +12,14 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
     cancelAnimation,
-    Easing,
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
     withDelay,
-    withTiming,
 } from "react-native-reanimated";
 import Icon from "@/components/base/icon.tsx";
 import Theme from "@/core/theme";
+import useMotion from "@/hooks/useMotion";
 
 export interface IToastConfig {
     /** 类型 */
@@ -56,13 +55,14 @@ const typeConfig = {
     },
 } as const;
 
-/** Plain config — avoid sharing non-worklet Easing from commonConst into Reanimated. */
-const TOAST_IN = { duration: 280, easing: Easing.out(Easing.cubic) };
-const TOAST_OUT = { duration: 220, easing: Easing.in(Easing.cubic) };
+/** Token refs (not resolved values) so Reduce Motion is applied at run time. */
+const TOAST_IN = { duration: "normal", easing: "decelerate" } as const;
+const TOAST_OUT = { duration: "fast", easing: "accelerate" } as const;
 
 export function ToastBaseComponent() {
     const activeToast = activeToastStore.useValue();
     const colors = useColors();
+    const motion = useMotion();
     // Track which toast id the current animation belongs to (avoid double-fire).
     const animatingIdRef = useRef<string | null>(null);
 
@@ -92,14 +92,14 @@ export function ToastBaseComponent() {
         cancelAnimation(toastAnim);
         // Reset without animation so the next withTiming always has a clean start.
         toastAnim.value = 0;
-        toastAnim.value = withTiming(1, TOAST_IN, finishedIn => {
+        toastAnim.value = motion.timing(1, TOAST_IN, finishedIn => {
             "worklet";
             if (!finishedIn) {
                 return;
             }
             toastAnim.value = withDelay(
                 holdMs,
-                withTiming(0, TOAST_OUT, finishedOut => {
+                motion.timing(0, TOAST_OUT, finishedOut => {
                     "worklet";
                     if (finishedOut) {
                         runOnJS(setNextToast)();
@@ -109,17 +109,17 @@ export function ToastBaseComponent() {
         });
         // Depend only on toast id — never on toastAnim (SharedValue identity churn).
         // eslint-disable-next-line react-hooks/exhaustive-deps -- toastAnim is stable SV
-    }, [activeToast?.id, setNextToast]);
+    }, [activeToast?.id, motion, setNextToast]);
 
     const dismissCurrentToast = useCallback(() => {
         cancelAnimation(toastAnim);
-        toastAnim.value = withTiming(0, TOAST_OUT, finished => {
+        toastAnim.value = motion.timing(0, TOAST_OUT, finished => {
             "worklet";
             if (finished) {
                 runOnJS(setNextToast)();
             }
         });
-    }, [setNextToast, toastAnim]);
+    }, [motion, setNextToast, toastAnim]);
 
     const flingGesture = Gesture.Fling()
         .direction(Directions.UP)

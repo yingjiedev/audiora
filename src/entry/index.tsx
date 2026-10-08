@@ -84,7 +84,14 @@ export default function Pages() {
                         <ErrorBoundary>
                             <BootstrapComponent />
                             <NotificationLifecycleManager />
-                            <ReducedMotionConfig mode={ReduceMotion.Never} />
+                            {/*
+                              Follow the OS "reduce motion" setting. Never
+                              forced animations off — the app ships motion that
+                              a user with vestibular sensitivity cannot opt out
+                              of. Individual animations keep a short cross-fade
+                              instead of vanishing (see utils/motion).
+                            */}
+                            <ReducedMotionConfig mode={ReduceMotion.System} />
                             <PageBackground />
                             <View
                                 style={globalStyle.flex1}
@@ -108,6 +115,7 @@ export default function Pages() {
                                             key={route.path}
                                             name={route.path}
                                             component={route.component}
+                                            options={route.options}
                                         />
                                     ))}
                                 </Stack.Navigator>

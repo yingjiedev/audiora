@@ -10,14 +10,13 @@ import {
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    withTiming,
     useDerivedValue,
     interpolateColor,
-    Easing,
     type SharedValue,
 } from "react-native-reanimated";
 import rpx from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
+import useMotion from "@/hooks/useMotion";
 import { fontSizeConst } from "@/constants/uiConst";
 import { getCurrentPositionMsShared } from "@/core/lyricManager";
 import { useAppConfig } from "@/core/appConfig";
@@ -286,11 +285,10 @@ interface ILyricItemComponentProps {
     wordFloatEm?: number;
 }
 
-// Animation timing configs
-const SCALE_TIMING_CONFIG = {
-    duration: 350,
-    easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-};
+// Animation timing configs — token refs, resolved through useMotion() so
+// Reduce Motion shortens them like everywhere else.
+const SCALE_TIMING = { duration: "slow", easing: "standard" } as const;
+const OPACITY_TIMING = { duration: "normal", easing: "standard" } as const;
 
 // Scale factor for highlighted line (1 = no scale)
 const HIGHLIGHT_SCALE = 1;
@@ -1364,16 +1362,17 @@ function RegularLyricLine({
 }) {
     const textOpacity = useSharedValue(highlight ? 1 : 0.5);
     const textScale = useSharedValue(highlight ? HIGHLIGHT_SCALE : 1);
+    const motion = useMotion();
 
     useEffect(() => {
         if (highlight) {
-            textOpacity.value = withTiming(1, { duration: 280 });
-            textScale.value = withTiming(HIGHLIGHT_SCALE, SCALE_TIMING_CONFIG);
+            textOpacity.value = motion.timing(1, OPACITY_TIMING);
+            textScale.value = motion.timing(HIGHLIGHT_SCALE, SCALE_TIMING);
         } else {
-            textOpacity.value = withTiming(0.5, { duration: 280 });
-            textScale.value = withTiming(1, SCALE_TIMING_CONFIG);
+            textOpacity.value = motion.timing(0.5, OPACITY_TIMING);
+            textScale.value = motion.timing(1, SCALE_TIMING);
         }
-    }, [highlight, textOpacity, textScale]);
+    }, [highlight, motion, textOpacity, textScale]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         opacity: textOpacity.value,
@@ -1446,16 +1445,17 @@ function MultiLineRegularLyric({
     // Scale animation for highlight effect
     const containerScale = useSharedValue(highlight ? HIGHLIGHT_SCALE : 1);
     const containerOpacity = useSharedValue(highlight ? 1 : 0.5);
+    const motion = useMotion();
 
     useEffect(() => {
         if (highlight) {
-            containerScale.value = withTiming(HIGHLIGHT_SCALE, SCALE_TIMING_CONFIG);
-            containerOpacity.value = withTiming(1, { duration: 280 });
+            containerScale.value = motion.timing(HIGHLIGHT_SCALE, SCALE_TIMING);
+            containerOpacity.value = motion.timing(1, OPACITY_TIMING);
         } else {
-            containerScale.value = withTiming(1, SCALE_TIMING_CONFIG);
-            containerOpacity.value = withTiming(0.5, { duration: 280 });
+            containerScale.value = motion.timing(1, SCALE_TIMING);
+            containerOpacity.value = motion.timing(0.5, OPACITY_TIMING);
         }
-    }, [containerOpacity, containerScale, highlight]);
+    }, [containerOpacity, containerScale, highlight, motion]);
 
     const animatedContainerStyle = useAnimatedStyle(() => ({
         transform: [{ scale: containerScale.value }],
