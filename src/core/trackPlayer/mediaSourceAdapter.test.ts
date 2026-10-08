@@ -1,6 +1,6 @@
 import Mp3Util from "@/native/mp3Util";
 import Cenc from "@/native/cenc";
-import { adaptMediaSourceForPlayback } from "./mediaSourceAdapter";
+import { adaptMediaSourceForPlayback, canReuseMediaSourceForPlayback } from "./mediaSourceAdapter";
 import { QmcKeyError } from "@/service/mflac/songKey";
 
 jest.mock("@/native/mp3Util", () => ({
@@ -13,6 +13,20 @@ jest.mock("@/native/cenc", () => ({
 }));
 
 beforeEach(() => jest.resetAllMocks());
+
+it.each([
+    { url: "https://host/opaque", ekey: "legacy" },
+    { url: "https://host/opaque", qmcRawKey: "AA==" },
+    { url: "https://host/audio.mflac", qmcRawKey: "AA==" },
+    { url: "https://host/audio.mflac" },
+    { url: "http://127.0.0.1/audio", qmcRawKey: "invalid!" },
+])("refreshes legacy or unadapted encrypted tracks before reusing them %#", source => {
+    expect(canReuseMediaSourceForPlayback(source)).toBe(false);
+});
+it("can resume a plain source or an already adapted native QMC proxy", () => {
+    expect(canReuseMediaSourceForPlayback({ url: "file:///music/audio.flac" })).toBe(true);
+    expect(canReuseMediaSourceForPlayback({ url: "http://127.0.0.1:17173/m/token", qmcRawKey: "AA==" })).toBe(true);
+});
 
 it("leaves ordinary audio unchanged", async () => {
     const source = Object.freeze({ url: "https://host/song.flac" });

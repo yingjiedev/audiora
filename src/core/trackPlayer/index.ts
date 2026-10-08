@@ -50,9 +50,8 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { resolveImportedAssetOrPath } from "@/utils/fileUtils";
 import { resolveArtwork } from "@/utils/artwork";
 import { getLocalPlaybackSource } from "./localPlayback";
-import { EncryptedSourceError, QmcKeyError, resolveSongKey } from "@/service/mflac/songKey";
-import { isMflacUrl } from "@/utils/mflac";
-import { adaptMediaSourceForPlayback } from "./mediaSourceAdapter";
+import { EncryptedSourceError, QmcKeyError } from "@/service/mflac/songKey";
+import { adaptMediaSourceForPlayback, canReuseMediaSourceForPlayback } from "./mediaSourceAdapter";
 import { refreshCurrentSource } from "./refreshCurrentSource";
 import SeekCoordinator from "./seekCoordinator";
 
@@ -580,14 +579,9 @@ class TrackPlayer extends EventEmitter<{
                 // 获取底层播放器中的track
                 const currentTrack = await ReactNativeTrackPlayer.getTrack(0);
                 // 2.1 如果当前有源
-                if (currentTrack?.url) {
-                    resolveSongKey(currentTrack as IPlugin.IMediaSourceResult);
-                }
-                if (currentTrack?.url && isMflacUrl(String(currentTrack.url))) {
-                    throw new QmcKeyError();
-                }
                 if (
                     currentTrack?.url &&
+                    canReuseMediaSourceForPlayback(currentTrack as IPlugin.IMediaSourceResult) &&
                     isSameMediaItem(
                         musicItem,
                         currentTrack as IMusic.IMusicItem,
