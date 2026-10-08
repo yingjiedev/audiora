@@ -6,6 +6,9 @@ import { armPlayerTransition } from "@/core/playerTransition";
 import MusicInfo from "./musicInfo";
 
 const mockNavigate = jest.fn();
+let mockUIRuntime = false;
+let mockMeasuredFrame: { pageX: number; pageY: number; width: number; height: number } | null = null;
+const mockTransitionOrigin = { value: null as { x: number; y: number; width: number; height: number } | null };
 const song: IMusic.IMusicItem = {
     id: "song",
     platform: "test",
@@ -25,7 +28,12 @@ jest.mock("@/hooks/useMotion", () => () => ({
 }));
 jest.mock("@/core/playerTransition", () => ({
     armPlayerTransition: jest.fn(),
-    playerTransition: () => ({ origin: { value: null } }),
+    playerTransition: () => {
+        if (mockUIRuntime) {
+            throw new Error("JS transition accessor called on the UI runtime");
+        }
+        return { origin: mockTransitionOrigin };
+    },
 }));
 jest.mock("@/core/router", () => ({
     ROUTE_PATH: { MUSIC_DETAIL: "music-detail" },
@@ -49,14 +57,21 @@ jest.mock("react-native-reanimated", () => ({
     default: { View: "AnimatedView" },
     useSharedValue: (value: number) => ({ value }),
     useAnimatedRef: () => ({ current: null }),
-    measure: () => null,
+    measure: () => mockMeasuredFrame,
     useAnimatedStyle: (factory: () => unknown) => factory(),
     withTiming: (value: number, _config: unknown, callback?: () => void) => {
         callback?.();
         return value;
     },
     runOnJS: (callback: () => void) => callback,
-    runOnUI: (callback: () => void) => callback,
+    runOnUI: (callback: () => void) => () => {
+        mockUIRuntime = true;
+        try {
+            callback();
+        } finally {
+            mockUIRuntime = false;
+        }
+    },
 }));
 jest.mock("react-native-gesture-handler", () => {
     function gesture() {
@@ -96,7 +111,20 @@ function render(onPress?: () => void) {
 }
 
 describe("MusicInfo interactions", () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockUIRuntime = false;
+        mockMeasuredFrame = null;
+        mockTransitionOrigin.value = null;
+    });
+
+    it("updates the artwork frame on the UI runtime without calling the JS state accessor", () => {
+        mockMeasuredFrame = { pageX: 12, pageY: 640, width: 40, height: 40 };
+        const renderer = render();
+        const artwork = renderer.root.findAll(node => node.props.collapsable === false && typeof node.props.onLayout === "function")[0];
+        act(() => artwork.props.onLayout());
+        expect(mockTransitionOrigin.value).toEqual({ x: 12, y: 640, width: 40, height: 40 });
+    });
 
     it("keeps the full-player shortcut for existing music bars", () => {
         const renderer = render();

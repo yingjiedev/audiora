@@ -26,7 +26,6 @@ import {
     expandPlayerTransition,
     playerTransition,
     resetPlayerTransition,
-    setPlayerTransitionProgress,
 } from "@/core/playerTransition";
 import {
     dismissDecision,
@@ -183,7 +182,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
             cancelAnimation(progress);
         })
         .onUpdate(e => {
-            setPlayerTransitionProgress(dragProgress(e.translationY, windowHeight));
+            progress.value = dragProgress(e.translationY, windowHeight);
         })
         .onEnd(e => {
             runOnJS(onGestureEnd)(

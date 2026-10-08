@@ -186,6 +186,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
     // Kept fresh on every layout so tapping the bar never has to wait for an
     // async measurement before navigating.
     const artworkRef = useAnimatedRef<Animated.View>();
+    const { origin } = playerTransition();
     const measureArtwork = useCallback(() => {
         // Resolved on the JS side. The UI runtime cannot call into this module:
         // `playerTransition` is a plain function, and touching it from inside
@@ -204,7 +205,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
                 height: frame.height,
             };
         })();
-    }, [artworkRef]);
+    }, [artworkRef, origin]);
 
     const tapGesture = Gesture.Tap()
         .onStart(() => {
