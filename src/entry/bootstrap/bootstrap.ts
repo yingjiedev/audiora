@@ -93,12 +93,6 @@ async function bootstrapImpl() {
             logger.mark("文件夹初始化完成");
         }),
         Config.setup().then(() => {
-            // Desktop lyrics used a permission that is no longer part of the app.
-            // Clear the old flag so an upgrade never tries to recreate that window.
-            if (Platform.OS === "android") {
-                Config.setConfig("lyric.showStatusBarLyric", false);
-                Config.setConfig("lyric.isLocked", false);
-            }
             logger.mark("Config");
         }),
         MusicSheet.setup().then(() => {

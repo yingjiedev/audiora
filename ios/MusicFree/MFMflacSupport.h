@@ -6,13 +6,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (BOOL)decryptFileAtPath:(NSString *)inputPath
                outputPath:(NSString *)outputPath
-                     ekey:(NSString *)ekey
+                     rawSongKey:(NSString *)rawSongKey
                     error:(NSError **)error;
 
 + (nullable NSString *)startProxyWithError:(NSError **)error;
 
 + (nullable NSString *)registerStream:(NSString *)src
-                                  ekey:(NSString *)ekey
+                                  rawSongKey:(NSString *)rawSongKey
                                headers:(nullable NSDictionary *)headers
                                  error:(NSError **)error;
 

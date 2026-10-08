@@ -3,6 +3,7 @@ import {
     getPrimaryArtist,
     isHotBoard,
     mergeBoardMusicList,
+    pickCandidates,
     pickHotTopLists,
     spreadByArtist,
     weightedSample,
@@ -258,3 +259,67 @@ describe("拾音 - 建池去重", () => {
         expect(pool[0].musicItem.id).toBe("valid");
     });
 });
+
+describe("拾音 - 候选降级", () => {
+    const makePool = (ids: string[]) =>
+        mergeBoardMusicList(
+            [
+                {
+                    boardHot: false,
+                    musicList: ids.map(id => makeMusic(id, "歌手")),
+                },
+            ],
+            new Set<string>(),
+        );
+
+    const keySet = (ids: string[]) =>
+        new Set(ids.map(id => `test@${id}`));
+
+    it("严格档还有货时不做降级", () => {
+        const { candidates, fallbackLevel } = pickCandidates(
+            makePool(["a", "b", "c"]),
+            [keySet(["c"]), keySet([]), keySet([])],
+        );
+
+        expect(fallbackLevel).toBe(0);
+        expect(candidates.map(item => item.musicItem.id).sort()).toEqual([
+            "a",
+            "b",
+        ]);
+    });
+
+    it("池子被 24h 已推记录吃光时退一档，宁可重复也要有歌", () => {
+        const pool = makePool(["a", "b"]);
+        const { candidates, fallbackLevel } = pickCandidates(pool, [
+            keySet(["a", "b"]),
+            keySet(["b"]),
+            keySet([]),
+        ]);
+
+        expect(fallbackLevel).toBe(1);
+        expect(candidates.map(item => item.musicItem.id)).toEqual(["a"]);
+    });
+
+    it("全被排除时退到最后一档，绝不返回空", () => {
+        const pool = makePool(["a", "b"]);
+        const { candidates, fallbackLevel } = pickCandidates(pool, [
+            keySet(["a", "b"]),
+            keySet(["a", "b"]),
+            keySet([]),
+        ]);
+
+        expect(fallbackLevel).toBe(2);
+        expect(candidates).toHaveLength(2);
+    });
+
+    it("池子本身为空时才会返回空候选", () => {
+        const { candidates, fallbackLevel } = pickCandidates(
+            [],
+            [keySet(["a"]), keySet([]), keySet([])],
+        );
+
+        expect(candidates).toHaveLength(0);
+        expect(fallbackLevel).toBe(2);
+    });
+});
+

@@ -1,18 +1,7 @@
-// Utilities for handling Kuwo/QQ .mflac/.mgg/.mmp4 (QMCv2) ekey quirks
-
-export function normalizeEkey(ekey?: string): string {
-  const s = String(ekey ?? "").trim();
-  // keep last 704 bytes (ekey may be prefixed by digits per API)
-  return s.length > 704 ? s.slice(-704) : s;
-}
-
+/** Recognize encrypted container paths, including signed URLs and local files. */
 export function isMflacUrl(url?: string): boolean {
-  if (!url) return false;
-  try {
-    const u = url.split('?')[0].toLowerCase();
-    return u.endsWith('.mflac') || u.endsWith('.mgg') || u.endsWith('.mmp4') || u.endsWith('.mflac0');
-  } catch {
-    return false;
-  }
+    if (!url) {
+        return false;
+    }
+    return /\.(?:mflac0?|mgg|mmp4)$/i.test(url.split(/[?#]/)[0]);
 }
-

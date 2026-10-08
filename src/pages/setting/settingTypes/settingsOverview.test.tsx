@@ -68,13 +68,9 @@ describe("SettingsOverview", () => {
         const playback = renderer!.root.findByProps({
             accessibilityLabel: "settingsEntry.playback",
         });
-        const downloads = renderer!.root.findByProps({
-            accessibilityLabel: "home.downloadManagement",
-        });
 
         act(() => {
             playback.props.onPress();
-            downloads.props.onPress();
         });
 
         // 设置子页与首页共用同一个 route，只有 params 不同。
@@ -84,7 +80,23 @@ describe("SettingsOverview", () => {
             type: "basic",
             section: "playback",
         });
-        expect(mockNavigate).toHaveBeenNthCalledWith(1, "downloading");
+    });
+
+    it("不再重复提供已有权威入口的设置项", () => {
+        let renderer: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(<SettingsOverview />);
+        });
+
+        // 定时关闭：权威入口 = 播放上下文（首页顶栏 + 歌曲菜单）
+        expect(renderer!.root.findAllByProps({
+            accessibilityLabel: "sidebar.scheduleClose",
+        })).toHaveLength(0);
+        // 下载管理：权威入口 = 「我的」 Tab 的快捷卡
+        expect(renderer!.root.findAllByProps({
+            accessibilityLabel: "home.downloadManagement",
+        })).toHaveLength(0);
     });
 
     it("pushes every sub-setting page so back returns one level", () => {

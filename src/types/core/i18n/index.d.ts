@@ -1,5 +1,7 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "media.rawSongKeyRequired": string;
+    "media.encryptedSourceFailed": string;
     // 通用词汇
     "common.setting": string; // 设置
     "common.software": string; // 软件
@@ -493,22 +495,13 @@ export interface ILanguageData {
     
     "basicSettings.lyric": string; // 歌词
     "basicSettings.lyric.autoSearchLyric": string; // 歌词缺失时自动搜索歌词
-    "basicSettings.lyric.showStatusBarLyric": string; // 开启桌面歌词
-    "basicSettings.lyric.hideDesktopLyricWhenPaused": string; // 暂停时隐藏桌面歌词
-    "basicSettings.lyric.align": string; // 对齐方式
     "basicSettings.lyric.align.left": string; // 左对齐
     "basicSettings.lyric.align.center": string; // 居中对齐
     "basicSettings.lyric.align.right": string; // 右对齐
-    "basicSettings.lyric.leftRightDistance": string; // 左右距离
-    "basicSettings.lyric.topBottomDistance": string; // 上下距离
-    "basicSettings.lyric.width": string; // 歌词宽度
-    "basicSettings.lyric.fontSize": string; // 字体大小
-    "basicSettings.lyric.textColor": string; // 文本颜色
-    "basicSettings.lyric.sungColor": string;
-    "basicSettings.lyric.backgroundColor": string;
-    "basicSettings.lyric.colorPreset": string;
-    "basicSettings.lyric.unlock": string;
-    "basicSettings.lyric.lock": string;
+    "basicSettings.lyric.wordByWord": string;
+    "basicSettings.lyric.wordByWordFloat": string;
+    "basicSettings.lyric.pureWhiteMode": string;
+    "basicSettings.lyric.breathingDots": string;
     
     "basicSettings.cache": string; // 缓存
     "basicSettings.cache.musicCacheLimit": string; // 音乐缓存上限
@@ -550,7 +543,6 @@ export interface ILanguageData {
     "toast.lyricCacheCleared": string; // 已清除歌词缓存
     "toast.imageCacheCleared": string; // 已清除图片缓存
     "toast.logCleared": string; // 日志已清空
-    "toast.noFloatWindowPermission": string; // 无悬浮窗权限
     "toast.folderNotExistOrNoPermission": string; // 文件夹不存在或无权限
     
     // 播放全部栏相关
@@ -664,10 +656,6 @@ export interface ILanguageData {
     // 面板相关 - 音乐项歌词选项
     "panel.musicItemLyricOptions.author": string; // 作者
     "panel.musicItemLyricOptions.album": string; // 专辑
-    "panel.musicItemLyricOptions.toggleDesktopLyric": string; // 桌面歌词开关
-    "panel.musicItemLyricOptions.enableDesktopLyric": string; // 开启
-    "panel.musicItemLyricOptions.disableDesktopLyric": string; // 关闭
-    "panel.musicItemLyricOptions.desktopLyricPermissionError": string; // 桌面歌词权限错误
     "panel.musicItemLyricOptions.uploadLocalLyric": string; // 上传本地歌词
     "panel.musicItemLyricOptions.uploadLocalLyricTranslation": string; // 上传本地歌词翻译
     "panel.musicItemLyricOptions.deleteLocalLyric": string; // 删除本地歌词
@@ -800,6 +788,7 @@ export interface ILanguageData {
     "toast.shiyinStarted": string;
     "toast.shiyinNoSource": string;
     "toast.shiyinNoMusic": string;
+    "toast.shiyinPoolEmpty": string;
 
     "settingsGroup.playback": string;
     "settingsGroup.download": string;
@@ -881,6 +870,27 @@ export interface ILanguageData {
     "musicLibrary.emptyOnlineTitle": string;
     "musicLibrary.emptyOnlineDescription": string;
     "musicLibrary.searchMusic": string;
+    // 播放页与 Mini Player 的文案 / 无障碍标签（issue #88）
+    "musicDetail.playingNow": string; // 正在播放
+    "musicDetail.a11y.back": string; // 返回
+    "musicDetail.a11y.toggleRepeatMode": string; // 切换循环模式
+    "musicDetail.a11y.skipToPrevious": string; // 上一首
+    "musicDetail.a11y.play": string; // 播放
+    "musicDetail.a11y.pause": string; // 暂停
+    "musicDetail.a11y.skipToNext": string; // 下一首
+    "musicDetail.a11y.playlist": string; // 播放列表
+    "musicDetail.a11y.seek": string; // 播放进度
+    "musicDetail.a11y.quality": string; // 选择音质
+    "musicDetail.a11y.download": string; // 下载这首歌曲
+    "musicDetail.a11y.downloaded": string; // 这首歌曲已下载
+    "musicDetail.a11y.playRate": string; // 调整播放速度
+    "musicDetail.a11y.comment": string; // 查看评论
+    "musicDetail.a11y.more": string; // 更多操作
+    "musicDetail.a11y.favorite": string; // 收藏这首歌曲
+    "musicDetail.a11y.unfavorite": string; // 取消收藏这首歌曲
+    "musicBar.a11y.playOrPause": string; // 播放或暂停当前歌曲
+    "musicBar.a11y.playlist": string; // 打开播放列表
+    "musicBar.a11y.nowPlaying": string; // 正在播放 {title}，歌手 {artist}
     "themeSettingsIndex.modeDescription": string;
     "themeSettingsIndex.coverDescription": string;
     "themeSettingsIndex.fontDescription": string;

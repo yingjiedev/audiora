@@ -1,5 +1,4 @@
 import { showDialog } from "@/components/dialogs/useDialog";
-import { showPanel } from "@/components/panels/usePanel";
 import { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate, usePush } from "@/core/router";
 import useColors from "@/hooks/useColors";
@@ -75,16 +74,6 @@ export default function SettingsOverview() {
             key: "network",
             title: t("settingsEntry.network"),
             onPress: () => navigateToSetting("basic", "network"),
-        },
-        {
-            key: "timing-close",
-            title: t("sidebar.scheduleClose"),
-            onPress: () => showPanel("TimingClose"),
-        },
-        {
-            key: "download-manager",
-            title: t("home.downloadManagement"),
-            onPress: () => navigate(ROUTE_PATH.DOWNLOADING),
         },
         {
             key: "download-options",

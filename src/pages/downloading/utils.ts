@@ -116,6 +116,8 @@ export function getFailReasonLabel(reason?: DownloadFailReason, t?: II18NFunc): 
         return fallback;
     }
     switch (reason) {
+    case DownloadFailReason.MissingDecryptionKey:
+        return t("media.rawSongKeyRequired");
     case DownloadFailReason.NetworkOffline:
         return t("downloading.downloadFailReason.networkOffline");
     case DownloadFailReason.NotAllowToDownloadInCellular:
@@ -132,6 +134,8 @@ export function getFailReasonLabel(reason?: DownloadFailReason, t?: II18NFunc): 
 /** 失败原因对应的图标，让「网络问题」和「设置问题」一眼可分 */
 export function getFailReasonIcon(reason?: DownloadFailReason): "link-slash" | "shield-keyhole-outline" | "exclamation-circle" {
     switch (reason) {
+    case DownloadFailReason.MissingDecryptionKey:
+        return "shield-keyhole-outline";
     case DownloadFailReason.NetworkOffline:
         return "link-slash";
     case DownloadFailReason.NotAllowToDownloadInCellular:

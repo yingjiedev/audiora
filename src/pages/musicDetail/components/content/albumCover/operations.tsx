@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { ReactNode, useMemo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import rpx, { fontRpx } from "@/utils/rpx";
 
@@ -8,6 +8,7 @@ import { ImgAsset } from "@/constants/assetsConst";
 import Toast from "@/utils/toast";
 import toast from "@/utils/toast";
 import useOrientation from "@/hooks/useOrientation";
+import useColors from "@/hooks/useColors";
 import { showPanel } from "@/components/panels/usePanel";
 import { showDialog, hideDialog } from "@/components/dialogs/useDialog";
 import TrackPlayer, { useCurrentMusic, useMusicQuality } from "@/core/trackPlayer";
@@ -16,10 +17,33 @@ import PersistStatus from "@/utils/persistStatus";
 import Icon from "@/components/base/icon.tsx";
 import PluginManager from "@/core/pluginManager";
 import downloader from "@/core/downloader";
-import i18n from "@/core/i18n";
+import { useI18N } from "@/core/i18n";
 
 import { getQualityAbbr, musicItemHasQualitySizes } from "@/utils/qualities";
 import { getLocalQualityAbbr } from "@/utils/localQuality";
+
+/**
+ * 一行五个入口此前是「两个纯文本 + 三个裸图标」，视觉重量和触控区都不一致。
+ * 这里统一套一层同尺寸圆形承载面，并把图标含义交给无障碍标签。
+ */
+function OperationButton(props: {
+    accessibilityLabel: string;
+    children: ReactNode;
+    onPress: () => void;
+}) {
+    return (
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={props.accessibilityLabel}
+            style={({ pressed }) => [
+                styles.operationButton,
+                pressed && styles.pressed,
+            ]}
+            onPress={props.onPress}>
+            {props.children}
+        </Pressable>
+    );
+}
 
 export default function Operations() {
     const musicItem = useCurrentMusic();
@@ -28,9 +52,11 @@ export default function Operations() {
     const localMusicItem = isDownloaded
         ? LocalMusicSheet.isLocalMusic(musicItem)
         : undefined;
+    const colors = useColors();
 
     const rate = PersistStatus.useValue("music.rate", 100);
     const orientation = useOrientation();
+    const { t } = useI18N();
 
     const supportComment = useMemo(() => {
         return !musicItem
@@ -48,14 +74,16 @@ export default function Operations() {
         [isDownloaded, localMusicItem, musicItem],
     );
 
+    const mediaForeground = colors.onMedia ?? colors.text;
+
     return (
         <View
             style={[
                 styles.wrapper,
                 orientation === "horizontal" ? styles.horizontalWrapper : null,
             ]}>
-            <Pressable
-                style={styles.qualityButton}
+            <OperationButton
+                accessibilityLabel={t("musicDetail.a11y.quality")}
                 onPress={async () => {
                     if (!musicItem) {
                         return;
@@ -95,26 +123,28 @@ export default function Operations() {
                             const changeResult =
                                 await TrackPlayer.changeQuality(quality);
                             if (!changeResult) {
-                                Toast.warn(i18n.t("toast.currentQualityNotAvailableForCurrentMusic"));
+                                Toast.warn(t("toast.currentQualityNotAvailableForCurrentMusic"));
                             }
                         },
                     });
                 }}>
-                <Text style={styles.qualityText}>
+                <Text style={[styles.qualityText, { color: mediaForeground }]}>
                     {isDownloaded
-                        ? localQualityAbbr ?? i18n.t("localQuality.abbr")
+                        ? localQualityAbbr ?? t("localQuality.abbr")
                         : getQualityAbbr(currentQuality) || "HQ"}
                 </Text>
-            </Pressable>
-            <Icon
-                name={isDownloaded ? "check-circle-outline" : "arrow-down-tray"}
-                size={iconSizeConst.normal}
-                color="white"
+            </OperationButton>
+            <OperationButton
+                accessibilityLabel={
+                    isDownloaded
+                        ? t("musicDetail.a11y.downloaded")
+                        : t("musicDetail.a11y.download")
+                }
                 onPress={async () => {
                     if (musicItem && !isDownloaded) {
                         // 显示加载状态
                         showDialog("LoadingDialog", {
-                            title: i18n.t("downloading.downloadStatus.preparing"),
+                            title: t("downloading.downloadStatus.preparing"),
                         });
 
                         try {
@@ -168,9 +198,16 @@ export default function Operations() {
                             });
                         }
                     }
-                }}
-            />
-            <Pressable
+                }}>
+                {/* 已下载用实心对勾：描边版在深色封面上读不出「已完成」 */}
+                <Icon
+                    name={isDownloaded ? "check-circle" : "arrow-down-tray"}
+                    size={iconSizeConst.normal}
+                    color={mediaForeground}
+                />
+            </OperationButton>
+            <OperationButton
+                accessibilityLabel={t("musicDetail.a11y.playRate")}
                 onPress={() => {
                     if (!musicItem) {
                         return;
@@ -187,15 +224,12 @@ export default function Operations() {
                     });
                 }}>
                 <Image source={ImgAsset.rate[rate!]} style={styles.quality} />
-            </Pressable>
-            <Icon
-                name="chat-bubble-oval-left-ellipsis"
-                size={iconSizeConst.normal}
-                color="white"
-                opacity={supportComment ? 1 : 0.2}
+            </OperationButton>
+            <OperationButton
+                accessibilityLabel={t("musicDetail.a11y.comment")}
                 onPress={() => {
                     if (!supportComment) {
-                        toast.warn(i18n.t("toast.commmentNotAvaliableForCurrentMusic"));
+                        toast.warn(t("toast.commmentNotAvaliableForCurrentMusic"));
                         return;
                     }
                     if (musicItem) {
@@ -203,12 +237,16 @@ export default function Operations() {
                             musicItem,
                         });
                     }
-                }}
-            />
-            <Icon
-                name="ellipsis-vertical"
-                size={iconSizeConst.normal}
-                color="white"
+                }}>
+                <Icon
+                    name="chat-bubble-oval-left-ellipsis"
+                    size={iconSizeConst.normal}
+                    color={mediaForeground}
+                    opacity={supportComment ? 1 : 0.2}
+                />
+            </OperationButton>
+            <OperationButton
+                accessibilityLabel={t("musicDetail.a11y.more")}
                 onPress={() => {
                     if (musicItem) {
                         showPanel("MusicItemOptions", {
@@ -216,8 +254,13 @@ export default function Operations() {
                             from: ROUTE_PATH.MUSIC_DETAIL,
                         });
                     }
-                }}
-            />
+                }}>
+                <Icon
+                    name="ellipsis-vertical"
+                    size={iconSizeConst.normal}
+                    color={mediaForeground}
+                />
+            </OperationButton>
         </View>
     );
 }
@@ -234,17 +277,22 @@ const styles = StyleSheet.create({
     horizontalWrapper: {
         marginBottom: 0,
     },
+    /** 与播放页控制区同样的圆形承载面，五个入口视觉重量一致 */
+    operationButton: {
+        width: rpx(76),
+        height: rpx(76),
+        borderRadius: rpx(38),
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    pressed: {
+        opacity: 0.72,
+    },
     quality: {
         width: rpx(52),
         height: rpx(52),
     },
-    qualityButton: {
-        height: rpx(42),
-        justifyContent: "center",
-        alignItems: "center",
-    },
     qualityText: {
-        color: "white",
         fontSize: fontRpx(26),
         fontWeight: "400",
         lineHeight: fontRpx(42),

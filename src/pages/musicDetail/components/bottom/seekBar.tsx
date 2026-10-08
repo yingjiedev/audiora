@@ -5,14 +5,19 @@ import Slider from "@react-native-community/slider";
 import timeformat from "@/utils/timeformat";
 import { fontSizeConst } from "@/constants/uiConst";
 import TrackPlayer, { useProgress } from "@/core/trackPlayer";
+import useColors from "@/hooks/useColors";
+import { useI18N } from "@/core/i18n";
 
 interface ITimeLabelProps {
     time: number;
+    color: string;
 }
 
 function TimeLabel(props: ITimeLabelProps) {
     return (
-        <Text style={style.text}>{timeformat(Math.max(props.time, 0))}</Text>
+        <Text style={[style.text, { color: props.color }]}>
+            {timeformat(Math.max(props.time, 0))}
+        </Text>
     );
 }
 
@@ -20,16 +25,31 @@ export default function SeekBar() {
     const progress = useProgress(1000);
     const [tmpProgress, setTmpProgress] = useState<number | null>(null);
     const slidingRef = useRef(false);
+    const colors = useColors();
+    const { t } = useI18N();
+
+    const foreground = colors.onMedia ?? colors.text;
+    const secondary = colors.onMediaSecondary ?? foreground;
+    const track = colors.onMediaTrack ?? secondary;
+    const position = tmpProgress ?? progress.position;
 
     return (
         <View style={style.wrapper}>
             <Slider
                 style={style.slider}
-                minimumTrackTintColor={"#FFFFFF"}
-                maximumTrackTintColor={"rgba(255,255,255,0.28)"}
-                thumbTintColor={"#FFFFFF"}
+                minimumTrackTintColor={foreground}
+                maximumTrackTintColor={track}
+                thumbTintColor={foreground}
                 minimumValue={0}
                 maximumValue={progress.duration}
+                accessible
+                accessibilityRole="adjustable"
+                accessibilityLabel={t("musicDetail.a11y.seek")}
+                accessibilityValue={{
+                    min: 0,
+                    max: Math.max(0, Math.round(progress.duration)),
+                    now: Math.max(0, Math.round(position)),
+                }}
                 onSlidingStart={() => {
                     slidingRef.current = true;
                 }}
@@ -49,8 +69,8 @@ export default function SeekBar() {
                 value={progress.position}
             />
             <View style={style.timeRow}>
-                <TimeLabel time={tmpProgress ?? progress.position} />
-                <TimeLabel time={progress.duration} />
+                <TimeLabel time={position} color={secondary} />
+                <TimeLabel time={progress.duration} color={secondary} />
             </View>
         </View>
     );
@@ -63,17 +83,17 @@ const style = StyleSheet.create({
     },
     slider: {
         width: "100%",
-        height: rpx(40),
+        // 触控目标：原来 rpx(40) 只有 20dp，滑块很难按到。
+        height: rpx(56),
     },
+    /** 不再额外内缩，左右时间文字与滑块两端对齐 */
     timeRow: {
         width: "100%",
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingHorizontal: rpx(18),
     },
     text: {
         fontSize: fontSizeConst.description,
         includeFontPadding: false,
-        color: "rgba(255,255,255,0.72)",
     },
 });

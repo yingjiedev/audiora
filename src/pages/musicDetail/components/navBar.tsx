@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import { useNavigation } from "@react-navigation/native";
 import IconButton from "@/components/base/iconButton";
-import useOrientation from "@/hooks/useOrientation";
+import useColors from "@/hooks/useColors";
 import HeartIcon from "./content/heartIcon";
 import ThemeText from "@/components/base/themeText";
 import { useCurrentMusic } from "@/core/trackPlayer";
@@ -18,17 +18,20 @@ export const NAV_BAR_HEIGHT = rpx(100);
 export default function NavBar(props: INavBarProps) {
     const { onBack } = props;
     const navigation = useNavigation();
-    const orientation = useOrientation();
-    const isHorizontal = orientation === "horizontal";
+    const colors = useColors();
     const musicItem = useCurrentMusic();
     const { t } = useI18N();
+
+    const mediaText = colors.onMedia ?? colors.text;
+    const mediaTextSecondary = colors.onMediaSecondary ?? mediaText;
 
     return (
         <View style={styles.container}>
             <IconButton
                 name="arrow-left"
                 sizeType={"normal"}
-                color="white"
+                color={mediaText}
+                accessibilityLabel={t("musicDetail.a11y.back")}
                 style={styles.button}
                 onPress={() => {
                     onBack?.();
@@ -37,27 +40,42 @@ export default function NavBar(props: INavBarProps) {
                     });
                 }}
             />
+            {/*
+                标题块回到 flex 流里左对齐：之前绝对定位居中会正好压在封面人脸上，
+                且显示的是音源平台名（信息价值低）。现在给歌名 + 歌手。
+            */}
             <View style={styles.titleBlock} pointerEvents="none">
                 <ThemeText
                     fontSize="caption"
                     fontWeight="bold"
-                    color="rgba(255,255,255,0.78)"
+                    color={mediaTextSecondary}
                     style={styles.kicker}>
-                    {t("panel.playById.playingNow").toUpperCase()}
+                    {t("musicDetail.playingNow").toUpperCase()}
                 </ThemeText>
-                <ThemeText
-                    numberOfLines={1}
-                    fontSize="description"
-                    fontWeight="semibold"
-                    color="#FFFFFF">
-                    {musicItem?.platform ?? "Audiora"}
-                </ThemeText>
-            </View>
-            {isHorizontal ? (
-                <View style={styles.rightButton}>
-                    <HeartIcon />
+                <View style={styles.titleRow}>
+                    <ThemeText
+                        numberOfLines={1}
+                        fontSize="subTitle"
+                        fontWeight="bold"
+                        color={mediaText}
+                        style={styles.title}>
+                        {musicItem?.title ?? t("common.unknownName")}
+                    </ThemeText>
+                    {musicItem?.artist ? (
+                        <ThemeText
+                            numberOfLines={1}
+                            fontSize="caption"
+                            color={mediaTextSecondary}
+                            style={styles.artist}>
+                            {musicItem.artist}
+                        </ThemeText>
+                    ) : null}
                 </View>
-            ) : null}
+            </View>
+            {/* 竖屏也要有右侧落点，否则「左返回 / 右全空」失衡 */}
+            <View style={styles.rightButton}>
+                <HeartIcon />
+            </View>
         </View>
     );
 }
@@ -69,22 +87,35 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
+        paddingHorizontal: rpx(24),
         zIndex: 2,
     },
     button: {
-        marginHorizontal: rpx(24),
+        flexShrink: 0,
     },
     rightButton: {
-        marginHorizontal: rpx(24),
+        flexShrink: 0,
     },
     titleBlock: {
-        position: "absolute",
-        left: rpx(120),
-        right: rpx(120),
-        alignItems: "center",
+        flex: 1,
+        minWidth: 0,
+        marginHorizontal: rpx(12),
+        justifyContent: "center",
+    },
+    titleRow: {
+        flexDirection: "row",
+        alignItems: "baseline",
+        marginTop: rpx(4),
+    },
+    title: {
+        flexShrink: 1,
+        minWidth: 0,
+    },
+    artist: {
+        flexShrink: 1,
+        marginLeft: rpx(10),
     },
     kicker: {
-        marginBottom: rpx(3),
         letterSpacing: rpx(1.8),
     },
 });

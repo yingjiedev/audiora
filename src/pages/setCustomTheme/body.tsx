@@ -1,6 +1,6 @@
 import Image from "@/components/base/image";
 import ThemeText from "@/components/base/themeText";
-import SliderRow from "@/components/base/sliderRow";
+import BackgroundTuningSliders from "@/components/base/backgroundTuningSliders";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
 import globalStyle from "@/constants/globalStyle";
@@ -9,8 +9,6 @@ import Theme, {
     customBackgroundSurfaceColors,
     customThemeDefaultPrimary,
     darkTheme,
-    DEFAULT_BACKGROUND_BLUR,
-    DEFAULT_BACKGROUND_OPACITY,
 } from "@/core/theme";
 import { derivePrimaryColor } from "@/utils/themePalette";
 import { CustomizedColors } from "@/hooks/useColors";
@@ -121,33 +119,7 @@ export default function Body() {
             </TouchableOpacity>
 
             <View style={styles.sliderWrapper}>
-                <SliderRow
-                    title={t("setCustomTheme.blur")}
-                    value={backgroundInfo?.blur ?? DEFAULT_BACKGROUND_BLUR}
-                    minimumValue={0}
-                    maximumValue={50}
-                    step={1}
-                    onChange={val => {
-                        Theme.setBackground({
-                            blur: val,
-                        });
-                    }}
-                />
-                <SliderRow
-                    title={t("setCustomTheme.opacity")}
-                    value={
-                        backgroundInfo?.opacity ?? DEFAULT_BACKGROUND_OPACITY
-                    }
-                    minimumValue={0}
-                    maximumValue={1}
-                    step={0.01}
-                    format={val => `${Math.round(val * 100)}%`}
-                    onChange={val => {
-                        Theme.setBackground({
-                            opacity: val,
-                        });
-                    }}
-                />
+                <BackgroundTuningSliders />
             </View>
             <View style={styles.colorsContainer}>
                 {Theme.configableColorKey.map(key => (

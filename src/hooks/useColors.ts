@@ -2,6 +2,7 @@ import { Theme, useTheme } from "@react-navigation/native";
 import Color from "color";
 import { useMemo } from "react";
 import { bestForeground } from "@/utils/colorContrast";
+import { mediaOnDark, mediaScrim } from "@/constants/designSystem";
 
 /** 主色上前景色的候选：足够亮的主色用近黑，其余用纯白 */
 const onPrimaryCandidates = ["#FFFFFF", "#10172D"];
@@ -60,6 +61,17 @@ export interface CustomizedColors extends IColors {
      * 2.9:1，这里按对比度自动取白或近黑。
      */
     onPrimary?: string;
+    /**
+     * 沉浸层（播放页）上的主前景色。底图恒为压暗后的封面，不随深浅主题变化，
+     * 因此这里给的是一组固定的中性色，页面侧只按语义取用。
+     */
+    onMedia?: string;
+    /** 沉浸层上的次要前景色（副标题、时间标签） */
+    onMediaSecondary?: string;
+    /** 沉浸层上的轨道 / 分隔色（进度条底槽、未选中态） */
+    onMediaTrack?: string;
+    /** 沉浸层的压暗底色，用于状态栏顶部遮罩 */
+    onMediaScrim?: string;
 }
 
 export default function useColors() {
@@ -76,6 +88,10 @@ export default function useColors() {
         return {
             ...customColors,
             onPrimary,
+            onMedia: mediaOnDark,
+            onMediaSecondary: Color(mediaOnDark).alpha(0.72).toString(),
+            onMediaTrack: Color(mediaOnDark).alpha(0.28).toString(),
+            onMediaScrim: mediaScrim,
             textSecondary: Color(colors.text).alpha(0.64).toString(),
             surface: customColors.surface ?? colors.card,
             surfaceElevated:

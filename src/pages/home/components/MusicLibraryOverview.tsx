@@ -1,5 +1,6 @@
 import Icon, { IIconName } from "@/components/base/icon";
 import PillTabBar from "@/components/base/pillTabBar";
+import { TONAL_ALPHA } from "@/components/base/roundActionButton";
 import ThemeText from "@/components/base/themeText";
 import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
@@ -163,7 +164,7 @@ function LocalMusicContent() {
                 accessibilityLabel={t("musicLibrary.viewAllLocal")}
                 style={[styles.localHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
                 onPress={() => navigate(ROUTE_PATH.LOCAL)}>
-                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(0.16).toString() }]}>
+                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
                     <Icon name="folder-music-outline" size={rpx(48)} color={colors.primary} />
                 </View>
                 <View style={styles.heroText}>
@@ -251,7 +252,7 @@ function OnlineMusicContent() {
     return (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={[styles.onlineHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
-                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(0.16).toString() }]}>
+                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
                     <Icon name="circle-stack" size={rpx(48)} color={colors.primary} />
                 </View>
                 <View style={styles.heroText}>

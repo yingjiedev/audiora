@@ -52,7 +52,12 @@ export default function useShiYin(source: IShiYinSource) {
                 });
 
                 if (!result.musicList.length) {
-                    Toast.warn(t("toast.shiyinNoMusic"));
+                    // 池子为空 = 榜单压根没拉到（插件 / 网络）；池子有歌却挑不出，
+                    // 只可能是去重把候选吃光了。两种失败要分开提示，否则没法排查。
+                    const emptyToast = result.poolSize
+                        ? "toast.shiyinNoMusic"
+                        : "toast.shiyinPoolEmpty";
+                    Toast.warn(t(emptyToast));
                     return;
                 }
 

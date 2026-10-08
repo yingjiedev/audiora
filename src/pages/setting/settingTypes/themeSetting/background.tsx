@@ -91,7 +91,8 @@ export default function Background() {
                 onPress={() => {
                     if (themeSelectedTheme !== "p-light") {
                         Theme.setTheme("p-light");
-                        Config.setConfig("theme.followSystem", false);
+                        // 明确选了主题就退出「跟随系统」，走统一入口
+                        Theme.setFollowSystem(false);
                     }
                 }}
             />
@@ -102,7 +103,7 @@ export default function Background() {
                 onPress={() => {
                     if (themeSelectedTheme !== "p-dark") {
                         Theme.setTheme("p-dark");
-                        Config.setConfig("theme.followSystem", false);
+                        Theme.setFollowSystem(false);
                     }
                 }}
             />
@@ -113,7 +114,7 @@ export default function Background() {
                 preview={themeBackground}
                 onPress={() => {
                     if (themeSelectedTheme !== "custom") {
-                        Config.setConfig("theme.followSystem", false);
+                        Theme.setFollowSystem(false);
                         Theme.setTheme("custom", {
                             colors: Config.getConfig(
                                 "theme.customColors",

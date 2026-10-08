@@ -143,12 +143,12 @@ export interface IMp3Util {
   setMediaTagWithCover(filePath: string, meta: IMusicMetadata, coverPath?: string): Promise<boolean>;
 
   /** 解密mflac到flac（Android） */
-  decryptMflacToFlac(inputPath: string, outputPath: string, ekey: string): Promise<boolean>;
+  decryptMflacToFlac(inputPath: string, outputPath: string, rawSongKey: string): Promise<boolean>;
 
   /** 启动本地mflac代理（Android） */
   startMflacProxy(): Promise<string>;
   /** 注册mflac流并返回本地URL（Android） */
-  registerMflacStream(src: string, ekey: string, headers?: Record<string, string> | null): Promise<string>;
+  registerMflacStream(src: string, rawSongKey: string, headers?: Record<string, string> | null): Promise<string>;
 
   /** Native 下载队列：添加任务 */
   addDownloadTask(params: {

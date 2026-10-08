@@ -1,6 +1,7 @@
 import React from "react";
 import ListItem from "@/components/base/listItem";
 import SliderRow from "@/components/base/sliderRow";
+import BackgroundTuningSliders from "@/components/base/backgroundTuningSliders";
 import Config, { useAppConfig } from "@/core/appConfig";
 import Theme, {
     DEFAULT_BACKGROUND_BLUR,
@@ -53,32 +54,7 @@ export default function BackgroundTuning() {
             ) : null}
             {isBackgroundActive ? (
                 <>
-                    <SliderRow
-                        title={t("setCustomTheme.blur")}
-                        value={
-                            backgroundInfo?.blur ?? DEFAULT_BACKGROUND_BLUR
-                        }
-                        minimumValue={0}
-                        maximumValue={50}
-                        step={1}
-                        onChange={val => {
-                            Theme.setBackground({ blur: val });
-                        }}
-                    />
-                    <SliderRow
-                        title={t("setCustomTheme.opacity")}
-                        value={
-                            backgroundInfo?.opacity ??
-                                DEFAULT_BACKGROUND_OPACITY
-                        }
-                        minimumValue={0}
-                        maximumValue={1}
-                        step={0.01}
-                        format={val => `${Math.round(val * 100)}%`}
-                        onChange={val => {
-                            Theme.setBackground({ opacity: val });
-                        }}
-                    />
+                    <BackgroundTuningSliders />
                     <SliderRow
                         title={t("themeSettings.backgroundMask")}
                         value={backgroundMask}

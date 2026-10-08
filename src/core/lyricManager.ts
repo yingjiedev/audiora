@@ -9,8 +9,6 @@ import { atom, getDefaultStore, useAtomValue } from "jotai";
 import { Plugin } from "./pluginManager";
 
 import pathConst from "@/constants/pathConst";
-import LyricUtil, { IDesktopLyricLineData } from "@/native/lyricUtil";
-import { resolveLyricPresets } from "@/utils/lyricPreset";
 import { checkAndCreateDir } from "@/utils/fileUtils";
 import PersistStatus from "@/utils/persistStatus";
 import CryptoJs from "crypto-js";
@@ -18,7 +16,7 @@ import { unlink, writeFile } from "react-native-fs";
 import RNTrackPlayer, { Event, State } from "react-native-track-player";
 import { TrackPlayerEvents } from "@/core.defination/trackPlayer";
 import { IPluginManager } from "@/types/core/pluginManager";
-import { autoDecryptLyric } from "@/utils/musicDecrypter";
+import { normalizeLyric } from "@/utils/lyricFormat";
 import { devLog } from "@/utils/log";
 import {
     cancelAnimation,
@@ -93,9 +91,6 @@ class LyricManager implements IInjectable {
     private lastPositionClockSyncTime = 0;
     private positionClockCorrectionUntil = 0;
 
-    // Native event subscriptions (cleaned up on re-setup)
-    private nativeSubscriptions: Array<{ remove: () => void }> = [];
-
 
     get currentLyricItem() {
         return getDefaultStore().get(currentLyricItemAtom);
@@ -135,15 +130,6 @@ class LyricManager implements IInjectable {
 
         const lyricItem = parser.getPosition(safePositionSeconds);
         getDefaultStore().set(currentLyricItemAtom, lyricItem ?? null);
-
-        if (this.appConfig.getConfig("lyric.showStatusBarLyric")) {
-            this.updateDesktopLyricDisplay(lyricItem);
-            LyricUtil.syncPlaybackState({
-                status: isPlaying ? "playing" : "paused",
-                positionMs,
-                isSeek: true,
-            });
-        }
 
         return lyricItem ?? null;
     }
@@ -252,33 +238,23 @@ class LyricManager implements IInjectable {
     setup() {
         // 更新歌词 - 延迟异步执行，完全不阻塞播放
         this.trackPlayer.on(TrackPlayerEvents.CurrentMusicChanged, (musicItem) => {
-            devLog('info', '[LyricManager] Music changed event triggered', {
+            devLog("info", "[LyricManager] Music changed event triggered", {
                 title: musicItem?.title,
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
 
             // CRITICAL FIX: Delay lyric loading to ensure playback starts immediately
             // Use setTimeout to push lyric loading to end of event queue
             setTimeout(() => {
-                devLog('info', '[LyricManager] Starting delayed lyric load', {
+                devLog("info", "[LyricManager] Starting delayed lyric load", {
                     title: musicItem?.title,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
                 });
 
                 this.refreshLyric(true, true).catch(err => {
-                    devLog('warn', 'Lyric loading failed but playback continues', err);
+                    devLog("warn", "Lyric loading failed but playback continues", err);
                 });
             }, 0);
-
-            if (this.appConfig.getConfig("lyric.showStatusBarLyric")) {
-                if (musicItem) {
-                    LyricUtil.setStatusBarLyricText(
-                        `${musicItem.title} - ${musicItem.artist}`,);
-                } else {
-                    // No music playing (e.g. playlist cleared) - hide desktop lyric
-                    LyricUtil.hideStatusBarLyric();
-                }
-            }
         });
 
         this.trackPlayer.on(TrackPlayerEvents.ProgressChanged, progress => {
@@ -317,18 +293,7 @@ class LyricManager implements IInjectable {
                 }, delay);
             }
 
-            // Detect seek (position jump > 800ms) — only sync if desktop lyric is active
-            if (isSeek && this.appConfig.getConfig("lyric.showStatusBarLyric")) {
-                // Check actual playback state to avoid forcing 'playing' when paused
-                RNTrackPlayer.getPlaybackState().then(currentState => {
-                    const seekStatus = currentState.state === State.Playing ? 'playing' : 'paused';
-                    LyricUtil.syncPlaybackState({
-                        status: seekStatus,
-                        positionMs,
-                        isSeek: true,
-                    });
-                }).catch(() => {});
-            }
+            // Detect seek (position jump > 800ms)
             this.lastProgressPositionMs = positionMs;
 
             if (!parser || !this.trackPlayer.isCurrentMusic(parser.musicItem)) {
@@ -343,17 +308,11 @@ class LyricManager implements IInjectable {
             if (currentLyricItem?.index !== newIndex) {
                 // 更新当前歌词状态
                 getDefaultStore().set(currentLyricItemAtom, newLyricItem ?? null);
-
-                // 更新桌面歌词
-                if (this.appConfig.getConfig("lyric.showStatusBarLyric")) {
-                    this.updateDesktopLyricDisplay(newLyricItem);
-                }
             }
         });
 
-        // Listen to playback state changes for desktop lyric visibility control
+        // Keep the continuous UI-thread clock in sync with playback state changes
         RNTrackPlayer.addEventListener(Event.PlaybackState, async (state) => {
-            const isPaused = state.state === State.Paused;
             const isPlaying = state.state === State.Playing;
             this.isPlaybackAdvancing = isPlaying;
 
@@ -365,73 +324,6 @@ class LyricManager implements IInjectable {
                 const positionMs = progress.position * 1000;
                 this.stopPositionClock(positionMs);
                 getDefaultStore().set(currentPositionMsAtom, positionMs);
-            }
-
-            const showStatusBarLyric = this.appConfig.getConfig("lyric.showStatusBarLyric");
-
-            if (!showStatusBarLyric) {
-                return;
-            }
-
-            const hideWhenPaused = this.appConfig.getConfig("lyric.hideDesktopLyricWhenPaused");
-            const currentMusic = this.trackPlayer.currentMusic;
-
-            if (isPlaying) {
-                // Always show desktop lyric when playing
-                const statusBarLyricConfig = {
-                    topPercent: this.appConfig.getConfig("lyric.topPercent"),
-                    leftPercent: this.appConfig.getConfig("lyric.leftPercent"),
-                    widthPercent: this.appConfig.getConfig("lyric.widthPercent"),
-                    align: this.appConfig.getConfig("lyric.align"),
-                    color: this.appConfig.getConfig("lyric.color"),
-                    backgroundColor: this.appConfig.getConfig("lyric.backgroundColor"),
-                    sungColor: this.appConfig.getConfig("lyric.sungColor"),
-                    fontSize: this.appConfig.getConfig("lyric.fontSize"),
-                    presetIndex: this.appConfig.getConfig("lyric.presetIndex") ?? 0,
-                    presets: resolveLyricPresets(),
-                    secondaryFontRatio: this.appConfig.getConfig("lyric.desktopSecondaryFontRatio") ?? 0.85,
-                    secondaryAlphaRatio: this.appConfig.getConfig("lyric.desktopSecondaryAlphaRatio") ?? 0.90,
-                };
-                LyricUtil.showStatusBarLyric(
-                    currentMusic ? `${currentMusic.title} - ${currentMusic.artist}` : "Audiora",
-                    statusBarLyricConfig ?? {}
-                );
-
-                // Restore lock state after window (re)creation
-                if (this.appConfig.getConfig("lyric.isLocked")) {
-                    LyricUtil.lockDesktopLyric();
-                }
-
-                // Sync playing state to native for Choreographer-driven animation
-                const progress = await this.trackPlayer.getProgress();
-                LyricUtil.syncPlaybackState({
-                    status: 'playing',
-                    positionMs: progress.position * 1000,
-                });
-
-                // Update to current lyric if available
-                const currentLyricItem = this.currentLyricItem;
-                if (currentLyricItem) {
-                    this.updateDesktopLyricDisplay(currentLyricItem);
-                }
-
-                devLog('info', '[LyricManager] Desktop lyric shown after play');
-            } else if (isPaused && hideWhenPaused === true) {
-                // Hide desktop lyric when paused (only if hideWhenPaused is explicitly enabled)
-                LyricUtil.hideStatusBarLyric();
-                devLog('info', '[LyricManager] Desktop lyric hidden due to pause');
-            } else if (isPaused) {
-                // Sync paused state to native to freeze animation
-                const progress = await this.trackPlayer.getProgress();
-                LyricUtil.syncPlaybackState({
-                    status: 'paused',
-                    positionMs: progress.position * 1000,
-                });
-                devLog('info', '[LyricManager] Desktop lyric paused (frozen)');
-            } else if (state.state === State.None || state.state === State.Stopped) {
-                // Hide desktop lyric when playback is stopped (e.g. playlist cleared)
-                LyricUtil.hideStatusBarLyric();
-                devLog('info', '[LyricManager] Desktop lyric hidden due to stop/reset');
             }
         });
 
@@ -452,107 +344,10 @@ class LyricManager implements IInjectable {
             .catch(() => {});
 
 
-        // Hide desktop lyric on app startup to prevent showing stale content
-        LyricUtil.hideStatusBarLyric();
-        devLog('info', '[LyricManager] Desktop lyric hidden on startup');
-
-        // Listen to native events for persisting state changes made via control bar
-        // Clean up any previous subscriptions first to prevent duplicates on re-setup
-        this.nativeSubscriptions.forEach(s => s.remove());
-        this.nativeSubscriptions = [];
-
-        this.nativeSubscriptions.push(
-            LyricUtil.addListener('LyricUtil:onLockStateChanged', ({ locked }) => {
-                this.appConfig.setConfig('lyric.isLocked', locked);
-            }),
-            LyricUtil.addListener('LyricUtil:onPresetChanged', ({ index }) => {
-                this.appConfig.setConfig('lyric.presetIndex', index);
-            }),
-            LyricUtil.addListener('LyricUtil:onFontSizeChanged', ({ fontSize }) => {
-                this.appConfig.setConfig('lyric.fontSize', fontSize);
-            }),
-            LyricUtil.addListener('LyricUtil:onPositionChanged', ({ leftPercent, topPercent }) => {
-                this.appConfig.setConfig('lyric.leftPercent', leftPercent);
-                this.appConfig.setConfig('lyric.topPercent', topPercent);
-            }),
-            LyricUtil.addListener('LyricUtil:onClose', () => {
-                this.appConfig.setConfig('lyric.showStatusBarLyric', false);
-            }),
-        );
-
         // Initial async lyric load - non-blocking
         this.refreshLyric(true).catch(err => {
-            devLog('warn', 'Initial lyric load failed', err);
+            devLog("warn", "Initial lyric load failed", err);
         });
-    }
-
-    private updateDesktopLyricDisplay(lyricItem: IParsedLrcItem | null) {
-        if (!lyricItem) return;
-
-        const desktopShowTranslation = this.appConfig.getConfig("lyric.desktopShowTranslation") ?? false;
-        const desktopShowRomanization = this.appConfig.getConfig("lyric.desktopShowRomanization") ?? false;
-        const lyricOrder = PersistStatus.get("lyric.lyricOrder") ?? ["romanization", "original", "translation"];
-
-        const original = lyricItem.lrc ?? "";
-        const translation = desktopShowTranslation ? (lyricItem.translation ?? "") : "";
-        const romanization = desktopShowRomanization ? (lyricItem.romanization ?? "") : "";
-
-        // Map type -> text for available lines
-        const textMap: Record<string, string> = {};
-        if (original) textMap["original"] = original;
-        if (translation) textMap["translation"] = translation;
-        if (romanization) textMap["romanization"] = romanization;
-
-        // Follow lyric page order: first available type is primary
-        const availableTypes = lyricOrder.filter(type => !!textMap[type]);
-        const primaryType = availableTypes[0] ?? "original";
-        const primaryText = textMap[primaryType] ?? original;
-
-        // Select word-by-word data based on primary type
-        let primaryWords: Array<{ text: string; startTime: number; duration: number; space?: boolean }> | null = null;
-        if (primaryType === "original" && lyricItem.hasWordByWord && lyricItem.words?.length) {
-            primaryWords = lyricItem.words.map(w => ({
-                text: w.text,
-                startTime: w.startTime,
-                duration: w.duration,
-                space: w.space,
-            }));
-        } else if (primaryType === "romanization" && lyricItem.hasRomanizationWordByWord && lyricItem.romanizationWords?.length) {
-            primaryWords = lyricItem.romanizationWords.map(w => ({
-                text: w.text,
-                startTime: w.startTime,
-                duration: w.duration,
-                space: w.space,
-            }));
-        } else if (primaryType === "translation" && lyricItem.translationWords?.length) {
-            primaryWords = lyricItem.translationWords.map(w => ({
-                text: w.text,
-                startTime: w.startTime,
-                duration: w.duration,
-                space: w.space,
-            }));
-        }
-
-        // Remaining available types become secondary lines
-        const secondaryLines: Array<{ type: 'translation' | 'romanization' | 'original'; text: string }> = [];
-        for (let i = 1; i < availableTypes.length; i++) {
-            const type = availableTypes[i] as 'translation' | 'romanization' | 'original';
-            secondaryLines.push({ type, text: textMap[type] });
-        }
-
-        const musicItem = this.trackPlayer.currentMusic;
-        const lineId = `${musicItem?.platform ?? ''}:${musicItem?.id ?? ''}:${lyricItem.index ?? 0}:${Math.round(lyricItem.time * 1000)}`;
-
-        const payload: IDesktopLyricLineData = {
-            lineId,
-            primaryText,
-            primaryWords,
-            secondaryLines,
-            lineStartMs: Math.round(lyricItem.time * 1000),
-            lineDurationMs: lyricItem.duration ?? null,
-        };
-
-        LyricUtil.setDesktopLyricLine(payload);
     }
 
     associateLyric(musicItem: IMusic.IMusicItem, linkToMusicItem: ICommon.IMediaBase) {
@@ -573,7 +368,7 @@ class LyricManager implements IInjectable {
             if (this.trackPlayer.isCurrentMusic(musicItem)) {
                 // Async refresh, non-blocking
                 this.refreshLyric(false).catch(err => {
-                    devLog('warn', 'Lyric refresh after association failed', err);
+                    devLog("warn", "Lyric refresh after association failed", err);
                 });
             }
             return true;
@@ -592,7 +387,7 @@ class LyricManager implements IInjectable {
         if (this.trackPlayer.isCurrentMusic(musicItem)) {
             // Async refresh, non-blocking
             this.refreshLyric(false).catch(err => {
-                devLog('warn', 'Lyric refresh after unassociation failed', err);
+                devLog("warn", "Lyric refresh after unassociation failed", err);
             });
         }
     }
@@ -621,7 +416,7 @@ class LyricManager implements IInjectable {
         if (this.trackPlayer.isCurrentMusic(musicItem)) {
             // Async refresh, non-blocking
             this.refreshLyric(false, false).catch(err => {
-                devLog('warn', 'Lyric refresh after upload failed', err);
+                devLog("warn", "Lyric refresh after upload failed", err);
             });
         }
     }
@@ -648,7 +443,7 @@ class LyricManager implements IInjectable {
         if (this.trackPlayer.isCurrentMusic(musicItem)) {
             // Async refresh, non-blocking
             this.refreshLyric(false, false).catch(err => {
-                devLog('warn', 'Lyric refresh after removal failed', err);
+                devLog("warn", "Lyric refresh after removal failed", err);
             });
         }
 
@@ -657,32 +452,19 @@ class LyricManager implements IInjectable {
     // Force reload current lyric (used when config changes like enableWordByWord)
     reloadCurrentLyric() {
         this.refreshLyric(false, false).catch(err => {
-            devLog('warn', 'Lyric reload failed', err);
+            devLog("warn", "Lyric reload failed", err);
         });
     }
 
     /**
-     * Re-send current lyric line data + sync playback state to the desktop lyric window.
-     * Call this after hide+show cycle (e.g. color inversion toggle, preset customization)
-     * to restore word-by-word display without requiring a song change.
+     * 逐字歌词开关的唯一写入路径。
+     * 这个开关只影响歌词解析（QRC 是否保留逐字时间轴），切换后必须重载当前歌词，
+     * 否则要等下一首歌才生效。设置页与歌曲长按面板都走这里。
      */
-    async resyncDesktopLyric() {
-        const currentLyricItem = this.currentLyricItem;
-        if (currentLyricItem) {
-            this.updateDesktopLyricDisplay(currentLyricItem);
-        }
-        // Sync playback state so Choreographer animation resumes
-        try {
-            const progress = await this.trackPlayer.getProgress();
-            const state = await RNTrackPlayer.getPlaybackState();
-            const status = state.state === State.Playing ? 'playing' : 'paused';
-            LyricUtil.syncPlaybackState({
-                status,
-                positionMs: progress.position * 1000,
-            });
-        } catch (_) {}
+    setWordByWordEnabled(enabled: boolean) {
+        this.appConfig.setConfig("lyric.enableWordByWord", enabled);
+        this.reloadCurrentLyric();
     }
-
 
     async updateLyricOffset(
         musicItem: IMusic.IMusicItem,
@@ -725,19 +507,6 @@ class LyricManager implements IInjectable {
                     currentLyric ?? null,
                 );
 
-                if (this.appConfig.getConfig("lyric.showStatusBarLyric")) {
-                    if (currentLyric) {
-                        this.updateDesktopLyricDisplay(currentLyric);
-                    }
-                    LyricUtil.syncPlaybackState({
-                        status: this.isPlaybackAdvancing
-                            ? "playing"
-                            : "paused",
-                        positionMs: positionSeconds * 1000,
-                        isSeek: true,
-                    });
-                }
-
                 return currentLyric ?? null;
             }
 
@@ -766,20 +535,16 @@ class LyricManager implements IInjectable {
             hasRomanization: false,
         });
         getDefaultStore().set(currentLyricItemAtom, null);
-        if (this.appConfig.getConfig("lyric.showStatusBarLyric")) {
-            const musicItem = this.trackPlayer.currentMusic;
-            LyricUtil.setStatusBarLyricText(musicItem ? `${musicItem.title} - ${musicItem.artist}` : "Audiora");
-        }
     }
 
     private async refreshLyric(skipFetchLyricSourceIfSame: boolean = true, ignoreProgress: boolean = false) {
         const currentMusicItem = this.trackPlayer.currentMusic;
 
-        devLog('info', 'Lyric refresh started', {
+        devLog("info", "Lyric refresh started", {
             hasMusic: !!currentMusicItem,
             title: currentMusicItem?.title,
             skipFetchLyricSourceIfSame,
-            ignoreProgress
+            ignoreProgress,
         });
 
         // 如果没有当前音乐项，重置歌词状态
@@ -793,27 +558,27 @@ class LyricManager implements IInjectable {
 
             if (skipFetchLyricSourceIfSame && this.lyricParser && this.trackPlayer.isCurrentMusic(this.lyricParser.musicItem)) {
                 lrcSource = this.lyricParser.lyricSource ?? null;
-                devLog('info', 'Using cached lyric source', { hasSource: !!lrcSource });
+                devLog("info", "Using cached lyric source", { hasSource: !!lrcSource });
             } else {
                 // 重置歌词状态
                 this.setLyricAsLoadingState();
 
-                devLog('info', 'Fetching lyric from plugin', { platform: currentMusicItem.platform });
+                devLog("info", "Fetching lyric from plugin", { platform: currentMusicItem.platform });
                 const fetchStartTime = Date.now();
 
                 lrcSource = (await this.pluginManager.getByMedia(currentMusicItem)?.methods?.getLyric(currentMusicItem)) ?? null;
 
                 const fetchDuration = Date.now() - fetchStartTime;
-                devLog('info', 'Plugin lyric fetch completed', {
+                devLog("info", "Plugin lyric fetch completed", {
                     duration: fetchDuration,
                     hasSource: !!lrcSource,
-                    hasRawLrc: !!lrcSource?.rawLrc
+                    hasRawLrc: !!lrcSource?.rawLrc,
                 });
             }
 
             // 切换到其他歌曲了, 直接返回
             if (!this.trackPlayer.isCurrentMusic(currentMusicItem)) {
-                devLog('info', 'Music changed during lyric fetch, aborting');
+                devLog("info", "Music changed during lyric fetch, aborting");
                 return;
             }
 
@@ -822,19 +587,19 @@ class LyricManager implements IInjectable {
                 // 重置歌词状态
                 this.setLyricAsLoadingState();
 
-                devLog('info', 'Auto-searching similar lyric');
+                devLog("info", "Auto-searching similar lyric");
                 lrcSource = await this.searchSimilarLyric(currentMusicItem);
             }
 
             // 切换到其他歌曲了, 直接返回
             if (!this.trackPlayer.isCurrentMusic(currentMusicItem)) {
-                devLog('info', 'Music changed during lyric search, aborting');
+                devLog("info", "Music changed during lyric search, aborting");
                 return;
             }
 
             // 如果源不存在，恢复默认设置
             if (!lrcSource) {
-                devLog('info', 'No lyric source found, setting no-lyric state');
+                devLog("info", "No lyric source found, setting no-lyric state");
                 this.setLyricAsNoLyricState();
                 this.lyricParser = null;
                 return;
@@ -842,33 +607,33 @@ class LyricManager implements IInjectable {
 
             // CRITICAL FIX: Defer CPU-intensive decryption to prevent blocking playback
             // QRC decryption involves Triple-DES + Zlib which can take 100-500ms+ synchronously
-            devLog('info', 'Processing lyric data', {
+            devLog("info", "Processing lyric data", {
                 hasRawLrc: !!lrcSource.rawLrc,
                 hasTranslation: !!lrcSource.translation,
-                hasRomanization: !!lrcSource.romanization
+                hasRomanization: !!lrcSource.romanization,
             });
 
             // Defer decryption to next event loop cycle to allow playback to start
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            const decryptStartTime = Date.now();
+            const normalizeStartTime = Date.now();
 
             // Get word-by-word setting from config
             const enableWordByWord = this.appConfig.getConfig("lyric.enableWordByWord") ?? true;
-            devLog('info', '[Lyric] Word-by-word config', { enableWordByWord });
+            devLog("info", "[Lyric] Word-by-word config", { enableWordByWord });
 
-            // Native async decryption (non-blocking, ~10ms)
-            // Pass enableWordByWord to preserve word-level timing for QRC lyrics
-            const rawLrc = lrcSource.rawLrc ? await autoDecryptLyric(lrcSource.rawLrc, enableWordByWord) : lrcSource.rawLrc;
-            const translation = lrcSource.translation ? await autoDecryptLyric(lrcSource.translation, enableWordByWord) : lrcSource.translation;
-            const romanization = lrcSource.romanization ? await autoDecryptLyric(lrcSource.romanization, enableWordByWord) : lrcSource.romanization;
+            // 统一歌词格式（带逐字时间轴的 XML -> LRC）
+            // enableWordByWord 用于保留逐字时间轴
+            const rawLrc = lrcSource.rawLrc ? await normalizeLyric(lrcSource.rawLrc, enableWordByWord) : lrcSource.rawLrc;
+            const translation = lrcSource.translation ? await normalizeLyric(lrcSource.translation, enableWordByWord) : lrcSource.translation;
+            const romanization = lrcSource.romanization ? await normalizeLyric(lrcSource.romanization, enableWordByWord) : lrcSource.romanization;
 
-            const decryptDuration = Date.now() - decryptStartTime;
-            devLog('info', 'Lyric decryption completed', {
-                duration: decryptDuration,
+            const normalizeDuration = Date.now() - normalizeStartTime;
+            devLog("info", "歌词格式规范化完成", {
+                duration: normalizeDuration,
                 rawLrcLength: rawLrc?.length,
                 translationLength: translation?.length,
-                romanizationLength: romanization?.length
+                romanizationLength: romanization?.length,
             });
 
             this.lyricParser = new LyricParser(rawLrc!, {
@@ -895,22 +660,14 @@ class LyricManager implements IInjectable {
                 : this.lyricParser.getPosition(progress.position);
             getDefaultStore().set(currentLyricItemAtom, currentLyric || null);
 
-            devLog('info', 'Lyric refresh completed successfully', {
+            devLog("info", "Lyric refresh completed successfully", {
                 lyricCount: this.lyricParser.getLyricItems().length,
                 hasTranslation: !!lrcSource.translation,
-                hasRomanization: !!lrcSource.romanization
+                hasRomanization: !!lrcSource.romanization,
             });
 
-            if (this.appConfig.getConfig("lyric.showStatusBarLyric")) {
-                if (currentLyric) {
-                    this.updateDesktopLyricDisplay(currentLyric);
-                } else {
-                    const musicItem = this.trackPlayer.currentMusic;
-                    LyricUtil.setStatusBarLyricText(musicItem ? `${musicItem.title} - ${musicItem.artist}` : "Audiora");
-                }
-            }
         } catch (err) {
-            devLog('error', 'Lyric refresh failed', err);
+            devLog("error", "Lyric refresh failed", err);
             if (this.trackPlayer.isCurrentMusic(currentMusicItem)) {
                 this.lyricParser = null;
                 this.setLyricAsNoLyricState();
