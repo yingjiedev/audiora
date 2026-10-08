@@ -49,6 +49,7 @@ import { normalizePluginMusicItem } from "@/utils/qualities";
 import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
 import { readCompanionText } from "@/utils/mediaCompanion";
 import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
+import { readCachedMediaSource } from "./mediaSourceCache";
 
 
 axios.defaults.timeout = 2000;
@@ -432,12 +433,7 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
         ) {
             trace("播放", "缓存播放");
             const qualityInfo = mediaCache.source[quality];
-            return {
-                url: qualityInfo!.url,
-                headers: mediaCache.headers,
-                userAgent:
-                    mediaCache.userAgent ?? mediaCache.headers?.["user-agent"],
-            };
+            return readCachedMediaSource(qualityInfo!, mediaCache);
         }
         // 3. 替代插件
         const alternativePlugin = Plugin.pluginManager?.getAlternativePlugin(this.plugin) as Plugin | null;
@@ -472,7 +468,7 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
                 musicItem,
                 pluginQuality,
             )) ?? { url: musicItem?.qualities?.[quality]?.url };
-            const { url, headers, ekey, cek } = mediaSourceResult as any;
+            const { url, headers, ekey, cek, qmcRawKey } = mediaSourceResult as any;
             if (!url) {
                 throw new Error("NOT RETRY");
             }
@@ -481,7 +477,8 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
                 url,
                 headers,
                 userAgent: headers?.["user-agent"],
-                ekey, // 传递 ekey 用于 mflac 解密
+                ekey, // 仅识别旧来源以提示迁移，宿主不再解包
+                qmcRawKey,
                 cek, // 传递 cek 用于 CENC 流式解密
             } as IPlugin.IMediaSourceResult;
             const authFormattedResult = formatAuthUrl(result.url!);
@@ -498,11 +495,7 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
                 !notUpdateCache
             ) {
                 // 更新缓存
-                const cacheSource = {
-                    headers: result.headers,
-                    userAgent: result.userAgent,
-                    url,
-                };
+                const cacheSource = { ...result };
                 let realMusicItem = {
                     ...musicItem,
                     ...(mediaCache || {}),

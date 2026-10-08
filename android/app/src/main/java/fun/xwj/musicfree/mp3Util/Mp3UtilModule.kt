@@ -1031,149 +1031,19 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
 
     // ================== MFLAC (QMCv2) Decrypt Support ==================
 
-    private val ROUNDS = 16
-    private val DELTA: Long = 0x9e3779b9L
-    private val SALT_LEN = 2
-    private val ZERO_LEN = 7
-    private val FIXED_PADDING_LEN = 1 + SALT_LEN + ZERO_LEN
-    private val EKEY_V2_PREFIX = "UVFNdXNpYyBFbmNWMixLZXk6" // base64("QQMusic EncV2,Key:")
-    private val EKEY_V2_KEY1 = byteArrayOf(
-        0x33, 0x38, 0x36, 0x5a, 0x4a, 0x59, 0x21, 0x40,
-        0x23, 0x2a, 0x24, 0x25, 0x5e, 0x26, 0x29, 0x28
-    ).map { it.toByte() }.toByteArray()
-    private val EKEY_V2_KEY2 = byteArrayOf(
-        0x2a, 0x2a, 0x23, 0x21, 0x28, 0x23, 0x24, 0x25,
-        0x26, 0x5e, 0x61, 0x31, 0x63, 0x5a, 0x2c, 0x54
-    ).map { it.toByte() }.toByteArray()
-
-    private fun toUInt32(v: Long): Long = v and 0xffffffffL
-    private fun readU32BE(b: ByteArray, off: Int): Long {
-        return ((b[off].toLong() and 0xff) shl 24) or
-                ((b[off + 1].toLong() and 0xff) shl 16) or
-                ((b[off + 2].toLong() and 0xff) shl 8) or
-                (b[off + 3].toLong() and 0xff)
-    }
-    private fun writeU32BE(b: ByteArray, off: Int, v: Long) {
-        b[off] = ((v ushr 24) and 0xff).toByte()
-        b[off + 1] = ((v ushr 16) and 0xff).toByte()
-        b[off + 2] = ((v ushr 8) and 0xff).toByte()
-        b[off + 3] = (v and 0xff).toByte()
-    }
-
-    private fun parseKey(key: ByteArray): LongArray {
-        require(key.size == 16) { "Key must be 16 bytes" }
-        return longArrayOf(
-            readU32BE(key, 0),
-            readU32BE(key, 4),
-            readU32BE(key, 8),
-            readU32BE(key, 12)
-        )
-    }
-
-    private fun ecbSingleRound(value: Long, sum: Long, key1: Long, key2: Long): Long {
-        val left = toUInt32(((value shl 4) + key1))
-        val right = toUInt32(((value ushr 5) + key2))
-        val mid = toUInt32(sum + value)
-        return toUInt32(left xor mid xor right)
-    }
-
-    private fun decryptBlock(blockHi: Long, blockLo: Long, keyWords: LongArray): Pair<Long, Long> {
-        var y = toUInt32(blockHi)
-        var z = toUInt32(blockLo)
-        var sum = toUInt32(DELTA * ROUNDS)
-        var round = 0
-        while (round < ROUNDS) {
-            val tmp1 = ecbSingleRound(y, sum, keyWords[2], keyWords[3])
-            z = toUInt32(z - tmp1)
-            val tmp0 = ecbSingleRound(z, sum, keyWords[0], keyWords[1])
-            y = toUInt32(y - tmp0)
-            sum = toUInt32(sum - DELTA)
-            round++
+    // Only explicitly supplied raw song keys are accepted; no EKey unpacking.
+    private fun decodeProvidedSongKey(value: String): ByteArray {
+        require(value.startsWith("base64:")) { "Expected a base64: raw song key" }
+        val encoded = value.removePrefix("base64:")
+        require(encoded.length <= 5464 && encoded.matches(Regex("[A-Za-z0-9+/]+={0,2}"))) {
+            "Invalid raw song key"
         }
-        return Pair(y, z)
-    }
-
-    private fun xor64(aHi: Long, aLo: Long, bHi: Long, bLo: Long): Pair<Long, Long> {
-        return Pair(toUInt32(aHi xor bHi), toUInt32(aLo xor bLo))
-    }
-
-    private fun tcTeaDecrypt(cipher: ByteArray, key: ByteArray): ByteArray {
-        val keyWords = parseKey(key)
-        require(cipher.size % 8 == 0 && cipher.size >= FIXED_PADDING_LEN) { "Invalid cipher length" }
-        val plain = ByteArray(cipher.size)
-        var iv1Hi = 0L
-        var iv1Lo = 0L
-        var iv2Hi = 0L
-        var iv2Lo = 0L
-        var off = 0
-        while (off < cipher.size) {
-            val cHi = readU32BE(cipher, off)
-            val cLo = readU32BE(cipher, off + 4)
-            val xHi = toUInt32(cHi xor iv2Hi)
-            val xLo = toUInt32(cLo xor iv2Lo)
-            val d = decryptBlock(xHi, xLo, keyWords)
-            val p = xor64(d.first, d.second, iv1Hi, iv1Lo)
-            writeU32BE(plain, off, p.first)
-            writeU32BE(plain, off + 4, p.second)
-            iv1Hi = cHi
-            iv1Lo = cLo
-            iv2Hi = d.first
-            iv2Lo = d.second
-            off += 8
+        val key = android.util.Base64.decode(encoded, android.util.Base64.NO_WRAP)
+        require(key.isNotEmpty() && key.size <= 4096 &&
+            android.util.Base64.encodeToString(key, android.util.Base64.NO_WRAP) == encoded) {
+            "Invalid raw song key"
         }
-        val padSize = (plain[0].toInt() and 0x7)
-        val start = 1 + padSize + SALT_LEN
-        val end = cipher.size - ZERO_LEN
-        // verify zero tail
-        for (i in end until plain.size) {
-            if (plain[i].toInt() != 0) throw RuntimeException("Invalid padding")
-        }
-        return plain.copyOfRange(start, end)
-    }
-
-    private fun makeSimpleKey(len: Int = 8): ByteArray {
-        val result = ByteArray(len)
-        var i = 0
-        while (i < len) {
-            val value = 106.0 + i * 0.1
-            val tan = kotlin.math.tan(value)
-            val scaled = kotlin.math.abs(tan) * 100.0
-            result[i] = (scaled.toInt() and 0xff).toByte()
-            i++
-        }
-        return result
-    }
-
-    private fun decryptEKeyV1(base64: String): ByteArray {
-        val decoded = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
-        require(decoded.size >= 12) { "EKey too short" }
-        val header = decoded.copyOfRange(0, 8)
-        val cipher = decoded.copyOfRange(8, decoded.size)
-        val simpleKey = makeSimpleKey()
-        val teaKey = ByteArray(16)
-        for (i in 0 until 8) {
-            teaKey[i * 2] = simpleKey[i]
-            teaKey[i * 2 + 1] = header[i]
-        }
-        val recovered = tcTeaDecrypt(cipher, teaKey)
-        return header + recovered
-    }
-
-    private fun decryptEKeyV2(base64: String): ByteArray {
-        var payload = base64
-        if (payload.startsWith(EKEY_V2_PREFIX)) payload = payload.substring(EKEY_V2_PREFIX.length)
-        var data = android.util.Base64.decode(payload, android.util.Base64.DEFAULT)
-        data = tcTeaDecrypt(data, EKEY_V2_KEY1)
-        data = tcTeaDecrypt(data, EKEY_V2_KEY2)
-        // trim trailing zeros
-        var end = data.size
-        while (end > 0 && data[end - 1].toInt() == 0) end--
-        val trimmed = String(data.copyOfRange(0, end))
-        return decryptEKeyV1(trimmed)
-    }
-
-    private fun decryptEKey(base64: String): ByteArray {
-        return if (base64.startsWith(EKEY_V2_PREFIX)) decryptEKeyV2(base64) else decryptEKeyV1(base64)
+        return key
     }
 
     private object QmcHelper {
@@ -1362,13 +1232,9 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
         }
     }
 
-    private fun normalizeEkey(input: String): String {
-        val s = input.trim()
-        return if (s.length > 704) s.takeLast(704) else s
-    }
 
     @ReactMethod
-    fun decryptMflacToFlac(inputPath: String, outputPath: String, rawEkey: String, promise: Promise) {
+    fun decryptMflacToFlac(inputPath: String, outputPath: String, rawSongKey: String, promise: Promise) {
         try {
             val inFile = File(inputPath)
             if (!inFile.exists()) {
@@ -1379,9 +1245,7 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
             val parent = File(outputPath).parentFile
             if (parent != null && !parent.exists()) parent.mkdirs()
 
-            val cleaned = normalizeEkey(rawEkey)
-            android.util.Log.i("Mp3UtilModule", "[Decrypt] ekey length raw=${rawEkey.length} cleaned=${cleaned.length}")
-            val key = decryptEKey(cleaned)
+            val key = decodeProvidedSongKey(rawSongKey)
             val decoder = QMC2Decoder(key)
 
             val bufferSize = 128 * 1024
@@ -1678,12 +1542,10 @@ class Mp3UtilModule(private val reactContext: ReactApplicationContext) : ReactCo
     }
 
     @ReactMethod
-    fun registerMflacStream(src: String, rawEkey: String, headers: ReadableMap?, promise: Promise) {
+    fun registerMflacStream(src: String, rawSongKey: String, headers: ReadableMap?, promise: Promise) {
         try {
             android.util.Log.i("Mp3UtilModule", "[Proxy] Register stream src=$src")
-            val cleaned = normalizeEkey(rawEkey)
-            android.util.Log.i("Mp3UtilModule", "[Proxy] ekey length raw=${rawEkey.length} cleaned=${cleaned.length}")
-            val key = decryptEKey(cleaned)
+            val key = decodeProvidedSongKey(rawSongKey)
             val h = mutableMapOf<String, String>()
             headers?.let {
                 val iter = it.keySetIterator()

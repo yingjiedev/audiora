@@ -50,6 +50,8 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { resolveImportedAssetOrPath } from "@/utils/fileUtils";
 import { resolveArtwork } from "@/utils/artwork";
 import { getLocalPlaybackSource } from "./localPlayback";
+import { EncryptedSourceError, QmcKeyError, resolveSongKey } from "@/service/mflac/songKey";
+import { isMflacUrl } from "@/utils/mflac";
 import { adaptMediaSourceForPlayback } from "./mediaSourceAdapter";
 import { refreshCurrentSource } from "./refreshCurrentSource";
 import SeekCoordinator from "./seekCoordinator";
@@ -265,20 +267,11 @@ class TrackPlayer extends EventEmitter<{
                 this.pluginManagerService.getByMedia(track)
                     ?.methods.getMediaSource(track, quality)
                     .then(async newSource => {
-                        try {
-                            const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                            const localUrl = await getLocalStreamUrlIfNeeded(newSource?.url, (newSource as any)?.ekey, newSource?.headers, (newSource as any)?.cek);
-                            if (localUrl) {
-                                track.url = localUrl;
-                                track.headers = undefined;
-                            } else {
-                                track.url = newSource?.url || track.url;
-                                track.headers = newSource?.headers || track.headers;
-                            }
-                        } catch {
-                            track.url = newSource?.url || track.url;
-                            track.headers = newSource?.headers || track.headers;
+                        if (!newSource?.url) {
+                            return;
                         }
+                        const adapted = await adaptMediaSourceForPlayback(newSource);
+                        track = this.mergeTrackSource(track, adapted) as IMusic.IMusicItem;
 
                         if (isSameMediaItem(this.currentMusic, track)) {
                             void appendStartupBreadcrumb("trackplayer-restore-apply-source", {
@@ -300,6 +293,11 @@ class TrackPlayer extends EventEmitter<{
                             title: track.title,
                             message: error instanceof Error ? error.message : String(error),
                         });
+                        if (error instanceof QmcKeyError) {
+                            Toast.warn(i18n.t("media.rawSongKeyRequired"));
+                        } else if (error instanceof EncryptedSourceError) {
+                            Toast.warn(i18n.t("media.encryptedSourceFailed"));
+                        }
                         errorLog("恢复播放音源失败", {
                             title: track.title,
                             platform: track.platform,
@@ -582,6 +580,12 @@ class TrackPlayer extends EventEmitter<{
                 // 获取底层播放器中的track
                 const currentTrack = await ReactNativeTrackPlayer.getTrack(0);
                 // 2.1 如果当前有源
+                if (currentTrack?.url) {
+                    resolveSongKey(currentTrack as IPlugin.IMediaSourceResult);
+                }
+                if (currentTrack?.url && isMflacUrl(String(currentTrack.url))) {
+                    throw new QmcKeyError();
+                }
                 if (
                     currentTrack?.url &&
                     isSameMediaItem(
@@ -721,14 +725,6 @@ class TrackPlayer extends EventEmitter<{
                         quality: selectedQuality,
                         url: source.url,
                     });
-                    try {
-                        const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                        const localUrl = await getLocalStreamUrlIfNeeded(source.url, (source as any)?.ekey, source.headers, (source as any)?.cek);
-                        if (localUrl) {
-                            source.url = localUrl;
-                            source.headers = undefined;
-                        }
-                    } catch {}
                     this.setQuality(selectedQuality);
                 } else {
                     // 智能选择失败，回退到遍历其它音质。
@@ -763,14 +759,6 @@ class TrackPlayer extends EventEmitter<{
                             // 5.4.1 获取到真实源
                             if (source) {
                                 source = { ...source };
-                                try {
-                                    const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                                    const localUrl = await getLocalStreamUrlIfNeeded(source.url, (source as any)?.ekey, source.headers, (source as any)?.cek);
-                                    if (localUrl) {
-                                        source.url = localUrl;
-                                        source.headers = undefined;
-                                    }
-                                } catch {}
                                 this.setQuality(quality);
                                 fallbackQuality = quality;
                                 break;
@@ -839,24 +827,6 @@ class TrackPlayer extends EventEmitter<{
                                     // 5.4.1 获取到真实源
                                     if (source) {
                                         source = { ...source };
-                                        try {
-                                            const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                                            devLog("info", "🎵[trackPlayer] 尝试处理mflac", {
-                                                url: source.url,
-                                                hasEkey: !!source.ekey,
-                                                ekeyLength: source.ekey?.length,
-                                            });
-                                            const localUrl = await getLocalStreamUrlIfNeeded(source.url, source.ekey, source.headers, source.cek);
-                                            if (localUrl) {
-                                                devLog("info", "✅[trackPlayer] mflac代理URL生成成功", { localUrl });
-                                                source.url = localUrl;
-                                                source.headers = undefined;
-                                            } else {
-                                                devLog("warn", "⚠️[trackPlayer] mflac代理URL生成失败");
-                                            }
-                                        } catch (error: any) {
-                                            devLog("error", "❌[trackPlayer] mflac处理异常", error);
-                                        }
                                         this.setQuality(quality);
                                         break;
                                     }
@@ -874,13 +844,20 @@ class TrackPlayer extends EventEmitter<{
                         throw new Error(PlayFailReason.INVALID_SOURCE);
                     }
                 } else {
+                    const providedSource = musicItem as IPlugin.IMediaSourceResult;
                     source = {
                         url: musicItem.url,
+                        headers: musicItem.headers,
+                        ekey: providedSource.ekey,
+                        qmcRawKey: providedSource.qmcRawKey,
+                        cek: providedSource.cek,
                     };
                     // 使用用户设置的默认音质，而不是硬编码
                     this.setQuality(preferredQuality);
                 }
             }
+
+            source = await adaptMediaSourceForPlayback(source);
 
             // 6. 特殊类型源
             if (getUrlExt(source.url) === ".m3u8") {
@@ -962,6 +939,10 @@ class TrackPlayer extends EventEmitter<{
                             "Current connection is not Wi-Fi. Enable cellular playback in settings to continue.",
                     });
                 }
+            } else if (e instanceof EncryptedSourceError) {
+                Toast.warn(i18n.t("media.encryptedSourceFailed"));
+            } else if (e instanceof QmcKeyError) {
+                Toast.warn(i18n.t("media.rawSongKeyRequired"));
             } else if (message === PlayFailReason.INVALID_SOURCE) {
                 trace("playback failed because source is empty");
                 await this.handlePlayFail();
@@ -1133,7 +1114,12 @@ class TrackPlayer extends EventEmitter<{
                 this.setQuality(newQuality);
             }
             return true;
-        } catch {
+        } catch (error) {
+            if (error instanceof QmcKeyError) {
+                Toast.warn(i18n.t("media.rawSongKeyRequired"));
+            } else if (error instanceof EncryptedSourceError) {
+                Toast.warn(i18n.t("media.encryptedSourceFailed"));
+            }
             // 修改失败
             return false;
         }
@@ -1315,6 +1301,11 @@ class TrackPlayer extends EventEmitter<{
             ? {
                 ...mediaItem,
                 ...props,
+                ...(props.url ? {
+                    ekey: props.ekey,
+                    qmcRawKey: props.qmcRawKey,
+                    cek: props.cek,
+                } : {}),
                 id: mediaItem.id,
                 platform: mediaItem.platform,
             }

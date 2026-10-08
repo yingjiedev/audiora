@@ -7,8 +7,10 @@ declare namespace IPlugin {
         userAgent?: string;
         /** 音质 */
         quality?: IMusic.IQualityKey;
-        /** 加密音频源所需的密钥，由播放器代理消费 */
+        /** @deprecated Wrapped EKey is no longer unpacked by the host. */
         ekey?: string;
+        /** Raw song key: canonical base64, base64: prefix, or explicit hex: prefix. */
+        qmcRawKey?: string;
         /** CENC 音频源所需的内容密钥，由播放器代理消费 */
         cek?: string;
     }

@@ -6,7 +6,7 @@ import downloadHistory, {
 } from "@/core/downloadHistory";
 import { getMediaExtraProperty } from "@/utils/mediaExtra";
 import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
-import { getFailReasonLabel, groupRecordsByDate } from "@/pages/downloading/utils";
+import { getFailReasonIcon, getFailReasonLabel, groupRecordsByDate } from "@/pages/downloading/utils";
 import { DownloadFailReason } from "@/core/downloadTypes";
 
 jest.mock("@/utils/mediaExtra", () => ({
@@ -320,4 +320,13 @@ describe("已完成记录按天分组", () => {
     it("空列表不产生分组", () => {
         expect(groupRecordsByDate([], t)).toEqual([]);
     });
+});
+
+
+it("shows a migration reason and key icon for missing raw song keys", () => {
+    const translate = jest.fn((key: string) => key) as any;
+    expect(getFailReasonLabel(DownloadFailReason.MissingDecryptionKey, translate))
+        .toBe("media.rawSongKeyRequired");
+    expect(getFailReasonIcon(DownloadFailReason.MissingDecryptionKey))
+        .toBe("shield-keyhole-outline");
 });

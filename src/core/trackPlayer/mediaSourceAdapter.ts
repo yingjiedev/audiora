@@ -1,19 +1,17 @@
-/** Apply playback-only URL adaptations while preserving the plugin response. */
+import { getLocalStreamUrlIfNeeded } from "@/service/mflac/proxy";
+
+/** Never fall back to encrypted bytes when source adaptation fails. */
 export async function adaptMediaSourceForPlayback(
     source: IPlugin.IMediaSourceResult,
 ): Promise<IPlugin.IMediaSourceResult> {
-    try {
-        const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-        const localUrl = await getLocalStreamUrlIfNeeded(
-            source.url,
-            source.ekey,
-            source.headers,
-            source.cek,
-        );
-        return localUrl
-            ? { ...source, url: localUrl, headers: undefined }
-            : source;
-    } catch {
-        return source;
-    }
+    const localUrl = await getLocalStreamUrlIfNeeded(
+        source.url,
+        source.ekey,
+        source.headers,
+        source.cek,
+        source.qmcRawKey,
+    );
+    return localUrl
+        ? { ...source, url: localUrl, headers: undefined }
+        : source;
 }

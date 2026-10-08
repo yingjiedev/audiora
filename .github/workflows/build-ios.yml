@@ -92,6 +92,9 @@ jobs:
                     fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
                   "
 
+            - name: Check bundled key material in sources
+              run: python3 scripts/check-release-key-material.py
+
             - name: Generate build info
               run: npm run generate-build-info
 
@@ -121,6 +124,9 @@ jobs:
                   mkdir -p Payload
                   cp -r Audiora.app Payload/
                   zip -r Audiora-${{ steps.build-version.outputs.raw }}.ipa Payload
+
+            - name: Check bundled key material in release IPAs
+              run: python3 scripts/check-release-key-material.py ios/build/Build/Products/Release-iphoneos/*.ipa
 
             - name: Upload IPA artifact
               uses: actions/upload-artifact@v4

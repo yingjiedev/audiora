@@ -1,4 +1,6 @@
 {
+    "media.encryptedSourceFailed": "無法開啟此加密音源，請檢查音源連線與提供的金鑰，或改用一般音訊連結。",
+    "media.rawSongKeyRequired": "此加密音源缺少有效的原始歌曲金鑰，請聯絡音源提供者提供 qmcRawKey 或一般音訊連結。",
     "common.setting": "設定",
     "common.software": "軟體",
     "common.language": "語言",
