@@ -46,13 +46,33 @@ export const KEYBOARD_TIMING = {
     easing: "standard",
 } as const;
 
+/**
+ * Completion callback for an animation.
+ *
+ * **It has to be a worklet.** Reanimated calls it from the frame queue
+ * (`valueSetter.step` → `animation.callback(true)`), which runs on the UI
+ * runtime; a plain JS function there becomes a "Remote Function" whose only
+ * behaviour is to throw, and the throw escapes the frame callback and kills the
+ * process. Mark the body with `"worklet"` and send anything that has to reach
+ * JS through `runOnJS` — `scripts/check-animation-callbacks.js` enforces this.
+ */
 export type MotionCallback = (finished?: boolean) => void;
 
+/**
+ * Both builders are **worklets**, exactly like the Reanimated primitives they
+ * wrap: `withTiming`/`withSpring` may be called on the UI runtime, so the
+ * helpers around them have to survive that trip too. Anything that animates
+ * from inside another animation callback (a chained `withDelay`, a panel that
+ * animates out when the in-animation finishes) depends on this — a plain JS
+ * helper there throws "[Worklets] Tried to synchronously call a Remote
+ * Function" and takes the process down.
+ */
 export function withMotionTiming(
     toValue: number,
     options?: MotionOptions,
     callback?: MotionCallback,
 ) {
+    "worklet";
     const {
         duration = "normal",
         easing = "standard",
@@ -78,6 +98,7 @@ export function withMotionSpring(
     options?: MotionOptions,
     callback?: MotionCallback,
 ) {
+    "worklet";
     const {
         spring = "spatial",
         velocity,
