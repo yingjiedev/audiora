@@ -1,7 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
-import { useNavigation } from "@react-navigation/native";
 import IconButton from "@/components/base/iconButton";
 import useColors from "@/hooks/useColors";
 import HeartIcon from "./content/heartIcon";
@@ -17,7 +16,6 @@ export const NAV_BAR_HEIGHT = rpx(100);
 
 export default function NavBar(props: INavBarProps) {
     const { onBack } = props;
-    const navigation = useNavigation();
     const colors = useColors();
     const musicItem = useCurrentMusic();
     const { t } = useI18N();
@@ -35,9 +33,6 @@ export default function NavBar(props: INavBarProps) {
                 style={styles.button}
                 onPress={() => {
                     onBack?.();
-                    requestAnimationFrame(() => {
-                        navigation.goBack();
-                    });
                 }}
             />
             {/*

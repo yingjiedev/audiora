@@ -3,6 +3,7 @@ import ThemeText from "@/components/base/themeText";
 import { ImgAsset } from "@/constants/assetsConst";
 import { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { openPlayer } from "@/core/playerOverlay";
 import TrackPlayer, { useCurrentMusic, useMusicState } from "@/core/trackPlayer";
 import { musicIsPaused } from "@/utils/trackUtils";
 import rpx, { fontRpx } from "@/utils/rpx";
@@ -23,7 +24,7 @@ export default function HomeHero() {
             accessibilityRole="button"
             accessibilityLabel={t("home.welcomeTitle")}
             onPress={() =>
-                navigate(currentMusic ? ROUTE_PATH.MUSIC_DETAIL : ROUTE_PATH.LOCAL)
+                currentMusic ? openPlayer() : navigate(ROUTE_PATH.LOCAL)
             }
             style={styles.card}>
             <ImageBackground

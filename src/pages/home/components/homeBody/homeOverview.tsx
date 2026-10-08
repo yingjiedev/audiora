@@ -4,6 +4,7 @@ import ThemeText from "@/components/base/themeText";
 import { ImgAsset } from "@/constants/assetsConst";
 import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { openPlayer } from "@/core/playerOverlay";
 import TrackPlayer, { useMusicState, useProgress } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
@@ -136,7 +137,7 @@ function ContinueListening(props: {
                 ]}
                 onPress={() => {
                     if (isCurrent) {
-                        navigate(ROUTE_PATH.MUSIC_DETAIL);
+                        openPlayer();
                     } else {
                         TrackPlayer.play(featuredMusic);
                     }

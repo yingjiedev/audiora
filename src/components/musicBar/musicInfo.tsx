@@ -6,7 +6,6 @@ import { ImgAsset } from "@/constants/assetsConst";
 import Color from "color";
 import ThemeText from "../base/themeText";
 import useColors from "@/hooks/useColors";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import TrackPlayer from "@/core/trackPlayer";
 import Animated, {
@@ -24,6 +23,7 @@ import { useMediaExtraProperty } from "@/utils/mediaExtra";
 import useMotion from "@/hooks/useMotion";
 import { resolveArtwork } from "@/utils/artwork";
 import { armPlayerTransition, playerTransition } from "@/core/playerTransition";
+import { openPlayer } from "@/core/playerOverlay";
 
 interface IBarMusicItemProps {
     musicItem: IMusic.IMusicItem | null;
@@ -143,7 +143,6 @@ function skipMusicItem(direction: number) {
 
 export default function MusicInfo(props: IMusicInfoProps) {
     const { musicItem } = props;
-    const navigate = useNavigate();
     const siblingMusicItems = useMemo(() => {
         if (!musicItem) {
             return {
@@ -195,10 +194,11 @@ export default function MusicInfo(props: IMusicInfoProps) {
     const tapGesture = Gesture.Tap()
         .onStart(() => {
             measureArtwork();
-            // Arms the morph (or reports "no shared element") before the screen
-            // mounts, so the full player's first frame already knows its origin.
+            // Arms the morph (or reports "no shared element") before the
+            // overlay mounts, so the full player's first frame already knows
+            // its origin.
             armPlayerTransition();
-            navigate(ROUTE_PATH.MUSIC_DETAIL);
+            openPlayer();
         })
         .runOnJS(true);
 
