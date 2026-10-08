@@ -83,23 +83,32 @@ export default function (props: IPanelFullScreenProps) {
         });
     }, [onClosed]);
 
+    /** Close animation was interrupted: drop the guard so another close can run. */
+    const releaseCloseGuard = useCallback(() => {
+        closingRef.current = false;
+    }, []);
+
     const closePanel = useCallback(() => {
         if (closingRef.current) {
             return;
         }
         closingRef.current = true;
+        // The callback runs on the UI runtime (see valueSetter: it calls
+        // `animation.callback(true)` straight from the frame queue), so it has
+        // to be a worklet and touch JS state only through runOnJS.
         snapPoint.value = motion.timing(
             0,
             { duration: "normal", easing: "accelerate" },
             finished => {
+                "worklet";
                 if (finished) {
                     runOnJS(unmountPanel)();
                 } else {
-                    closingRef.current = false;
+                    runOnJS(releaseCloseGuard)();
                 }
             },
         );
-    }, [snapPoint, unmountPanel, motion]);
+    }, [snapPoint, unmountPanel, motion, releaseCloseGuard]);
 
     useEffect(() => {
         closingRef.current = false;

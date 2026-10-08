@@ -235,6 +235,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
                             skip,
                             skipTiming,
                             () => {
+                                "worklet";
                                 runOnJS(skipMusicItem)(skip);
                             },
                         );

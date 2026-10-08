@@ -143,6 +143,7 @@ const TipPortal = ({
                         0,
                         { duration: "fast", easing: "accelerate" },
                         finished => {
+                            "worklet";
                             if (finished) {
                                 runOnJS(onHide)();
                             }
@@ -162,6 +163,7 @@ const TipPortal = ({
                 0,
                 { duration: "fast", easing: "accelerate" },
                 finished => {
+                    "worklet";
                     if (finished) {
                         runOnJS(setShouldRender)(false);
                     }
