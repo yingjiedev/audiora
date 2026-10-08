@@ -821,5 +821,8 @@
     "musicDetail.a11y.unfavorite": "取消收藏这首歌曲",
     "musicBar.a11y.playOrPause": "播放或暂停当前歌曲",
     "musicBar.a11y.playlist": "打开播放列表",
-    "musicBar.a11y.nowPlaying": "正在播放 {title}，歌手 {artist}"
+    "musicBar.a11y.nowPlaying": "正在播放 {title}，歌手 {artist}",
+    "musicBar.a11y.expand": "展开播放器",
+    "musicBar.a11y.collapse": "收起播放器",
+    "musicBar.a11y.openDetail": "打开完整播放页"
 }

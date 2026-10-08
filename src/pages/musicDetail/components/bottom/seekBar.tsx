@@ -21,33 +21,37 @@ function TimeLabel(props: ITimeLabelProps) {
     );
 }
 
-export default function SeekBar() {
+export default function SeekBar(props: { variant?: "media" | "surface" }) {
     const progress = useProgress(1000);
     const [tmpProgress, setTmpProgress] = useState<number | null>(null);
     const slidingRef = useRef(false);
     const colors = useColors();
     const { t } = useI18N();
 
-    const foreground = colors.onMedia ?? colors.text;
-    const secondary = colors.onMediaSecondary ?? foreground;
-    const track = colors.onMediaTrack ?? secondary;
-    const position = tmpProgress ?? progress.position;
+    const surface = props.variant === "surface";
+    const foreground = surface ? colors.primary : colors.onMedia ?? colors.text;
+    const secondary = surface ? colors.textSecondary ?? colors.text : colors.onMediaSecondary ?? foreground;
+    const track = surface ? colors.border : colors.onMediaTrack ?? secondary;
+    const duration = Number.isFinite(progress.duration) ? Math.max(0, progress.duration) : 0;
+    const currentPosition = Number.isFinite(progress.position) ? progress.position : 0;
+    const position = Math.min(duration, Math.max(0, tmpProgress ?? currentPosition));
 
     return (
-        <View style={style.wrapper}>
+        <View style={[style.wrapper, surface && style.surfaceWrapper]}>
             <Slider
-                style={style.slider}
+                style={[style.slider, surface && style.surfaceSlider]}
                 minimumTrackTintColor={foreground}
                 maximumTrackTintColor={track}
                 thumbTintColor={foreground}
                 minimumValue={0}
-                maximumValue={progress.duration}
+                maximumValue={duration}
+                disabled={duration <= 0}
                 accessible
                 accessibilityRole="adjustable"
                 accessibilityLabel={t("musicDetail.a11y.seek")}
                 accessibilityValue={{
                     min: 0,
-                    max: Math.max(0, Math.round(progress.duration)),
+                    max: Math.round(duration),
                     now: Math.max(0, Math.round(position)),
                 }}
                 onSlidingStart={() => {
@@ -61,22 +65,27 @@ export default function SeekBar() {
                 onSlidingComplete={val => {
                     slidingRef.current = false;
                     setTmpProgress(null);
-                    if (val >= progress.duration - 2) {
-                        val = progress.duration - 2;
+                    if (duration > 0 && Number.isFinite(val)) {
+                        TrackPlayer.seekTo(Math.max(0, Math.min(val, duration - 2)));
                     }
-                    TrackPlayer.seekTo(val);
                 }}
-                value={progress.position}
+                value={Math.min(duration, Math.max(0, currentPosition))}
             />
             <View style={style.timeRow}>
                 <TimeLabel time={position} color={secondary} />
-                <TimeLabel time={progress.duration} color={secondary} />
+                <TimeLabel time={duration} color={secondary} />
             </View>
         </View>
     );
 }
 
 const style = StyleSheet.create({
+    surfaceWrapper: {
+        paddingHorizontal: 0,
+    },
+    surfaceSlider: {
+        height: 48,
+    },
     wrapper: {
         width: "100%",
         paddingHorizontal: rpx(30),

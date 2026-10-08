@@ -821,5 +821,8 @@
     "musicDetail.a11y.unfavorite": "Remove from favorites",
     "musicBar.a11y.playOrPause": "Play or pause the current track",
     "musicBar.a11y.playlist": "Open the play queue",
-    "musicBar.a11y.nowPlaying": "Now playing {title} by {artist}"
+    "musicBar.a11y.nowPlaying": "Now playing {title} by {artist}",
+    "musicBar.a11y.expand": "Expand player",
+    "musicBar.a11y.collapse": "Collapse player",
+    "musicBar.a11y.openDetail": "Open full player"
 }

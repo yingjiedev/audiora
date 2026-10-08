@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 
 import NavBar from "./components/navBar";
-import MusicBar from "@/components/musicBar";
+import PlayerDock from "@/components/musicBar/playerDock";
 import { SafeAreaView } from "react-native-safe-area-context";
 import StatusBar from "@/components/base/statusBar";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
@@ -43,12 +43,17 @@ function Home() {
                     </>
                 )}
             </HorizontalSafeAreaView>
-            <MusicBar />
-            <HomeBottomNavigation
-                activeTab={activeTab}
-                onSelectHome={() => setActiveTab("home")}
-                onSelectLibrary={() => setActiveTab("library")}
-                onSelectMine={() => setActiveTab("mine")}
+            <PlayerDock
+                collapseKey={activeTab}
+                bottomNavigation={(
+                    <HomeBottomNavigation
+                        integrated
+                        activeTab={activeTab}
+                        onSelectHome={() => setActiveTab("home")}
+                        onSelectLibrary={() => setActiveTab("library")}
+                        onSelectMine={() => setActiveTab("mine")}
+                    />
+                )}
             />
         </SafeAreaView>
     );

@@ -32,9 +32,13 @@ interface IBarMusicItemProps {
     /** Only the visible (current) item carries the shared-element frame. */
     artworkRef?: AnimatedRef<Animated.View>;
     onArtworkLayout?: () => void;
+    foregroundColor?: string;
 }
 function BarMusicItemView(props: IBarMusicItemProps) {
-    const { musicItem, activeIndex, transformSharedValue, artworkRef, onArtworkLayout } = props;
+    const {
+        musicItem, activeIndex, transformSharedValue,
+        artworkRef, onArtworkLayout, foregroundColor,
+    } = props;
     const colors = useColors();
     // Subscribe so minibar updates when cover is associated/restored
     useMediaExtraProperty(musicItem, "associatedArtwork");
@@ -54,7 +58,7 @@ function BarMusicItemView(props: IBarMusicItemProps) {
         <Animated.View
             style={[
                 styles.container,
-                // Parent MusicBar already applies horizontal safe-area margins.
+                // The parent player already applies horizontal safe-area spacing.
                 // Do not add safeAreaInsets.left again or text/controls drift apart.
                 styles.containerPadding,
                 animatedStyles,
@@ -72,6 +76,7 @@ function BarMusicItemView(props: IBarMusicItemProps) {
                     fontSize="subTitle"
                     fontWeight="semibold"
                     fontColor="musicBarText"
+                    color={foregroundColor}
                     numberOfLines={1}>
                     {musicItem?.title}
                 </ThemeText>
@@ -80,7 +85,7 @@ function BarMusicItemView(props: IBarMusicItemProps) {
                         fontSize="description"
                         numberOfLines={1}
                         style={styles.artist}
-                        color={Color(colors.musicBarText)
+                        color={Color(foregroundColor ?? colors.musicBarText ?? colors.text)
                             .alpha(0.62)
                             .toString()}>
                         {musicItem.artist}
@@ -95,7 +100,8 @@ const BarMusicItem = memo(
     BarMusicItemView,
     (prev, curr) =>
         prev.musicItem === curr.musicItem &&
-        prev.activeIndex === curr.activeIndex,
+        prev.activeIndex === curr.activeIndex &&
+        prev.foregroundColor === curr.foregroundColor,
 );
 
 const styles = StyleSheet.create({
@@ -131,6 +137,10 @@ const styles = StyleSheet.create({
 interface IMusicInfoProps {
     musicItem: IMusic.IMusicItem | null;
     paddingLeft?: number;
+    foregroundColor?: string;
+    onPress?: () => void;
+    accessibilityLabel?: string;
+    accessibilityHint?: string;
 }
 
 function skipMusicItem(direction: number) {
@@ -142,7 +152,7 @@ function skipMusicItem(direction: number) {
 }
 
 export default function MusicInfo(props: IMusicInfoProps) {
-    const { musicItem } = props;
+    const { musicItem, foregroundColor, onPress, accessibilityLabel, accessibilityHint } = props;
     const siblingMusicItems = useMemo(() => {
         if (!musicItem) {
             return {
@@ -198,12 +208,14 @@ export default function MusicInfo(props: IMusicInfoProps) {
 
     const tapGesture = Gesture.Tap()
         .onStart(() => {
-            measureArtwork();
-            // Arms the morph (or reports "no shared element") before the
-            // overlay mounts, so the full player's first frame already knows
-            // its origin.
-            armPlayerTransition();
-            openPlayer();
+            if (onPress) {
+                onPress();
+            } else {
+                measureArtwork();
+                // Arm the shared artwork transition before mounting the overlay.
+                armPlayerTransition();
+                openPlayer();
+            }
         })
         .runOnJS(true);
 
@@ -264,6 +276,16 @@ export default function MusicInfo(props: IMusicInfoProps) {
         <GestureDetector gesture={gesture}>
             <View
                 style={musicInfoStyles.infoContainer}
+                accessible={!!onPress}
+                accessibilityRole={onPress ? "button" : undefined}
+                accessibilityLabel={accessibilityLabel}
+                accessibilityHint={accessibilityHint}
+                accessibilityActions={onPress ? [{ name: "activate" }] : undefined}
+                onAccessibilityAction={event => {
+                    if (event.nativeEvent.actionName === "activate") {
+                        onPress?.();
+                    }
+                }}
                 onLayout={e => {
                     musicItemWidthValue.value = e.nativeEvent.layout.width;
                 }}>
@@ -271,6 +293,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
                     transformSharedValue={transformSharedValue}
                     musicItem={siblingMusicItems.prev}
                     activeIndex={-1}
+                    foregroundColor={foregroundColor}
                 />
                 <BarMusicItem
                     transformSharedValue={transformSharedValue}
@@ -278,11 +301,13 @@ export default function MusicInfo(props: IMusicInfoProps) {
                     activeIndex={0}
                     artworkRef={artworkRef}
                     onArtworkLayout={measureArtwork}
+                    foregroundColor={foregroundColor}
                 />
                 <BarMusicItem
                     transformSharedValue={transformSharedValue}
                     musicItem={siblingMusicItems.next}
                     activeIndex={1}
+                    foregroundColor={foregroundColor}
                 />
             </View>
         </GestureDetector>

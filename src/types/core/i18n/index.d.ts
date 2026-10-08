@@ -891,6 +891,9 @@ export interface ILanguageData {
     "musicBar.a11y.playOrPause": string; // 播放或暂停当前歌曲
     "musicBar.a11y.playlist": string; // 打开播放列表
     "musicBar.a11y.nowPlaying": string; // 正在播放 {title}，歌手 {artist}
+    "musicBar.a11y.expand": string;
+    "musicBar.a11y.collapse": string;
+    "musicBar.a11y.openDetail": string;
     "themeSettingsIndex.modeDescription": string;
     "themeSettingsIndex.coverDescription": string;
     "themeSettingsIndex.fontDescription": string;
