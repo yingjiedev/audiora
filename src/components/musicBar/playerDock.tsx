@@ -11,7 +11,8 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { elevation, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import MusicSheet, { useFavorite } from "@/core/musicSheet";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { openPlayer } from "@/core/playerOverlay";
+import { armPlayerTransition } from "@/core/playerTransition";
 import TrackPlayer, { useCurrentMusic, useMusicState } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import SeekBar from "@/pages/musicDetail/components/bottom/seekBar";
@@ -68,7 +69,6 @@ export default function PlayerDock(props: IPlayerDockProps) {
     const { dark } = useTheme();
     const colors = useColors();
     const insets = useSafeAreaInsets();
-    const navigate = useNavigate();
     const { t } = useI18N();
     const [expanded, setExpanded] = useState(false);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -165,7 +165,8 @@ export default function PlayerDock(props: IPlayerDockProps) {
                                 style={styles.songInfo}
                                 onPress={() => {
                                     setExpanded(false);
-                                    navigate(ROUTE_PATH.MUSIC_DETAIL);
+                                    armPlayerTransition();
+                                    openPlayer();
                                 }}>
                                 <ThemeText numberOfLines={2} fontSize="content" fontWeight="semibold">
                                     {musicItem.title ?? t("common.unknownName")}

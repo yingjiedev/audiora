@@ -184,15 +184,11 @@ export default function MusicInfo(props: IMusicInfoProps) {
 
     // Shared-element source: the mini artwork's frame in window coordinates.
     // Kept fresh on every layout so tapping the bar never has to wait for an
-    // async measurement before navigating.
+    // async measurement before opening the overlay.
     const artworkRef = useAnimatedRef<Animated.View>();
+    // Capture the shared value on JS; the UI runtime cannot call the accessor.
     const { origin } = playerTransition();
     const measureArtwork = useCallback(() => {
-        // Resolved on the JS side. The UI runtime cannot call into this module:
-        // `playerTransition` is a plain function, and touching it from inside
-        // the worklet throws "[Worklets] Tried to synchronously call a Remote
-        // Function". Only the shared value crosses the boundary.
-        const { origin } = playerTransition();
         runOnUI(() => {
             const frame = measure(artworkRef);
             if (!frame || frame.width <= 0 || frame.height <= 0) {

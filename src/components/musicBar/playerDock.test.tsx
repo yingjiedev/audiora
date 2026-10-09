@@ -3,6 +3,8 @@ import { BackHandler, Keyboard } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import MusicSheet from "@/core/musicSheet";
 import TrackPlayer from "@/core/trackPlayer";
+import { openPlayer } from "@/core/playerOverlay";
+import { armPlayerTransition } from "@/core/playerTransition";
 import { showPanel } from "@/components/panels/usePanel";
 import SeekBar from "@/pages/musicDetail/components/bottom/seekBar";
 import MusicInfo from "./musicInfo";
@@ -28,6 +30,8 @@ jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, playe
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/router", () => ({ ROUTE_PATH: { MUSIC_DETAIL: "music-detail" }, useNavigate: () => mockNavigate }));
+jest.mock("@/core/playerOverlay", () => ({ openPlayer: jest.fn() }));
+jest.mock("@/core/playerTransition", () => ({ armPlayerTransition: jest.fn() }));
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
     default: { play: jest.fn(), pause: jest.fn(), skipToPrevious: jest.fn(), skipToNext: jest.fn() },
@@ -130,7 +134,11 @@ describe("PlayerDock", () => {
         press(renderer, "musicDetail.a11y.favorite");
         expect(MusicSheet.addMusic).toHaveBeenCalledWith("favorites", mockSong);
         press(renderer, "musicBar.a11y.openDetail");
-        expect(mockNavigate).toHaveBeenCalledWith("music-detail");
+        expect(openPlayer).toHaveBeenCalledTimes(1);
+        expect(armPlayerTransition).toHaveBeenCalledTimes(1);
+        expect(jest.mocked(armPlayerTransition).mock.invocationCallOrder[0])
+            .toBeLessThan(jest.mocked(openPlayer).mock.invocationCallOrder[0]);
+        expect(mockNavigate).not.toHaveBeenCalled();
         expect(renderer.root.findAllByType(MusicInfo)).toHaveLength(1);
     });
 

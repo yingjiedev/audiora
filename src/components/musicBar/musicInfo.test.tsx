@@ -3,9 +3,9 @@ import TestRenderer, { act } from "react-test-renderer";
 import { GestureDetector } from "react-native-gesture-handler";
 import TrackPlayer from "@/core/trackPlayer";
 import { armPlayerTransition } from "@/core/playerTransition";
+import { openPlayer } from "@/core/playerOverlay";
 import MusicInfo from "./musicInfo";
 
-const mockNavigate = jest.fn();
 let mockUIRuntime = false;
 let mockMeasuredFrame: { pageX: number; pageY: number; width: number; height: number } | null = null;
 const mockTransitionOrigin = { value: null as { x: number; y: number; width: number; height: number } | null };
@@ -35,10 +35,7 @@ jest.mock("@/core/playerTransition", () => ({
         return { origin: mockTransitionOrigin };
     },
 }));
-jest.mock("@/core/router", () => ({
-    ROUTE_PATH: { MUSIC_DETAIL: "music-detail" },
-    useNavigate: () => mockNavigate,
-}));
+jest.mock("@/core/playerOverlay", () => ({ openPlayer: jest.fn() }));
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
     default: {
@@ -129,8 +126,10 @@ describe("MusicInfo interactions", () => {
     it("keeps the full-player shortcut for existing music bars", () => {
         const renderer = render();
         act(() => renderer.root.findByType(GestureDetector).props.gesture.tap.callbacks.start());
-        expect(mockNavigate).toHaveBeenCalledWith("music-detail");
+        expect(openPlayer).toHaveBeenCalledTimes(1);
         expect(armPlayerTransition).toHaveBeenCalledTimes(1);
+        expect(jest.mocked(armPlayerTransition).mock.invocationCallOrder[0])
+            .toBeLessThan(jest.mocked(openPlayer).mock.invocationCallOrder[0]);
     });
 
     it("expands the new dock by tapping or activating with a screen reader", () => {
@@ -141,7 +140,7 @@ describe("MusicInfo interactions", () => {
             .find(node => typeof node.props.onAccessibilityAction === "function")!;
         act(() => button.props.onAccessibilityAction({ nativeEvent: { actionName: "activate" } }));
         expect(onPress).toHaveBeenCalledTimes(2);
-        expect(mockNavigate).not.toHaveBeenCalled();
+        expect(openPlayer).not.toHaveBeenCalled();
         expect(armPlayerTransition).not.toHaveBeenCalled();
     });
 
