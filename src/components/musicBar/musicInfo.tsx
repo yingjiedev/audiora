@@ -177,12 +177,17 @@ export default function MusicInfo(props: IMusicInfoProps) {
     // async measurement before navigating.
     const artworkRef = useAnimatedRef<Animated.View>();
     const measureArtwork = useCallback(() => {
+        // Resolved on the JS side. The UI runtime cannot call into this module:
+        // `playerTransition` is a plain function, and touching it from inside
+        // the worklet throws "[Worklets] Tried to synchronously call a Remote
+        // Function". Only the shared value crosses the boundary.
+        const { origin } = playerTransition();
         runOnUI(() => {
             const frame = measure(artworkRef);
             if (!frame || frame.width <= 0 || frame.height <= 0) {
                 return;
             }
-            playerTransition().origin.value = {
+            origin.value = {
                 x: frame.pageX,
                 y: frame.pageY,
                 width: frame.width,
