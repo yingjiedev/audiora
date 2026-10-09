@@ -12,6 +12,7 @@
     "lint": "eslint src --fix",
     "typecheck:runtime": "node ./scripts/check-runtime-references.js",
     "check:colors": "node ./scripts/check-hardcoded-colors.mjs",
+    "check:motion": "node ./scripts/check-animation-callbacks.js",
     "check:colors:baseline": "node ./scripts/check-hardcoded-colors.mjs --update",
     "check:ui": "node ./scripts/check-ui-conventions.mjs",
     "check:ui:baseline": "node ./scripts/check-ui-conventions.mjs --update",

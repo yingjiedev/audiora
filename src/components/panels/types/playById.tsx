@@ -17,13 +17,12 @@ import PluginManager from "@/core/pluginManager";
 import NoPlugin from "@/components/base/noPlugin";
 import Toast from "@/utils/toast";
 import TrackPlayer from "@/core/trackPlayer";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { openPlayer } from "@/core/playerOverlay";
 import { Plugin } from "@/core/pluginManager/plugin";
 
 export default function PlayById() {
     const { t } = useI18N();
     const colors = useColors();
-    const navigate = useNavigate();
 
     const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
     const [musicId, setMusicId] = useState("");
@@ -120,8 +119,8 @@ export default function PlayById() {
             // Play the music
             await TrackPlayer.play(musicItem);
 
-            // Navigate to music detail page
-            navigate(ROUTE_PATH.MUSIC_DETAIL);
+            // Open the full player overlay
+            openPlayer();
 
             Toast.success(t("panel.playById.playingNow"));
         } catch {

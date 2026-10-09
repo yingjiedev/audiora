@@ -1,6 +1,7 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useCallback } from "react";
 import { LogBox } from "react-native";
+import { closePlayer, isPlayerOpen } from "@/core/playerOverlay";
 
 LogBox.ignoreLogs([
     "Non-serializable values were found in the navigation state",
@@ -125,6 +126,12 @@ export function useNavigate() {
         route: T,
         params?: RouterParams[T],
     ) {
+        // The full player is a root overlay above the navigator: navigating
+        // from inside it must dismiss it first, otherwise the new screen
+        // renders underneath the still-open overlay.
+        if (isPlayerOpen()) {
+            closePlayer();
+        }
         navigation.navigate(route, params);
     },
     [navigation]);
@@ -150,6 +157,11 @@ export function usePush() {
         route: T,
         params?: RouterParams[T],
     ) {
+        // See useNavigate: leaving the player overlay for another route
+        // dismisses the overlay first.
+        if (isPlayerOpen()) {
+            closePlayer();
+        }
         if (typeof navigation.push === "function") {
             navigation.push(route, params);
         } else {

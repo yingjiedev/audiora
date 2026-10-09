@@ -19,6 +19,14 @@ import type { MotionDuration } from "@/constants/designSystem";
  * (see localPlayback.test.ts) then fails to import the whole motion system.
  * Solving the curve here keeps one implementation with no runtime dependency
  * on Reanimated's Easing surface.
+ *
+ * The returned curve is a **worklet**. Reanimated evaluates `easing(t)` on the
+ * UI runtime (`animation/timing.ts`: `animation.easing(runtime / duration)`) and
+ * refuses non-worklet easings outright (`assertEasingIsWorklet`). A plain JS
+ * closure there dies with "[Worklets] Tried to synchronously call a Remote
+ * Function", which is what crashed the app at launch on the Switch thumb and
+ * the MusicBar swipe. So everything the curve needs is declared *inside* the
+ * returned body — only the four control-point numbers are captured.
  */
 export function cubicBezier(
     x1: number,
@@ -26,24 +34,32 @@ export function cubicBezier(
     x2: number,
     y2: number,
 ): (t: number) => number {
-    const cx = 3 * x1;
-    const bx = 3 * (x2 - x1) - cx;
-    const ax = 1 - cx - bx;
-    const cy = 3 * y1;
-    const by = 3 * (y2 - y1) - cy;
-    const ay = 1 - cy - by;
+    return (t: number) => {
+        "worklet";
+        if (t <= 0) {
+            return 0;
+        }
+        if (t >= 1) {
+            return 1;
+        }
 
-    const sampleX = (u: number) => ((ax * u + bx) * u + cx) * u;
-    const sampleY = (u: number) => ((ay * u + by) * u + cy) * u;
-    const slopeX = (u: number) => (3 * ax * u + 2 * bx) * u + cx;
+        const cx = 3 * x1;
+        const bx = 3 * (x2 - x1) - cx;
+        const ax = 1 - cx - bx;
+        const cy = 3 * y1;
+        const by = 3 * (y2 - y1) - cy;
+        const ay = 1 - cy - by;
 
-    const solveU = (t: number) => {
-        let u = t;
+        const sampleX = (u: number) => ((ax * u + bx) * u + cx) * u;
+        const sampleY = (u: number) => ((ay * u + by) * u + cy) * u;
+        const slopeX = (u: number) => (3 * ax * u + 2 * bx) * u + cx;
+
         // Newton-Raphson: converges in 2-4 steps for the M3 curves.
+        let u = t;
         for (let i = 0; i < 8; i++) {
             const dx = sampleX(u) - t;
             if (Math.abs(dx) < 1e-6) {
-                return u;
+                return sampleY(u);
             }
             const d = slopeX(u);
             if (Math.abs(d) < 1e-6) {
@@ -51,6 +67,7 @@ export function cubicBezier(
             }
             u -= dx / d;
         }
+
         // Flat segment fallback: bisect the whole range.
         let low = 0;
         let high = 1;
@@ -63,17 +80,7 @@ export function cubicBezier(
             }
             u = (low + high) / 2;
         }
-        return u;
-    };
-
-    return (t: number) => {
-        if (t <= 0) {
-            return 0;
-        }
-        if (t >= 1) {
-            return 1;
-        }
-        return sampleY(solveU(t));
+        return sampleY(u);
     };
 }
 
@@ -81,11 +88,15 @@ export function cubicBezier(
  * Reduce Motion collapses long travel to a short cross-fade instead of
  * removing it: a player that appears with no transition at all reads as a
  * freeze, which is worse than a 160ms fade.
+ *
+ * Worklet: the motion layer resolves duration/easing through this from inside
+ * Reanimated callbacks (see `motion.timing`), which run on the UI runtime.
  */
 export function motionDuration(
     kind: MotionDuration,
     reduceMotion = false,
 ): number {
+    "worklet";
     if (!reduceMotion) {
         return motionTokens.duration[kind];
     }
@@ -107,6 +118,7 @@ export const DISMISS_DISTANCE_RATIO = 0.25;
 export const DISMISS_VELOCITY = 1000;
 
 export function clamp(value: number, min: number, max: number): number {
+    "worklet";
     if (Number.isNaN(value)) {
         return min;
     }
@@ -114,6 +126,7 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 export function lerp(from: number, to: number, progress: number): number {
+    "worklet";
     return from + (to - from) * clamp(progress, 0, 1);
 }
 
@@ -124,12 +137,16 @@ export function lerp(from: number, to: number, progress: number): number {
  * `progress` 0 = sitting exactly on top of the mini artwork, 1 = resting
  * layout. Only a uniform scale plus a translate is used, so the artwork keeps
  * its aspect ratio — the mini artwork and the full cover are both squares.
+ *
+ * Worklet: this runs inside `useAnimatedStyle` (see albumCover), so it and
+ * everything it calls has to be callable on the UI runtime.
  */
 export function coverMorphTransform(
     origin: MotionRect,
     target: MotionRect,
     progress: number,
 ) {
+    "worklet";
     const p = clamp(progress, 0, 1);
     const targetWidth = Math.max(1, target.width);
     const collapsedScale = Math.max(0.01, origin.width / targetWidth);
@@ -148,8 +165,11 @@ export function coverMorphTransform(
 /**
  * Finger position → transition progress. Upward drags never collapse the
  * player, so the gesture cannot fight a scroll or a fling back to the top.
+ *
+ * Worklet: called straight from the dismiss pan gesture (see musicDetail).
  */
 export function dragProgress(translationY: number, screenHeight: number) {
+    "worklet";
     if (screenHeight <= 0 || translationY <= 0) {
         return 1;
     }
@@ -158,11 +178,13 @@ export function dragProgress(translationY: number, screenHeight: number) {
 
 export type DismissDecision = "dismiss" | "cancel";
 
+/** Worklet for the same reason as `dragProgress`. */
 export function dismissDecision(
     translationY: number,
     velocityY: number,
     screenHeight: number,
 ): DismissDecision {
+    "worklet";
     if (screenHeight <= 0) {
         return "cancel";
     }

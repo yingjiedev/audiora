@@ -87,6 +87,7 @@ export function collapsePlayerTransition(
     const { progress } = getState();
     cancelAnimation(progress);
     progress.value = withMotionSpring(0, options, finished => {
+        "worklet";
         if (finished) {
             runOnJS(onFinished)();
         }

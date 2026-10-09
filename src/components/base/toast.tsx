@@ -92,20 +92,25 @@ export function ToastBaseComponent() {
         cancelAnimation(toastAnim);
         // Reset without animation so the next withTiming always has a clean start.
         toastAnim.value = 0;
+        // The out-animation is built on the JS side on purpose. Reanimated runs
+        // the completion callback of the in-animation on the UI runtime, and a
+        // `motion.timing(...)` call from there used to cross the worklet
+        // boundary — "[Worklets] Tried to synchronously call a Remote Function"
+        // killed the app the moment a toast showed (e.g. picking an unavailable
+        // quality). Building the config here leaves the callback with nothing
+        // but `withDelay` and a captured plain object.
+        const outAnim = motion.timing(0, TOAST_OUT, finishedOut => {
+            "worklet";
+            if (finishedOut) {
+                runOnJS(setNextToast)();
+            }
+        });
         toastAnim.value = motion.timing(1, TOAST_IN, finishedIn => {
             "worklet";
             if (!finishedIn) {
                 return;
             }
-            toastAnim.value = withDelay(
-                holdMs,
-                motion.timing(0, TOAST_OUT, finishedOut => {
-                    "worklet";
-                    if (finishedOut) {
-                        runOnJS(setNextToast)();
-                    }
-                }),
-            );
+            toastAnim.value = withDelay(holdMs, outAnim);
         });
         // Depend only on toast id — never on toastAnim (SharedValue identity churn).
         // eslint-disable-next-line react-hooks/exhaustive-deps -- toastAnim is stable SV

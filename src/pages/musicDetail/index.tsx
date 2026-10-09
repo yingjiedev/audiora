@@ -2,7 +2,7 @@ import StatusBar from "@/components/base/statusBar";
 import globalStyle from "@/constants/globalStyle";
 import useOrientation from "@/hooks/useOrientation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { BackHandler, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
     cancelAnimation,
@@ -19,7 +19,6 @@ import Lyric from "./components/content/lyric";
 import NavBar from "./components/navBar";
 import Config, { useAppConfig } from "@/core/appConfig";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
-import { useNavigation } from "@react-navigation/native";
 import useMotion from "@/hooks/useMotion";
 import {
     cancelPlayerTransitionCollapse,
@@ -38,9 +37,17 @@ import {
 /** Never let a stuck animation trap the user on this screen. */
 const CLOSE_WATCHDOG_MS = 900;
 
-export default function MusicDetail() {
+interface IMusicDetailProps {
+    /**
+     * Overlay 关闭回调。播放器是根层 Overlay（见 components/playerOverlay），
+     * 不在导航栈里，退场由这里的动画时序驱动而不是导航转场。
+     */
+    onClose: () => void;
+}
+
+export default function MusicDetail(props: IMusicDetailProps) {
+    const { onClose } = props;
     const orientation = useOrientation();
-    const navigation = useNavigation<any>();
     const [isExiting, setIsExiting] = useState(false);
     const [tab, selectTab] = useState<MusicDetailContentTab>(
         Config.getConfig("basic.musicDetailDefault") || "album",
@@ -101,8 +108,8 @@ export default function MusicDetail() {
 
     /**
      * Single exit path for every way of leaving this screen (back button,
-     * hardware back, drag). The screen is only removed after the collapse
-     * animation reports it finished, otherwise the native removal cuts the
+     * hardware back, drag). The overlay is only removed after the collapse
+     * animation reports it finished, otherwise the removal cuts the
      * transition in half.
      */
     const requestClose = useCallback(
@@ -133,46 +140,27 @@ export default function MusicDetail() {
         [motion.reduceMotion],
     );
 
+    // Hardware back: the overlay is not in the navigation stack, so
+    // react-navigation cannot manage the back button for us. Panels and
+    // dialogs register their own handler after the overlay mounts, so their
+    // back handling still wins while one of them is open.
     useEffect(() => {
-        const unsubscribeBeforeRemove = navigation.addListener(
-            "beforeRemove",
-            (event: any) => {
-                if (closingRef.current) {
-                    // Our own removal pass — let it through.
-                    return;
-                }
-                event?.preventDefault?.();
-                const action = event?.data?.action;
-                requestClose(() => {
-                    if (action) {
-                        navigation.dispatch(action);
-                    } else {
-                        navigation.goBack();
-                    }
-                });
-            },
-        );
-        const unsubscribeFocus = navigation.addListener("focus", () => {
-            setIsExiting(false);
-        });
-        const unsubscribeGestureCancel = navigation.addListener(
-            "gestureCancel",
+        const subscription = BackHandler.addEventListener(
+            "hardwareBackPress",
             () => {
-                setIsExiting(false);
+                requestClose(onClose);
+                return true;
             },
         );
-
         return () => {
-            unsubscribeBeforeRemove();
-            unsubscribeFocus();
-            unsubscribeGestureCancel();
+            subscription.remove();
         };
-    }, [navigation, requestClose]);
+    }, [requestClose, onClose]);
 
     const onGestureEnd = useCallback(
         (dismiss: boolean, velocityY: number) => {
             if (dismiss) {
-                requestClose(() => navigation.goBack());
+                requestClose(onClose);
                 return;
             }
             // Cancelled: spring back to full screen, keeping the finger's speed.
@@ -181,7 +169,7 @@ export default function MusicDetail() {
                 velocity: -velocityY / (windowHeight * DRAG_FULL_RATIO),
             });
         },
-        [motion.reduceMotion, navigation, requestClose, windowHeight],
+        [motion.reduceMotion, onClose, requestClose, windowHeight],
     );
 
     // Drag-down dismiss. Only on the cover tab: the lyric tab owns vertical
@@ -250,7 +238,7 @@ export default function MusicDetail() {
                                     globalStyle.flex1,
                                     isHorizontal ? style.leftPane : null,
                                 ]}>
-                                <NavBar onBack={() => setIsExiting(true)} />
+                                <NavBar onBack={() => requestClose(onClose)} />
                                 <Content
                                     // Always keep cover tree mounted across album/lyric tabs
                                     // so mini lyrics are not torn down (only unmount on page exit).

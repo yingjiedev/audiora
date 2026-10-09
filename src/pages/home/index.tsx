@@ -9,25 +9,24 @@ import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx
 import globalStyle from "@/constants/globalStyle";
 import Theme from "@/core/theme";
 import HomeBody from "./components/homeBody";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Config from "@/core/appConfig";
 import HomeBottomNavigation from "./components/HomeBottomNavigation";
 import MyMusicOverview from "./components/MyMusicOverview";
 import MusicLibraryOverview from "./components/MusicLibraryOverview";
+import { openPlayer } from "@/core/playerOverlay";
 
 function Home() {
-    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<"home" | "library" | "mine">("home");
     
     useEffect(() => {
         // 检查是否需要在启动后打开播放详情页
         if (Config.getConfig("basic.openPlayDetailOnLaunch")) {
-            // 延迟一下导航，确保页面已经渲染完成
+            // 延迟一下，确保页面已经渲染完成
             setTimeout(() => {
-                navigate(ROUTE_PATH.MUSIC_DETAIL);
+                openPlayer();
             }, 100);
         }
-    }, [navigate]);
+    }, []);
 
     return (
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>

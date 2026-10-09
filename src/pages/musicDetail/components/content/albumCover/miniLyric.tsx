@@ -297,6 +297,7 @@ export default function MiniLyric(props: IMiniLyricProps) {
             1,
             isAdjacent ? HANDOFF_TIMING : SEEK_HANDOFF_TIMING,
             finished => {
+                "worklet";
                 if (finished) {
                     runOnJS(finishTransition)(transitionId);
                 }
