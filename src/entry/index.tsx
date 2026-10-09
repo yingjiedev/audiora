@@ -15,7 +15,6 @@ import globalStyle from "@/constants/globalStyle";
 import Theme from "@/core/theme";
 import { BootstrapComponent } from "./bootstrap/BootstrapComponent";
 import SplashImageOverlay from "@/components/base/splashImageOverlay";
-import PlayerOverlay from "@/components/playerOverlay";
 import { ToastBaseComponent } from "@/components/base/toast";
 import { StatusBar, StyleSheet, View } from "react-native";
 import { ReduceMotion, ReducedMotionConfig } from "react-native-reanimated";
@@ -116,11 +115,11 @@ export default function Pages() {
                                             key={route.path}
                                             name={route.path}
                                             component={route.component}
+                                            options={route.options}
                                         />
                                     ))}
                                 </Stack.Navigator>
                             </View>
-                            <PlayerOverlay />
                             <Panels />
                             <MvPlayerHost />
                             <Dialogs />
