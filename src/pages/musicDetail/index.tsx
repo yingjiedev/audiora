@@ -10,6 +10,7 @@ import Animated, {
     interpolate,
     runOnJS,
     useAnimatedStyle,
+    useSharedValue,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Background from "./components/background";
@@ -66,6 +67,8 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const { progress } = playerTransition();
     const motion = useMotion();
     const { height: windowHeight } = useWindowDimensions();
+    const isClosing = useSharedValue(false);
+    const isDragging = useSharedValue(false);
     const closingRef = useRef(false);
     const removalRef = useRef<(() => void) | null>(null);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,12 +101,16 @@ export default function MusicDetail(props: IMusicDetailProps) {
 
     useEffect(() => {
         return () => {
+            closingRef.current = true;
+            isClosing.value = true;
+            isDragging.value = false;
+            removalRef.current = null;
             if (watchdogRef.current) {
                 clearTimeout(watchdogRef.current);
                 watchdogRef.current = null;
             }
         };
-    }, []);
+    }, [isClosing, isDragging]);
 
     /**
      * Single exit path for every way of leaving this screen (back button,
@@ -114,10 +121,11 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const requestClose = useCallback(
         (remove: () => void) => {
             if (closingRef.current) {
-                remove();
                 return;
             }
             closingRef.current = true;
+            isClosing.value = true;
+            isDragging.value = false;
             setIsExiting(true);
             const runRemoval = () => {
                 if (removalRef.current === null) {
@@ -136,7 +144,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
                 reduceMotion: motion.reduceMotion,
             });
         },
-        [motion.reduceMotion],
+        [isClosing, isDragging, motion.reduceMotion],
     );
 
     // Hardware back: the overlay is not in the navigation stack, so
@@ -158,6 +166,10 @@ export default function MusicDetail(props: IMusicDetailProps) {
 
     const onGestureEnd = useCallback(
         (dismiss: boolean, velocityY: number) => {
+            // A queued UI-thread release must not restart an exiting player.
+            if (closingRef.current) {
+                return;
+            }
             if (dismiss) {
                 requestClose(onClose);
                 return;
@@ -178,18 +190,41 @@ export default function MusicDetail(props: IMusicDetailProps) {
         .enabled(dragEnabled)
         .minPointers(1)
         .maxPointers(1)
-        .onBegin(() => {
+        .activeOffsetY(12)
+        .failOffsetX([-16, 16])
+        .onStart(() => {
+            if (isClosing.value) {
+                return;
+            }
+            isDragging.value = true;
             cancelAnimation(progress);
         })
         .onUpdate(e => {
-            progress.value = dragProgress(e.translationY, windowHeight);
+            if (isDragging.value && !isClosing.value) {
+                progress.value = dragProgress(e.translationY, windowHeight);
+            }
         })
-        .onEnd(e => {
+        .onEnd((e, success) => {
+            if (!isDragging.value || isClosing.value) {
+                return;
+            }
+            isDragging.value = false;
             runOnJS(onGestureEnd)(
-                dismissDecision(e.translationY, e.velocityY, windowHeight) ===
-                    "dismiss",
-                e.velocityY,
+                success &&
+                    dismissDecision(
+                        e.translationY,
+                        e.velocityY,
+                        windowHeight,
+                    ) === "dismiss",
+                success ? e.velocityY : 0,
             );
+        })
+        .onFinalize(() => {
+            // Failed taps never became active; cancelled active drags must settle.
+            if (isDragging.value && !isClosing.value) {
+                isDragging.value = false;
+                runOnJS(onGestureEnd)(false, 0);
+            }
         });
 
     const backgroundStyle = useAnimatedStyle(() => ({
@@ -215,7 +250,9 @@ export default function MusicDetail(props: IMusicDetailProps) {
 
     return (
         <>
-            <Animated.View style={[style.backgroundLayer, backgroundStyle]}>
+            <Animated.View
+                pointerEvents="none"
+                style={[style.backgroundLayer, backgroundStyle]}>
                 <Background
                     immersiveCoverEnabled={immersiveCoverEnabled}
                     renderImmersiveCover={renderImmersiveCover}
@@ -225,6 +262,11 @@ export default function MusicDetail(props: IMusicDetailProps) {
             <GestureDetector gesture={dismissGesture}>
                 <Animated.View
                     style={[globalStyle.fwflex1, contentStyle]}
+                    pointerEvents={isExiting ? "none" : "auto"}
+                    importantForAccessibility={
+                        isExiting ? "no-hide-descendants" : "auto"
+                    }
+                    accessibilityElementsHidden={isExiting}
                     collapsable={false}>
                     <SafeAreaView style={globalStyle.fwflex1}>
                         <StatusBar

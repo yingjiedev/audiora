@@ -1,12 +1,17 @@
-import { cancelAnimation, makeMutable, runOnJS, SharedValue } from "react-native-reanimated";
+import {
+    cancelAnimation,
+    makeMutable,
+    runOnJS,
+    SharedValue,
+} from "react-native-reanimated";
 import { MotionRect } from "@/utils/motionMath";
 import { withMotionSpring } from "@/utils/motion";
 
 /**
  * Cross-screen state for the Mini ↔ Full player transition.
  *
- * The mini player lives inside whatever page is behind, the full player is its
- * own native-stack screen, so the transition cannot be expressed as a single
+ * The mini player lives inside whatever page is behind, the full player is a
+ * root overlay, so the transition cannot be expressed as a single
  * view tree. Instead both ends read one shared `progress` (0 = collapsed on the
  * mini player, 1 = full screen) plus the screen-space frame of the mini
  * artwork. Every animated value lives on the UI thread, which is what makes the
