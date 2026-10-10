@@ -22,7 +22,7 @@ import {
 } from "@/utils/mediaUtils";
 import notImplementedFunction from "@/utils/notImplementedFunction.ts";
 import type { IPluginManager } from "@/types/core/pluginManager";
-import axios from "axios";
+import axios from "./httpClient";
 import bigInt from "big-integer";
 import * as cheerio from "cheerio";
 import { satisfies } from "compare-versions";
@@ -51,31 +51,6 @@ import { readCompanionText } from "@/utils/mediaCompanion";
 import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
 import { readCachedMediaSource } from "./mediaSourceCache";
 
-
-axios.defaults.timeout = 2000;
-axios.interceptors.response.use((response) => {
-    // 统一 set-cookie 格式。AxiosHeaders 在部分环境下不可扩展，必须 try/catch。
-    try {
-        const headers: any = response.headers;
-        const setCookie =
-            headers?.["set-cookie"] ??
-            (typeof headers?.get === "function" ? headers.get("set-cookie") : undefined);
-        if (setCookie && Array.isArray(setCookie) && setCookie.length === 1) {
-            const splitedCookie = String(setCookie[0]).split(",");
-            if (typeof headers?.set === "function") {
-                headers.set("set-cookie", splitedCookie);
-                headers.set("x-set-cookie", setCookie);
-            } else {
-                headers["set-cookie"] = splitedCookie;
-                headers["x-set-cookie"] = setCookie;
-            }
-        }
-    } catch {
-        // ignore header normalization failures
-    }
-
-    return response;
-});
 
 const sha256 = CryptoJs.SHA256;
 
