@@ -1,4 +1,5 @@
 import React from "react";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import ListItem from "@/components/base/listItem";
 import { ImgAsset } from "@/constants/assetsConst";
 import TitleAndTag from "./titleAndTag";
@@ -9,6 +10,7 @@ interface IAlbumResultsProps {
 }
 export default function LyricItem(props: IAlbumResultsProps) {
     const { lyricItem, onPress } = props;
+    const getPluginDisplayName = usePluginDisplayNameResolver();
 
     return (
         <ListItem
@@ -26,7 +28,7 @@ export default function LyricItem(props: IAlbumResultsProps) {
                 title={
                     <TitleAndTag
                         title={lyricItem.title}
-                        tag={lyricItem.platform}
+                        tag={getPluginDisplayName(lyricItem.platform)}
                     />
                 }
             />

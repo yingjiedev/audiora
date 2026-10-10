@@ -42,11 +42,17 @@ function getProgressPercent(
     )}%` as DimensionValue;
 }
 
-function getMusicDescription(musicItem?: IMusic.IMusicItem | null) {
+function getMusicDescription(
+    musicItem?: IMusic.IMusicItem | null,
+    getDisplayName?: (platform: string) => string,
+) {
     if (!musicItem) {
         return "";
     }
-    return [musicItem.artist, musicItem.platform].filter(Boolean).join(" · ");
+    const sourceName = getDisplayName
+        ? getDisplayName(musicItem.platform)
+        : musicItem.platform;
+    return [musicItem.artist, sourceName].filter(Boolean).join(" · ");
 }
 
 export default function HomeOverview() {
@@ -88,6 +94,7 @@ function ContinueListening(props: {
     featuredMusic: IMusic.IMusicItem | null;
 }) {
     const { currentMusic, featuredMusic } = props;
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     // 进度/播放态是高频更新源，仅在本子组件内订阅，避免整个首页随进度每秒重渲染。
     const musicState = useMusicState();
     const { position, duration } = useProgress();
@@ -167,7 +174,7 @@ function ContinueListening(props: {
                                 },
                             ]}>
                             <ThemeText fontSize="tag" color={colors.primary}>
-                                {featuredMusic.platform}
+                                {getPluginDisplayName(featuredMusic.platform)}
                             </ThemeText>
                         </View>
                     </View>
@@ -244,6 +251,7 @@ function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
     const { musics } = props;
     const { t } = useI18N();
     const colors = useColors();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
 
     if (!musics.length) {
         return null;
@@ -280,7 +288,10 @@ function RecentListening(props: { musics: IMusic.IMusicItem[] }) {
                                 fontSize="tag"
                                 fontColor="textSecondary"
                                 style={styles.smallTextMargin}>
-                                {getMusicDescription(musicItem)}
+                                {getMusicDescription(
+                                    musicItem,
+                                    getPluginDisplayName,
+                                )}
                             </ThemeText>
                         </View>
                     </Pressable>
