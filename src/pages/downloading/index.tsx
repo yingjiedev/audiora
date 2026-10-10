@@ -5,7 +5,6 @@ import DownloadingList from "./downloadingList";
 import CompletedList from "./completedList";
 import FailedList from "./failedList";
 import OverviewCard from "./components/overviewCard";
-import MusicBar from "@/components/musicBar";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
 import AppBar from "@/components/base/appBar";
@@ -149,7 +148,6 @@ export default function Downloading() {
                 {index === 1 ? <CompletedList /> : null}
                 {index === 2 ? <FailedList /> : null}
             </View>
-            <MusicBar />
         </VerticalSafeAreaView>
     );
 }
