@@ -35,7 +35,9 @@ jest.mock("@/core/playerTransition", () => ({
         return { origin: mockTransitionOrigin };
     },
 }));
-jest.mock("@/core/playerOverlay", () => ({ openPlayer: jest.fn() }));
+jest.mock("@/core/playerOverlay", () => ({
+    openPlayer: jest.fn((prepare?: () => void) => prepare?.()),
+}));
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
     default: {
@@ -127,9 +129,8 @@ describe("MusicInfo interactions", () => {
         const renderer = render();
         act(() => renderer.root.findByType(GestureDetector).props.gesture.tap.callbacks.start());
         expect(openPlayer).toHaveBeenCalledTimes(1);
+        expect(openPlayer).toHaveBeenCalledWith(armPlayerTransition);
         expect(armPlayerTransition).toHaveBeenCalledTimes(1);
-        expect(jest.mocked(armPlayerTransition).mock.invocationCallOrder[0])
-            .toBeLessThan(jest.mocked(openPlayer).mock.invocationCallOrder[0]);
     });
 
     it("expands the new dock by tapping or activating with a screen reader", () => {

@@ -1,5 +1,5 @@
 import React from "react";
-import { BackHandler, View } from "react-native";
+import { BackHandler, StyleSheet, View } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import { cancelAnimation } from "react-native-reanimated";
 import {
@@ -16,6 +16,11 @@ let mockBackPress: () => boolean | null | undefined;
 let mockRemoval: (() => void) | undefined;
 let mockOrientation = "vertical";
 let mockTab = "album";
+let mockReaction: {
+    prepare: () => number;
+    react: (value: number, previous: number | null) => void;
+    previous: number | null;
+} | undefined;
 let renderers: TestRenderer.ReactTestRenderer[] = [];
 
 jest.mock("react-native-reanimated", () => {
@@ -28,6 +33,12 @@ jest.mock("react-native-reanimated", () => {
         interpolate: (value: number) => value,
         runOnJS: (callback: Function) => callback,
         useAnimatedStyle: (callback: Function) => callback(),
+        useAnimatedReaction: (
+            prepare: () => number,
+            react: (value: number, previous: number | null) => void,
+        ) => {
+            mockReaction = { prepare, react, previous: mockReaction?.previous ?? null };
+        },
         useSharedValue: (value: unknown) => ReactMock.useRef({ value }).current,
     };
 });
@@ -100,6 +111,19 @@ function render(onClose = jest.fn()) {
     return { renderer: renderer!, onClose };
 }
 
+function flushVisibility() {
+    act(() => {
+        const value = mockReaction!.prepare();
+        mockReaction!.react(value, mockReaction!.previous);
+        mockReaction!.previous = value;
+    });
+}
+
+function contentView(renderer: TestRenderer.ReactTestRenderer) {
+    return renderer.root.findAllByType(View)
+        .find(node => node.props.collapsable === false)!;
+}
+
 describe("full player input lifecycle", () => {
     beforeEach(() => {
         jest.useFakeTimers();
@@ -108,6 +132,7 @@ describe("full player input lifecycle", () => {
         mockRemoval = undefined;
         mockOrientation = "vertical";
         mockTab = "album";
+        mockReaction = undefined;
         renderers = [];
         jest.spyOn(BackHandler, "addEventListener").mockImplementation(
             (_event, callback) => {
@@ -190,7 +215,7 @@ describe("full player input lifecycle", () => {
                 .some(
                     node =>
                         node.props.collapsable === false &&
-                        node.props.pointerEvents === "none",
+                        StyleSheet.flatten(node.props.style).pointerEvents === "none",
                 ),
         ).toBe(true);
         mockProgress.value = 0.1;
@@ -250,6 +275,7 @@ describe("full player input lifecycle", () => {
         const oldRemoval = mockRemoval;
         const oldEnd = gestureCallback("onEnd");
         act(() => renderer.unmount());
+        mockProgress.value = 1;
         const next = render();
         act(() => {
             oldRemoval?.();
@@ -260,6 +286,82 @@ describe("full player input lifecycle", () => {
         expect(next.onClose).not.toHaveBeenCalled();
         expect(cancelPlayerTransitionCollapse).not.toHaveBeenCalled();
         act(() => next.renderer.unmount());
+    });
+
+    it("makes transparent controls untouchable and removes an opening animation stuck at zero", () => {
+        const { renderer, onClose } = render();
+        expect(StyleSheet.flatten(contentView(renderer).props.style).pointerEvents).toBe("none");
+        expect(contentView(renderer).props.accessibilityElementsHidden).toBe(true);
+        expect((mockReaction!.prepare as Function & { __workletHash?: number }).__workletHash).toBeDefined();
+        expect((mockReaction!.react as Function & { __workletHash?: number }).__workletHash).toBeDefined();
+        act(() => jest.advanceTimersByTime(899));
+        expect(onClose).not.toHaveBeenCalled();
+        act(() => jest.advanceTimersByTime(1));
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("cancels recovery when the opening animation makes the controls visible", () => {
+        const { renderer, onClose } = render();
+        mockProgress.value = 1;
+        flushVisibility();
+        expect(StyleSheet.flatten(contentView(renderer).props.style).pointerEvents).toBe("auto");
+        expect(contentView(renderer).props.accessibilityElementsHidden).toBe(false);
+        act(() => jest.advanceTimersByTime(1000));
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("removes a previously visible player that becomes transparent without requesting exit", () => {
+        mockProgress.value = 1;
+        const { renderer, onClose } = render();
+        flushVisibility();
+        mockProgress.value = 0;
+        flushVisibility();
+        expect(StyleSheet.flatten(contentView(renderer).props.style).pointerEvents).toBe("none");
+        act(() => jest.advanceTimersByTime(900));
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(collapsePlayerTransition).not.toHaveBeenCalled();
+    });
+
+    it("keeps an active drag mounted even when held fully collapsed", () => {
+        mockProgress.value = 1;
+        const { onClose } = render();
+        act(() => {
+            gestureCallback("onStart")?.();
+            gestureCallback("onUpdate")?.({ translationY: 2000 });
+        });
+        flushVisibility();
+        expect(mockProgress.value).toBe(0);
+        act(() => jest.advanceTimersByTime(1500));
+        expect(onClose).not.toHaveBeenCalled();
+        act(() => gestureCallback("onEnd")?.({ translationY: 2000, velocityY: 0 }, false));
+        flushVisibility();
+        act(() => jest.advanceTimersByTime(450));
+        mockProgress.value = 1;
+        flushVisibility();
+        act(() => jest.advanceTimersByTime(1000));
+        expect(onClose).not.toHaveBeenCalled();
+        expect(cancelPlayerTransitionCollapse).toHaveBeenCalledTimes(1);
+    });
+
+    it("rechecks current UI values before a delayed visibility reaction arrives", () => {
+        const { onClose } = render();
+        mockProgress.value = 1;
+        act(() => jest.advanceTimersByTime(1000));
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("ignores a queued visibility reaction after the player unmounts", () => {
+        const { renderer, onClose } = render();
+        const oldReaction = mockReaction!;
+        act(() => renderer.unmount());
+        mockProgress.value = 1;
+        const next = render();
+        act(() => {
+            oldReaction.react(2, 1);
+            jest.advanceTimersByTime(1000);
+        });
+        expect(onClose).not.toHaveBeenCalled();
+        expect(next.onClose).not.toHaveBeenCalled();
     });
 
     it.each([

@@ -165,8 +165,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
                                 style={styles.songInfo}
                                 onPress={() => {
                                     setExpanded(false);
-                                    armPlayerTransition();
-                                    openPlayer();
+                                    openPlayer(armPlayerTransition);
                                 }}>
                                 <ThemeText numberOfLines={2} fontSize="content" fontWeight="semibold">
                                     {musicItem.title ?? t("common.unknownName")}

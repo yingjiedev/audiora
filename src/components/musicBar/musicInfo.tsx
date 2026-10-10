@@ -209,9 +209,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
                 onPress();
             } else {
                 measureArtwork();
-                // Arm the shared artwork transition before mounting the overlay.
-                armPlayerTransition();
-                openPlayer();
+                openPlayer(armPlayerTransition);
             }
         })
         .runOnJS(true);

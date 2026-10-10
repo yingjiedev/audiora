@@ -18,6 +18,7 @@ import Bottom from "./components/bottom";
 import Content, { MusicDetailContentTab } from "./components/content";
 import Lyric from "./components/content/lyric";
 import NavBar from "./components/navBar";
+import usePlayerVisibility, { PLAYER_INPUT_THRESHOLD } from "./usePlayerVisibility";
 import Config, { useAppConfig } from "@/core/appConfig";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import useMotion from "@/hooks/useMotion";
@@ -72,6 +73,9 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const closingRef = useRef(false);
     const removalRef = useRef<(() => void) | null>(null);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const acceptsInput = usePlayerVisibility(
+        progress, isDragging, isClosing, isExiting, onClose,
+    );
 
     useEffect(() => {
         const needAwake = Config.getConfig("basic.musicDetailAwake");
@@ -239,6 +243,10 @@ export default function MusicDetail(props: IMusicDetailProps) {
     }));
 
     const contentStyle = useAnimatedStyle(() => ({
+        // Alpha alone does not remove native views from hit testing. Keep the
+        // input gate on the UI thread so it changes with the same opacity frame.
+        pointerEvents: progress.value > PLAYER_INPUT_THRESHOLD && !isClosing.value
+            ? "auto" as const : "none" as const,
         // Chrome (title, controls, lyrics) settles in behind the artwork.
         opacity: interpolate(
             progress.value,
@@ -262,11 +270,10 @@ export default function MusicDetail(props: IMusicDetailProps) {
             <GestureDetector gesture={dismissGesture}>
                 <Animated.View
                     style={[globalStyle.fwflex1, contentStyle]}
-                    pointerEvents={isExiting ? "none" : "auto"}
                     importantForAccessibility={
-                        isExiting ? "no-hide-descendants" : "auto"
+                        acceptsInput ? "auto" : "no-hide-descendants"
                     }
-                    accessibilityElementsHidden={isExiting}
+                    accessibilityElementsHidden={!acceptsInput}
                     collapsable={false}>
                     <SafeAreaView style={globalStyle.fwflex1}>
                         <StatusBar

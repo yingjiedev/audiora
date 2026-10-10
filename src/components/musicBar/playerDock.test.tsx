@@ -30,7 +30,9 @@ jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, playe
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/router", () => ({ ROUTE_PATH: { MUSIC_DETAIL: "music-detail" }, useNavigate: () => mockNavigate }));
-jest.mock("@/core/playerOverlay", () => ({ openPlayer: jest.fn() }));
+jest.mock("@/core/playerOverlay", () => ({
+    openPlayer: jest.fn((prepare?: () => void) => prepare?.()),
+}));
 jest.mock("@/core/playerTransition", () => ({ armPlayerTransition: jest.fn() }));
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
@@ -136,8 +138,7 @@ describe("PlayerDock", () => {
         press(renderer, "musicBar.a11y.openDetail");
         expect(openPlayer).toHaveBeenCalledTimes(1);
         expect(armPlayerTransition).toHaveBeenCalledTimes(1);
-        expect(jest.mocked(armPlayerTransition).mock.invocationCallOrder[0])
-            .toBeLessThan(jest.mocked(openPlayer).mock.invocationCallOrder[0]);
+        expect(openPlayer).toHaveBeenCalledWith(armPlayerTransition);
         expect(mockNavigate).not.toHaveBeenCalled();
         expect(renderer.root.findAllByType(MusicInfo)).toHaveLength(1);
     });
