@@ -1,3 +1,4 @@
+import Color from "color";
 import React, { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -7,6 +8,7 @@ import { fontSizeConst } from "@/constants/uiConst";
 import TrackPlayer, { useProgress } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import { useI18N } from "@/core/i18n";
+import { spacing } from "@/constants/designSystem";
 
 interface ITimeLabelProps {
     time: number;
@@ -29,9 +31,9 @@ export default function SeekBar(props: { variant?: "media" | "surface" }) {
     const { t } = useI18N();
 
     const surface = props.variant === "surface";
-    const foreground = surface ? colors.primary : colors.onMedia ?? colors.text;
+    const foreground = surface ? colors.musicBarText ?? colors.text : colors.onMedia ?? colors.text;
     const secondary = surface ? colors.textSecondary ?? colors.text : colors.onMediaSecondary ?? foreground;
-    const track = surface ? colors.border : colors.onMediaTrack ?? secondary;
+    const track = surface ? Color(foreground).alpha(0.22).toString() : colors.onMediaTrack ?? secondary;
     const duration = Number.isFinite(progress.duration) ? Math.max(0, progress.duration) : 0;
     const currentPosition = Number.isFinite(progress.position) ? progress.position : 0;
     const position = Math.min(duration, Math.max(0, tmpProgress ?? currentPosition));
@@ -43,6 +45,7 @@ export default function SeekBar(props: { variant?: "media" | "surface" }) {
                 minimumTrackTintColor={foreground}
                 maximumTrackTintColor={track}
                 thumbTintColor={foreground}
+                thumbSize={surface ? Math.max(8, rpx(16)) : undefined}
                 minimumValue={0}
                 maximumValue={duration}
                 disabled={duration <= 0}
@@ -71,7 +74,7 @@ export default function SeekBar(props: { variant?: "media" | "surface" }) {
                 }}
                 value={Math.min(duration, Math.max(0, currentPosition))}
             />
-            <View style={style.timeRow}>
+            <View style={[style.timeRow, surface && style.surfaceTimeRow]} pointerEvents="none">
                 <TimeLabel time={position} color={secondary} />
                 <TimeLabel time={duration} color={secondary} />
             </View>
@@ -85,6 +88,9 @@ const style = StyleSheet.create({
     },
     surfaceSlider: {
         height: 48,
+    },
+    surfaceTimeRow: {
+        marginTop: -spacing.xl,
     },
     wrapper: {
         width: "100%",

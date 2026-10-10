@@ -1,5 +1,7 @@
+import Color from "color";
 import React, { ReactNode, useCallback, useEffect, useState } from "react";
 import { BackHandler, Image, Keyboard, Pressable, StyleSheet, View } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import Animated, { measure, runOnUI, useAnimatedRef } from "react-native-reanimated";
 import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,7 +11,7 @@ import RoundActionButton from "@/components/base/roundActionButton";
 import ThemeText from "@/components/base/themeText";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
-import { elevation, radius, spacing } from "@/constants/designSystem";
+import { audioraGradient, elevation, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import MusicSheet, { useFavorite } from "@/core/musicSheet";
 import { openPlayer } from "@/core/playerOverlay";
@@ -24,10 +26,11 @@ import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
 
 const TOUCH_SIZE = 48;
-const COVER_SIZE = Math.min(72, Math.max(68, rpx(140)));
+const COVER_SIZE = Math.min(96, Math.max(80, rpx(180)));
 const VINYL_SIZE = COVER_SIZE * 0.8;
 const VINYL_RIM = COVER_SIZE * 0.15;
-const COVER_OVERHANG = Math.min(20, rpx(40));
+const COVER_OVERHANG = Math.min(12, rpx(20));
+const PLAYBACK_SIZE = Math.min(44, rpx(76));
 
 interface IPlayerDockProps {
     bottomNavigation: ReactNode;
@@ -42,7 +45,16 @@ function DockAction(props: {
     selected?: boolean;
     collapse?: boolean;
     expand?: boolean;
+    outlined?: boolean;
 }) {
+    const icon = (
+        <Icon
+            name={props.icon}
+            color={props.color}
+            size={rpx(46)}
+            style={props.collapse ? styles.collapseIcon : props.expand ? styles.expandIcon : undefined}
+        />
+    );
     return (
         <Pressable
             accessibilityRole="button"
@@ -52,12 +64,11 @@ function DockAction(props: {
             }
             onPress={props.onPress}
             style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
-            <Icon
-                name={props.icon}
-                color={props.color}
-                size={rpx(46)}
-                style={props.collapse ? styles.collapseIcon : props.expand ? styles.expandIcon : undefined}
-            />
+            {props.outlined ? (
+                <View style={[styles.playbackOutline, { borderColor: props.color }]}>
+                    {icon}
+                </View>
+            ) : icon}
         </Pressable>
     );
 }
@@ -83,6 +94,9 @@ export default function PlayerDock(props: IPlayerDockProps) {
         ? colors.tabBar ?? colors.surface ?? colors.card
         : colors.musicBar ?? colors.card;
     const foreground = dark ? colors.text : colors.musicBarText ?? colors.text;
+    const cardBackground = dark ? colors.surfaceElevated ?? colors.card : dockBackground;
+    const gradientAccent = dark ? colors.accentCool ?? colors.primary : audioraGradient[0];
+    const album = typeof musicItem?.album === "string" ? musicItem.album.trim() : "";
     const artworkRef = useAnimatedRef<Animated.View>();
     const { origin } = playerTransition();
     const measureArtwork = useCallback(() => {
@@ -152,49 +166,73 @@ export default function PlayerDock(props: IPlayerDockProps) {
             {showExpanded && musicItem ? (
                 <View style={styles.expandedSpace}>
                     <View
+                        pointerEvents="none"
+                        style={[styles.expandedBase, { backgroundColor: dockBackground }]}
+                    />
+                    <View
                         testID="player-dock-expanded"
                         style={[
                             styles.expandedCard,
-                            elevation.mid,
+                            elevation.low,
                             {
-                                marginLeft: spacing.lg + insets.left,
-                                marginRight: spacing.lg + insets.right,
-                                backgroundColor: colors.surfaceElevated ?? colors.card,
+                                marginLeft: spacing.xxxl + insets.left,
+                                marginRight: spacing.xxxl + insets.right,
+                                backgroundColor: cardBackground,
                                 shadowColor: colors.shadow ?? colors.text,
                             },
                         ]}>
+                        <LinearGradient
+                            pointerEvents="none"
+                            colors={[
+                                Color(cardBackground).mix(Color(gradientAccent), dark ? 0.08 : 0.12).toString(),
+                                Color(cardBackground).mix(Color(gradientAccent), 0.03).toString(),
+                                cardBackground,
+                            ]}
+                            locations={[0, 0.5, 1]}
+                            style={styles.cardGradient}
+                        />
                         <View style={styles.header}>
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel={t("musicBar.a11y.openDetail")}
                                 style={styles.songInfo}
                                 onPress={openExpandedPlayer}>
-                                <ThemeText numberOfLines={2} fontSize="content" fontWeight="semibold">
+                                <ThemeText numberOfLines={2} fontSize="content" color={foreground}>
                                     {musicItem.title ?? t("common.unknownName")}
                                 </ThemeText>
                                 {musicItem.artist ? (
                                     <ThemeText
                                         numberOfLines={1}
                                         fontSize="description"
-                                        fontColor="textSecondary"
+                                        color={Color(foreground).alpha(0.72).toString()}
                                         style={styles.artist}>
                                         {musicItem.artist}
+                                    </ThemeText>
+                                ) : null}
+                                {album ? (
+                                    <ThemeText
+                                        numberOfLines={1}
+                                        fontSize="description"
+                                        color={Color(foreground).alpha(0.64).toString()}
+                                        style={styles.artist}>
+                                        {t("panel.musicItemOptions.album", { album })}
                                     </ThemeText>
                                 ) : null}
                             </Pressable>
                             <DockAction
                                 icon="chevron-right"
                                 label={t("musicBar.a11y.collapse")}
-                                color={colors.text}
+                                color={foreground}
                                 collapse
                                 onPress={() => setExpanded(false)}
                             />
                         </View>
+                        <SeekBar variant="surface" />
                         <View style={styles.transport}>
                             <DockAction
                                 icon={isFavorite ? "heart" : "heart-outline"}
                                 label={isFavorite ? t("musicDetail.a11y.unfavorite") : t("musicDetail.a11y.favorite")}
-                                color={isFavorite ? colors.danger ?? colors.primary : colors.text}
+                                color={isFavorite ? colors.danger ?? colors.primary : foreground}
                                 selected={isFavorite}
                                 onPress={() => {
                                     if (isFavorite) {
@@ -207,31 +245,29 @@ export default function PlayerDock(props: IPlayerDockProps) {
                             <DockAction
                                 icon="skip-left"
                                 label={t("musicDetail.a11y.skipToPrevious")}
-                                color={colors.text}
+                                color={foreground}
                                 onPress={() => TrackPlayer.skipToPrevious()}
                             />
-                            <RoundActionButton
-                                variant="solid"
-                                iconName={isPaused ? "play" : "pause"}
-                                size={Math.max(52, rpx(100))}
-                                iconSize={rpx(48)}
-                                accessibilityLabel={playbackLabel}
+                            <DockAction
+                                icon={isPaused ? "play" : "pause"}
+                                label={playbackLabel}
+                                color={foreground}
+                                outlined
                                 onPress={togglePlayback}
                             />
                             <DockAction
                                 icon="skip-right"
                                 label={t("musicDetail.a11y.skipToNext")}
-                                color={colors.text}
+                                color={foreground}
                                 onPress={() => TrackPlayer.skipToNext()}
                             />
                             <DockAction
                                 icon="playlist"
                                 label={t("musicBar.a11y.playlist")}
-                                color={colors.text}
+                                color={foreground}
                                 onPress={openPlaylist}
                             />
                         </View>
-                        <SeekBar variant="surface" />
                     </View>
                     {/* The parent includes the overhang so Android can hit the entire cover. */}
                     <Pressable
@@ -241,7 +277,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
                         onPress={openExpandedPlayer}
                         style={[
                             styles.artworkAssembly,
-                            { left: spacing.lg + insets.left + spacing.md },
+                            { left: spacing.xxxl + insets.left + spacing.xxl },
                         ]}>
                         <Image
                             testID="player-dock-vinyl"
@@ -343,13 +379,30 @@ const styles = StyleSheet.create({
     },
     expandedSpace: {
         paddingTop: COVER_OVERHANG,
-        paddingBottom: spacing.lg,
+        paddingBottom: spacing.sm,
+    },
+    expandedBase: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: TOUCH_SIZE + spacing.xxl,
+        borderTopLeftRadius: radius.sheet,
+        borderTopRightRadius: radius.sheet,
     },
     expandedCard: {
-        borderRadius: radius.sheet,
-        paddingHorizontal: spacing.md,
+        borderRadius: radius.md,
+        paddingHorizontal: spacing.xxl,
         paddingBottom: spacing.md,
         overflow: "visible",
+    },
+    cardGradient: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        borderRadius: radius.md,
     },
     artworkAssembly: {
         position: "absolute",
@@ -376,8 +429,8 @@ const styles = StyleSheet.create({
         borderRadius: radius.sm,
     },
     header: {
-        minHeight: COVER_SIZE - COVER_OVERHANG + spacing.md,
-        paddingLeft: COVER_SIZE + VINYL_RIM + spacing.md,
+        minHeight: COVER_SIZE - COVER_OVERHANG + spacing.sm,
+        paddingLeft: COVER_SIZE + VINYL_RIM + spacing.xxxl,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -398,11 +451,18 @@ const styles = StyleSheet.create({
         transform: [{ rotate: "-90deg" }],
     },
     transport: {
-        minHeight: 56,
-        marginVertical: spacing.xs,
+        minHeight: TOUCH_SIZE,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
+    },
+    playbackOutline: {
+        width: PLAYBACK_SIZE,
+        height: PLAYBACK_SIZE,
+        borderRadius: PLAYBACK_SIZE / 2,
+        borderWidth: 1,
+        alignItems: "center",
+        justifyContent: "center",
     },
     pressed: {
         opacity: 0.7,

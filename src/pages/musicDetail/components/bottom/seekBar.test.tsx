@@ -1,3 +1,4 @@
+import Color from "color";
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
 import Slider from "@react-native-community/slider";
@@ -45,8 +46,9 @@ describe("SeekBar", () => {
             renderer = TestRenderer.create(<SeekBar variant="surface" />);
         });
         const slider = renderer!.root.findByType(Slider);
-        expect(slider.props.minimumTrackTintColor).toBe(COLORS.primary);
-        expect(slider.props.maximumTrackTintColor).toBe(COLORS.border);
+        expect(slider.props.minimumTrackTintColor).toBe(COLORS.text);
+        expect(slider.props.maximumTrackTintColor).toBe(Color(COLORS.text).alpha(0.22).toString());
+        expect(slider.props.thumbSize).toBe(16);
     });
 
     it("does not seek to a negative time for clips shorter than two seconds", () => {

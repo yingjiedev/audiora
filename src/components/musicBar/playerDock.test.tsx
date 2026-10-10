@@ -26,6 +26,7 @@ jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/base/roundActionButton", () => "RoundActionButton");
+jest.mock("react-native-linear-gradient", () => "LinearGradient");
 jest.mock("./musicInfo", () => "MusicInfo");
 jest.mock("@/pages/musicDetail/components/bottom/seekBar", () => "SeekBar");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, playerVinyl: 2 } }));
