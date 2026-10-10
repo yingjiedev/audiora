@@ -575,6 +575,22 @@ export interface ILanguageData {
 
     // 面板相关 - 播放列表
     "panel.playList.title": string; // 播放列表
+    "panel.playList.tab.queue": string;
+    "panel.playList.tab.history": string;
+    "panel.playList.tab.sheets": string;
+    "panel.playList.recentFirst": string;
+    "panel.playList.addAll": string;
+    "panel.playList.remove": string;
+    "panel.playList.reorder": string;
+    "panel.playList.reorderHint": string;
+    "panel.playList.moveUp": string;
+    "panel.playList.moveDown": string;
+    "panel.playList.emptyQueue": string;
+    "panel.playList.emptyHistory": string;
+    "panel.playList.emptySheets": string;
+    "panel.playList.clear.queue": string;
+    "panel.playList.clear.history": string;
+    "panel.playList.clear.sheets": string;
     "panel.playList.count": string; // 歌曲数量
     "panel.searchLrc.inputPlaceholder": string; // 搜索歌词输入占位符
     "panel.searchLrc.toast.settingSuccess": string; // 设置成功

@@ -142,4 +142,17 @@ describe("MyMusicOverview", () => {
             jest.requireMock("@/components/panels/usePanel").showPanel,
         ).toHaveBeenNthCalledWith(3, "CreateMusicSheet");
     });
+
+    it("opens the played songs drawer from My music", () => {
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<MyMusicOverview />);
+        });
+        act(() => {
+            renderer.root.findByProps({ accessibilityLabel: "home.playHistory" }).props.onPress();
+        });
+        expect(jest.requireMock("@/components/panels/usePanel").showPanel).toHaveBeenCalledWith("PlayList", { initialTab: "history" });
+        expect(mockNavigate).not.toHaveBeenCalled();
+        act(() => renderer.unmount());
+    });
 });

@@ -13,6 +13,7 @@ import Icon from "../base/icon";
 import { iconSizeConst } from "@/constants/uiConst";
 import useColors from "@/hooks/useColors";
 import useCardStyle from "@/hooks/useCardStyle";
+import { useRoute } from "@react-navigation/native";
 
 interface IMusicListProps {
     /** 顶部 */
@@ -49,6 +50,7 @@ const CARD_ITEM_HEIGHT = rpx(132);
 
 /** 音乐列表 */
 export default function MusicList(props: IMusicListProps) {
+    const route = useRoute();
     const {
         Header,
         musicList,
@@ -76,15 +78,15 @@ export default function MusicList(props: IMusicListProps) {
     const itemHeight = variant === "compact"
         ? COMPACT_ITEM_HEIGHT
         : variant === "card"
-        ? CARD_ITEM_HEIGHT
-        : ITEM_HEIGHT;
+            ? CARD_ITEM_HEIGHT
+            : ITEM_HEIGHT;
 
     // 查找高亮项的索引
     const highlightIndex = React.useMemo(() => {
         if (!highlightMusicItem || !musicList) return -1;
         return musicList.findIndex(item => isSameMediaItem(item, highlightMusicItem));
-    }, [highlightMusicItem, musicList]);    
-    
+    }, [highlightMusicItem, musicList]);
+
     // 处理滚动开始
     const handleScrollBegin = useCallback(() => {
         if (highlightIndex !== -1) {
@@ -94,7 +96,7 @@ export default function MusicList(props: IMusicListProps) {
             setShowBadge(true);
         }
     }, [highlightIndex]);
-    
+
     // 处理滚动结束
     const handleScrollEnd = useCallback(() => {
         if (hideTimeoutRef.current) {
@@ -104,8 +106,8 @@ export default function MusicList(props: IMusicListProps) {
         hideTimeoutRef.current = setTimeout(() => {
             setShowBadge(false);
         }, 5000);
-    }, []);    
-    
+    }, []);
+
     // 滚动到高亮项
     const scrollToHighlight = useCallback(() => {
         if (highlightIndex !== -1 && flashListRef.current) {
@@ -120,8 +122,8 @@ export default function MusicList(props: IMusicListProps) {
                 clearTimeout(hideTimeoutRef.current);
             }
         }
-    }, [highlightIndex]);    
-    
+    }, [highlightIndex]);
+
     // 清理定时器
     useEffect(() => {
         return () => {
@@ -129,8 +131,8 @@ export default function MusicList(props: IMusicListProps) {
                 clearTimeout(hideTimeoutRef.current);
             }
         };
-    }, []);    
-    
+    }, []);
+
     return (
         <View style={styles.container}>
             <FlashList
@@ -163,6 +165,7 @@ export default function MusicList(props: IMusicListProps) {
                                     TrackPlayer.playWithReplacePlayList(
                                         musicItem,
                                         musicList ?? [musicItem],
+                                        musicSheet ? { sheet: musicSheet, routeName: route.name } : undefined,
                                     );
                                 }
                             }}
@@ -197,7 +200,7 @@ export default function MusicList(props: IMusicListProps) {
                     }
                 }}
                 onEndReachedThreshold={0.1}
-            />              
+            />
             {showBadge && (
                 <View style={styles.badge} pointerEvents="box-none">
                     <Pressable

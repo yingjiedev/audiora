@@ -49,3 +49,43 @@ The lower pair in the combined comparison is an equal-size panel-only comparison
 - [x] Verify the exact release APK on a connected Android device.
 
 final result: passed
+
+---
+
+# Playback drawer visual verification
+
+- Source visual truth: user attachment `3a1dae1a278d6baac0a6893d95eec025.jpg` (1220 × 2656 pixels, displayed at 941 × 2048).
+- Implementation: native React Native playback drawer; no implementation screenshot captured.
+- Viewport: physical Android device; runtime viewport and density not captured.
+- State: playing queue, song history, and playlist history in light/dark themes await manual acceptance.
+- Density normalization: none; no paired runtime capture is available.
+- Full-view comparison evidence: unavailable. The reference was inspected, but code and passing tests do not establish visual fidelity.
+- Focused region comparison evidence: unavailable for tab typography, row spacing, toolbar icons, current-song indicator, or gesture rendering.
+
+## Findings
+
+Visual verification remains pending. The repository's explicit preview instructions require installation and installed-version confirmation, then stopping for user acceptance; they prohibit device screenshots or substitute visual acceptance unless requested. This instruction takes precedence over the design skill's automatic screenshot workflow.
+
+The implementation uses the existing theme, type sizes, icons, and native panel. Three tabs and live counts replace the old queue header; songs use compact single-line title/artist rows with separate remove and reorder controls. Playlist history uses real collection metadata. The current-song indicator uses existing musical-note/pause icons rather than the reference's equalizer. Dragging commits on release; automatic scrolling at the viewport edge is not implemented. These are implementation facts, not verified visual matches.
+
+## Required fidelity surfaces
+
+- Fonts/typography: existing native typography reused; runtime font rendering, clipping, large text, and selected-tab underline await review.
+- Spacing/layout rhythm: bottom drawer height 62%, 20dp horizontal inset, at least 48dp song rows and action height; runtime safe-area layout awaits review.
+- Colors/tokens: existing panel, foreground, secondary text, and success tokens reused; light/dark runtime contrast awaits review.
+- Image/assets: existing icons and actual collection covers reused; no sample art or fabricated playlist data. Runtime crop and sharpness await review.
+- Copy/content: localized tabs, counts, empty states, and confirmations have automated coverage; runtime truncation and text scaling await review.
+
+## Comparison history
+
+No paired native visual comparison has been performed. No visual iteration is claimed as passed.
+
+## Implementation checklist
+
+- Automated playback-history, tab/action isolation, navigation, stale reorder, and gesture cancellation regressions passed.
+- Build and install a uniquely versioned Android preview; verify package, ABI, fonts, signing certificate, and installed version.
+- User to accept appearance, list scrolling, drag behavior, tab switching, source navigation, and full-player return interactions on the physical device.
+
+final result: blocked
+
+Blocker: native visual evidence is intentionally deferred to user manual acceptance under repository preview instructions.

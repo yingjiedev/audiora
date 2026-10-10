@@ -4,6 +4,8 @@ import TestRenderer, { act } from "react-test-renderer";
 import HomeOverview from "./homeOverview";
 
 const mockNavigate = jest.fn();
+const mockShowPanel = jest.fn();
+jest.mock("@/components/panels/usePanel", () => ({ showPanel: (...args: unknown[]) => mockShowPanel(...args) }));
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
@@ -104,9 +106,12 @@ jest.mock("./useHomeOverview", () => () => ({
 jest.mock("../HomeHero", () => "HomeHero");
 
 describe("HomeOverview quick access", () => {
-    beforeEach(() => mockNavigate.mockReset());
+    beforeEach(() => {
+        mockNavigate.mockReset();
+        mockShowPanel.mockReset();
+    });
 
-    it("keeps the four legacy destinations on Home", () => {
+    it("opens recent songs in the playback drawer and keeps other Home destinations", () => {
         let renderer: TestRenderer.ReactTestRenderer;
         act(() => {
             renderer = TestRenderer.create(<HomeOverview />);
@@ -126,11 +131,11 @@ describe("HomeOverview quick access", () => {
         });
 
         expect(mockNavigate).toHaveBeenNthCalledWith(1, "recommend-sheets");
-        expect(mockNavigate).toHaveBeenNthCalledWith(2, "history");
-        expect(mockNavigate).toHaveBeenNthCalledWith(3, "local-sheet-detail", {
+        expect(mockShowPanel).toHaveBeenCalledWith("PlayList", { initialTab: "history" });
+        expect(mockNavigate).toHaveBeenNthCalledWith(2, "local-sheet-detail", {
             id: "favorite",
         });
-        expect(mockNavigate).toHaveBeenNthCalledWith(4, "local");
+        expect(mockNavigate).toHaveBeenNthCalledWith(3, "local");
     });
 
     it("stretches all quick entries evenly without a trailing offset", () => {

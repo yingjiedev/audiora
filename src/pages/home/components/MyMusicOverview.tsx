@@ -67,7 +67,7 @@ export default function MyMusicOverview() {
             icon: "clock-outline",
             title: t("home.playHistory"),
             description: t("home.songCount", { count: history.length }),
-            onPress: () => navigate(ROUTE_PATH.HISTORY),
+            onPress: () => showPanel("PlayList", { initialTab: "history" }),
         },
         {
             key: "downloads",
