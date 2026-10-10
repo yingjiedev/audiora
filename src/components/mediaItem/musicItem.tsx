@@ -4,6 +4,7 @@ import rpx from "@/utils/rpx";
 import ListItem from "../base/listItem";
 
 import LocalMusicSheet from "@/core/localMusicSheet";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { showPanel } from "../panels/usePanel";
 import ThemeText from "../base/themeText";
 import Tag from "../base/tag";
@@ -45,6 +46,7 @@ export default function MusicItem(props: IMusicItemProps) {
     } = props;
 
     const isLocal = LocalMusicSheet.useIsLocal(musicItem);
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const localMusicItem = isLocal
         ? LocalMusicSheet.isLocalMusic(musicItem)
         : undefined;
@@ -128,7 +130,7 @@ export default function MusicItem(props: IMusicItemProps) {
             {(musicItem.platform || titleTagSubText) ? (
                 <View style={styles.rightColumn}>
                     {musicItem.platform ? (
-                        <Tag tagName={musicItem.platform} containerStyle={styles.rightTag} />
+                        <Tag tagName={getPluginDisplayName(musicItem.platform)} containerStyle={styles.rightTag} />
                     ) : null}
                     {titleTagSubText ? (
                         <ThemeText

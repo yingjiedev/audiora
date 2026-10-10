@@ -1,7 +1,11 @@
 import React, { memo } from "react";
 
 import useColors from "@/hooks/useColors";
-import pluginManager, { Plugin, usePluginEnabled } from "@/core/pluginManager";
+import pluginManager, {
+    Plugin,
+    usePluginDisplayNameResolver,
+    usePluginEnabled,
+} from "@/core/pluginManager";
 
 import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
@@ -34,6 +38,8 @@ function PluginItemBase(props: IPluginItemProps) {
     const { plugin } = props;
     const colors = useColors();
     const enabled = usePluginEnabled(plugin);
+    const getDisplayName = usePluginDisplayNameResolver();
+    const displayName = getDisplayName(plugin);
     const { t } = useI18N();
     const navigate = useNavigate();
     const rerender = useRerender();
@@ -75,7 +81,7 @@ function PluginItemBase(props: IPluginItemProps) {
                 showDialog("SimpleDialog", {
                     title: t("pluginSetting.pluginItem.options.uninstallPlugin"),
                     content: t("pluginSetting.pluginItem.options.uninstallPluginContent", {
-                        name: plugin.name,
+                        name: displayName,
                     }),
                     async onOk() {
                         try {
@@ -93,22 +99,60 @@ function PluginItemBase(props: IPluginItemProps) {
             icon: "strategy",
             show: true,
             onPress() {
+                // 音源重定向落库的一定是平台名：这里只把展示换成显示名，
+                // 显示名撞车时补上平台名消歧，保证选中项能唯一映射回平台。
+                const candidates = pluginManager.getSortedPluginsWithAbility(
+                    "getMediaSource",
+                );
+                const labels = candidates.map(it => getDisplayName(it));
+                const uniqueLabels = labels.map((label, index) =>
+                    labels.filter(_ => _ === label).length > 1
+                        ? `${label}（${candidates[index].name}）`
+                        : label,
+                );
+                const currentPlatform = pluginManager.getAlternativePluginName(
+                    plugin,
+                );
+                const currentIndex = candidates.findIndex(
+                    it => it.name === currentPlatform,
+                );
+
                 showDialog("RadioDialog", {
-                    content: (pluginManager.getSortedPluginsWithAbility("getMediaSource").map(it => it.name)),
+                    content: uniqueLabels,
                     title: t("pluginSetting.pluginItem.dialog.setAlternativePluginTitle"),
-                    defaultSelected: pluginManager.getAlternativePluginName(plugin) as any,
+                    defaultSelected: currentIndex === -1 ? undefined : uniqueLabels[currentIndex],
                     onOk(value) {
-                        if (value === plugin.name) {
-                            pluginManager.setAlternativePluginName(plugin, null as any);
-                        } else {
-                            pluginManager.setAlternativePluginName(plugin, value as any);
-                        }
+                        const target = candidates[uniqueLabels.indexOf(value)];
+                        pluginManager.setAlternativePluginName(
+                            plugin,
+                            target && target.name !== plugin.name
+                                ? target.name
+                                : (null as any),
+                        );
                         rerender();
                     },
                     tip: t("pluginSetting.pluginItem.dialog.setAlternativePluginTip"),
 
                 });
 
+            },
+        },
+        {
+            title: t("pluginSetting.pluginItem.options.renamePlugin"),
+            icon: "pencil-square",
+            show: true,
+            onPress() {
+                showPanel("SimpleInput", {
+                    title: t("pluginSetting.pluginItem.options.renamePlugin"),
+                    placeholder: displayName,
+                    defaultValue: displayName,
+                    maxLength: 40,
+                    hints: [t("pluginSetting.pluginItem.dialog.renamePluginTip")],
+                    onOk(text, closePanel) {
+                        pluginManager.setPluginDisplayName(plugin, text);
+                        closePanel();
+                    },
+                });
             },
         },
         {
@@ -134,7 +178,7 @@ function PluginItemBase(props: IPluginItemProps) {
                                     showPanel("AddToMusicSheet", {
                                         musicItem: result,
                                         newSheetDefaultName: t("pluginSetting.pluginItem.options.importMusicToSheetName", {
-                                            name: plugin.name,
+                                            name: displayName,
                                         }),
                                     });
                                 },
@@ -167,7 +211,7 @@ function PluginItemBase(props: IPluginItemProps) {
                             plugin.name,
                             text,
                             t("panel.importMusicSheet.fallbackTitle", {
-                                plugin: plugin.name,
+                                plugin: displayName,
                             }),
                         );
                         if (sheet) {
@@ -215,12 +259,12 @@ function PluginItemBase(props: IPluginItemProps) {
                     <ThemeText
                         numberOfLines={1}
                         fontSize="title">
-                        {plugin.name}
+                        {displayName}
                     </ThemeText>
                     {
                         plugin.instance.description?.length ? <IconButton name='question-mark-circle' sizeType='light' onPress={() => {
                             showDialog("MarkdownDialog", {
-                                title: plugin.name,
+                                title: displayName,
                                 markdownContent: plugin.instance.description!,
                             });
                         }} /> : null
@@ -255,7 +299,7 @@ function PluginItemBase(props: IPluginItemProps) {
             {alternativePluginName ? <View style={styles.alternativePluginDescription}>
                 <ThemeText fontSize="subTitle" fontColor="textSecondary">
                     {t("pluginSetting.pluginItem.alternativePlugin", {
-                        name: alternativePluginName,
+                        name: getDisplayName(alternativePluginName),
                     })}
                 </ThemeText>
             </View> : null}

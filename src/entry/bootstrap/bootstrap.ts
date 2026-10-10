@@ -361,7 +361,11 @@ async function extraMakeup() {
                 })
                     .then(res => {
                         if (res.success) {
-                            Toast.success(`插件「${res.pluginName}」安装成功~`);
+                            Toast.success(
+                                `插件「${PluginManager.getPluginDisplayName(
+                                    res.pluginName ?? "",
+                                )}」安装成功~`,
+                            );
                         } else {
                             Toast.warn("安装失败: " + res.message);
                         }

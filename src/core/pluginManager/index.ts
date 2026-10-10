@@ -17,7 +17,7 @@ import EventEmitter from "eventemitter3";
 import { readAsStringAsync } from "expo-file-system/legacy";
 import { atom, getDefaultStore, useAtomValue } from "jotai";
 import { nanoid } from "@/utils/nanoid";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ToastAndroid } from "react-native";
 import { copyFile, readDir, readFile, unlink, writeFile } from "react-native-fs";
 import { devLog, errorLog } from "../../utils/log";
@@ -31,12 +31,34 @@ import { IAppConfig } from "@/types/core/config";
 import delay from "@/utils/delay";
 
 const pluginsAtom = atom<Plugin[]>([]);
+/** 插件显示名（本地自定义）：platform -> 显示名。未自定义的插件不在其中。 */
+const pluginDisplayNamesAtom = atom<Record<string, string>>(
+    pluginMeta.getAllDisplayNames(),
+);
 const pluginCacheStore = getOrCreateMMKV("plugin.cache");
 
 const ee = new EventEmitter<{
     "order-updated": () => void;
     "enabled-updated": (pluginName: string, enabled: boolean) => void;
 }>();
+
+/** 插件本事：插件实例或平台名（媒体项、歌单、榜单数据里存的只有平台名） */
+export type PluginRef = Plugin | string;
+
+/** 取平台名（插件唯一标识） */
+function toPlatform(pluginOrPlatform: PluginRef | null | undefined) {
+    return typeof pluginOrPlatform === "string"
+        ? pluginOrPlatform
+        : pluginOrPlatform?.name;
+}
+
+/** 显示名解析：本地自定义优先，否则回落到插件平台名（唯一标识） */
+function resolveDisplayName(
+    platform: string | null | undefined,
+    displayNames: Record<string, string>,
+): string {
+    return (platform && displayNames[platform]) || platform || "";
+}
 
 class PluginManager implements IPluginManager, IInjectable {
     private appConfigService!: IAppConfig;
@@ -513,6 +535,8 @@ class PluginManager implements IPluginManager, IInjectable {
             // 防止其他重名
             if (plugins.every(_ => _.name !== pluginName)) {
                 removeAllMediaExtra(pluginName);
+                pluginMeta.setDisplayName(pluginName, null);
+                this.syncPluginDisplayNames();
             }
         }
     }
@@ -532,6 +556,8 @@ class PluginManager implements IPluginManager, IInjectable {
             }),
         );
         this.setPlugins([]);
+        pluginMeta.clearDisplayNames();
+        this.syncPluginDisplayNames();
 
         /** 清除空余文件，异步做就可以了 */
         readDir(pathConst.pluginPath)
@@ -718,6 +744,36 @@ class PluginManager implements IPluginManager, IInjectable {
         return pluginMeta.getUserVariables(plugin.name);
     }
 
+    /**
+     * 插件显示名：本地自定义优先，未自定义时回落到平台名。
+     * 所有对外展示插件名的地方都必须走这里，不要直接读 plugin.name / platform。
+     * @param pluginOrPlatform - 插件实例，或插件的平台名（媒体项 / 歌单 / 榜单数据里只有平台名）
+     */
+    getPluginDisplayName(pluginOrPlatform: PluginRef) {
+        return resolveDisplayName(
+            toPlatform(pluginOrPlatform),
+            getDefaultStore().get(pluginDisplayNamesAtom),
+        );
+    }
+
+    /**
+     * 修改插件在本地的显示名，只影响展示，不改插件的平台名/唯一标识。
+     * 传空值（null / 空串 / 纯空格）表示恢复插件本身的平台名。
+     */
+    setPluginDisplayName(plugin: Plugin, displayName: string | null) {
+        const normalizedName = displayName?.trim() || null;
+        pluginMeta.setDisplayName(plugin.name, normalizedName);
+        this.syncPluginDisplayNames();
+    }
+
+    /** 把最新的显示名同步给订阅它的组件 */
+    private syncPluginDisplayNames() {
+        getDefaultStore().set(
+            pluginDisplayNamesAtom,
+            pluginMeta.getAllDisplayNames(),
+        );
+    }
+
     setAlternativePluginName(plugin: Plugin, alternativePluginName: string) {
         pluginMeta.setAlternativePlugin(plugin.name, alternativePluginName);
     }
@@ -766,6 +822,26 @@ export function useSortedPlugins() {
     }, [plugins]);
 
     return sortedPlugins;
+}
+
+/** 单个插件的显示名，改名后自动刷新；入参可以是插件实例或平台名 */
+export function usePluginDisplayName(pluginOrPlatform: PluginRef) {
+    useAtomValue(pluginDisplayNamesAtom);
+    return pluginManager.getPluginDisplayName(pluginOrPlatform);
+}
+
+/**
+ * 列表场景（renderItem / map / useMemo）用的取显示名函数：
+ * 只在本组件订阅改名，返回的函数身份仅在改名时变化，可安全作为 memo 依赖。
+ * 入参可以是插件实例或平台名（媒体项、歌单、榜单数据里只有平台名）。
+ */
+export function usePluginDisplayNameResolver() {
+    const displayNames = useAtomValue(pluginDisplayNamesAtom);
+    return useCallback(
+        (pluginOrPlatform: PluginRef) =>
+            resolveDisplayName(toPlatform(pluginOrPlatform), displayNames),
+        [displayNames],
+    );
 }
 
 export function usePluginEnabled(plugin: Plugin) {

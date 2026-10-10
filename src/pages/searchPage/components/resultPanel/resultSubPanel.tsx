@@ -1,6 +1,6 @@
 import Empty from "@/components/base/empty";
 import PillTabBar from "@/components/base/pillTabBar";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { vw } from "@/utils/rpx";
 import { useAtomValue } from "jotai";
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
@@ -60,14 +60,16 @@ function getSubRouterScene(
 
 function ResultSubPanel(props: IResultSubPanelProps) {
     const [index, setIndex] = useState(0);
+    const getDisplayName = usePluginDisplayNameResolver();
     // Do not over-memoize: plugins can load/enable after mount.
     const routes = PluginManager.getSortedSearchablePlugins(props.tab).map(
         _ => ({
             key: _.hash,
-            title: _.name,
+            title: getDisplayName(_),
         }),
     );
-    const routeKey = routes.map(r => r.key).join("|");
+    // 标题参与 memo key：插件改名后场景随之重建，避免残留旧名字
+    const routeKey = routes.map(r => `${r.key}:${r.title}`).join("|");
     const renderScene = useMemo(
         () => getSubRouterScene(props.tab, routes),
         // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild when plugin set changes

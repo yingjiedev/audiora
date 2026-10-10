@@ -25,6 +25,11 @@ jest.mock("@/core/i18n", () => ({
             key === "home.songCount" ? `${args?.count ?? 0} songs` : key,
     }),
 }));
+jest.mock("@/core/pluginManager", () => ({
+    __esModule: true,
+    usePluginDisplayNameResolver: () => (plugin: any) =>
+        typeof plugin === "string" ? plugin : (plugin?.name ?? ""),
+}));
 jest.mock("@/core/router", () => ({
     ROUTE_PATH: {
         HISTORY: "history",

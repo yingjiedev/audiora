@@ -7,6 +7,7 @@ import globalStyle from "@/constants/globalStyle";
 import { fontSizeConst } from "@/constants/uiConst";
 import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
+import PluginManager from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useState } from "react";
@@ -18,7 +19,9 @@ function filterMusic(query: string, musicList: IMusic.IMusicItem[]) {
         return musicList;
     }
     return musicList.filter(_ =>
-        `${_.title} ${_.artist} ${_.album} ${_.platform}`
+        `${_.title} ${_.artist} ${_.album} ${PluginManager.getPluginDisplayName(
+            _.platform,
+        )}`
             .toLowerCase()
             .includes(query.toLowerCase()),
     );

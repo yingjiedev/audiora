@@ -1,5 +1,6 @@
 import React from "react";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import ListItem from "@/components/base/listItem";
 import { ImgAsset } from "@/constants/assetsConst";
 import TitleAndTag from "./titleAndTag";
@@ -11,6 +12,7 @@ interface IAlbumResultsProps {
 export default function AlbumItem(props: IAlbumResultsProps) {
     const { albumItem } = props;
     const navigate = useNavigate();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
 
     return (
         <ListItem
@@ -29,7 +31,7 @@ export default function AlbumItem(props: IAlbumResultsProps) {
                 title={
                     <TitleAndTag
                         title={albumItem.title}
-                        tag={albumItem.platform}
+                        tag={getPluginDisplayName(albumItem.platform)}
                     />
                 }
                 description={`${albumItem.artist ?? ""}    ${

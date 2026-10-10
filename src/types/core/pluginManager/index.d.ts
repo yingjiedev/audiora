@@ -173,6 +173,21 @@ export interface IPluginManager {
     getUserVariables(plugin: Plugin): Record<string, string>;
 
     /**
+     * 获取插件的显示名（本地自定义优先，未自定义时为插件平台名）
+     * 展示插件名时必须走这里，不要直接读 plugin.name / platform
+     * @param plugin - 插件实例或插件的平台名
+     * @returns 插件显示名
+     */
+    getPluginDisplayName(plugin: Plugin | string): string;
+
+    /**
+     * 设置插件在本地的显示名，只影响展示，不影响插件的平台名与功能
+     * @param plugin - 要修改显示名的插件实例
+     * @param displayName - 新的显示名，传空值表示恢复插件本身的平台名
+     */
+    setPluginDisplayName(plugin: Plugin, displayName: string | null): void;
+
+    /**
      * 设置插件的替代插件名称
      * @param plugin - 要设置替代插件的插件实例
      * @param alternativePluginName - 替代插件的名称
