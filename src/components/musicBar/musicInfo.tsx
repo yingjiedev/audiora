@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
         width: compactCoverSize,
         height: compactCoverSize,
         alignSelf: "flex-start",
-        marginRight: rpx(60),
+        marginRight: rpx(28),
         borderRadius: radius.xs,
         ...elevation.low,
     },
