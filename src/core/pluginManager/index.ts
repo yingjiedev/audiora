@@ -42,12 +42,21 @@ const ee = new EventEmitter<{
     "enabled-updated": (pluginName: string, enabled: boolean) => void;
 }>();
 
+/** 插件本事：插件实例或平台名（媒体项、歌单、榜单数据里存的只有平台名） */
+export type PluginRef = Plugin | string;
+
+/** 取平台名（插件唯一标识） */
+function toPlatform(pluginOrPlatform: PluginRef | null | undefined) {
+    return typeof pluginOrPlatform === "string"
+        ? pluginOrPlatform
+        : pluginOrPlatform?.name;
+}
+
 /** 显示名解析：本地自定义优先，否则回落到插件平台名（唯一标识） */
 function resolveDisplayName(
-    plugin: Plugin | null | undefined,
+    platform: string | null | undefined,
     displayNames: Record<string, string>,
 ): string {
-    const platform = plugin?.name;
     return (platform && displayNames[platform]) || platform || "";
 }
 
@@ -735,10 +744,14 @@ class PluginManager implements IPluginManager, IInjectable {
         return pluginMeta.getUserVariables(plugin.name);
     }
 
-    /** 插件显示名：本地自定义优先，未自定义时回落到平台名 */
-    getPluginDisplayName(plugin: Plugin) {
+    /**
+     * 插件显示名：本地自定义优先，未自定义时回落到平台名。
+     * 所有对外展示插件名的地方都必须走这里，不要直接读 plugin.name / platform。
+     * @param pluginOrPlatform - 插件实例，或插件的平台名（媒体项 / 歌单 / 榜单数据里只有平台名）
+     */
+    getPluginDisplayName(pluginOrPlatform: PluginRef) {
         return resolveDisplayName(
-            plugin,
+            toPlatform(pluginOrPlatform),
             getDefaultStore().get(pluginDisplayNamesAtom),
         );
     }
@@ -811,20 +824,22 @@ export function useSortedPlugins() {
     return sortedPlugins;
 }
 
-/** 单个插件的显示名，改名后自动刷新 */
-export function usePluginDisplayName(plugin: Plugin) {
+/** 单个插件的显示名，改名后自动刷新；入参可以是插件实例或平台名 */
+export function usePluginDisplayName(pluginOrPlatform: PluginRef) {
     useAtomValue(pluginDisplayNamesAtom);
-    return pluginManager.getPluginDisplayName(plugin);
+    return pluginManager.getPluginDisplayName(pluginOrPlatform);
 }
 
 /**
  * 列表场景（renderItem / map / useMemo）用的取显示名函数：
  * 只在本组件订阅改名，返回的函数身份仅在改名时变化，可安全作为 memo 依赖。
+ * 入参可以是插件实例或平台名（媒体项、歌单、榜单数据里只有平台名）。
  */
 export function usePluginDisplayNameResolver() {
     const displayNames = useAtomValue(pluginDisplayNamesAtom);
     return useCallback(
-        (plugin: Plugin) => resolveDisplayName(plugin, displayNames),
+        (pluginOrPlatform: PluginRef) =>
+            resolveDisplayName(toPlatform(pluginOrPlatform), displayNames),
         [displayNames],
     );
 }

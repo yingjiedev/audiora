@@ -14,6 +14,7 @@ import React, { ReactNode, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { DimensionValue, ImageSourcePropType } from "react-native";
 import type { Plugin } from "@/core/pluginManager";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import useHomeDiscovery, {
     IHomeDiscoveryPreview,
 } from "./useHomeDiscovery";
@@ -392,6 +393,7 @@ function Discovery(props: {
     const colors = useColors();
     const { t } = useI18N();
     const navigate = useNavigate();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
 
     const previewItems = useMemo(
         () =>
@@ -401,7 +403,11 @@ function Discovery(props: {
                 pluginHash: preview.topListPluginHash,
                 pluginName: preview.topListPluginName,
                 title: item.title ?? i18n.t("common.unknownName"),
-                desc: item.description ?? preview.topListPluginName ?? "",
+                desc:
+                    item.description ??
+                    (preview.topListPluginName
+                        ? getPluginDisplayName(preview.topListPluginName)
+                        : ""),
                 cover: item.coverImg ?? item.artwork,
                 action: () => {
                     if (preview.topListPluginHash) {
@@ -412,10 +418,13 @@ function Discovery(props: {
                     }
                 },
             })),
-        [navigate, preview, t],
+        [getPluginDisplayName, navigate, preview, t],
     );
-    const fallbackPluginName =
-        preview.topListPluginName ?? topListPlugins[0]?.name ?? t("home.topList");
+    const fallbackPluginName = preview.topListPluginName
+        ? getPluginDisplayName(preview.topListPluginName)
+        : topListPlugins.length
+            ? getPluginDisplayName(topListPlugins[0])
+            : t("home.topList");
     const fallbackDescription = preview.hasError
         ? `${t("home.topList")} · ${t("common.failToLoad")}`
         : `${t("home.topList")} · ${t("common.emptyList")}`;
@@ -492,7 +501,9 @@ function Discovery(props: {
                                     fontSize="tag"
                                     fontColor="textSecondary"
                                     style={styles.discoverySourceName}>
-                                    {item.pluginName}
+                                    {item.pluginName
+                                        ? getPluginDisplayName(item.pluginName)
+                                        : ""}
                                 </ThemeText>
                             </View>
                             <ThemeText

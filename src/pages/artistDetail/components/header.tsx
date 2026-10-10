@@ -10,6 +10,7 @@ import { useAtomValue } from "jotai";
 import { scrollToTopAtom } from "../store/atoms";
 import ThemeText from "@/components/base/themeText";
 import Tag from "@/components/base/tag";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { useParams } from "@/core/router";
 import Image from "@/components/base/image";
 import { ImgAsset } from "@/constants/assetsConst";
@@ -39,6 +40,7 @@ export default function Header(props: IHeaderProps) {
     const { t } = useI18N();
     const colors = useColors();
     const motion = useMotion();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const cardStyle = useCardStyle({
         borderWidth: 0,
         elevation: 3,
@@ -114,7 +116,11 @@ export default function Header(props: IHeaderProps) {
                                 </ThemeText>
                             </View>
                             {artistItem.platform ? (
-                                <Tag tagName={artistItem.platform} />
+                                <Tag
+                                    tagName={getPluginDisplayName(
+                                        artistItem.platform,
+                                    )}
+                                />
                             ) : null}
                         </View>
                         <ThemeText

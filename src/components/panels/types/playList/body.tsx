@@ -12,6 +12,7 @@ import Loading from "@/components/base/loading";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useColors from "@/hooks/useColors";
 import TrackPlayer, { useCurrentMusic, usePlayList } from "@/core/trackPlayer";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { FlashList } from "@shopify/flash-list";
 import Icon from "@/components/base/icon.tsx";
 
@@ -25,6 +26,7 @@ interface IPlayListProps {
 
 function PlayListItemView(props: IPlayListProps) {
     const colors = useColors();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const { item, isCurrentMusic } = props;
 
     // 正在播放这一行的标识色：主题高亮色，没有就用主色
@@ -77,7 +79,7 @@ function PlayListItemView(props: IPlayListProps) {
                     </Text>
                 )}
             </ThemeText>
-            <Tag tagName={item.platform} />
+            <Tag tagName={getPluginDisplayName(item.platform)} />
             <IconButton
                 style={{ marginLeft: rpx(14) }}
                 name="x-mark"

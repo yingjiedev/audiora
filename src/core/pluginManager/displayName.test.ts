@@ -113,6 +113,19 @@ describe("插件显示名", () => {
         ).toBe("我的音源");
     });
 
+    it("只拿到平台名（媒体项 / 歌单里存的只有它）也能取到显示名", () => {
+        pluginManager.setPluginDisplayName(createPlugin(platform), "我的音源");
+
+        expect(pluginManager.getPluginDisplayName(platform)).toBe("我的音源");
+    });
+
+    it("空值或未知平台名不会抛错，原样回落", () => {
+        expect(pluginManager.getPluginDisplayName("")).toBe("");
+        expect(pluginManager.getPluginDisplayName("不存在的音源")).toBe(
+            "不存在的音源",
+        );
+    });
+
     it("清空显示名不会误删用户变量等其它 meta", () => {
         const plugin = createPlugin(platform);
         pluginManager.setPluginDisplayName(plugin, "我的音源");

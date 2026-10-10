@@ -119,7 +119,7 @@ export default function MergeImportMusicSheet() {
             const statsText = stats
                 .map(stat =>
                     t("panel.mergeImportMusicSheet.sourceStatLine", {
-                        plugin: stat.pluginName,
+                        plugin: getDisplayName(stat.pluginName),
                         total: stat.total,
                         kept: stat.kept,
                         duplicates: stat.duplicates,

@@ -11,7 +11,9 @@ import Icon from "@/components/base/icon.tsx";
 import MusicSheet, { useFavorite } from "@/core/musicSheet";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import { showPanel } from "@/components/panels/usePanel";
-import pluginManager from "@/core/pluginManager";
+import pluginManager, {
+    usePluginDisplayNameResolver,
+} from "@/core/pluginManager";
 import { IMMERSIVE_CONTENT_HORIZONTAL_PADDING } from "../../immersiveCover";
 
 interface ISongInfoProps {
@@ -22,6 +24,7 @@ interface ISongInfoProps {
 export default function SongInfo(props: ISongInfoProps) {
     const { showHeart = false, immersive = false } = props;
     const musicItem = useCurrentMusic();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const orientation = useOrientation();
     const isHorizontal = orientation === "horizontal";
     const isImmersive = immersive && !isHorizontal;
@@ -174,7 +177,7 @@ export default function SongInfo(props: ISongInfoProps) {
                 </Pressable>
                 {musicItem?.platform ? (
                     <Tag
-                        tagName={musicItem.platform}
+                        tagName={getPluginDisplayName(musicItem.platform)}
                         containerStyle={styles.tagBg}
                         style={styles.tagText}
                     />

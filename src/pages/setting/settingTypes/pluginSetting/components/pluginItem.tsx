@@ -3,7 +3,7 @@ import React, { memo } from "react";
 import useColors from "@/hooks/useColors";
 import pluginManager, {
     Plugin,
-    usePluginDisplayName,
+    usePluginDisplayNameResolver,
     usePluginEnabled,
 } from "@/core/pluginManager";
 
@@ -38,7 +38,8 @@ function PluginItemBase(props: IPluginItemProps) {
     const { plugin } = props;
     const colors = useColors();
     const enabled = usePluginEnabled(plugin);
-    const displayName = usePluginDisplayName(plugin);
+    const getDisplayName = usePluginDisplayNameResolver();
+    const displayName = getDisplayName(plugin);
     const { t } = useI18N();
     const navigate = useNavigate();
     const rerender = useRerender();
@@ -98,16 +99,36 @@ function PluginItemBase(props: IPluginItemProps) {
             icon: "strategy",
             show: true,
             onPress() {
+                // 音源重定向落库的一定是平台名：这里只把展示换成显示名，
+                // 显示名撞车时补上平台名消歧，保证选中项能唯一映射回平台。
+                const candidates = pluginManager.getSortedPluginsWithAbility(
+                    "getMediaSource",
+                );
+                const labels = candidates.map(it => getDisplayName(it));
+                const uniqueLabels = labels.map((label, index) =>
+                    labels.filter(_ => _ === label).length > 1
+                        ? `${label}（${candidates[index].name}）`
+                        : label,
+                );
+                const currentPlatform = pluginManager.getAlternativePluginName(
+                    plugin,
+                );
+                const currentIndex = candidates.findIndex(
+                    it => it.name === currentPlatform,
+                );
+
                 showDialog("RadioDialog", {
-                    content: (pluginManager.getSortedPluginsWithAbility("getMediaSource").map(it => it.name)),
+                    content: uniqueLabels,
                     title: t("pluginSetting.pluginItem.dialog.setAlternativePluginTitle"),
-                    defaultSelected: pluginManager.getAlternativePluginName(plugin) as any,
+                    defaultSelected: currentIndex === -1 ? undefined : uniqueLabels[currentIndex],
                     onOk(value) {
-                        if (value === plugin.name) {
-                            pluginManager.setAlternativePluginName(plugin, null as any);
-                        } else {
-                            pluginManager.setAlternativePluginName(plugin, value as any);
-                        }
+                        const target = candidates[uniqueLabels.indexOf(value)];
+                        pluginManager.setAlternativePluginName(
+                            plugin,
+                            target && target.name !== plugin.name
+                                ? target.name
+                                : (null as any),
+                        );
                         rerender();
                     },
                     tip: t("pluginSetting.pluginItem.dialog.setAlternativePluginTip"),
@@ -278,7 +299,7 @@ function PluginItemBase(props: IPluginItemProps) {
             {alternativePluginName ? <View style={styles.alternativePluginDescription}>
                 <ThemeText fontSize="subTitle" fontColor="textSecondary">
                     {t("pluginSetting.pluginItem.alternativePlugin", {
-                        name: alternativePluginName,
+                        name: getDisplayName(alternativePluginName),
                     })}
                 </ThemeText>
             </View> : null}
