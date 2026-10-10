@@ -6,7 +6,7 @@ import { fontSizeConst } from "@/constants/uiConst";
 import useColors from "@/hooks/useColors";
 import PanelBase from "../../base/panelBase";
 import useSearchCover from "./useSearchCover";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { TabView } from "react-native-tab-view";
 import PillTabBar from "@/components/base/pillTabBar";
 import CoverList from "./CoverList";
@@ -216,15 +216,16 @@ function CoverResultBodyWrapper(props: {
         elevation: 3,
     });
 
+    const getDisplayName = usePluginDisplayNameResolver();
     const routes = useMemo(
         () =>
             PluginManager.getSortedSearchablePlugins("music")?.map?.(
                 _ => ({
                     key: _.hash,
-                    title: _.name,
+                    title: getDisplayName(_),
                 }),
             ) ?? [],
-        [],
+        [getDisplayName],
     );
 
     return routes?.length ? (

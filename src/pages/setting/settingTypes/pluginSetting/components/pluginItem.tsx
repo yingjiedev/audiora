@@ -1,7 +1,11 @@
 import React, { memo } from "react";
 
 import useColors from "@/hooks/useColors";
-import pluginManager, { Plugin, usePluginEnabled } from "@/core/pluginManager";
+import pluginManager, {
+    Plugin,
+    usePluginDisplayName,
+    usePluginEnabled,
+} from "@/core/pluginManager";
 
 import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
@@ -34,6 +38,7 @@ function PluginItemBase(props: IPluginItemProps) {
     const { plugin } = props;
     const colors = useColors();
     const enabled = usePluginEnabled(plugin);
+    const displayName = usePluginDisplayName(plugin);
     const { t } = useI18N();
     const navigate = useNavigate();
     const rerender = useRerender();
@@ -75,7 +80,7 @@ function PluginItemBase(props: IPluginItemProps) {
                 showDialog("SimpleDialog", {
                     title: t("pluginSetting.pluginItem.options.uninstallPlugin"),
                     content: t("pluginSetting.pluginItem.options.uninstallPluginContent", {
-                        name: plugin.name,
+                        name: displayName,
                     }),
                     async onOk() {
                         try {
@@ -112,6 +117,24 @@ function PluginItemBase(props: IPluginItemProps) {
             },
         },
         {
+            title: t("pluginSetting.pluginItem.options.renamePlugin"),
+            icon: "pencil-square",
+            show: true,
+            onPress() {
+                showPanel("SimpleInput", {
+                    title: t("pluginSetting.pluginItem.options.renamePlugin"),
+                    placeholder: displayName,
+                    defaultValue: displayName,
+                    maxLength: 40,
+                    hints: [t("pluginSetting.pluginItem.dialog.renamePluginTip")],
+                    onOk(text, closePanel) {
+                        pluginManager.setPluginDisplayName(plugin, text);
+                        closePanel();
+                    },
+                });
+            },
+        },
+        {
             title: t("pluginSetting.pluginItem.options.importMusic"),
             icon: "arrow-right-end-on-rectangle",
             onPress() {
@@ -134,7 +157,7 @@ function PluginItemBase(props: IPluginItemProps) {
                                     showPanel("AddToMusicSheet", {
                                         musicItem: result,
                                         newSheetDefaultName: t("pluginSetting.pluginItem.options.importMusicToSheetName", {
-                                            name: plugin.name,
+                                            name: displayName,
                                         }),
                                     });
                                 },
@@ -167,7 +190,7 @@ function PluginItemBase(props: IPluginItemProps) {
                             plugin.name,
                             text,
                             t("panel.importMusicSheet.fallbackTitle", {
-                                plugin: plugin.name,
+                                plugin: displayName,
                             }),
                         );
                         if (sheet) {
@@ -215,12 +238,12 @@ function PluginItemBase(props: IPluginItemProps) {
                     <ThemeText
                         numberOfLines={1}
                         fontSize="title">
-                        {plugin.name}
+                        {displayName}
                     </ThemeText>
                     {
                         plugin.instance.description?.length ? <IconButton name='question-mark-circle' sizeType='light' onPress={() => {
                             showDialog("MarkdownDialog", {
-                                title: plugin.name,
+                                title: displayName,
                                 markdownContent: plugin.instance.description!,
                             });
                         }} /> : null

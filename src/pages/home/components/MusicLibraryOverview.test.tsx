@@ -26,6 +26,7 @@ jest.mock("@/core/pluginManager", () => ({
     __esModule: true,
     default: { isPluginEnabled: () => true },
     useSortedPlugins: () => [{ hash: "source", name: "Music Source", supportedMethods: new Set(["search", "getTopLists"]) }],
+    usePluginDisplayNameResolver: () => (plugin: any) => plugin?.name ?? "",
 }));
 jest.mock("@/core/router", () => ({
     ROUTE_PATH: { LOCAL: "local", SEARCH_PAGE: "search-page", SETTING: "setting" },

@@ -5,12 +5,16 @@ import { getStorage, removeStorage } from "@/utils/storage";
 
 type IPluginPlatform = string;
 
+/** 插件显示名的存储后缀：key 形如 `${platform}.displayName` */
+const displayNameSuffix = ".displayName";
+
 interface IPluginMetaStorage {
     $version: number;
     order: Record<IPluginPlatform, number>;
     disabledPlugins: Array<IPluginPlatform>;
     [key: `${IPluginPlatform}.alternativePlugin`]: IPluginPlatform | null;
     [key: `${IPluginPlatform}.userVariables`]: Record<string, string>;
+    [key: `${IPluginPlatform}.displayName`]: string;
 
 }
 
@@ -114,6 +118,48 @@ class PluginMeta {
 
     setUserVariables(pluginPlatform: IPluginPlatform, userVariables: Record<string, string>) {
         this.setMetaStorage(`${pluginPlatform}.userVariables`, userVariables);
+    }
+
+    /**
+     * 插件的本地显示名。返回 null 表示用户没有自定义，调用方应回落到平台名。
+     */
+    getDisplayName(pluginPlatform: IPluginPlatform): string | null {
+        return this.getMetaStorage(`${pluginPlatform}${displayNameSuffix}`) ?? null;
+    }
+
+    /** 设置显示名；传空值表示删除自定义、恢复插件本身的平台名 */
+    setDisplayName(pluginPlatform: IPluginPlatform, displayName: string | null) {
+        const key = `${pluginPlatform}${displayNameSuffix}`;
+        if (displayName) {
+            this.setMetaStorage(key, displayName);
+        } else {
+            storage.remove(key);
+        }
+    }
+
+    /** 所有自定义显示名，platform -> 显示名 */
+    getAllDisplayNames(): Record<IPluginPlatform, string> {
+        const result: Record<IPluginPlatform, string> = {};
+        storage.getAllKeys().forEach(key => {
+            if (!key.endsWith(displayNameSuffix)) {
+                return;
+            }
+            const platform = key.slice(0, -displayNameSuffix.length);
+            const displayName = this.getDisplayName(platform);
+            if (displayName) {
+                result[platform] = displayName;
+            }
+        });
+        return result;
+    }
+
+    /** 清空所有自定义显示名（卸载全部插件时避免残留） */
+    clearDisplayNames() {
+        storage.getAllKeys().forEach(key => {
+            if (key.endsWith(displayNameSuffix)) {
+                storage.remove(key);
+            }
+        });
     }
 
     setAlternativePlugin(pluginPlatform: IPluginPlatform, alternativePluginPlatform: IPluginPlatform) {

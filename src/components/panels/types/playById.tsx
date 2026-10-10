@@ -13,7 +13,7 @@ import PanelBase from "../base/panelBase";
 import { hidePanel } from "../usePanel";
 import PanelHeader from "../base/panelHeader";
 import { useI18N } from "@/core/i18n";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import NoPlugin from "@/components/base/noPlugin";
 import Toast from "@/utils/toast";
 import TrackPlayer from "@/core/trackPlayer";
@@ -30,6 +30,7 @@ export default function PlayById() {
 
     // Get all sorted plugins
     const allPlugins = PluginManager.getSortedPlugins();
+    const getDisplayName = usePluginDisplayNameResolver();
 
     const handlePlay = async () => {
         if (!selectedPlugin) {
@@ -181,7 +182,7 @@ export default function PlayById() {
                                                             ? "#fff"
                                                             : colors.text,
                                                     }}>
-                                                    {plugin.name}
+                                                    {getDisplayName(plugin)}
                                                 </ThemeText>
                                             </TouchableOpacity>
                                         );
