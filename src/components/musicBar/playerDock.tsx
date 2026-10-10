@@ -7,7 +7,6 @@ import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon, { IIconName } from "@/components/base/icon";
 import FastImage from "@/components/base/fastImage";
-import RoundActionButton from "@/components/base/roundActionButton";
 import ThemeText from "@/components/base/themeText";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
@@ -24,6 +23,7 @@ import { useMediaExtraProperty } from "@/utils/mediaExtra";
 import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
+import { compactCoverOverhang, compactPlayerHeight } from "./compactLayout";
 
 const TOUCH_SIZE = 48;
 const COVER_SIZE = Math.min(96, Math.max(80, rpx(180)));
@@ -31,7 +31,6 @@ const VINYL_SIZE = COVER_SIZE * 0.8;
 const VINYL_RIM = COVER_SIZE * 0.15;
 const COVER_OVERHANG = Math.min(12, rpx(20));
 const PLAYBACK_SIZE = Math.min(44, rpx(76));
-const COMPACT_HEIGHT = Math.max(64, rpx(128));
 
 interface IPlayerDockProps {
     bottomNavigation: ReactNode;
@@ -46,7 +45,6 @@ function DockAction(props: {
     onPress: () => void;
     selected?: boolean;
     collapse?: boolean;
-    expand?: boolean;
     outlined?: boolean;
 }) {
     const icon = (
@@ -54,7 +52,7 @@ function DockAction(props: {
             name={props.icon}
             color={props.color}
             size={rpx(46)}
-            style={props.collapse ? styles.collapseIcon : props.expand ? styles.expandIcon : undefined}
+            style={props.collapse ? styles.collapseIcon : undefined}
         />
     );
     return (
@@ -147,7 +145,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
 
     useEffect(() => {
         // Expansion floats over the content instead of shrinking its viewport.
-        onDockHeightChange?.(navigationHeight + (musicVisible ? COMPACT_HEIGHT : 0));
+        onDockHeightChange?.(navigationHeight + (musicVisible ? compactPlayerHeight : 0));
     }, [navigationHeight, musicVisible, onDockHeightChange]);
 
     useEffect(() => {
@@ -170,6 +168,18 @@ export default function PlayerDock(props: IPlayerDockProps) {
     };
     const openPlaylist = () => showPanel("PlayList");
     const playbackLabel = isPaused ? t("musicDetail.a11y.play") : t("musicDetail.a11y.pause");
+    const toggleFavorite = () => {
+        if (!musicItem) {
+            return;
+        }
+        if (isFavorite) {
+            MusicSheet.removeMusic(MusicSheet.defaultSheet.id, musicItem);
+        } else {
+            MusicSheet.addMusic(MusicSheet.defaultSheet.id, musicItem);
+        }
+    };
+    const favoriteLabel = isFavorite ? t("musicDetail.a11y.unfavorite") : t("musicDetail.a11y.favorite");
+    const favoriteColor = isFavorite ? colors.danger ?? colors.primary : foreground;
 
     return (
         <View testID="player-dock" pointerEvents="box-none" style={styles.root}>
@@ -240,16 +250,10 @@ export default function PlayerDock(props: IPlayerDockProps) {
                         <View style={styles.transport}>
                             <DockAction
                                 icon={isFavorite ? "heart" : "heart-outline"}
-                                label={isFavorite ? t("musicDetail.a11y.unfavorite") : t("musicDetail.a11y.favorite")}
-                                color={isFavorite ? colors.danger ?? colors.primary : foreground}
+                                label={favoriteLabel}
+                                color={favoriteColor}
                                 selected={isFavorite}
-                                onPress={() => {
-                                    if (isFavorite) {
-                                        MusicSheet.removeMusic(MusicSheet.defaultSheet.id, musicItem);
-                                    } else {
-                                        MusicSheet.addMusic(MusicSheet.defaultSheet.id, musicItem);
-                                    }
-                                }}
+                                onPress={toggleFavorite}
                             />
                             <DockAction
                                 icon="skip-left"
@@ -311,52 +315,14 @@ export default function PlayerDock(props: IPlayerDockProps) {
             ) : null}
             <View
                 testID="player-dock-surface"
+                pointerEvents="box-none"
                 style={[
                     styles.surface,
                     !showExpanded && styles.roundedSurface,
                     { backgroundColor: dockBackground },
                 ]}>
                 {musicVisible && !showExpanded ? (
-                    <View
-                        testID="player-dock-compact"
-                        style={[
-                            styles.compactRow,
-                            { paddingLeft: insets.left, paddingRight: spacing.md + insets.right },
-                        ]}>
-                        <MusicInfo
-                            musicItem={musicItem}
-                            foregroundColor={foreground}
-                            accessibilityLabel={t("musicBar.a11y.nowPlaying", {
-                                title: musicItem?.title ?? "",
-                                artist: musicItem?.artist ?? "",
-                            })}
-                            accessibilityHint={t("musicBar.a11y.openDetail")}
-                        />
-                        <DockAction
-                            icon="chevron-right"
-                            label={t("musicBar.a11y.expand")}
-                            color={foreground}
-                            expand
-                            onPress={() => setExpanded(true)}
-                        />
-                        <View style={styles.action}>
-                            <RoundActionButton
-                                variant="solid"
-                                iconName={isPaused ? "play" : "pause"}
-                                size={rpx(72)}
-                                iconSize={rpx(40)}
-                                hitSlop={Math.max(0, (TOUCH_SIZE - rpx(72)) / 2)}
-                                accessibilityLabel={playbackLabel}
-                                onPress={togglePlayback}
-                            />
-                        </View>
-                        <DockAction
-                            icon="playlist"
-                            label={t("musicBar.a11y.playlist")}
-                            color={foreground}
-                            onPress={openPlaylist}
-                        />
-                    </View>
+                    <View pointerEvents="none" style={styles.compactBase} />
                 ) : null}
                 <View
                     testID="player-dock-navigation"
@@ -369,6 +335,52 @@ export default function PlayerDock(props: IPlayerDockProps) {
                     {bottomNavigation}
                 </View>
             </View>
+            {musicVisible && !showExpanded ? (
+                <View
+                    testID="player-dock-compact"
+                    style={[
+                        styles.compactRow,
+                        {
+                            bottom: navigationHeight,
+                            paddingLeft: insets.left,
+                            paddingRight: spacing.md + insets.right,
+                        },
+                    ]}>
+                    <MusicInfo
+                        musicItem={musicItem}
+                        compact
+                        onExpand={() => setExpanded(true)}
+                        expandAccessibilityLabel={t("musicBar.a11y.expand")}
+                        foregroundColor={foreground}
+                        accessibilityLabel={t("musicBar.a11y.nowPlaying", {
+                            title: musicItem?.title ?? "",
+                            artist: musicItem?.artist ?? "",
+                        })}
+                        accessibilityHint={t("musicBar.a11y.compactHint")}
+                    />
+                    <View style={styles.compactActions}>
+                        <DockAction
+                            icon={isFavorite ? "heart" : "heart-outline"}
+                            label={favoriteLabel}
+                            color={favoriteColor}
+                            selected={isFavorite}
+                            onPress={toggleFavorite}
+                        />
+                        <DockAction
+                            icon={isPaused ? "play" : "pause"}
+                            label={playbackLabel}
+                            color={foreground}
+                            onPress={togglePlayback}
+                        />
+                        <DockAction
+                            icon="playlist"
+                            label={t("musicBar.a11y.playlist")}
+                            color={foreground}
+                            onPress={openPlaylist}
+                        />
+                    </View>
+                </View>
+            ) : null}
         </View>
     );
 }
@@ -392,9 +404,21 @@ const styles = StyleSheet.create({
         borderTopRightRadius: radius.sheet,
     },
     compactRow: {
-        height: COMPACT_HEIGHT,
+        position: "absolute",
+        left: 0,
+        right: 0,
+        height: compactPlayerHeight + compactCoverOverhang,
         flexDirection: "row",
         alignItems: "center",
+    },
+    compactActions: {
+        height: compactPlayerHeight,
+        marginTop: compactCoverOverhang,
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    compactBase: {
+        height: compactPlayerHeight,
     },
     action: {
         minWidth: TOUCH_SIZE,
@@ -465,9 +489,6 @@ const styles = StyleSheet.create({
     },
     collapseIcon: {
         transform: [{ rotate: "90deg" }],
-    },
-    expandIcon: {
-        transform: [{ rotate: "-90deg" }],
     },
     transport: {
         minHeight: TOUCH_SIZE,

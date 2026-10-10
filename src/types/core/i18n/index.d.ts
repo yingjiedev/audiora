@@ -894,6 +894,7 @@ export interface ILanguageData {
     "musicBar.a11y.expand": string;
     "musicBar.a11y.collapse": string;
     "musicBar.a11y.openDetail": string;
+    "musicBar.a11y.compactHint": string;
     "themeSettingsIndex.modeDescription": string;
     "themeSettingsIndex.coverDescription": string;
     "themeSettingsIndex.fontDescription": string;

@@ -824,5 +824,6 @@
     "musicBar.a11y.nowPlaying": "正在播放 {title}，歌手 {artist}",
     "musicBar.a11y.expand": "展开播放器",
     "musicBar.a11y.collapse": "收起播放器",
-    "musicBar.a11y.openDetail": "打开完整播放页"
+    "musicBar.a11y.openDetail": "打开完整播放页",
+    "musicBar.a11y.compactHint": "点击打开完整播放页，上滑或长按展开播放器"
 }

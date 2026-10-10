@@ -25,7 +25,6 @@ jest.mock("@react-navigation/native", () => ({ useTheme: () => ({ dark: mockDark
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/components/base/roundActionButton", () => "RoundActionButton");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
 jest.mock("./musicInfo", () => "MusicInfo");
 jest.mock("@/pages/musicDetail/components/bottom/seekBar", () => "SeekBar");
@@ -78,7 +77,7 @@ function render(collapseKey = "home", onDockHeightChange?: (height: number) => v
 }
 
 function expand(renderer: TestRenderer.ReactTestRenderer) {
-    press(renderer, "musicBar.a11y.expand");
+    act(() => renderer.root.findByType(MusicInfo).props.onExpand());
 }
 
 function press(renderer: TestRenderer.ReactTestRenderer, label: string) {
@@ -109,10 +108,10 @@ describe("PlayerDock", () => {
 
     afterEach(() => jest.restoreAllMocks());
 
-    it("keeps the compact song shortcut and expands from a separate button", () => {
+    it("keeps the compact song shortcut and expands through its dedicated gesture callback", () => {
         const renderer = render();
         expect(renderer.root.findByType(MusicInfo).props.onPress).toBeUndefined();
-        expect(renderer.root.findByType(MusicInfo).props.accessibilityHint).toBe("musicBar.a11y.openDetail");
+        expect(renderer.root.findByType(MusicInfo).props.accessibilityHint).toBe("musicBar.a11y.compactHint");
         expect(renderer.root.findAllByProps({ testID: "player-dock-vinyl" })).toHaveLength(0);
         expand(renderer);
         expect(renderer.root.findAllByProps({ testID: "player-dock-vinyl" }).length).toBeGreaterThan(0);
@@ -129,14 +128,14 @@ describe("PlayerDock", () => {
         const navigation = renderer.root.findAllByProps({ testID: "player-dock-navigation" })
             .find(node => typeof node.props.onLayout === "function")!;
         act(() => navigation.props.onLayout({ nativeEvent: { layout: { height: 72 } } }));
-        expect(onDockHeightChange).toHaveBeenLastCalledWith(136);
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(124);
         onDockHeightChange.mockClear();
         expand(renderer);
         expect(onDockHeightChange).not.toHaveBeenCalled();
         expect(renderer.root.findByProps({ testID: "player-dock" }).props.pointerEvents).toBe("box-none");
         expect(renderer.root.findByProps({ testID: "player-dock-expanded-space" }).props.pointerEvents).toBe("box-none");
         act(() => navigation.props.onLayout({ nativeEvent: { layout: { height: 88 } } }));
-        expect(onDockHeightChange).toHaveBeenLastCalledWith(152);
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(140);
         onDockHeightChange.mockClear();
         act(() => navigation.props.onLayout({ nativeEvent: { layout: { height: Number.NaN } } }));
         expect(onDockHeightChange).not.toHaveBeenCalled();
@@ -153,7 +152,7 @@ describe("PlayerDock", () => {
         act(() => mockKeyboardListeners.keyboardDidShow());
         expect(onDockHeightChange).toHaveBeenLastCalledWith(72);
         act(() => mockKeyboardListeners.keyboardDidHide());
-        expect(onDockHeightChange).toHaveBeenLastCalledWith(136);
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(124);
         mockMusic = null;
         act(() => renderer.update(<PlayerDock collapseKey="home" onDockHeightChange={onDockHeightChange} bottomNavigation={null} />));
         expect(onDockHeightChange).toHaveBeenLastCalledWith(72);
@@ -179,9 +178,16 @@ describe("PlayerDock", () => {
         const renderer = render();
         press(renderer, "musicDetail.a11y.pause");
         expect(TrackPlayer.pause).toHaveBeenCalledTimes(1);
-        expand(renderer);
         press(renderer, "musicDetail.a11y.unfavorite");
         expect(MusicSheet.removeMusic).toHaveBeenCalledWith("favorites", mockSong);
+    });
+
+    it("adds a favorite from the compact row without opening either player view", () => {
+        const renderer = render();
+        press(renderer, "musicDetail.a11y.favorite");
+        expect(MusicSheet.addMusic).toHaveBeenCalledWith("favorites", mockSong);
+        expect(openPlayer).not.toHaveBeenCalled();
+        expect(renderer.root.findAllByType(MusicInfo)).toHaveLength(1);
     });
 
     it("adds a favorite and keeps a full-player entry in the expanded metadata", () => {

@@ -91,20 +91,26 @@ jest.mock("react-native-gesture-handler", () => {
             },
             minPointers: () => chain,
             maxPointers: () => chain,
+            minDuration: () => chain,
             runOnJS: () => chain,
         };
         return chain;
     }
     return {
         GestureDetector: "GestureDetector",
-        Gesture: { Tap: gesture, Pan: gesture, Race: (pan: unknown, tap: unknown) => ({ pan, tap }) },
+        Gesture: {
+            Tap: gesture, Pan: gesture, LongPress: gesture,
+            Race: (pan: unknown, ...rest: unknown[]) => ({
+                pan, tap: rest[rest.length - 1], longPress: rest.length > 1 ? rest[0] : undefined,
+            }),
+        },
     };
 });
 
-function render(onPress?: () => void) {
+function render(onPress?: () => void, onExpand?: () => void) {
     let renderer: TestRenderer.ReactTestRenderer;
     act(() => {
-        renderer = TestRenderer.create(<MusicInfo musicItem={song} onPress={onPress} />);
+        renderer = TestRenderer.create(<MusicInfo musicItem={song} onPress={onPress} onExpand={onExpand} compact={!!onExpand} expandAccessibilityLabel="Expand player" />);
     });
     return renderer!;
 }
@@ -165,5 +171,42 @@ describe("MusicInfo interactions", () => {
         expect(TrackPlayer.skipToPrevious).toHaveBeenCalledTimes(1);
         expect(TrackPlayer.skipToNext).toHaveBeenCalledTimes(1);
         expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it("expands on upward swipe, hold and accessibility while keeping tap as the full-player shortcut", () => {
+        const onExpand = jest.fn();
+        const renderer = render(undefined, onExpand);
+        const gesture = renderer.root.findByType(GestureDetector).props.gesture;
+        act(() => gesture.pan.callbacks.end({ translationX: 2, translationY: -40, velocityX: 0 }, true));
+        act(() => gesture.longPress.callbacks.start());
+        const button = renderer.root.findAllByProps({ accessibilityRole: "button" })
+            .find(node => typeof node.props.onAccessibilityAction === "function")!;
+        expect(button.props.accessibilityActions).toContainEqual({ name: "expand", label: "Expand player" });
+        act(() => button.props.onAccessibilityAction({ nativeEvent: { actionName: "expand" } }));
+        expect(onExpand).toHaveBeenCalledTimes(3);
+        expect(openPlayer).not.toHaveBeenCalled();
+        expect(TrackPlayer.skipToNext).not.toHaveBeenCalled();
+        expect(TrackPlayer.skipToPrevious).not.toHaveBeenCalled();
+        act(() => gesture.tap.callbacks.start());
+        expect(openPlayer).toHaveBeenCalledWith(armPlayerTransition);
+        expect(onExpand).toHaveBeenCalledTimes(3);
+    });
+
+    it("ignores short, downward and cancelled vertical drags and retains horizontal skips in compact mode", () => {
+        const onExpand = jest.fn();
+        const renderer = render(undefined, onExpand);
+        const info = renderer.root.findAll(node => typeof node.props.onLayout === "function")[0];
+        act(() => info.props.onLayout({ nativeEvent: { layout: { width: 100 } } }));
+        const pan = renderer.root.findByType(GestureDetector).props.gesture.pan;
+        act(() => pan.callbacks.end({ translationX: 0, translationY: -20, velocityX: 0 }, true));
+        act(() => pan.callbacks.end({ translationX: 0, translationY: 40, velocityX: 0 }, true));
+        act(() => pan.callbacks.end({ translationX: 40, translationY: 80, velocityX: 1600 }, true));
+        act(() => pan.callbacks.end({ translationX: 0, translationY: -40, velocityX: 0 }, false));
+        act(() => pan.callbacks.end({ translationX: 40, translationY: -10, velocityX: 300 }, true));
+        act(() => pan.callbacks.end({ translationX: -40, translationY: 10, velocityX: -300 }, true));
+        expect(onExpand).not.toHaveBeenCalled();
+        expect(openPlayer).not.toHaveBeenCalled();
+        expect(TrackPlayer.skipToPrevious).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.skipToNext).toHaveBeenCalledTimes(1);
     });
 });

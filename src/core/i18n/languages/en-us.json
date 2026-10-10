@@ -824,5 +824,6 @@
     "musicBar.a11y.nowPlaying": "Now playing {title} by {artist}",
     "musicBar.a11y.expand": "Expand player",
     "musicBar.a11y.collapse": "Collapse player",
-    "musicBar.a11y.openDetail": "Open full player"
+    "musicBar.a11y.openDetail": "Open full player",
+    "musicBar.a11y.compactHint": "Tap to open the full player; swipe up or hold to expand"
 }
