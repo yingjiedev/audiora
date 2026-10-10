@@ -203,15 +203,19 @@ export default function MusicInfo(props: IMusicInfoProps) {
         })();
     }, [artworkRef, origin]);
 
+    const handlePress = () => {
+        if (!musicItem) {
+            return;
+        }
+        if (onPress) {
+            onPress();
+        } else {
+            measureArtwork();
+            openPlayer(armPlayerTransition);
+        }
+    };
     const tapGesture = Gesture.Tap()
-        .onStart(() => {
-            if (onPress) {
-                onPress();
-            } else {
-                measureArtwork();
-                openPlayer(armPlayerTransition);
-            }
-        })
+        .onStart(handlePress)
         .runOnJS(true);
 
     useLayoutEffect(() => {
@@ -271,14 +275,14 @@ export default function MusicInfo(props: IMusicInfoProps) {
         <GestureDetector gesture={gesture}>
             <View
                 style={musicInfoStyles.infoContainer}
-                accessible={!!onPress}
-                accessibilityRole={onPress ? "button" : undefined}
+                accessible={!!musicItem}
+                accessibilityRole={musicItem ? "button" : undefined}
                 accessibilityLabel={accessibilityLabel}
                 accessibilityHint={accessibilityHint}
-                accessibilityActions={onPress ? [{ name: "activate" }] : undefined}
+                accessibilityActions={musicItem ? [{ name: "activate" }] : undefined}
                 onAccessibilityAction={event => {
                     if (event.nativeEvent.actionName === "activate") {
-                        onPress?.();
+                        handlePress();
                     }
                 }}
                 onLayout={e => {

@@ -145,6 +145,14 @@ describe("MusicInfo interactions", () => {
         expect(armPlayerTransition).not.toHaveBeenCalled();
     });
 
+    it("opens the full player through accessibility without a custom handler", () => {
+        const renderer = render();
+        const button = renderer.root.findAllByProps({ accessibilityRole: "button" })
+            .find(node => typeof node.props.onAccessibilityAction === "function")!;
+        act(() => button.props.onAccessibilityAction({ nativeEvent: { actionName: "activate" } }));
+        expect(openPlayer).toHaveBeenCalledWith(armPlayerTransition);
+    });
+
     it("retains horizontal swipes to skip songs without expanding", () => {
         const onPress = jest.fn();
         const renderer = render(onPress);

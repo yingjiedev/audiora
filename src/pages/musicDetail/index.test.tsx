@@ -169,6 +169,12 @@ describe("full player input lifecycle", () => {
         act(() => renderer.unmount());
     });
 
+    it("starts entry even when JS still sees the value before UI preparation", () => {
+        mockProgress.value = 1;
+        render();
+        expect(expandPlayerTransition).toHaveBeenCalledWith({ reduceMotion: false });
+    });
+
     it("restores the player when an active drag is cancelled even beyond the dismiss threshold", () => {
         const { renderer, onClose } = render();
         act(() => {
@@ -324,13 +330,14 @@ describe("full player input lifecycle", () => {
 
     it("keeps an active drag mounted even when held fully collapsed", () => {
         mockProgress.value = 1;
-        const { onClose } = render();
+        const { renderer, onClose } = render();
         act(() => {
             gestureCallback("onStart")?.();
             gestureCallback("onUpdate")?.({ translationY: 2000 });
         });
         flushVisibility();
         expect(mockProgress.value).toBe(0);
+        expect(StyleSheet.flatten(contentView(renderer).props.style).pointerEvents).toBe("auto");
         act(() => jest.advanceTimersByTime(1500));
         expect(onClose).not.toHaveBeenCalled();
         act(() => gestureCallback("onEnd")?.({ translationY: 2000, velocityY: 0 }, false));

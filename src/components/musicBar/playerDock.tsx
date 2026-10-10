@@ -1,5 +1,6 @@
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useCallback, useEffect, useState } from "react";
 import { BackHandler, Image, Keyboard, Pressable, StyleSheet, View } from "react-native";
+import Animated, { measure, runOnUI, useAnimatedRef } from "react-native-reanimated";
 import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon, { IIconName } from "@/components/base/icon";
@@ -12,7 +13,7 @@ import { elevation, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import MusicSheet, { useFavorite } from "@/core/musicSheet";
 import { openPlayer } from "@/core/playerOverlay";
-import { armPlayerTransition } from "@/core/playerTransition";
+import { armPlayerTransition, playerTransition } from "@/core/playerTransition";
 import TrackPlayer, { useCurrentMusic, useMusicState } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import SeekBar from "@/pages/musicDetail/components/bottom/seekBar";
@@ -40,6 +41,7 @@ function DockAction(props: {
     onPress: () => void;
     selected?: boolean;
     collapse?: boolean;
+    expand?: boolean;
 }) {
     return (
         <Pressable
@@ -54,7 +56,7 @@ function DockAction(props: {
                 name={props.icon}
                 color={props.color}
                 size={rpx(46)}
-                style={props.collapse ? styles.collapseIcon : undefined}
+                style={props.collapse ? styles.collapseIcon : props.expand ? styles.expandIcon : undefined}
             />
         </Pressable>
     );
@@ -81,6 +83,26 @@ export default function PlayerDock(props: IPlayerDockProps) {
         ? colors.tabBar ?? colors.surface ?? colors.card
         : colors.musicBar ?? colors.card;
     const foreground = dark ? colors.text : colors.musicBarText ?? colors.text;
+    const artworkRef = useAnimatedRef<Animated.View>();
+    const { origin } = playerTransition();
+    const measureArtwork = useCallback(() => {
+        runOnUI(() => {
+            const frame = measure(artworkRef);
+            if (frame && frame.width > 0 && frame.height > 0) {
+                origin.value = {
+                    x: frame.pageX,
+                    y: frame.pageY,
+                    width: frame.width,
+                    height: frame.height,
+                };
+            }
+        })();
+    }, [artworkRef, origin]);
+    const openExpandedPlayer = () => {
+        measureArtwork();
+        // Keep the source card mounted for the return morph as well.
+        openPlayer(armPlayerTransition);
+    };
 
     useEffect(() => {
         const show = Keyboard.addListener("keyboardDidShow", () => {
@@ -141,32 +163,12 @@ export default function PlayerDock(props: IPlayerDockProps) {
                                 shadowColor: colors.shadow ?? colors.text,
                             },
                         ]}>
-                        {/* Only the sleeve has rounded corners; the record stays behind and can overflow. */}
-                        <View pointerEvents="none" style={styles.artworkAssembly}>
-                            <Image
-                                testID="player-dock-vinyl"
-                                source={ImgAsset.playerVinyl}
-                                resizeMode="contain"
-                                style={styles.vinyl}
-                            />
-                            <View style={[styles.coverShadow, { shadowColor: colors.shadow ?? colors.text }]}>
-                                <FastImage
-                                    key={artwork ?? "default"}
-                                    source={artwork}
-                                    placeholderSource={ImgAsset.albumDefault}
-                                    style={styles.cover}
-                                />
-                            </View>
-                        </View>
                         <View style={styles.header}>
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel={t("musicBar.a11y.openDetail")}
                                 style={styles.songInfo}
-                                onPress={() => {
-                                    setExpanded(false);
-                                    openPlayer(armPlayerTransition);
-                                }}>
+                                onPress={openExpandedPlayer}>
                                 <ThemeText numberOfLines={2} fontSize="content" fontWeight="semibold">
                                     {musicItem.title ?? t("common.unknownName")}
                                 </ThemeText>
@@ -231,6 +233,35 @@ export default function PlayerDock(props: IPlayerDockProps) {
                         </View>
                         <SeekBar variant="surface" />
                     </View>
+                    {/* The parent includes the overhang so Android can hit the entire cover. */}
+                    <Pressable
+                        testID="player-dock-artwork"
+                        accessibilityRole="button"
+                        accessibilityLabel={t("musicBar.a11y.openDetail")}
+                        onPress={openExpandedPlayer}
+                        style={[
+                            styles.artworkAssembly,
+                            { left: spacing.lg + insets.left + spacing.md },
+                        ]}>
+                        <Image
+                            testID="player-dock-vinyl"
+                            source={ImgAsset.playerVinyl}
+                            resizeMode="contain"
+                            style={styles.vinyl}
+                        />
+                        <Animated.View
+                            ref={artworkRef}
+                            onLayout={measureArtwork}
+                            collapsable={false}
+                            style={[styles.coverShadow, { shadowColor: colors.shadow ?? colors.text }]}>
+                            <FastImage
+                                key={artwork ?? "default"}
+                                source={artwork}
+                                placeholderSource={ImgAsset.albumDefault}
+                                style={styles.cover}
+                            />
+                        </Animated.View>
+                    </Pressable>
                 </View>
             ) : null}
             <View
@@ -250,12 +281,18 @@ export default function PlayerDock(props: IPlayerDockProps) {
                         <MusicInfo
                             musicItem={musicItem}
                             foregroundColor={foreground}
-                            onPress={() => setExpanded(true)}
                             accessibilityLabel={t("musicBar.a11y.nowPlaying", {
                                 title: musicItem?.title ?? "",
                                 artist: musicItem?.artist ?? "",
                             })}
-                            accessibilityHint={t("musicBar.a11y.expand")}
+                            accessibilityHint={t("musicBar.a11y.openDetail")}
+                        />
+                        <DockAction
+                            icon="chevron-right"
+                            label={t("musicBar.a11y.expand")}
+                            color={foreground}
+                            expand
+                            onPress={() => setExpanded(true)}
                         />
                         <View style={styles.action}>
                             <RoundActionButton
@@ -316,8 +353,7 @@ const styles = StyleSheet.create({
     },
     artworkAssembly: {
         position: "absolute",
-        top: -COVER_OVERHANG,
-        left: spacing.md,
+        top: 0,
         width: COVER_SIZE + VINYL_RIM,
         height: COVER_SIZE,
     },
@@ -357,6 +393,9 @@ const styles = StyleSheet.create({
     },
     collapseIcon: {
         transform: [{ rotate: "90deg" }],
+    },
+    expandIcon: {
+        transform: [{ rotate: "-90deg" }],
     },
     transport: {
         minHeight: 56,

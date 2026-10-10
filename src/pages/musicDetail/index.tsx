@@ -92,9 +92,9 @@ export default function MusicDetail(props: IMusicDetailProps) {
     // Enter: the mini player armed progress to 0 before navigating, so the
     // first frame already sits on the mini artwork and springs to full screen.
     useEffect(() => {
-        if (progress.value < 1) {
-            expandPlayerTransition({ reduceMotion: motion.reduceMotion });
-        }
+        // JS can still read 1 while the queued UI preparation will set 0.
+        // Always queue the spring after preparation; read/write on UI only.
+        expandPlayerTransition({ reduceMotion: motion.reduceMotion });
         return () => {
             cancelAnimation(progress);
             resetPlayerTransition();
@@ -245,7 +245,8 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const contentStyle = useAnimatedStyle(() => ({
         // Alpha alone does not remove native views from hit testing. Keep the
         // input gate on the UI thread so it changes with the same opacity frame.
-        pointerEvents: progress.value > PLAYER_INPUT_THRESHOLD && !isClosing.value
+        pointerEvents: !isClosing.value &&
+            (isDragging.value || progress.value > PLAYER_INPUT_THRESHOLD)
             ? "auto" as const : "none" as const,
         // Chrome (title, controls, lyrics) settles in behind the artwork.
         opacity: interpolate(

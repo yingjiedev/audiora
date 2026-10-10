@@ -2,6 +2,7 @@ import {
     cancelAnimation,
     makeMutable,
     runOnJS,
+    runOnUI,
     SharedValue,
 } from "react-native-reanimated";
 import { MotionRect } from "@/utils/motionMath";
@@ -55,16 +56,20 @@ export function setPlayerTransitionProgress(value: number) {
  */
 export function armPlayerTransition() {
     const { progress, origin } = getState();
-    cancelAnimation(progress);
-    progress.value = origin.value === null ? 1 : 0;
+    runOnUI(() => {
+        cancelAnimation(progress);
+        progress.value = origin.value === null ? 1 : 0;
+    })();
 }
 
 /** Forget the shared frame once the full player is gone. */
 export function resetPlayerTransition() {
     const { progress, origin } = getState();
-    cancelAnimation(progress);
-    progress.value = 1;
-    origin.value = null;
+    runOnUI(() => {
+        cancelAnimation(progress);
+        progress.value = 1;
+        origin.value = null;
+    })();
 }
 
 export interface PlayerTransitionMotionOptions {
@@ -77,8 +82,10 @@ export function expandPlayerTransition(
     options: PlayerTransitionMotionOptions = {},
 ) {
     const { progress } = getState();
-    cancelAnimation(progress);
-    progress.value = withMotionSpring(1, options);
+    runOnUI(() => {
+        cancelAnimation(progress);
+        progress.value = withMotionSpring(1, options);
+    })();
 }
 
 /**
@@ -90,13 +97,15 @@ export function collapsePlayerTransition(
     options: PlayerTransitionMotionOptions = {},
 ) {
     const { progress } = getState();
-    cancelAnimation(progress);
-    progress.value = withMotionSpring(0, options, finished => {
-        "worklet";
-        if (finished) {
-            runOnJS(onFinished)();
-        }
-    });
+    runOnUI(() => {
+        cancelAnimation(progress);
+        progress.value = withMotionSpring(0, options, finished => {
+            "worklet";
+            if (finished) {
+                runOnJS(onFinished)();
+            }
+        });
+    })();
 }
 
 /** Abort a running collapse (gesture cancelled) and settle back to full. */
@@ -104,6 +113,8 @@ export function cancelPlayerTransitionCollapse(
     options: PlayerTransitionMotionOptions = {},
 ) {
     const { progress } = getState();
-    cancelAnimation(progress);
-    progress.value = withMotionSpring(1, options);
+    runOnUI(() => {
+        cancelAnimation(progress);
+        progress.value = withMotionSpring(1, options);
+    })();
 }
