@@ -24,6 +24,7 @@ import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
 import { compactCoverOverhang, compactPlayerHeight } from "./compactLayout";
+import useAutoExpand from "./useAutoExpand";
 
 const TOUCH_SIZE = 48;
 const COVER_SIZE = Math.min(96, Math.max(80, rpx(180)));
@@ -84,6 +85,8 @@ export default function PlayerDock(props: IPlayerDockProps) {
     const insets = useSafeAreaInsets();
     const { t } = useI18N();
     const [expanded, setExpanded] = useState(false);
+    const expand = useCallback(() => setExpanded(true), []);
+    useAutoExpand(expand);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
     const [navigationHeight, setNavigationHeight] = useState(() =>
         Math.max(rpx(112), rpx(100) + Math.max(insets.bottom, spacing.xs)),
@@ -349,7 +352,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
                     <MusicInfo
                         musicItem={musicItem}
                         compact
-                        onExpand={() => setExpanded(true)}
+                        onExpand={expand}
                         expandAccessibilityLabel={t("musicBar.a11y.expand")}
                         foregroundColor={foreground}
                         accessibilityLabel={t("musicBar.a11y.nowPlaying", {

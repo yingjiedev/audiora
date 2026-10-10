@@ -9,6 +9,7 @@ import { showPanel } from "@/components/panels/usePanel";
 import SeekBar from "@/pages/musicDetail/components/bottom/seekBar";
 import MusicInfo from "./musicInfo";
 import PlayerDock from "./playerDock";
+import useAutoExpand from "./useAutoExpand";
 
 const mockSong = { id: "song", platform: "test", title: "A long song title", artist: "Artist", artwork: "cover.jpg" };
 let mockMusic: typeof mockSong | null = mockSong;
@@ -27,6 +28,7 @@ jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
 jest.mock("./musicInfo", () => "MusicInfo");
+jest.mock("./useAutoExpand", () => ({ __esModule: true, default: jest.fn() }));
 jest.mock("@/pages/musicDetail/components/bottom/seekBar", () => "SeekBar");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, playerVinyl: 2 } }));
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
@@ -120,6 +122,17 @@ describe("PlayerDock", () => {
         expect(renderer.root.findAllByType(MusicInfo)).toHaveLength(1);
         expect(openPlayer).not.toHaveBeenCalled();
         expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("shows the floating card when a new song first plays and lets the user collapse it", () => {
+        const renderer = render();
+        const onFirstPlayback = (useAutoExpand as jest.Mock).mock.calls[0][0];
+        act(() => onFirstPlayback());
+        expect(renderer.root.findAllByType(MusicInfo)).toHaveLength(0);
+        expect(renderer.root.findAllByProps({ testID: "player-dock-expanded" }).length).toBeGreaterThan(0);
+        press(renderer, "musicBar.a11y.collapse");
+        expect(renderer.root.findAllByType(MusicInfo)).toHaveLength(1);
+        expect(openPlayer).not.toHaveBeenCalled();
     });
 
     it("keeps the content viewport stable when opening and closing the floating card", () => {
