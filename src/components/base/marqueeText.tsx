@@ -130,7 +130,9 @@ const styles = StyleSheet.create({
     viewport: {
         flexGrow: 0,
         flexShrink: 1,
-        overflow: "hidden",
+        // Yoga only measures horizontal content without a width limit when
+        // overflow is scroll. The native ScrollView still clips its contents.
+        overflow: "scroll",
     },
     track: {
         flexDirection: "row",
