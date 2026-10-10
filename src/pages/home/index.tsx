@@ -17,6 +17,7 @@ import { openPlayer } from "@/core/playerOverlay";
 
 function Home() {
     const [activeTab, setActiveTab] = useState<"home" | "library" | "mine">("home");
+    const [dockHeight, setDockHeight] = useState(0);
     
     useEffect(() => {
         // 检查是否需要在启动后打开播放详情页
@@ -31,7 +32,7 @@ function Home() {
     return (
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
-            <HorizontalSafeAreaView style={globalStyle.flex1}>
+            <HorizontalSafeAreaView style={[globalStyle.flex1, { marginBottom: dockHeight }]}>
                 {activeTab === "mine" ? (
                     <MyMusicOverview />
                 ) : activeTab === "library" ? (
@@ -45,6 +46,7 @@ function Home() {
             </HorizontalSafeAreaView>
             <PlayerDock
                 collapseKey={activeTab}
+                onDockHeightChange={setDockHeight}
                 bottomNavigation={(
                     <HomeBottomNavigation
                         integrated

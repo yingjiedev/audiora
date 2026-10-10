@@ -69,10 +69,10 @@ jest.mock("@/utils/artwork", () => ({ resolveArtwork: (item: typeof mockSong | n
 jest.mock("@/utils/mediaExtra", () => ({ useMediaExtraProperty: jest.fn() }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 12, left: 0, right: 0 }) }));
 
-function render(collapseKey = "home") {
+function render(collapseKey = "home", onDockHeightChange?: (height: number) => void) {
     let renderer: TestRenderer.ReactTestRenderer;
     act(() => {
-        renderer = TestRenderer.create(<PlayerDock collapseKey={collapseKey} bottomNavigation={<React.Fragment>Navigation</React.Fragment>} />);
+        renderer = TestRenderer.create(<PlayerDock collapseKey={collapseKey} onDockHeightChange={onDockHeightChange} bottomNavigation={<React.Fragment>Navigation</React.Fragment>} />);
     });
     return renderer!;
 }
@@ -121,6 +121,42 @@ describe("PlayerDock", () => {
         expect(renderer.root.findAllByType(MusicInfo)).toHaveLength(1);
         expect(openPlayer).not.toHaveBeenCalled();
         expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("keeps the content viewport stable when opening and closing the floating card", () => {
+        const onDockHeightChange = jest.fn();
+        const renderer = render("home", onDockHeightChange);
+        const navigation = renderer.root.findAllByProps({ testID: "player-dock-navigation" })
+            .find(node => typeof node.props.onLayout === "function")!;
+        act(() => navigation.props.onLayout({ nativeEvent: { layout: { height: 72 } } }));
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(136);
+        onDockHeightChange.mockClear();
+        expand(renderer);
+        expect(onDockHeightChange).not.toHaveBeenCalled();
+        expect(renderer.root.findByProps({ testID: "player-dock" }).props.pointerEvents).toBe("box-none");
+        expect(renderer.root.findByProps({ testID: "player-dock-expanded-space" }).props.pointerEvents).toBe("box-none");
+        act(() => navigation.props.onLayout({ nativeEvent: { layout: { height: 88 } } }));
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(152);
+        onDockHeightChange.mockClear();
+        act(() => navigation.props.onLayout({ nativeEvent: { layout: { height: Number.NaN } } }));
+        expect(onDockHeightChange).not.toHaveBeenCalled();
+        press(renderer, "musicBar.a11y.collapse");
+        expect(onDockHeightChange).not.toHaveBeenCalled();
+    });
+
+    it("releases only the compact-player inset while typing or after clearing the track", () => {
+        const onDockHeightChange = jest.fn();
+        const renderer = render("home", onDockHeightChange);
+        const navigation = renderer.root.findAllByProps({ testID: "player-dock-navigation" })
+            .find(node => typeof node.props.onLayout === "function")!;
+        act(() => navigation.props.onLayout({ nativeEvent: { layout: { height: 72 } } }));
+        act(() => mockKeyboardListeners.keyboardDidShow());
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(72);
+        act(() => mockKeyboardListeners.keyboardDidHide());
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(136);
+        mockMusic = null;
+        act(() => renderer.update(<PlayerDock collapseKey="home" onDockHeightChange={onDockHeightChange} bottomNavigation={null} />));
+        expect(onDockHeightChange).toHaveBeenLastCalledWith(72);
     });
 
     it("keeps playback, queue and transport actions connected to the existing player", () => {

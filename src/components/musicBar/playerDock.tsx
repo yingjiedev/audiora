@@ -31,10 +31,12 @@ const VINYL_SIZE = COVER_SIZE * 0.8;
 const VINYL_RIM = COVER_SIZE * 0.15;
 const COVER_OVERHANG = Math.min(12, rpx(20));
 const PLAYBACK_SIZE = Math.min(44, rpx(76));
+const COMPACT_HEIGHT = Math.max(64, rpx(128));
 
 interface IPlayerDockProps {
     bottomNavigation: ReactNode;
     collapseKey: string;
+    onDockHeightChange?: (height: number) => void;
 }
 
 function DockAction(props: {
@@ -75,7 +77,7 @@ function DockAction(props: {
 
 /** The compact player and tabs share one surface; the expanded card grows above it. */
 export default function PlayerDock(props: IPlayerDockProps) {
-    const { bottomNavigation, collapseKey } = props;
+    const { bottomNavigation, collapseKey, onDockHeightChange } = props;
     const musicItem = useCurrentMusic();
     const musicState = useMusicState();
     const isFavorite = useFavorite(musicItem);
@@ -85,6 +87,9 @@ export default function PlayerDock(props: IPlayerDockProps) {
     const { t } = useI18N();
     const [expanded, setExpanded] = useState(false);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [navigationHeight, setNavigationHeight] = useState(() =>
+        Math.max(rpx(112), rpx(100) + Math.max(insets.bottom, spacing.xs)),
+    );
     useMediaExtraProperty(musicItem, "associatedArtwork");
     const artwork = resolveArtwork(musicItem);
     const musicVisible = !!musicItem && !keyboardVisible;
@@ -141,6 +146,11 @@ export default function PlayerDock(props: IPlayerDockProps) {
     }, [musicItem]);
 
     useEffect(() => {
+        // Expansion floats over the content instead of shrinking its viewport.
+        onDockHeightChange?.(navigationHeight + (musicVisible ? COMPACT_HEIGHT : 0));
+    }, [navigationHeight, musicVisible, onDockHeightChange]);
+
+    useEffect(() => {
         if (!showExpanded) {
             return;
         }
@@ -162,13 +172,12 @@ export default function PlayerDock(props: IPlayerDockProps) {
     const playbackLabel = isPaused ? t("musicDetail.a11y.play") : t("musicDetail.a11y.pause");
 
     return (
-        <View testID="player-dock" style={styles.root}>
+        <View testID="player-dock" pointerEvents="box-none" style={styles.root}>
             {showExpanded && musicItem ? (
-                <View style={styles.expandedSpace}>
-                    <View
-                        pointerEvents="none"
-                        style={[styles.expandedBase, { backgroundColor: dockBackground }]}
-                    />
+                <View
+                    testID="player-dock-expanded-space"
+                    pointerEvents="box-none"
+                    style={[styles.expandedSpace, { bottom: navigationHeight }]}>
                     <View
                         testID="player-dock-expanded"
                         style={[
@@ -349,7 +358,16 @@ export default function PlayerDock(props: IPlayerDockProps) {
                         />
                     </View>
                 ) : null}
-                {bottomNavigation}
+                <View
+                    testID="player-dock-navigation"
+                    onLayout={event => {
+                        const height = event.nativeEvent.layout.height;
+                        if (Number.isFinite(height) && height >= 0) {
+                            setNavigationHeight(height);
+                        }
+                    }}>
+                    {bottomNavigation}
+                </View>
             </View>
         </View>
     );
@@ -357,9 +375,16 @@ export default function PlayerDock(props: IPlayerDockProps) {
 
 const styles = StyleSheet.create({
     root: {
-        width: "100%",
+        // The overhanging cover must remain inside every Android touch parent.
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     surface: {
+        position: "absolute",
+        bottom: 0,
         width: "100%",
     },
     roundedSurface: {
@@ -367,7 +392,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: radius.sheet,
     },
     compactRow: {
-        height: Math.max(64, rpx(128)),
+        height: COMPACT_HEIGHT,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -378,17 +403,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     expandedSpace: {
-        paddingTop: COVER_OVERHANG,
-        paddingBottom: spacing.sm,
-    },
-    expandedBase: {
         position: "absolute",
         left: 0,
         right: 0,
-        bottom: 0,
-        height: TOUCH_SIZE + spacing.xxl,
-        borderTopLeftRadius: radius.sheet,
-        borderTopRightRadius: radius.sheet,
+        paddingTop: COVER_OVERHANG,
+        paddingBottom: spacing.sm,
     },
     expandedCard: {
         borderRadius: radius.md,
