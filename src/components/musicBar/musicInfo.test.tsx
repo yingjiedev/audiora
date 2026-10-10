@@ -5,6 +5,7 @@ import TrackPlayer from "@/core/trackPlayer";
 import { armPlayerTransition } from "@/core/playerTransition";
 import { openPlayer } from "@/core/playerOverlay";
 import MusicInfo from "./musicInfo";
+import MarqueeText from "@/components/base/marqueeText";
 
 let mockUIRuntime = false;
 let mockMeasuredFrame: { pageX: number; pageY: number; width: number; height: number } | null = null;
@@ -21,6 +22,7 @@ const song: IMusic.IMusicItem = {
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/themeText", () => "ThemeText");
+jest.mock("@/components/base/marqueeText", () => "MarqueeText");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1 } }));
 jest.mock("@/hooks/useMotion", () => () => ({
     duration: () => 160,
@@ -137,6 +139,13 @@ describe("MusicInfo interactions", () => {
         expect(openPlayer).toHaveBeenCalledTimes(1);
         expect(openPlayer).toHaveBeenCalledWith(armPlayerTransition);
         expect(armPlayerTransition).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows the title and artist together in the active compact marquee", () => {
+        const renderer = render(undefined, jest.fn());
+        const marquee = renderer.root.findByType(MarqueeText);
+        expect(marquee.props.text).toBe("Song · Artist");
+        expect(marquee.props.active).toBe(true);
     });
 
     it("expands the new dock by tapping or activating with a screen reader", () => {

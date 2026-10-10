@@ -5,6 +5,7 @@ import FastImage from "../base/fastImage";
 import { ImgAsset } from "@/constants/assetsConst";
 import Color from "color";
 import ThemeText from "../base/themeText";
+import MarqueeText from "@/components/base/marqueeText";
 import useColors from "@/hooks/useColors";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import TrackPlayer from "@/core/trackPlayer";
@@ -80,14 +81,22 @@ function BarMusicItemView(props: IBarMusicItemProps) {
                 />
             </Animated.View>
             <View accessible={false} style={[styles.textWrapper, compact && styles.compactText]}>
-                <ThemeText
-                    fontSize={compact ? "content" : "subTitle"}
-                    fontWeight={compact ? "regular" : "semibold"}
-                    fontColor="musicBarText"
-                    color={foregroundColor}
-                    numberOfLines={1}>
-                    {musicItem?.title}
-                </ThemeText>
+                {compact ? (
+                    <MarqueeText
+                        text={[musicItem.title, musicItem.artist].filter(Boolean).join(" · ")}
+                        color={foregroundColor}
+                        active={activeIndex === 0}
+                    />
+                ) : (
+                    <ThemeText
+                        fontSize="subTitle"
+                        fontWeight="semibold"
+                        fontColor="musicBarText"
+                        color={foregroundColor}
+                        numberOfLines={1}>
+                        {musicItem?.title}
+                    </ThemeText>
+                )}
                 {!compact && musicItem?.artist && (
                     <ThemeText
                         fontSize="description"
