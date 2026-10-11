@@ -7,8 +7,8 @@ import { FlashList } from "@shopify/flash-list";
 import { RequestStateCode } from "@/constants/commonConst";
 
 jest.mock("@shopify/flash-list", () => {
-    const React = require("react");
-    return { FlashList: jest.fn(props => React.createElement("FlashList", props, props.data.map((item: IMusic.IMusicItem, index: number) => React.createElement(React.Fragment, { key: item.id }, props.renderItem({ item, index }))))) };
+    const ReactMock = require("react");
+    return { FlashList: jest.fn(props => ReactMock.createElement("FlashList", props, props.data.map((item: IMusic.IMusicItem, index: number) => ReactMock.createElement(ReactMock.Fragment, { key: item.id }, props.renderItem({ item, index }))))) };
 });
 jest.mock("@/components/mediaItem/musicItem", () => "MusicItem");
 jest.mock("@/components/base/listEmpty", () => "ListEmpty");

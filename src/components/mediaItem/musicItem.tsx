@@ -32,7 +32,7 @@ interface IMusicItemProps {
     onItemPress?: (musicItem: IMusic.IMusicItem) => void;
     onItemLongPress?: () => void;
     itemPaddingRight?: number;
-    left?: () => React.ReactElement;
+    left?: React.ReactNode;
     containerStyle?: StyleProp<ViewStyle>;
     highlight?: boolean;
     highlightText?: string;
@@ -94,7 +94,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
 export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
-        musicSheet, itemPaddingRight, left: Left, containerStyle,
+        musicSheet, itemPaddingRight, left, containerStyle,
         highlight, highlightText, actions = ["addNext", "more"], showCover = false,
     } = props;
     const colors = useColors();
@@ -107,7 +107,7 @@ export default function MusicItem(props: IMusicItemProps) {
     const titleParts = useMemo(() => splitTitleHighlight(musicItem.title, highlightText), [musicItem.title, highlightText]);
     const hasMv = useMemo(() => canPlayMusicVideo(musicItem), [musicItem]);
     const album = typeof musicItem.album === "string" ? musicItem.album.trim() : "";
-    const showAlbum = album && album !== musicItem.title?.trim();
+    const showAlbum = album && album !== String(musicItem.title ?? "").trim();
 
     return (
         <View style={[styles.row, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
@@ -118,7 +118,7 @@ export default function MusicItem(props: IMusicItemProps) {
                 onLongPress={onItemLongPress}
                 onPress={() => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem)}
                 style={({ pressed }) => [styles.main, pressed && { backgroundColor: colors.listActive }]}>
-                {Left ? <Left /> : null}
+                {left}
                 {index !== undefined ? (
                     <ThemeText fontColor={active ? "primary" : "textSecondary"} style={styles.index}>
                         {index}

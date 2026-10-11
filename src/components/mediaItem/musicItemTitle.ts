@@ -1,6 +1,6 @@
 /** Literal, case-insensitive search highlighting without interpreting regex syntax. */
 export function splitTitleHighlight(title: string, keyword?: string) {
-    const text = title ?? "";
+    const text = String(title ?? "");
     const query = keyword?.trim();
     if (!query) return [{ text, highlight: false }];
     const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");

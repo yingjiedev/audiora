@@ -72,7 +72,7 @@ describe("shared song row interactions", () => {
     });
     it("allows editing mode to select the row without playback actions", () => {
         const select = jest.fn();
-        render({ left: () => <View testID="selection" />, actions: [], onItemPress: select });
+        render({ left: <View testID="selection" />, actions: [], onItemPress: select });
         expect(renderer.root.findAll(node => node.props.accessibilityLabel === "musicDetail.a11y.more")).toHaveLength(0);
         expect(renderer.root.findByProps({ testID: "selection" })).toBeDefined();
         act(() => button("Song - Artist").props.onPress());

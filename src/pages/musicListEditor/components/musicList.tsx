@@ -34,11 +34,11 @@ function MusicEditorItemView(props: IMusicEditorItemProps) {
     return (
         <MusicItem
             musicItem={editorMusicItem.musicItem}
-            left={() => (
+            left={
                 <View style={style.checkBox}>
                     <CheckBox checked={editorMusicItem.checked} />
                 </View>
-            )}
+            }
             actions={[]}
             itemPaddingRight={rpx(100)}
             onItemPress={onPress}
