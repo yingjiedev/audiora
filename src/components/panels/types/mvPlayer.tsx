@@ -1,3 +1,5 @@
+import useColors from "@/hooks/useColors";
+import Color from "color";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -112,6 +114,8 @@ export default function MvPlayer({
     onClosed,
 }: IMvPlayerProps) {
     const { t } = useI18N();
+    const colors = useColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [source, setSource] = useState<IVideoSource | null>(null);
     const [quality, setQuality] = useState("");
     const [qualityOptions, setQualityOptions] = useState<VideoQualityOption[]>([]);
@@ -384,9 +388,9 @@ export default function MvPlayer({
                                     minimumValue={0}
                                     maximumValue={Math.max(duration, 0.01)}
                                     value={Math.min(position, duration || 0)}
-                                    minimumTrackTintColor="#fff"
-                                    maximumTrackTintColor="rgba(255,255,255,0.38)"
-                                    thumbTintColor="#fff"
+                                    minimumTrackTintColor={colors.onMedia}
+                                    maximumTrackTintColor={colors.onMediaTrack}
+                                    thumbTintColor={colors.onMedia}
                                     onSlidingStart={showControls}
                                     onSlidingComplete={value => {
                                         videoRef.current?.seek(value);
@@ -406,7 +410,7 @@ export default function MvPlayer({
                                             style={styles.controlButton}>
                                             <Icon
                                                 name={paused ? "play" : "pause"}
-                                                color="#fff"
+                                                color={colors.onMedia}
                                                 size={rpx(38)}
                                             />
                                         </Pressable>
@@ -482,7 +486,7 @@ export default function MvPlayer({
 
                 {loading ? (
                     <View pointerEvents="none" style={styles.loading}>
-                        <ActivityIndicator color="#fff" size="large" />
+                        <ActivityIndicator color={colors.onMedia} size="large" />
                     </View>
                 ) : null}
                 {error ? (
@@ -512,15 +516,15 @@ function formatTime(value: number) {
     return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
     container: {
-        backgroundColor: "#000",
+        backgroundColor: colors.onMediaScrim,
     },
     stage: {
         flex: 1,
         width: "100%",
         height: "100%",
-        backgroundColor: "#000",
+        backgroundColor: colors.onMediaScrim,
         overflow: "hidden",
     },
     video: {
@@ -562,12 +566,12 @@ const styles = StyleSheet.create({
         marginRight: rpx(20),
     },
     title: {
-        color: "#fff",
+        color: colors.onMedia,
         fontSize: rpx(30),
         fontWeight: "700",
     },
     artist: {
-        color: "rgba(255,255,255,0.72)",
+        color: colors.onMediaSecondary,
         fontSize: rpx(22),
         marginTop: rpx(6),
     },
@@ -578,7 +582,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     closeText: {
-        color: "#fff",
+        color: colors.onMedia,
         fontSize: rpx(54),
         lineHeight: rpx(58),
         fontWeight: "300",
@@ -619,12 +623,12 @@ const styles = StyleSheet.create({
         marginRight: rpx(12),
     },
     seekText: {
-        color: "rgba(255,255,255,0.92)",
+        color: colors.onMedia,
         fontSize: rpx(17),
         fontWeight: "600",
     },
     timeText: {
-        color: "rgba(255,255,255,0.86)",
+        color: colors.onMediaSecondary,
         fontSize: rpx(19),
         marginLeft: rpx(8),
     },
@@ -633,13 +637,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: rpx(18),
         paddingVertical: rpx(11),
         borderRadius: rpx(20),
-        backgroundColor: "rgba(255,255,255,0.22)",
+        backgroundColor: colors.onMediaSurface,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: "rgba(255,255,255,0.32)",
+        borderColor: colors.onMediaTrack,
         alignItems: "center",
     },
     qualityText: {
-        color: "#fff",
+        color: colors.onMedia,
         fontSize: rpx(22),
     },
     qualityMenu: {
@@ -648,7 +652,7 @@ const styles = StyleSheet.create({
         bottom: rpx(64),
         maxHeight: rpx(300),
         minWidth: rpx(160),
-        backgroundColor: "rgba(20,20,20,0.96)",
+        backgroundColor: colors.mediaSurface,
         borderRadius: rpx(8),
     },
     qualityItem: {
@@ -656,14 +660,14 @@ const styles = StyleSheet.create({
         paddingVertical: rpx(18),
     },
     qualityItemActive: {
-        backgroundColor: "rgba(255,255,255,0.16)",
+        backgroundColor: colors.onMediaSurface,
     },
     qualityItemText: {
-        color: "#fff",
+        color: colors.onMedia,
         fontSize: rpx(22),
     },
     qualityDetailsText: {
-        color: "rgba(255,255,255,0.58)",
+        color: colors.onMediaSecondary,
         fontSize: rpx(18),
         marginTop: rpx(5),
     },
@@ -684,10 +688,10 @@ const styles = StyleSheet.create({
         bottom: 0,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(0,0,0,0.72)",
+        backgroundColor: Color(colors.onMediaScrim).alpha(0.72).toString(),
     },
     errorText: {
-        color: "#fff",
+        color: colors.onMedia,
         fontSize: rpx(26),
         marginBottom: rpx(20),
     },
@@ -695,10 +699,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: rpx(28),
         paddingVertical: rpx(14),
         borderRadius: rpx(8),
-        backgroundColor: "rgba(255,255,255,0.2)",
+        backgroundColor: colors.onMediaSurface,
     },
     retryText: {
-        color: "#fff",
+        color: colors.onMedia,
         fontSize: rpx(22),
     },
 });

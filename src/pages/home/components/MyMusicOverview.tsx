@@ -188,7 +188,7 @@ export default function MyMusicOverview() {
                                 <Icon
                                     name={entry.icon}
                                     size={rpx(32)}
-                                    color={colors.primary}
+                                    color={colors.primaryText}
                                 />
                             </View>
                             <View style={styles.quickText}>
@@ -233,7 +233,7 @@ export default function MyMusicOverview() {
                                     styles.managementIcon,
                                     { backgroundColor: iconTint },
                                 ]}>
-                                <Icon name={entry.icon} size={rpx(30)} color={colors.primary} />
+                                <Icon name={entry.icon} size={rpx(30)} color={colors.primaryText} />
                             </View>
                             <View style={styles.managementText}>
                                 <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>
@@ -292,7 +292,7 @@ export default function MyMusicOverview() {
                             <ThemeText
                                 fontSize="caption"
                                 fontWeight="semibold"
-                                color={colors.primary}>
+                                color={colors.primaryText}>
                                 {t("home.viewAll")}
                             </ThemeText>
                         </Pressable>

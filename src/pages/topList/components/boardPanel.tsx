@@ -131,7 +131,7 @@ function BoardPanel(props: IBoardPanelProps) {
                                 <ThemeText
                                     fontSize="tag"
                                     fontWeight="bold"
-                                    color={colors.primary}>
+                                    color={colors.primaryText}>
                                     {section.cards.length}
                                 </ThemeText>
                             </View>

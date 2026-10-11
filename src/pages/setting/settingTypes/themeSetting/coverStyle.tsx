@@ -81,8 +81,8 @@ export default function CoverStyle() {
         coverStyle === "circle"
             ? "circle"
             : musicDetailCoverStyle === "immersive"
-              ? "squareImmersive"
-              : "square";
+                ? "squareImmersive"
+                : "square";
 
     const options: {
         variant: CoverStyleKey;
@@ -133,7 +133,7 @@ export default function CoverStyle() {
                                         <Icon
                                             name="check"
                                             size={rpx(32)}
-                                            color={colors.primary}
+                                            color={colors.primaryText}
                                         />
                                     ) : null}
                                 </View>

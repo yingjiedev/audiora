@@ -68,7 +68,7 @@ export default function (props: IProps) {
                 <IconButton
                     name={starred ? "heart" : "heart-outline"}
                     sizeType={"normal"}
-                    color={starred ? "#e31639" : undefined}
+                    color={starred ? colors.favorite : undefined}
                     style={style.optionButton}
                     onPress={async () => {
                         if (!starred) {

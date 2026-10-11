@@ -32,7 +32,7 @@ const BASELINE_VERSION = 2;
 const COLOR_PATTERNS = [
     /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g,
     /\b(?:rgba?|hsla?)\((?=[^)\r\n]*\d)[^)\r\n]+\)/gi,
-    /(["'`])(?:black|white)\1/gi,
+    /(["'`])(?:black|white|red|blue|green|yellow|pink|orange|purple|grey|gray|gold)\1/gi,
 ];
 const EXEMPT_MARK = "color-exempt";
 

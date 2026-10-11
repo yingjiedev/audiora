@@ -109,7 +109,7 @@ export default function RadioDialog(props: IRadioDialogProps) {
                                 (isConfig ? item.value : item) ? (
                                     <ListItem.ListItemIcon
                                         icon={"check"}
-                                        color={colors.primary}
+                                        color={colors.primaryText}
                                     />
                                 ) : null}
                         </ListItem>

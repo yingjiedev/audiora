@@ -206,7 +206,7 @@ function TabButton(props: {
             </ThemeText>
             <ThemeText
                 fontSize="description"
-                color={selected ? colors.primary : colors.textSecondary}
+                color={selected ? colors.primaryText : colors.textSecondary}
                 style={styles.tabCount}>
                 {String(count).padStart(2, "0")}
             </ThemeText>

@@ -229,7 +229,7 @@ export default function EditMusicSheetInfo(props: IEditSheetDetailProps) {
                                 },
                                 style.secondaryButton,
                             ]}>
-                            <ThemeText fontSize="subTitle" color={colors.primary}>
+                            <ThemeText fontSize="subTitle" color={colors.primaryText}>
                                 {t("panel.editMusicSheetInfo.useCoverAsBackground")}
                             </ThemeText>
                         </TouchableOpacity>
@@ -264,7 +264,7 @@ export default function EditMusicSheetInfo(props: IEditSheetDetailProps) {
                             },
                             style.button,
                         ]}>
-                        <ThemeText color={"white"}>{t("common.confirm")}</ThemeText>
+                        <ThemeText color={colors.onPrimary}>{t("common.confirm")}</ThemeText>
                     </TouchableOpacity>
                 </ScrollView>
             </VerticalSafeAreaView>

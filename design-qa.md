@@ -156,3 +156,17 @@ Blocker: post-change native visual evidence is deferred to user manual acceptanc
 final result: blocked
 
 Blocker: post-change native visual evidence awaits a new preview and user manual acceptance; source implementation and automated checks are complete.
+
+---
+
+# App-wide color migration (2026-10-11)
+
+- Target: apply `COLOR_SYSTEM.md` throughout the existing Android application while preserving player/navigation/gesture geometry and animations.
+- Source audit: the guarded business-color inventory decreased from 180 occurrences in 47 files to zero. The baseline was tightened to zero after migration; common named colors are now checked alongside hex/RGB/HSL values. Preset/configuration/native lyric inputs, generated assets and the independent web preview retain their documented boundaries.
+- Corrected: fixed-color controls in dialogs, sleep timer, links, switches, toast statuses, badges, library actions, song lists, search, downloads, settings, lyrics, album information and MV controls. The immersive cover tint now follows primary with a limited purple ambient stop. Destructive-fill foreground is independent of primary-fill foreground; RGBA error tints no longer use hex suffix concatenation.
+- Contrast: light/dark presets, bright/transparent custom primary, tonal badges, warnings, destructive fills and opaque panel RGB are covered. A custom blue exposed a 4.486:1 button foreground; a neutral fallback now meets the unrounded 4.5:1 text threshold. Real cover imagery and arbitrary incompatible custom surfaces still require native/manual checks.
+- Performance: semantic results are reused across consumers of the same immutable theme; mode/color-object changes invalidate them. This avoids repeating contrast derivation per mounted lyric row.
+- Validation: 85 suites / 628 tests passed, plus the final language-package check (4 tests). Color, runtime-reference, animation-callback and UI guards passed. Changed source has zero ESLint errors and four existing warnings; TypeScript has ten existing diagnostics and zero introduced diagnostics. Repository ESLint retains 43 existing errors and 138 warnings.
+- Handoff: a new signed arm64 preview is built from the committed source, with actual package/version/signature/font/resource verification and preserve-data installation recorded in the preview verification JSON. Per `AGENTS.md`, installation stops after confirming the installed version. Light/dark/custom appearance and interactive acceptance remain with the user; no post-migration native screenshot or visual pass is claimed.
+
+Source/color regression result: pass. Native visual acceptance: pending user.

@@ -46,6 +46,7 @@ export interface CustomizedColors extends IColors {
     /** 冷色强调 */
     accentCool?: string;
     success?: string;
+    warning?: string;
     danger?: string;
     info?: string;
     /** 喜欢状态；与危险操作分离 */
@@ -75,10 +76,24 @@ export interface CustomizedColors extends IColors {
     onMediaScrim?: string;
 }
 
+// Theme updates replace the colors object. Share contrast calculations across
+// consumers, including the many lyric rows mounted under the same theme.
+const resolvedThemes = new WeakMap<CustomizedColors, {
+    dark: boolean;
+    colors: ReturnType<typeof resolveThemeColors>;
+}>();
+
 export default function useColors() {
     const { colors, dark } = useTheme();
 
-    const cColors = useMemo(() => resolveThemeColors(colors as CustomizedColors, dark), [colors, dark]);
+    const cColors = useMemo(() => {
+        const source = colors as CustomizedColors;
+        const cached = resolvedThemes.get(source);
+        if (cached?.dark === dark) return cached.colors;
+        const resolved = resolveThemeColors(source, dark);
+        resolvedThemes.set(source, { dark, colors: resolved });
+        return resolved;
+    }, [colors, dark]);
 
     return cColors;
 }

@@ -3,12 +3,13 @@ import { StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 
 import RoundActionButton from "@/components/base/roundActionButton";
+import { contrastRatio } from "@/utils/colorContrast";
 
 jest.mock("@/components/base/icon", () => "Icon");
-jest.mock("@/hooks/useColors", () => () => ({
-    primary: "#3978FF",
-    onPrimary: "#FFFFFF",
-}));
+jest.mock("@/hooks/useColors", () => () => {
+    const { lightColors } = require("@/constants/colorPalette");
+    return require("@/utils/themeColors").resolveThemeColors({ ...lightColors, background: "transparent", primary: "#3978FF" }, false);
+});
 jest.mock("@/utils/rpx", () => ({
     __esModule: true,
     default: (value: number) => value,
@@ -45,7 +46,7 @@ describe("RoundActionButton", () => {
         expect(style.borderRadius).toBe(35);
 
         const icon = renderer.root.findByProps({ name: "play" });
-        expect(icon.props.color).toBe("#FFFFFF");
+        expect(contrastRatio(icon.props.color, style.backgroundColor as string)).toBeGreaterThanOrEqual(4.5);
     });
 
     it("inverse 是白底 + 深色图标 + 投影，与主题无关", () => {
@@ -56,24 +57,24 @@ describe("RoundActionButton", () => {
 
         const style = boxStyle(renderer);
         expect(style.backgroundColor).toBe("#FFFFFF");
-        expect(style.shadowColor).toBe("#13244E");
+        expect(style.shadowColor).toBe("#050C1C");
         expect(style.elevation).toBe(4);
 
         const icon = renderer.root.findByProps({ name: "play" });
-        expect(icon.props.color).toBe("#17213E");
+        expect(contrastRatio(icon.props.color, style.backgroundColor as string)).toBeGreaterThanOrEqual(4.5);
     });
 
-    it("tonal 是主色 16% 底 + 主色图标", () => {
+    it("tonal 使用主色浅底，图标按实际底色保证对比度", () => {
         const renderer = render("tonal", {
             onPress: jest.fn(),
             accessibilityLabel: "p",
         });
 
         const style = boxStyle(renderer);
-        expect(style.backgroundColor).toBe("rgba(57, 120, 255, 0.16)");
+        expect(style.backgroundColor).not.toBe("#3978FF");
 
         const icon = renderer.root.findByProps({ name: "play" });
-        expect(icon.props.color).toBe("#3978FF");
+        expect(contrastRatio(icon.props.color, style.backgroundColor as string)).toBeGreaterThanOrEqual(4.5);
     });
 
     it("size 只改直径，圆角始终是一半", () => {

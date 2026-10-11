@@ -9,7 +9,6 @@ import { Marked } from "marked";
 import Loading from "@/components/base/loading";
 import { useOnMounted } from "@/hooks/useMounted";
 import useColors from "@/hooks/useColors";
-import { useTheme } from "@react-navigation/native";
 import { sanitizeHtml } from "@/utils/htmlUtil";
 import Toast from "@/utils/toast";
 import openUrl from "@/utils/openUrl";
@@ -28,14 +27,11 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
 
     const { t } = useI18N();
     const colors = useColors();
-    const { dark } = useTheme();
 
     // WebView 里的 CSS 是字符串，深色下那几层 rgba(0,0,0,x) 全都会隐形
-    const codeFill = dark ? "rgba(255, 255, 255, 0.07)" : "rgba(0, 0, 0, 0.05)";
-    const subtleFill = dark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.02)";
-    const quoteFill = dark
-        ? "rgba(109, 141, 255, 0.14)"
-        : "rgba(0, 122, 255, 0.05)";
+    const codeFill = colors.surface;
+    const subtleFill = colors.surface;
+    const quoteFill = colors.tonalSurface;
 
 
     useEffect(() => {
@@ -105,7 +101,7 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             blockquote {
                 margin: 16px 0;
                 padding: 4px 16px;
-                border-left: 4px solid ${colors.primary};
+                border-left: 4px solid ${colors.primaryText};
                 background-color: ${quoteFill};
                 border-radius: 4px;
             }
@@ -130,14 +126,14 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             }
             
             a {
-                color: ${colors.primary};
+                color: ${colors.primaryText};
                 text-decoration: none;
                 border-bottom: 1px solid transparent;
                 transition: border-color 0.2s ease;
             }
             
             a:hover {
-                border-bottom-color: ${colors.primary};
+                border-bottom-color: ${colors.primaryText};
             }
             
             table {
@@ -184,11 +180,11 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             
             .img-placeholder:hover {
                 background-color: ${codeFill};
-                border-color: ${colors.primary};
+                border-color: ${colors.primaryText};
             }
             
             .img-placeholder.loading {
-                color: ${colors.primary};
+                color: ${colors.primaryText};
             }
             
             .img-loaded {
@@ -264,7 +260,7 @@ export default function MarkdownDialog(props: IMarkdownDialogProps) {
             }
         });
 
-    }, [markdownContent, onMounted, colors, dark, title]);
+    }, [markdownContent, onMounted, colors, codeFill, quoteFill, subtleFill, title]);
 
     const actions = [
         {

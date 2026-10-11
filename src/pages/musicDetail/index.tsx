@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import StatusBar from "@/components/base/statusBar";
 import globalStyle from "@/constants/globalStyle";
 import useOrientation from "@/hooks/useOrientation";
@@ -47,6 +48,7 @@ interface IMusicDetailProps {
 }
 
 export default function MusicDetail(props: IMusicDetailProps) {
+    const colors = useColors();
     const { onClose } = props;
     const orientation = useOrientation();
     const [isExiting, setIsExiting] = useState(false);
@@ -299,7 +301,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
                                 <Bottom />
                             </View>
                             {isHorizontal ? (
-                                <View style={style.divider} />
+                                <View style={[style.divider, { backgroundColor: colors.onMediaTrack }]} />
                             ) : null}
                             {isHorizontal ? (
                                 <View
@@ -339,6 +341,5 @@ const style = StyleSheet.create({
     },
     divider: {
         width: StyleSheet.hairlineWidth,
-        backgroundColor: "rgba(255, 255, 255, 0.12)",
     },
 });

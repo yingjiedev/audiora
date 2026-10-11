@@ -131,6 +131,7 @@ function ContinueListening(props: {
             <Pressable
                 style={[
                     styles.continueCard,
+                    { shadowColor: colors.shadow },
                     {
                         backgroundColor: colors.card,
                         borderColor: Color(colors.text).alpha(0.06).toString(),
@@ -166,7 +167,7 @@ function ContinueListening(props: {
                                         .toString(),
                                 },
                             ]}>
-                            <ThemeText fontSize="tag" color={colors.primary}>
+                            <ThemeText fontSize="tag" color={colors.primaryText}>
                                 {featuredMusic.platform}
                             </ThemeText>
                         </View>
@@ -232,7 +233,7 @@ function ContinueListening(props: {
                                 : "play"
                         }
                         size={rpx(36)}
-                        color={colors.primary}
+                        color={colors.primaryText}
                     />
                 </Pressable>
             </Pressable>
@@ -446,7 +447,7 @@ function Discovery(props: {
                     <ThemeText
                         fontSize="description"
                         fontWeight="semibold"
-                        color={colors.primary}>
+                        color={colors.primaryText}>
                         {t("common.view")}
                     </ThemeText>
                 </Pressable>
@@ -484,7 +485,7 @@ function Discovery(props: {
                                     <ThemeText
                                         numberOfLines={1}
                                         fontSize="tag"
-                                        color={colors.primary}>
+                                        color={colors.primaryText}>
                                         {item.type}
                                     </ThemeText>
                                 </View>
@@ -553,7 +554,7 @@ function Discovery(props: {
                         <Icon
                             name="trophy"
                             size={rpx(34)}
-                            color={colors.primary}
+                            color={colors.primaryText}
                         />
                     </View>
                     <View style={styles.discoveryText}>
@@ -683,7 +684,6 @@ const styles = StyleSheet.create({
         padding: rpx(20),
         flexDirection: "row",
         alignItems: "center",
-        shadowColor: "#2D4A78",
         shadowOffset: { width: 0, height: rpx(8) },
         shadowOpacity: 0.1,
         shadowRadius: rpx(18),

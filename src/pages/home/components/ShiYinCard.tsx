@@ -51,7 +51,7 @@ export default function ShiYinCard(props: {
                         <Icon
                             name="shuffle"
                             size={rpx(40)}
-                            color={colors.primary}
+                            color={colors.primaryText}
                         />
                     </View>
                 }

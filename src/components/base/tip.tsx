@@ -306,7 +306,6 @@ export default function Tip({
 const styles = StyleSheet.create({
     tipContainer: {
         position: "absolute",
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
         paddingHorizontal: rpx(16),
         paddingVertical: rpx(8),
         borderRadius: rpx(8),

@@ -10,6 +10,11 @@ import {
 import MusicDetail from "./index";
 import NavBar from "./components/navBar";
 
+jest.mock("@/hooks/useColors", () => () => {
+    const { lightColors } = require("@/constants/colorPalette");
+    return require("@/utils/themeColors").resolveThemeColors({ ...lightColors, background: "transparent" }, false);
+});
+
 const mockProgress = { value: 0 };
 let mockGesture: Record<string, jest.Mock>;
 let mockBackPress: () => boolean | null | undefined;

@@ -11,7 +11,7 @@ import Theme, {
     darkTheme,
 } from "@/core/theme";
 import { derivePrimaryColor } from "@/utils/themePalette";
-import { CustomizedColors } from "@/hooks/useColors";
+import useColors, { CustomizedColors } from "@/hooks/useColors";
 import {
     pickBackgroundImage,
     saveBackgroundImage,
@@ -27,6 +27,7 @@ import ImageColors from "react-native-image-colors";
 
 export default function Body() {
     const theme = Theme.useTheme();
+    const colors = useColors();
     const backgroundInfo = Theme.useBackground();
     const { t } = useI18N();
 
@@ -47,9 +48,9 @@ export default function Body() {
         let themeColors: Partial<CustomizedColors> = {};
         try {
             const colorsResult = await ImageColors.getColors(bgUrl, {
-                fallback: "#ffffff",
+                fallback: colors.inverseSurface,
             });
-            const colors = {
+            const extractedColors = {
                 primary:
                     colorsResult.platform === "android"
                         ? colorsResult.dominant
@@ -75,7 +76,7 @@ export default function Body() {
             // （蓝黑图出橙色就是它），色相偏离主导色太多的候选强降权
             // 亮度/饱和度单位都是 0~100（color@4 约定），阈值错配会静默出错
             const primaryHex = derivePrimaryColor(
-                [colors.primary, colors.vibrant, colors.average],
+                [extractedColors.primary, extractedColors.vibrant, extractedColors.average],
                 { fallbackPrimary: customThemeDefaultPrimary },
             );
 
@@ -138,7 +139,7 @@ export default function Body() {
                                 });
                             }}
                             style={styles.colorItemBlockContainer}>
-                            <View style={[styles.colorBlockContainer]}>
+                            <View style={[styles.colorBlockContainer, { borderColor: colors.border }]}>
                                 <Image
                                     resizeMode="repeat"
                                     emptySrc={ImgAsset.transparentBg}
@@ -205,7 +206,6 @@ const styles = StyleSheet.create({
         height: rpx(50),
         borderWidth: 1,
         borderStyle: "solid",
-        borderColor: "#ccc",
     },
     colorBlock: {
         width: "100%",

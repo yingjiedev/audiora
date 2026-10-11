@@ -96,7 +96,7 @@ export default function SearchCover(props: ISearchCoverProps) {
                                     },
                                 ]}>
                                 <ThemeText
-                                    color={colors.primary}
+                                    color={colors.primaryText}
                                     fontWeight="bold">
                                     {t("common.search")}
                                 </ThemeText>

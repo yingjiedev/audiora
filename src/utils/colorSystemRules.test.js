@@ -42,4 +42,10 @@ describe("color system boundaries", () => {
         expect(checkSource("import { lightColors } from '@/constants/colorPalette';", "src/utils/themeColors.test.ts")).toHaveLength(0);
         expect(checkProject(path.resolve(__dirname, "../.."))).toEqual([]);
     });
+
+    it("allows the saved-theme color extraction utility without exposing presets to its UI caller", () => {
+        const source = "import { neutralFallbackPrimary } from '@/constants/colorPalette';";
+        expect(checkSource(source, "src/utils/themePalette.ts")).toHaveLength(0);
+        expect(checkSource(source, "src/pages/setCustomTheme/body.tsx").map(issue => issue.rule)).toContain("raw-palette");
+    });
 });

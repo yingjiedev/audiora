@@ -1,7 +1,7 @@
 import Color from "color";
 import type { CustomizedColors } from "@/hooks/useColors";
 import {
-    colorContrastMinimum, darkColors, lightColors, mediaOnDark,
+    colorContrastMinimum, controlNeutralDark, darkColors, lightColors, mediaOnDark,
     mediaScrim, playerTintWeights,
 } from "@/constants/colorPalette";
 import { bestForeground, blendOver, contrastRatio } from "./colorContrast";
@@ -49,19 +49,40 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const playerText = Color(bestForeground(playerGradient[0], [colors.musicBarText ?? colors.text, preset.text, lightColors.text, mediaOnDark])).alpha(1).hex();
     const playerTextSecondary = Color(playerText).mix(Color(playerSurface), 0.28).hex();
     const playerTextTertiary = Color(playerText).mix(Color(playerSurface), 0.36).hex();
-    const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), ...playerGradient];
+    const tonalSurface = Color(blendOver(card, page)).mix(Color(primaryOpaque), 0.16).hex();
+    const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
+    const danger = readableAccent(safeColor(colors.danger, preset.danger).hex(), backgrounds, colorContrastMinimum.text);
     return {
         ...colors,
         primary,
         primaryText,
         active: primaryText,
         favorite: readableAccent(safeColor(colors.favorite, preset.favorite).hex(), backgrounds, colorContrastMinimum.control),
-        onPrimary: bestForeground(blendOver(primary, blendOver(card, page)), [mediaOnDark, lightColors.text]),
+        onPrimary: bestForeground(blendOver(primary, blendOver(card, page)), [mediaOnDark, lightColors.text, controlNeutralDark]),
+        tonalSurface,
+        onTonal: readableAccent(primaryOpaque, [tonalSurface], colorContrastMinimum.text),
+        success: readableAccent(safeColor(colors.success, preset.success).hex(), backgrounds, colorContrastMinimum.text),
+        warning: readableAccent(safeColor(colors.warning, preset.warning).hex(), backgrounds, colorContrastMinimum.text),
+        danger,
+        onDanger: bestForeground(danger, [mediaOnDark, lightColors.text, controlNeutralDark]),
+        dangerSurface: Color(safeColor(colors.danger, preset.danger)).alpha(0.12).toString(),
+        divider: colors.divider ?? preset.divider,
+        shadow: colors.shadow ?? preset.shadow,
+        mask: colors.mask ?? preset.mask,
+        modalScrim: Color(preset.mask).alpha(1).hex(),
+        inverseSurface: mediaOnDark,
+        onInverse: lightColors.text,
         onMedia: mediaOnDark,
-        onMediaSecondary: Color(mediaOnDark).alpha(0.72).toString(),
+        onMediaSecondary: Color(mediaOnDark).alpha(0.86).toString(),
         onMediaTrack: Color(mediaOnDark).alpha(0.28).toString(),
+        onMediaSurface: Color(mediaOnDark).alpha(0.16).toString(),
         onMediaScrim: mediaScrim,
+        mediaSurface: darkColors.surface,
+        mediaAccent: readableAccent(primaryOpaque, [mediaScrim, darkColors.surface], colorContrastMinimum.text),
+        mediaFavorite: readableAccent(safeColor(colors.favorite, preset.favorite).hex(), [mediaScrim], colorContrastMinimum.control),
+        mediaAmbientGradient: [Color(primaryOpaque).alpha(0.16).toString(), Color(primaryOpaque).alpha(0.18).toString(), Color(colors.accentWarm ?? preset.accentWarm).alpha(0.24).toString()],
+        panelGradient: [Color(surfaceElevated).alpha(1).hex(), Color(surface).alpha(1).hex()],
         textSecondary: colors.textSecondary ?? Color(colors.text).alpha(0.64).toString(),
         surface,
         surfaceElevated,

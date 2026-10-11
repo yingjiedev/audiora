@@ -1,4 +1,5 @@
 {
+    "panel.qualityTranslation.labelPlaceholder": "Display label",
     "media.encryptedSourceFailed": "Cannot open this encrypted source. Check the connection and supplied key, or use an unencrypted audio URL.",
     "media.rawSongKeyRequired": "This encrypted source needs a valid raw song key. Ask the source provider for qmcRawKey or an unencrypted audio URL.",
     "common.setting": "Settings",

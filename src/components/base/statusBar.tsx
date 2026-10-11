@@ -31,7 +31,7 @@ export default function (props: IStatusBarProps) {
         <>
             <StatusBar
                 {...statusBarProps}
-                backgroundColor={"rgba(0,0,0,0)"}
+                backgroundColor="transparent"
                 barStyle={barStyle ?? resolveBarStyle(resolvedBackground)}
             />
             <View

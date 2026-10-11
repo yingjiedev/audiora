@@ -1,3 +1,5 @@
+import Color from "color";
+import useColors from "@/hooks/useColors";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import Image from "./image";
@@ -22,6 +24,7 @@ interface IProps {
  */
 export default function CustomBackground(props: IProps) {
     const { url, blur, opacity, backgroundColor } = props;
+    const colors = useColors();
     const mask = useAppConfig("theme.backgroundMask") ?? 0;
 
     return (
@@ -49,7 +52,7 @@ export default function CustomBackground(props: IProps) {
                 <View
                     style={[
                         style.wrapper,
-                        { backgroundColor: `rgba(0,0,0,${mask})` },
+                        { backgroundColor: Color(colors.onMediaScrim).alpha(mask).toString() },
                     ]}
                     pointerEvents="none"
                 />

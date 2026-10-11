@@ -21,6 +21,7 @@ import FastImage from "./fastImage";
 import { ImageStyle } from "react-native-fast-image";
 import Icon, { IIconName } from "@/components/base/icon.tsx";
 import { useAppConfig } from "@/core/appConfig";
+import Color from "color";
 
 interface IListItemProps {
     // 是否有左右边距
@@ -195,6 +196,7 @@ interface IListItemImageProps {
 }
 
 function ListItemImage(props: IListItemImageProps) {
+    const colors = useColors();
     const {
         uri,
         fallbackImg,
@@ -230,11 +232,11 @@ function ListItemImage(props: IListItemImageProps) {
                 placeholderSource={fallbackImg}
             />
             {maskIcon ? (
-                <View style={[styles.leftImage, isCircle && styles.leftImageCircle, styles.imageMask]}>
+                <View style={[styles.leftImage, isCircle && styles.leftImageCircle, styles.imageMask, { backgroundColor: Color(colors.onMediaScrim).alpha(0.5).toString() }]}>
                     <Icon
                         name={maskIcon}
                         size={iconSizeConst.normal}
-                        color="red"
+                        color={maskIcon === "heart" ? colors.mediaFavorite : colors.onMedia}
                     />
                 </View>
             ) : null}
@@ -339,7 +341,6 @@ const styles = StyleSheet.create({
         position: "absolute",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#00000022",
     },
     itemContentContainer: {
         flex: 1,

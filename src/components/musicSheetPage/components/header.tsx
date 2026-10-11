@@ -81,7 +81,7 @@ export default function Header(props: IHeaderProps) {
                                     },
                                 ]}>
                                 <ThemeText
-                                    color={colors.primary}
+                                    color={colors.primaryText}
                                     fontSize="caption"
                                     fontWeight="bold">
                                     {t("common.sheet")}

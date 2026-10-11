@@ -21,6 +21,7 @@ export const lightColors = {
     tabBar: "#F1F6FF",
     placeholder: "#E9F0FC",
     success: "#08735C",
+    warning: "#8C5C00",
     danger: "#C62E43",
     favorite: "#F23F70",
     info: "#3867F4",
@@ -50,6 +51,7 @@ export const darkColors = {
     tabBar: "#131C31",
     placeholder: "#1C2843",
     success: "#20D2B0",
+    warning: "#FFD074",
     danger: "#FF7A88",
     favorite: "#FF648B",
     info: "#6D8DFF",
@@ -69,7 +71,9 @@ export const topListGradients = [
 
 /** Immersive cover surfaces always use a dark scrim, independently of theme. */
 export const mediaOnDark = "#FFFFFF";
+export const controlNeutralDark = "#000000";
 export const mediaScrim = "#050C1C";
+export const neutralFallbackPrimary = "#F2F2F2";
 
 export const colorContrastMinimum = { text: 4.5, control: 3 } as const;
 export const playerTintWeights = [0.06, 0.02, 0] as const;

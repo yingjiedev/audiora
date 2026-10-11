@@ -9,7 +9,7 @@ import { GlobalState } from "@/utils/stateMapper";
 import { CustomizedColors } from "@/hooks/useColors";
 import Color from "color";
 import { Appearance, Image as RNImage } from "react-native";
-import { darkColors, lightColors } from "@/constants/colorPalette";
+import { darkColors, lightColors, neutralFallbackPrimary } from "@/constants/colorPalette";
 
 /** RN Navigation 7+ reads theme.fonts.regular in native-stack headers. */
 const navigationFonts: NavigationTheme["fonts"] =
@@ -92,7 +92,7 @@ interface IBackgroundInput {
  * 自定义主题的初始主色：中性白，配深色底就是黑底白字；
  * 不再继承深色主题的橙色
  */
-export const customThemeDefaultPrimary = "#F2F2F2";
+export const customThemeDefaultPrimary = neutralFallbackPrimary;
 
 /** 深色主题的旧默认主色（橙），用于旧配置迁移判定 */
 const LEGACY_DARK_PRIMARY = "#FF7650";

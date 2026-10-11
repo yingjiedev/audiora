@@ -139,7 +139,7 @@ export default function MusicItem(props: IMusicItemProps) {
                         <ThemeText numberOfLines={1} fontSize="description" fontColor="textSecondary" style={styles.artist}>
                             {musicItem.artist}{showAlbum ? ` · ${album}` : ""}
                         </ThemeText>
-                        {isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primary} style={styles.metadataIcon} /> : null}
+                        {isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
                         {qualityBadge ? <Badge type={qualityBadge.type}>{qualityBadge.text}</Badge> : null}
                         {musicItem.fee === 1 ? <Badge type="vip">VIP</Badge> : null}
                         {hasMv ? <Badge type="source">MV</Badge> : null}

@@ -166,7 +166,7 @@ export default function MusicList(props: IMusicListProps) {
             {showBadge && (
                 <View style={styles.badge} pointerEvents="box-none">
                     <Pressable
-                        style={[styles.badgeButton, { backgroundColor: colors.notification }]}
+                        style={[styles.badgeButton, { backgroundColor: colors.notification, shadowColor: colors.shadow }]}
                         onPress={scrollToHighlight}
                     >
                         <Icon
@@ -197,7 +197,6 @@ const styles = StyleSheet.create({
         borderRadius: rpx(32),
         justifyContent: "center",
         alignItems: "center",
-        shadowColor: "#000",
         shadowOffset: {
             width: 0,
             height: 2,

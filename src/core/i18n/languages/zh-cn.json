@@ -1,4 +1,5 @@
 {
+    "panel.qualityTranslation.labelPlaceholder": "显示标签",
     "media.encryptedSourceFailed": "无法打开此加密音源，请检查音源连接与提供的密钥，或改用普通音频链接。",
     "media.rawSongKeyRequired": "此加密音源缺少有效的原始歌曲密钥，请联系音源提供方提供 qmcRawKey 或普通音频链接。",
     "common.setting": "设置",

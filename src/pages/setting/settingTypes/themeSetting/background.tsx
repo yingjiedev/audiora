@@ -5,7 +5,7 @@ import rpx from "@/utils/rpx";
 import Config, { useAppConfig } from "@/core/appConfig";
 import ThemeCard from "./themeCard";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
-import Theme from "@/core/theme";
+import Theme, { lightTheme, darkTheme } from "@/core/theme";
 import { useI18N } from "@/core/i18n";
 import SettingSection from "../../components/settingSection";
 
@@ -85,7 +85,7 @@ export default function Background() {
             title={t("themeSettings.setTheme")}
             cardStyle={style.sectionCard}>
             <ThemeCard
-                preview="#fff"
+                preview={lightTheme.colors.pageBackground}
                 title={t("themeSettings.lightMode")}
                 selected={themeSelectedTheme === "p-light"}
                 onPress={() => {
@@ -97,7 +97,7 @@ export default function Background() {
                 }}
             />
             <ThemeCard
-                preview="#131313"
+                preview={darkTheme.colors.pageBackground}
                 title={t("themeSettings.darkMode")}
                 selected={themeSelectedTheme === "p-dark"}
                 onPress={() => {

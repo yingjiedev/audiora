@@ -165,7 +165,7 @@ function LocalMusicContent() {
                 style={[styles.localHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
                 onPress={() => navigate(ROUTE_PATH.LOCAL)}>
                 <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
-                    <Icon name="folder-music-outline" size={rpx(48)} color={colors.primary} />
+                    <Icon name="folder-music-outline" size={rpx(48)} color={colors.primaryText} />
                 </View>
                 <View style={styles.heroText}>
                     <ThemeText fontSize="subTitle" fontWeight="bold">
@@ -194,7 +194,7 @@ function LocalMusicContent() {
                             ]}
                             onPress={() => setBrowserMode(entry.key)}>
                             <View style={[styles.localIcon, { backgroundColor: iconTint }]}>
-                                <Icon name={entry.icon} size={rpx(32)} color={colors.primary} />
+                                <Icon name={entry.icon} size={rpx(32)} color={colors.primaryText} />
                             </View>
                             <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>
                                 {entry.title}
@@ -214,8 +214,8 @@ function LocalMusicContent() {
                     accessibilityLabel={t("localMusic.scanLocalMusic")}
                     style={[styles.scanAction, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
                     onPress={() => navigate(ROUTE_PATH.LOCAL)}>
-                    <Icon name="folder-plus" size={rpx(26)} color={colors.primary} />
-                    <ThemeText color={colors.primary} fontSize="caption" fontWeight="semibold" style={styles.scanText}>
+                    <Icon name="folder-plus" size={rpx(26)} color={colors.primaryText} />
+                    <ThemeText color={colors.primaryText} fontSize="caption" fontWeight="semibold" style={styles.scanText}>
                         {t("musicLibrary.scanMusic")}
                     </ThemeText>
                 </Pressable>
@@ -230,7 +230,7 @@ function LocalMusicContent() {
                         style={[styles.browserRow, index < browserItems.length - 1 ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Color(colors.text).alpha(0.07).toString() } : null]}
                         onPress={() => navigate(ROUTE_PATH.LOCAL)}>
                         <View style={[styles.browserIcon, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
-                            <Icon name={browserMode === "tracks" ? "musical-note" : browserMode === "artists" ? "user" : browserMode === "albums" ? "album-outline" : "folder-outline"} size={rpx(28)} color={colors.primary} />
+                            <Icon name={browserMode === "tracks" ? "musical-note" : browserMode === "artists" ? "user" : browserMode === "albums" ? "album-outline" : "folder-outline"} size={rpx(28)} color={colors.primaryText} />
                         </View>
                         <View style={styles.browserText}>
                             <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{item.title}</ThemeText>
@@ -253,7 +253,7 @@ function OnlineMusicContent() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={[styles.onlineHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
                 <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
-                    <Icon name="circle-stack" size={rpx(48)} color={colors.primary} />
+                    <Icon name="circle-stack" size={rpx(48)} color={colors.primaryText} />
                 </View>
                 <View style={styles.heroText}>
                     <ThemeText fontSize="subTitle" fontWeight="bold">
@@ -268,7 +268,7 @@ function OnlineMusicContent() {
                     accessibilityLabel={t("musicLibrary.searchOnline")}
                     style={[styles.onlineSearch, { backgroundColor: colors.primary }]}
                     onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
-                    <Icon name="magnifying-glass" size={rpx(28)} color="#FFFFFF" />
+                    <Icon name="magnifying-glass" size={rpx(28)} color={colors.onPrimary} />
                 </Pressable>
             </View>
 
@@ -277,7 +277,7 @@ function OnlineMusicContent() {
                     {t("musicLibrary.sourcesAndPlatforms")}
                 </ThemeText>
                 <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.manageSources")} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
-                    <ThemeText fontSize="caption" color={colors.primary} fontWeight="semibold">
+                    <ThemeText fontSize="caption" color={colors.primaryText} fontWeight="semibold">
                         {t("musicLibrary.manage")}
                     </ThemeText>
                 </Pressable>
@@ -292,7 +292,7 @@ function OnlineMusicContent() {
                         style={[styles.browserRow, index < enabledPlugins.length - 1 ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Color(colors.text).alpha(0.07).toString() } : null]}
                         onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
                         <View style={[styles.browserIcon, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
-                            <Icon name="circle-stack" size={rpx(28)} color={colors.primary} />
+                            <Icon name="circle-stack" size={rpx(28)} color={colors.primaryText} />
                         </View>
                         <View style={styles.browserText}>
                             <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{plugin.name}</ThemeText>

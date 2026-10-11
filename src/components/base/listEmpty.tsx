@@ -37,7 +37,7 @@ export default function ListEmpty(props: IEmptyProps) {
             <ThemeText fontSize="title">
                 {t("common.error")}
             </ThemeText>
-            <TouchableOpacity onPress={onRetry} style={style.retryButton}>
+            <TouchableOpacity onPress={onRetry} style={[style.retryButton, { backgroundColor: colors.surface }]}>
                 <ThemeText>{t("common.clickToRetry")}</ThemeText>
             </TouchableOpacity>
         </View>;
@@ -58,6 +58,5 @@ const style = StyleSheet.create({
         paddingVertical: rpx(24),
         paddingHorizontal: rpx(48),
         borderRadius: rpx(36),
-        backgroundColor: "rgba(128, 128, 128, 0.2)",
     },
 });

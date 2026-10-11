@@ -279,7 +279,7 @@ export default function MergeImportMusicSheet() {
                                                         numberOfLines={1}
                                                         style={{
                                                             color: isSelected
-                                                                ? "#fff"
+                                                                ? colors.onPrimary
                                                                 : colors.text,
                                                         }}>
                                                         {plugin.name}

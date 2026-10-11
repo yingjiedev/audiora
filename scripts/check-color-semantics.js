@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const ts = require("typescript");
 
-const RAW_CONSUMERS = new Set(["src/core/theme.ts", "src/utils/themeColors.ts", "src/constants/designSystem.ts"]);
+const RAW_CONSUMERS = new Set(["src/core/theme.ts", "src/utils/themeColors.ts", "src/utils/themePalette.ts", "src/constants/designSystem.ts"]);
 const RAW_SYMBOLS = new Set(["audioraGradient", "topListGradients", "mediaOnDark", "mediaScrim"]);
 const isTest = file => /(?:\.test\.[jt]sx?$|\/__tests__\/|\.d\.ts$)/.test(file);
 

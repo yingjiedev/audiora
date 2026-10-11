@@ -25,6 +25,7 @@ import Portal from "./portal";
 import ListItem from "./listItem";
 import { IIconName } from "@/components/base/icon.tsx";
 import useMotion from "@/hooks/useMotion";
+import Theme from "@/core/theme";
 
 interface IAppBarProps {
     titleTextOpacity?: number;
@@ -179,7 +180,7 @@ export default function AppBar(props: IAppBarProps) {
                         pointerEvents={showMenu ? "auto" : "none"}
                         style={[
                             {
-                                borderBottomColor: colors.surfaceElevated,
+                                borderBottomColor: hasCustomBackground ? Theme.getDialogSurfaceColor() : colors.surfaceElevated,
                                 left:
                                     (menuIconLayout?.x ?? 0) +
                                     (menuIconLayout?.width ?? 0) / 2 -
@@ -201,7 +202,7 @@ export default function AppBar(props: IAppBarProps) {
                             {
                                 // 有壁纸时菜单用更实的暗底，避免透出壁纸看不清
                                 backgroundColor: hasCustomBackground
-                                    ? "rgba(0,0,0,0.82)"
+                                    ? Theme.getDialogSurfaceColor()
                                     : colors.surfaceElevated,
                                 borderColor: hasCustomBackground
                                     ? "transparent"
