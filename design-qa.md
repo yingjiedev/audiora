@@ -291,3 +291,11 @@ Source/function/color checks: pass. Native visual comparison: pending user.
 - The installed Trends preview (`1791702474`) had a matching certificate. `adb install -r` successfully upgraded the user's physical phone at `192.168.31.232:39053` while preserving data, and exact installed version/code `1791704114` were confirmed. Device operations stopped at confirmation; user performs native visual acceptance.
 
 final result: blocked (native visual acceptance pending user under repository handoff rules)
+
+# My-page shortcut spacing and Today corner summary (2026-10-11)
+
+- Input: user's `9490ab526aea4364144ff50918f1ce38.jpg` and cropped corner-summary reference `codex-clipboard-cbaaa5ae-ab13-4e57-a840-554de501e46a.png`. Scope is the two requested adjustments.
+- Shortcut row spacing increases by 50%, from 24rpx to 36rpx below the collection card. All four existing destinations and counts are retained.
+- Today summary now places the measured duration and a tonal music-note badge above the caption/chevron. Play count remains visible below. A softer asymmetric corner surface uses existing `surface`, `tonalSurface` and `onTonal` tokens; no monetization copy, new brand palette or image asset is introduced. The summary has a named, minimum-44dp report target with duration/play-count accessibility hint; the Favorites target remains independent. Zero seconds and localized hour/minute units remain truthful.
+- Validation: updated navigation/duration component tests pass (2 suites / 25 tests), along with required color regressions (13 suites / 140 tests). Color/UI/runtime-reference/motion guards and changed-source ESLint pass. Full lint retains the existing 14 errors / 101 warnings; its unrelated auto-edits are restored. Explicit compiler comparison shows no changed-file diagnostics; unrelated diagnostics remain. No new dependencies or native-project changes.
+- Preview delivery pending. Native visual acceptance remains with the user after installation, per repository instructions.

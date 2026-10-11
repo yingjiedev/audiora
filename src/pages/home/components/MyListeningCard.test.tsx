@@ -52,17 +52,19 @@ describe("MyListeningCard", () => {
         expect(text().map(node => node.props.children)).not.toContain(mockLanguage["listening.collection"]);
     });
 
-    it("has separate collection and report buttons and keeps the recording start explicit", () => {
+    it("opens the report from the today summary and activity while keeping Favorites separate", () => {
         render();
         const collection = renderer.root.findByProps({ accessibilityLabel: zhCN["home.favoriteSheet"] });
         const report = renderer.root.findByProps({ accessibilityLabel: zhCN["listening.openReport"] });
+        const today = renderer.root.findByProps({ accessibilityLabel: zhCN["listening.todayEntry"] });
         act(() => {
             collection.props.onPress();
+            today.props.onPress();
             report.props.onPress();
         });
-        expect(mockNavigate.mock.calls).toEqual([["favorite", { id: "favorites" }], ["report"]]);
+        expect(mockNavigate.mock.calls).toEqual([["favorite", { id: "favorites" }], ["report"], ["report"]]);
+        expect(today.props.accessibilityHint).toBe("41 秒 · 播放 1 次");
         expect(report.props.accessibilityHint).toBe("10/11 起记录 · 活跃 1 天");
-        expect(renderer.root.findAll(node => node.props.accessibilityLabel === zhCN["listening.todayEntry"])).toHaveLength(0);
         const previewCells = renderer.root.findAll(node => typeof node.props.testID === "string" && node.props.testID.startsWith("listening-day-"));
         expect(new Set(previewCells.map(node => node.props.testID)).size).toBe(91);
     });

@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     logo: { width: rpx(24), height: rpx(24), borderRadius: radius.xs },
     inlineLabel: { marginLeft: spacing.xs },
     description: { marginTop: spacing.xxs },
-    quickRow: { flexDirection: "row", alignItems: "stretch", paddingTop: spacing.xl, paddingBottom: spacing.xs },
+    quickRow: { flexDirection: "row", alignItems: "stretch", paddingTop: spacing.xl * 1.5, paddingBottom: spacing.xs },
     quickEntry: { flex: 1, minWidth: 0, minHeight: minimumTouch, alignItems: "center", paddingHorizontal: spacing.xxs, paddingBottom: spacing.xs },
     quickIcon: { height: rpx(48), alignItems: "center", justifyContent: "center" },
     quickTitle: { flexGrow: 1, marginTop: spacing.xs, textAlign: "center" },

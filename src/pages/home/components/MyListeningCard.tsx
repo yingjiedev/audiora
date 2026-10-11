@@ -58,15 +58,28 @@ export default function MyListeningCard({ sheetId, count, cover }: { sheetId?: s
                     </View>
                     <Icon name="chevron-right" size={rpx(20)} color={colors.textSecondary} />
                 </Pressable>
-                <View style={[styles.today, { backgroundColor: colors.surface }]}>
-                    <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.today")}</ThemeText>
-                    <ThemeText accessible accessibilityLabel={todayTime} style={styles.todayValue}>
-                        {todayTime.split(/(\d+)/).map((part, index) => (
-                            <ThemeText key={index} fontColor={/^\d+$/.test(part) ? "text" : "textSecondary"} fontWeight={/^\d+$/.test(part) ? "semibold" : "regular"} style={/^\d+$/.test(part) ? styles.todayNumber : styles.todayUnit}>{part}</ThemeText>
-                        ))}
-                    </ThemeText>
-                    <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.playCount", { count: today.plays })}</ThemeText>
-                </View>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t("listening.todayEntry")}
+                    accessibilityHint={`${todayTime} · ${t("listening.playCount", { count: today.plays })}`}
+                    onPress={openTrends}
+                    style={({ pressed }) => [styles.today, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}>
+                    <View style={styles.todayValueRow}>
+                        <ThemeText accessible accessibilityLabel={todayTime} style={styles.todayValue}>
+                            {todayTime.split(/(\d+)/).map((part, index) => (
+                                <ThemeText key={index} fontColor={/^\d+$/.test(part) ? "text" : "textSecondary"} fontWeight={/^\d+$/.test(part) ? "semibold" : "regular"} style={/^\d+$/.test(part) ? styles.todayNumber : styles.todayUnit}>{part}</ThemeText>
+                            ))}
+                        </ThemeText>
+                        <View style={[styles.todayBadge, { backgroundColor: colors.tonalSurface }]}>
+                            <Icon name="musical-note" size={Math.max(12, rpx(18))} color={colors.onTonal} />
+                        </View>
+                    </View>
+                    <View style={styles.todayLink}>
+                        <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.today")}</ThemeText>
+                        <Icon name="chevron-right" size={rpx(16)} color={colors.textSecondary} />
+                    </View>
+                    <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.todayPlays}>{t("listening.playCount", { count: today.plays })}</ThemeText>
+                </Pressable>
             </View>
             <View style={[styles.divider, { backgroundColor: colors.divider }]} />
             <Pressable accessibilityRole="button" accessibilityLabel={t("listening.openReport")} accessibilityHint={activityHint} onPress={openTrends}
@@ -97,8 +110,12 @@ const styles = StyleSheet.create({
     favoriteHeading: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xxs },
     favoriteTitle: { fontSize: Math.max(20, fontRpx(38)) },
     count: { marginTop: spacing.xs },
-    today: { minWidth: rpx(144), paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderTopRightRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderTopLeftRadius: radius.xs, borderBottomRightRadius: radius.xs, justifyContent: "center" },
-    todayValue: { marginVertical: spacing.xxs },
+    today: { minWidth: rpx(144), minHeight: minimumTouch, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopRightRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderTopLeftRadius: radius.sheet, borderBottomRightRadius: radius.lg, alignItems: "center", justifyContent: "center" },
+    todayValueRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    todayValue: { flexShrink: 1 },
+    todayBadge: { padding: spacing.xxs, borderRadius: radius.pill },
+    todayLink: { flexDirection: "row", alignItems: "center", gap: spacing.xxs, marginTop: spacing.xxs },
+    todayPlays: { marginTop: spacing.xxs },
     todayNumber: { fontSize: Math.max(22, fontRpx(42)) },
     todayUnit: { fontSize: Math.max(12, fontRpx(22)) },
     divider: { height: StyleSheet.hairlineWidth, marginVertical: Math.max(12, spacing.xl) },

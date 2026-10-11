@@ -85,11 +85,12 @@ describe("MyMusicOverview", () => {
     });
     const textNodes = () => renderer.root.findAll(node => node.type === "ThemeText" as unknown as React.ElementType);
 
-    it("opens listening trends from one clear activity entrance while keeping Favorites separate", () => {
+    it("opens listening trends from the today summary and activity while keeping Favorites separate", () => {
         render();
         press("listening.openReport");
         expect(mockNavigate).toHaveBeenCalledWith("listening-report");
-        expect(renderer.root.findAll(node => node.props.accessibilityLabel === "listening.todayEntry")).toHaveLength(0);
+        press("listening.todayEntry");
+        expect(mockNavigate).toHaveBeenLastCalledWith("listening-report");
         press("home.favoriteSheet");
         expect(mockNavigate).toHaveBeenLastCalledWith("local-sheet-detail", { id: "favorite" });
     });
