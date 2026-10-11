@@ -230,6 +230,8 @@
     "pluginSetting.pluginItem.options.uninstallPlugin": "Uninstall Plugin",
     "pluginSetting.pluginItem.options.uninstallPluginContent": "Are you sure to uninstall plugin「{name}」?",
     "pluginSetting.pluginItem.options.alternativePlugin": "Plugin Redirect",
+    "pluginSetting.pluginItem.options.renamePlugin": "Rename Plugin",
+    "pluginSetting.pluginItem.dialog.renamePluginTip": "Only changes the local display name; the plugin's source id and features stay intact. Leave it empty to restore the original name",
     "pluginSetting.pluginItem.alternativePlugin": "This plugin actually uses「{name}」plugin to parse music sources",
     "pluginSetting.pluginItem.dialog.setAlternativePluginTitle": "Set Plugin Redirect",
     "pluginSetting.pluginItem.dialog.setAlternativePluginTip": "The selected plugin will be used to parse music sources for this plugin\nRandom settings may cause songs to fail to play, please operate with caution",

@@ -6,7 +6,7 @@ import { View } from "react-native";
 
 import NoPlugin from "@/components/base/noPlugin";
 import globalStyle from "@/constants/globalStyle";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import { normalizeImportedMusicSheet } from "@/utils/mediaUtils";
 import { FlatList } from "react-native-gesture-handler";
@@ -18,6 +18,7 @@ import { useI18N } from "@/core/i18n";
 
 export default function ImportMusicSheet() {
     const validPlugins = PluginManager.getSortedPluginsWithAbility("importMusicSheet");
+    const getDisplayName = usePluginDisplayNameResolver();
     const { t } = useI18N();
     const navigate = useNavigate();
 
@@ -81,7 +82,7 @@ export default function ImportMusicSheet() {
                                                             text,
                                                             t(
                                                                 "panel.importMusicSheet.fallbackTitle",
-                                                                { plugin: plugin.name },
+                                                                { plugin: getDisplayName(plugin) },
                                                             ),
                                                         );
                                                     if (sheet) {
@@ -99,7 +100,7 @@ export default function ImportMusicSheet() {
                                                 },
                                             });
                                         }}>
-                                        <ListItem.Content title={plugin.name} />
+                                        <ListItem.Content title={getDisplayName(plugin)} />
                                     </ListItem>
                                 )}
                             />

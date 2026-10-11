@@ -12,6 +12,7 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import { useCurrentMusic, useMusicState } from "@/core/trackPlayer";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { ISheetPlaybackEntry } from "@/core/sheetPlaybackHistory";
 import useColors from "@/hooks/useColors";
 import useMotion from "@/hooks/useMotion";
@@ -158,6 +159,7 @@ export default function Body(props: IBodyProps) {
 
 export function SheetBody(props: { entries: ISheetPlaybackEntry[]; onOpen: (entry: ISheetPlaybackEntry) => void; onRemove: (entry: ISheetPlaybackEntry) => void }) {
     const { t } = useI18N();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const insets = useSafeAreaInsets();
     return (
         <GestureHandlerRootView style={styles.list}>
@@ -174,7 +176,7 @@ export function SheetBody(props: { entries: ISheetPlaybackEntry[]; onOpen: (entr
                             <FastImage source={item.sheet.coverImg ?? item.sheet.artwork} placeholderSource={ImgAsset.albumDefault} style={styles.sheetCover} />
                             <View style={styles.sheetDetails}>
                                 <ThemeText fontSize="title" numberOfLines={1}>{item.sheet.title ?? t("common.unknownName")}</ThemeText>
-                                <ThemeText fontSize="content" fontColor="textSecondary" numberOfLines={1}>{item.sheet.artist || item.sheet.platform}</ThemeText>
+                                <ThemeText fontSize="content" fontColor="textSecondary" numberOfLines={1}>{item.sheet.artist || getPluginDisplayName(item.sheet.platform)}</ThemeText>
                             </View>
                         </Pressable>
                         <QueueAction icon="x-mark" label={t("panel.playList.remove", { title: item.sheet.title })} onPress={() => props.onRemove(item)} />

@@ -173,6 +173,18 @@ Source/color regression result: pass. Native visual acceptance: pending user.
 
 ---
 
+# Release branch conflict resolution (2026-10-11)
+
+- Synced `release/0.3.0` at `c4fed382` (plugin display names, #106). Resolved the three conflicts by preserving the shared flat MusicItem and three-tab playback drawer, while applying live display-name resolution to homepage sources and the sheet-history source fallback. Song rows keep their existing title/artist layout without restoring old platform tags or cards.
+- Plugin display names affect presentation only; playback, lookup, stored history and route identifiers retain their original platform values. Existing semantic text colors and the purple player gradient are preserved.
+- Completed the two new translation declarations and fixed template-literal storage-key typing and the radio callback's string/number narrowing in the incoming plugin feature.
+- Validation: all 86 Jest suites / 642 tests passed; final affected-file regression passed (4 suites / 25 tests), and color regression passed (12 suites / 116 tests). Added homepage rename/color/identifier coverage and sheet-history display-name/author/identifier coverage. Color, runtime-reference, motion and UI checks passed. Resolved files and supplemental fixes have zero ESLint errors/warnings; merge-file TypeScript comparison has two existing diagnostics and zero introduced diagnostics. `npm run lint` still reports existing repository findings; its unrelated automatic edits were restored.
+- This conflict resolution does not produce a new APK or perform device acceptance. The previously installed purple preview remains built from `add4fa5e`; the merge includes the later plugin-display-name changes.
+
+Source regression result: pass. Native visual acceptance remains with the user.
+
+---
+
 # Expanded player purple gradient (2026-10-11)
 
 - Evidence: the user's screenshot of `0.3.1-preview.i88.colors.20261011.105538` shows that the 6% blue tint is barely visible. The user requested trying purple.

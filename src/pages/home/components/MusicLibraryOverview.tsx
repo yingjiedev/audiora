@@ -5,7 +5,10 @@ import ThemeText from "@/components/base/themeText";
 import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import LocalMusicSheet from "@/core/localMusicSheet";
-import PluginManager, { useSortedPlugins } from "@/core/pluginManager";
+import PluginManager, {
+    usePluginDisplayNameResolver,
+    useSortedPlugins,
+} from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import Color from "color";
@@ -247,6 +250,7 @@ function OnlineMusicContent() {
     const colors = useColors();
     const navigate = useNavigate();
     const { t } = useI18N();
+    const getDisplayName = usePluginDisplayNameResolver();
     const enabledPlugins = useSortedPlugins().filter(plugin => PluginManager.isPluginEnabled(plugin));
 
     return (
@@ -288,14 +292,14 @@ function OnlineMusicContent() {
                     <Pressable
                         key={plugin.hash}
                         accessibilityRole="button"
-                        accessibilityLabel={t("musicLibrary.searchWithSource", { name: plugin.name })}
+                        accessibilityLabel={t("musicLibrary.searchWithSource", { name: getDisplayName(plugin) })}
                         style={[styles.browserRow, index < enabledPlugins.length - 1 ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Color(colors.text).alpha(0.07).toString() } : null]}
                         onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
                         <View style={[styles.browserIcon, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
                             <Icon name="circle-stack" size={rpx(28)} color={colors.primaryText} />
                         </View>
                         <View style={styles.browserText}>
-                            <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{plugin.name}</ThemeText>
+                            <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{getDisplayName(plugin)}</ThemeText>
                             <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.browserDescription}>
                                 {plugin.supportedMethods.has("search")
                                     ? t("musicLibrary.searchSupported")

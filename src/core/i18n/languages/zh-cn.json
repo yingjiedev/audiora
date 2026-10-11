@@ -230,6 +230,8 @@
     "pluginSetting.pluginItem.options.uninstallPlugin": "卸载插件",
     "pluginSetting.pluginItem.options.uninstallPluginContent": "确认卸载插件「{name}」吗？",
     "pluginSetting.pluginItem.options.alternativePlugin": "音源重定向",
+    "pluginSetting.pluginItem.options.renamePlugin": "重命名插件",
+    "pluginSetting.pluginItem.dialog.renamePluginTip": "只修改本地显示名称，不影响插件的音源标识与功能；留空可恢复原名",
     "pluginSetting.pluginItem.dialog.setAlternativePluginTitle": "设置音源重定向",
     "pluginSetting.pluginItem.dialog.setAlternativePluginTip": "将使用选定的插件解析该插件的音源\n随便设置可能导致无法播放歌曲，请谨慎操作",
     "pluginSetting.pluginItem.options.importMusic": "导入单曲",

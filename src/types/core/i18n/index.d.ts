@@ -273,6 +273,8 @@ export interface ILanguageData {
     "artistDetail.musicSheet": string; // 音乐歌单
 
     // 插件设置相关
+    "pluginSetting.pluginItem.options.renamePlugin": string;
+    "pluginSetting.pluginItem.dialog.renamePluginTip": string;
     "pluginSetting.pluginItem.options.updatePlugin": string; // 更新插件
     "pluginSetting.pluginItem.options.sharePlugin": string; // 分享插件
     "pluginSetting.pluginItem.options.uninstallPlugin": string; // 卸载插件

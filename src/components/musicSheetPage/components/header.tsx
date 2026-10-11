@@ -8,6 +8,7 @@ import PlayAllBar from "@/components/base/playAllBar";
 import useColors from "@/hooks/useColors";
 import { useI18N } from "@/core/i18n";
 import Tag from "@/components/base/tag";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import Color from "color";
 import useCardStyle from "@/hooks/useCardStyle";
 import useHasCustomBackground from "@/hooks/useHasCustomBackground";
@@ -29,10 +30,14 @@ export default function Header(props: IHeaderProps) {
 
     const [maxLines, setMaxLines] = useState<number | undefined>(6);
     const count = musicSheet?.worksNum ?? (musicList ? musicList.length ?? 0 : 0);
-    const platformTag =
+    const getPluginDisplayName = usePluginDisplayNameResolver();
+    const pluginPlatform =
         musicSheet?.platform && musicSheet.platform !== "local"
             ? musicSheet.platform
             : null;
+    const platformTag = pluginPlatform
+        ? getPluginDisplayName(pluginPlatform)
+        : null;
     const accentBackground = Color(colors.primary).alpha(0.1).toString();
     const detailBackground = colors.surfaceElevated ?? colors.card;
     const coverBackground = hasCustomBackground

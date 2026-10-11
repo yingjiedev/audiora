@@ -2,7 +2,10 @@ import ListItem from "@/components/base/listItem";
 import ThemeText from "@/components/base/themeText";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { useI18N } from "@/core/i18n";
-import PluginManager, { Plugin } from "@/core/pluginManager";
+import PluginManager, {
+    Plugin,
+    usePluginDisplayNameResolver,
+} from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import { normalizeImportedMusicSheet } from "@/utils/mediaUtils";
 import rpx, { vmax } from "@/utils/rpx";
@@ -35,6 +38,7 @@ interface ILoadedSheet {
 export default function MergeImportMusicSheet() {
     const validPlugins =
         PluginManager.getSortedPluginsWithAbility("importMusicSheet");
+    const getDisplayName = usePluginDisplayNameResolver();
     const { t } = useI18N();
     const colors = useColors();
     const safeAreaInsets = useSafeAreaInsets();
@@ -88,13 +92,13 @@ export default function MergeImportMusicSheet() {
                     plugin.name,
                     input,
                     t("panel.importMusicSheet.fallbackTitle", {
-                        plugin: plugin.name,
+                        plugin: getDisplayName(plugin),
                     }),
                 );
                 if (!sheet) {
                     throw new Error(
                         t("panel.mergeImportMusicSheet.sourceFailed", {
-                            plugin: plugin.name,
+                            plugin: getDisplayName(plugin),
                         }),
                     );
                 }
@@ -115,7 +119,7 @@ export default function MergeImportMusicSheet() {
             const statsText = stats
                 .map(stat =>
                     t("panel.mergeImportMusicSheet.sourceStatLine", {
-                        plugin: stat.pluginName,
+                        plugin: getDisplayName(stat.pluginName),
                         total: stat.total,
                         kept: stat.kept,
                         duplicates: stat.duplicates,
@@ -184,10 +188,11 @@ export default function MergeImportMusicSheet() {
                                         fontWeight="bold"
                                         fontSize="subTitle">
                                         {`${index + 1}. ${
-                                            row.plugin?.name ??
-                                            t(
-                                                "panel.mergeImportMusicSheet.selectPlugin",
-                                            )
+                                            row.plugin
+                                                ? getDisplayName(row.plugin)
+                                                : t(
+                                                    "panel.mergeImportMusicSheet.selectPlugin",
+                                                )
                                         }`}
                                     </ThemeText>
                                     <View style={styles.rowActions}>
@@ -282,7 +287,7 @@ export default function MergeImportMusicSheet() {
                                                                 ? colors.onPrimary
                                                                 : colors.text,
                                                         }}>
-                                                        {plugin.name}
+                                                        {getDisplayName(plugin)}
                                                     </ThemeText>
                                                 </TouchableOpacity>
                                             );

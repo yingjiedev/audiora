@@ -1,12 +1,15 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
-import { SongRow } from "./body";
+import { SheetBody, SongRow } from "./body";
+import type { ISheetPlaybackEntry } from "@/core/sheetPlaybackHistory";
 import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
 
 const song = { id: "one", platform: "demo", title: "Song", artist: "Artist" } as IMusic.IMusicItem;
 let mockCurrent: IMusic.IMusicItem | null = song;
 let mockPaused = false;
+let mockDisplayName = "Renamed source";
+jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => (platform: string) => platform === "demo" ? mockDisplayName : platform }));
 const mockGestures: Array<Record<string, (...args: any[]) => void>> = [];
 jest.mock("react-native-gesture-handler", () => ({
     Gesture: { Pan: () => {
@@ -30,6 +33,7 @@ jest.mock("react-native-gesture-handler", () => ({
         return gesture;
     } },
     GestureDetector: "GestureDetector",
+    GestureHandlerRootView: "GestureHandlerRootView",
     ScrollView: "ScrollView",
 }));
 jest.mock("react-native-reanimated", () => ({
@@ -39,7 +43,15 @@ jest.mock("react-native-reanimated", () => ({
     useSharedValue: (value: unknown) => ({ value }),
     useAnimatedStyle: (callback: () => unknown) => callback(),
 }));
-jest.mock("@shopify/flash-list", () => ({ FlashList: "FlashList" }));
+jest.mock("@shopify/flash-list", () => {
+    const ReactMock = require("react");
+    return {
+        FlashList: (props: any) => ReactMock.createElement("FlashList", props, props.data.map((item: unknown, index: number) =>
+            ReactMock.createElement(ReactMock.Fragment, { key: index }, props.renderItem({ item })),
+        )),
+    };
+});
+jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ bottom: 0 }) }));
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/base/fastImage", () => "FastImage");
@@ -107,5 +119,33 @@ describe("playback drawer song row", () => {
         const free = render(song);
         expect(free.renderer.root.findAllByType(ThemeText).some(node => node.props.children === "VIP")).toBe(false);
         act(() => free.renderer.unmount());
+    });
+});
+
+describe("playback drawer sheet sources", () => {
+    it("refreshes display names while preserving playback identifiers and author text", () => {
+        const entry: ISheetPlaybackEntry = {
+            routeName: "plugin-sheet-detail",
+            sheet: { id: "sheet", platform: "demo", title: "Sheet" },
+        };
+        const onOpen = jest.fn();
+        const onRemove = jest.fn();
+        let renderer!: TestRenderer.ReactTestRenderer;
+        const content = () => <SheetBody entries={[entry]} onOpen={onOpen} onRemove={onRemove} />;
+        act(() => {
+            renderer = TestRenderer.create(content());
+        });
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "Renamed source")).toBe(true);
+        act(() => renderer.root.findByProps({ accessibilityLabel: "Sheet" }).props.onPress());
+        expect(onOpen).toHaveBeenCalledWith(entry);
+        expect(entry.sheet.platform).toBe("demo");
+        mockDisplayName = "New source name";
+        act(() => renderer.update(content()));
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "New source name")).toBe(true);
+        entry.sheet.artist = "Author";
+        act(() => renderer.update(content()));
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "Author")).toBe(true);
+        act(() => renderer.unmount());
+        mockDisplayName = "Renamed source";
     });
 });

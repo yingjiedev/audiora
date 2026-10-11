@@ -449,7 +449,12 @@ export default function MusicItemOptions(props: IMusicItemOptionsProps) {
         {
             icon: "link",
             title: associatedLrc
-                ? t("panel.musicItemOptions.associatedLyric", { platform: associatedLrc.platform, id: associatedLrc.id })
+                ? t("panel.musicItemOptions.associatedLyric", {
+                    platform: pluginManager.getPluginDisplayName(
+                        associatedLrc.platform,
+                    ),
+                    id: associatedLrc.id,
+                })
                 : t("panel.musicItemOptions.associateLyric"),
             onPress: async () => {
                 if (
