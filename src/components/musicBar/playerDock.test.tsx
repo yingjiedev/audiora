@@ -118,9 +118,12 @@ describe("PlayerDock", () => {
         const renderer = render();
         expand(renderer);
         const gradient = renderer.root.findByType(LinearGradient);
-        expect(gradient.props.colors).toEqual(dark ? ["#263459", "#233052", "#212E4E"] : ["#F3F6FE", "#FBFCFF", "#FFFFFF"]);
+        expect(gradient.props.colors).toEqual(dark ? ["#4B4380", "#333763", "#212E4E"] : ["#E9D6FC", "#F6EEFE", "#FFFFFF"]);
         const before = gradient.props.colors;
         mockThemeOverrides = { primary: "#FFCC00" };
+        act(() => renderer.update(<PlayerDock collapseKey="home" bottomNavigation={null} />));
+        expect(renderer.root.findByType(LinearGradient).props.colors).toEqual(before);
+        mockThemeOverrides = { primary: "#FFCC00", accentWarm: "#7040D8" };
         act(() => renderer.update(<PlayerDock collapseKey="home" bottomNavigation={null} />));
         expect(renderer.root.findByType(LinearGradient).props.colors).not.toEqual(before);
         expect(openPlayer).not.toHaveBeenCalled();

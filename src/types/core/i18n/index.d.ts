@@ -1,5 +1,6 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "panel.qualityTranslation.labelPlaceholder": string;
     "media.rawSongKeyRequired": string;
     "media.encryptedSourceFailed": string;
     // 通用词汇

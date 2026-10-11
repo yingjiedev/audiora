@@ -76,4 +76,5 @@ export const mediaScrim = "#050C1C";
 export const neutralFallbackPrimary = "#F2F2F2";
 
 export const colorContrastMinimum = { text: 4.5, control: 3 } as const;
-export const playerTintWeights = [0.06, 0.02, 0] as const;
+/** Visible decorative purple at the top, fading into the selected panel surface. */
+export const playerTintWeights = [0.28, 0.12, 0] as const;

@@ -29,21 +29,42 @@ describe("Audiora semantic colors", () => {
         }
     });
 
-    it("uses the agreed subtle blue surface instead of the brand's mint green", () => {
+    it("uses a visible lavender tint while keeping primary controls blue", () => {
         const colors = resolveThemeColors({ ...lightColors, background: "transparent" }, false);
-        expect(colors.playerGradient).toEqual(["#F3F6FE", "#FBFCFF", "#FFFFFF"]);
+        expect(colors.playerGradient).toEqual(["#E9D6FC", "#F6EEFE", "#FFFFFF"]);
         expect(colors.primary).toBe("#3867F4");
         expect(colors.active).toBe(colors.primaryText);
     });
 
-    it.each(["#FFCC00", "#FF7650", "#8A46D9", "#888888"])("follows the custom accent %s without leaking preset blue/green", primary => {
+    it.each(["#FFCC00", "#FF7650", "#8A46D9", "#888888"])("preserves custom primary %s independently of the decorative player tint", primary => {
         const input = { ...lightColors, background: "transparent", primary };
         const before = { ...input };
         const colors = resolveThemeColors(input, false);
         expect(colors.primary).toBe(primary);
-        expect(colors.playerGradient[0]).not.toBe("#F3F6FE");
+        expect(colors.playerGradient).toEqual(["#E9D6FC", "#F6EEFE", "#FFFFFF"]);
         for (const background of [lightColors.card, lightColors.pageBackground, ...colors.playerGradient]) {
             expect(contrastRatio(colors.active, background)).toBeGreaterThanOrEqual(4.5);
+        }
+        expect(input).toEqual(before);
+    });
+
+    it.each([undefined, "invalid"])("falls back to preset purple for a missing or invalid decorative accent (%s)", accentWarm => {
+        const input = { ...lightColors, background: "transparent", primary: "#FFCC00", accentWarm };
+        const colors = resolveThemeColors(input, false);
+        expect(colors.playerGradient).toEqual(["#E9D6FC", "#F6EEFE", "#FFFFFF"]);
+        expect(colors.primary).toBe(input.primary);
+        expect(input.accentWarm).toBe(accentWarm);
+    });
+
+    it("honors a custom decorative accent while keeping the panel opaque and theme settings intact", () => {
+        const input = { ...lightColors, background: "transparent", primary: "#FFCC00", accentWarm: "rgba(112,64,216,0.3)" };
+        const before = { ...input };
+        const colors = resolveThemeColors(input, false);
+        expect(colors.playerGradient[0]).not.toBe("#E9D6FC");
+        expect(Color(colors.accentWarm).alpha()).toBe(0.3);
+        for (const background of colors.playerGradient) {
+            expect(Color(background).alpha()).toBe(1);
+            expect(contrastRatio(colors.playerTextSecondary, background)).toBeGreaterThanOrEqual(4.5);
         }
         expect(input).toEqual(before);
     });
@@ -77,7 +98,7 @@ describe("Audiora semantic colors", () => {
         const colors = resolveThemeColors({ ...lightColors, background: "transparent", primary }, false);
         expect(Color(colors.primary).alpha()).toBe(0.25);
         expect(contrastRatio(colors.onPrimary, blendOver(colors.primary, lightColors.card))).toBeGreaterThanOrEqual(4.5);
-        expect(colors.playerGradient).toEqual(["#F3F6FE", "#FBFCFF", "#FFFFFF"]);
+        expect(colors.playerGradient).toEqual(["#E9D6FC", "#F6EEFE", "#FFFFFF"]);
     });
 
     it("does not overestimate a transparent foreground's contrast", () => {

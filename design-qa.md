@@ -170,3 +170,15 @@ Blocker: post-change native visual evidence awaits a new preview and user manual
 - Handoff: a new signed arm64 preview is built from the committed source, with actual package/version/signature/font/resource verification and preserve-data installation recorded in the preview verification JSON. Per `AGENTS.md`, installation stops after confirming the installed version. Light/dark/custom appearance and interactive acceptance remain with the user; no post-migration native screenshot or visual pass is claimed.
 
 Source/color regression result: pass. Native visual acceptance: pending user.
+
+---
+
+# Expanded player purple gradient (2026-10-11)
+
+- Evidence: the user's screenshot of `0.3.1-preview.i88.colors.20261011.105538` shows that the 6% blue tint is barely visible. The user requested trying purple.
+- Change: the expanded player now blends the theme's purple decorative accent into the opaque panel at 28% / 12% / 0%. Default light stops are #E9D6FC / #F6EEFE / #FFFFFF; dark stops are #4B4380 / #333763 / #212E4E. Primary controls retain their blue/theme role. Custom decorative accents remain configurable, with a safe preset fallback.
+- Readability: the stronger tint exposed insufficient contrast in existing secondary/tertiary player text. Those roles are now calibrated across the gradient; preset light/dark tests sample both rendered gradient segments and enforce the unrounded 4.5:1 threshold.
+- Validation: all 12 color suites / 115 tests passed, including actual native gradient binding, separate primary/decorative overrides, missing/invalid accents and opaque custom accents. Color, runtime-reference, animation and UI checks passed. Modified source has zero ESLint errors/warnings; PR type comparison retains ten existing diagnostics and zero introduced diagnostics. The previous change's missing placeholder key declaration was completed. Full repository lint still has existing findings. No component layout, animation, navigation or hit-region changes were made.
+- Native acceptance: deliver a new uniquely versioned preview, verify the artifact and preserve-data installation, then leave visual comparison with the user per repository instructions. No post-change screenshot or native visual pass is claimed.
+
+Source/color regression result: pass. Native visual acceptance: pending user.

@@ -38,6 +38,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const primaryColor = safeColor(colors.primary, preset.primary);
     const primary = primaryColor.alpha() < 1 ? primaryColor.toString() : primaryColor.hex();
     const primaryOpaque = primaryColor.alpha(1).hex();
+    const accentWarm = safeColor(colors.accentWarm, preset.accentWarm).toString();
     const page = safeColor(colors.pageBackground ?? (colors.background === "transparent" ? preset.pageBackground : colors.background), preset.pageBackground).alpha(1).hex();
     const card = safeColor(colors.card, preset.card).toString();
     const surface = colors.surface ?? card;
@@ -45,10 +46,11 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     // The panel itself is opaque so wallpaper cannot invalidate foreground contrast.
     // Its surroundings remain transparent; preserve the selected surface RGB.
     const playerSurface = safeColor(dark ? surfaceElevated : colors.musicBar ?? card, preset.surfaceElevated).alpha(1).hex();
-    const playerGradient = playerTintWeights.map(weight => Color(playerSurface).mix(Color(primaryOpaque), weight).hex());
+    const playerTint = Color(accentWarm).alpha(1);
+    const playerGradient = playerTintWeights.map(weight => Color(playerSurface).mix(playerTint, weight).hex());
     const playerText = Color(bestForeground(playerGradient[0], [colors.musicBarText ?? colors.text, preset.text, lightColors.text, mediaOnDark])).alpha(1).hex();
-    const playerTextSecondary = Color(playerText).mix(Color(playerSurface), 0.28).hex();
-    const playerTextTertiary = Color(playerText).mix(Color(playerSurface), 0.36).hex();
+    const playerTextSecondary = readableAccent(Color(playerText).mix(Color(playerSurface), 0.28).hex(), playerGradient, colorContrastMinimum.text);
+    const playerTextTertiary = readableAccent(Color(playerText).mix(Color(playerSurface), 0.36).hex(), playerGradient, colorContrastMinimum.text);
     const tonalSurface = Color(blendOver(card, page)).mix(Color(primaryOpaque), 0.16).hex();
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
@@ -81,14 +83,14 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         mediaSurface: darkColors.surface,
         mediaAccent: readableAccent(primaryOpaque, [mediaScrim, darkColors.surface], colorContrastMinimum.text),
         mediaFavorite: readableAccent(safeColor(colors.favorite, preset.favorite).hex(), [mediaScrim], colorContrastMinimum.control),
-        mediaAmbientGradient: [Color(primaryOpaque).alpha(0.16).toString(), Color(primaryOpaque).alpha(0.18).toString(), Color(colors.accentWarm ?? preset.accentWarm).alpha(0.24).toString()],
+        mediaAmbientGradient: [Color(primaryOpaque).alpha(0.16).toString(), Color(primaryOpaque).alpha(0.18).toString(), Color(accentWarm).alpha(0.24).toString()],
         panelGradient: [Color(surfaceElevated).alpha(1).hex(), Color(surface).alpha(1).hex()],
         textSecondary: colors.textSecondary ?? Color(colors.text).alpha(0.64).toString(),
         surface,
         surfaceElevated,
         border: colors.border ?? Color(colors.text).alpha(0.12).toString(),
         listActive: colors.listActive ?? Color(primary).alpha(0.12).toString(),
-        accentWarm: colors.accentWarm ?? primary,
+        accentWarm,
         accentCool: colors.accentCool ?? colors.info ?? primary,
         background: colors.pageBackground ?? colors.background,
         playerSurface, playerGradient, playerText, playerTextSecondary, playerTextTertiary,
