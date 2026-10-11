@@ -378,3 +378,12 @@ Source/build/install result: pass. Native visual acceptance: pending user.
 - Follow-up regression for correct chart-history context: online chart UI and sheet playback history 2 suites / 20 tests passed.
 
 Source/build/install result: pass. Native visual/function acceptance: pending user.
+
+## Online chart proportions and typography review
+
+- Compared the user's new online screenshot with their horizontal-ranking reference; the earlier 82%-screen cards, 120rpx rows, five-track cap, redundant source captions and weak chart headings did not meet the visual target. Evidence and the concrete fixes are in docs/design/online-charts-audit-20261012.md.
+- Multi-chart cards now use 62% screen width; one chart uses available content width. Public MusicItem has an opt-in compact mode (both outer row and primary target at least 44dp / 96rpx), without changing default search/favorite/local density. Removed inherited row padding; tighter ranking columns, 32rpx chart headings over 26rpx song titles, neutral small visible play controls and 16rpx card corners follow the reference proportions and existing Audiora theme.
+- Source selection, scoped search, management and full catalog are grouped in one row; cards no longer repeat source names. Up to ten real tracks are previewed and queued with truthful actual-count labels, including shorter lists; full detail navigation and lazy source-scoped data remain intact.
+- Focused regression: 11 suites / 78 tests passed. Color regression: 16 suites / 171 tests passed. Color/UI guards and runtime references passed. Changed-file ESLint has no errors/warnings. Explicit TypeScript check has no changed-file diagnostics; existing repository diagnostics remain. Repository lint still has 14 existing errors / 100 warnings; unrelated formatting was restored.
+
+Source/function/color checks: pass. Native visual/function acceptance: pending user. Build/install record follows after artifact verification.

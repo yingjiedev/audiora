@@ -1,7 +1,7 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
-import { View } from "react-native";
-import MusicItem from "./musicItem";
+import { StyleSheet, View } from "react-native";
+import MusicItem, { MUSIC_ITEM_HEIGHT } from "./musicItem";
 import TrackPlayer from "@/core/trackPlayer";
 import MusicSheet from "@/core/musicSheet";
 import { showPanel } from "@/components/panels/usePanel";
@@ -77,6 +77,24 @@ describe("shared song row interactions", () => {
         expect(renderer.root.findByProps({ testID: "selection" })).toBeDefined();
         act(() => button("Song - Artist").props.onPress());
         expect(select).toHaveBeenCalledWith(song);
+    });
+    it("compacts both row and hit area while preserving normal rows and playback", () => {
+        const play = jest.fn();
+        render({ density: "compact", actions: [], onItemPress: play });
+        const outer = StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style);
+        const main = StyleSheet.flatten(button("Song - Artist").props.style({ pressed: false }));
+        expect(outer.minHeight).toBeGreaterThanOrEqual(44);
+        expect(main.minHeight).toBeGreaterThanOrEqual(44);
+        expect(main.minHeight).toBeLessThan(MUSIC_ITEM_HEIGHT);
+        expect(outer.paddingLeft).toBe(0);
+        expect(outer.paddingRight).toBe(0);
+        expect(renderer.root.findAllByType(ThemeText).find(node => node.props.children === "Song")?.props.fontSize).toBe("subTitle");
+        expect(renderer.root.findAllByType(ThemeText).find(node => node.props.fontSize === "tag")).toBeDefined();
+        act(() => button("Song - Artist").props.onPress());
+        expect(play).toHaveBeenCalledWith(song);
+        act(() => renderer.update(<MusicItem musicItem={song} />));
+        expect(StyleSheet.flatten(button("Song - Artist").props.style({ pressed: false })).minHeight).toBe(MUSIC_ITEM_HEIGHT);
+        expect(renderer.root.findAllByType(ThemeText).find(node => node.props.children === "Song")?.props.fontSize).toBe("content");
     });
     it("adds and removes the actual song in favorites without playing it", async () => {
         render({ actions: ["favorite"] });

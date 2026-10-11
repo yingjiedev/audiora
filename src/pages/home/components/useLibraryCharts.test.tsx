@@ -11,7 +11,7 @@ jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { isPlugin
 jest.mock("@/utils/motion", () => ({ motionDuration: () => 160, motionEasing: {} }));
 
 const sheets = Array.from({ length: 6 }, (_, index) => ({ id: String(index), platform: "source", title: `Chart ${index}` }));
-const songs = Array.from({ length: 8 }, (_, index) => ({ id: String(index), platform: "source", title: `Song ${index}`, artist: "Artist", album: "Album", artwork: "", duration: 180 }));
+const songs = Array.from({ length: 12 }, (_, index) => ({ id: String(index), platform: "source", title: `Song ${index}`, artist: "Artist", album: "Album", artwork: "", duration: 180 }));
 const store = getDefaultStore();
 let hashSequence = 0;
 function source(methods: Record<string, any> = {}) {
@@ -40,12 +40,12 @@ describe("library charts requests and scope", () => {
     beforeEach(() => store.set(pluginsTopListAtom, {}));
     afterEach(() => act(() => renderer?.unmount()));
 
-    it("loads only the current card and neighbour and caps unique previews at five real songs", async () => {
+    it("loads only the current card and neighbour and caps unique previews at ten real songs", async () => {
         const plugin = source({ getTopListDetail: jest.fn(async () => ({ musicList: [songs[0], ...songs], topListItem: { title: "Updated chart" } })) });
         await render(plugin);
         expect(plugin.methods.getTopLists).toHaveBeenCalledTimes(1);
         expect(plugin.methods.getTopListDetail).toHaveBeenCalledTimes(2);
-        expect(result!.getPreview(sheets[0])).toEqual({ state: "ready", musicList: songs.slice(0, 5), sheet: { ...sheets[0], title: "Updated chart" } });
+        expect(result!.getPreview(sheets[0])).toEqual({ state: "ready", musicList: songs.slice(0, 10), sheet: { ...sheets[0], title: "Updated chart" } });
         act(() => renderer.update(React.createElement(Capture, { plugin, index: 1 })));
         await flush();
         expect(plugin.methods.getTopListDetail).toHaveBeenCalledTimes(3);

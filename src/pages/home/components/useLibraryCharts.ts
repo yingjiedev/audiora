@@ -4,7 +4,7 @@ import { pluginsTopListAtom } from "@/pages/topList/store/atoms";
 import { getDefaultStore, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export const chartPreviewLimit = 5;
+export const chartPreviewLimit = 10;
 type PreviewState = "loading" | "ready" | "error";
 export interface LibraryChartPreview {
     state: PreviewState;

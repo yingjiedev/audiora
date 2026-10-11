@@ -39,6 +39,8 @@ interface IMusicItemProps {
     /** All scenes share this row; only leading content and actions vary. */
     actions?: readonly MusicItemAction[];
     showCover?: boolean;
+    /** Compact previews keep the shared content and interactions with less spacing. */
+    density?: "default" | "compact";
 }
 
 function RowAction(props: { icon: IIconName; label: string; onPress: () => void; color?: string; disabled?: boolean; selected?: boolean }) {
@@ -95,7 +97,7 @@ export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
         musicSheet, itemPaddingRight, left, containerStyle,
-        highlight, highlightText, actions = ["addNext", "more"], showCover = false,
+        highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default",
     } = props;
     const colors = useColors();
     const { t } = useI18N();
@@ -108,19 +110,20 @@ export default function MusicItem(props: IMusicItemProps) {
     const hasMv = useMemo(() => canPlayMusicVideo(musicItem), [musicItem]);
     const album = typeof musicItem.album === "string" ? musicItem.album.trim() : "";
     const showAlbum = album && album !== String(musicItem.title ?? "").trim();
+    const compact = density === "compact";
 
     return (
-        <View style={[styles.row, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
+        <View style={[styles.row, compact && styles.compactRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={[musicItem.title, musicItem.artist].filter(Boolean).join(" - ")}
                 accessibilityState={{ selected: active }}
                 onLongPress={onItemLongPress}
                 onPress={() => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem)}
-                style={({ pressed }) => [styles.main, pressed && { backgroundColor: colors.listActive }]}>
+                style={({ pressed }) => [styles.main, compact && styles.compactMain, pressed && { backgroundColor: colors.listActive }]}>
                 {left}
                 {index !== undefined ? (
-                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={styles.index}>
+                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex]}>
                         {index}
                     </ThemeText>
                 ) : null}
@@ -128,15 +131,15 @@ export default function MusicItem(props: IMusicItemProps) {
                     <FastImage style={styles.cover} source={resolveArtwork(musicItem) ?? musicItem.artwork} placeholderSource={ImgAsset.albumDefault} />
                 ) : null}
                 <View style={styles.content}>
-                    <ThemeText fontColor={active ? "primary" : "text"} numberOfLines={1}>
+                    <ThemeText fontColor={active ? "primary" : "text"} fontSize={compact ? "subTitle" : "content"} numberOfLines={1}>
                         {titleParts.map((part, partIndex) => (
-                            <ThemeText key={partIndex} fontColor={active || part.highlight ? "primary" : "text"}>
+                            <ThemeText key={partIndex} fontSize={compact ? "subTitle" : "content"} fontColor={active || part.highlight ? "primary" : "text"}>
                                 {part.text}
                             </ThemeText>
                         ))}
                     </ThemeText>
-                    <View style={styles.metadata}>
-                        <ThemeText numberOfLines={1} fontSize="description" fontColor="textSecondary" style={styles.artist}>
+                    <View style={[styles.metadata, compact && styles.compactMetadata]}>
+                        <ThemeText numberOfLines={1} fontSize={compact ? "tag" : "description"} fontColor="textSecondary" style={styles.artist}>
                             {musicItem.artist}{showAlbum ? ` · ${album}` : ""}
                         </ThemeText>
                         {isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
@@ -183,4 +186,8 @@ const styles = StyleSheet.create({
     actions: { flexDirection: "row", alignItems: "center", flexShrink: 0, marginLeft: spacing.xs },
     action: { width: 44, minHeight: 48, justifyContent: "center", alignItems: "center" },
     muted: { opacity: 0.4 },
+    compactRow: { minHeight: Math.max(44, rpx(96)), paddingLeft: 0, paddingRight: 0 },
+    compactMain: { minHeight: Math.max(44, rpx(96)), paddingVertical: spacing.sm },
+    compactIndex: { width: rpx(32), marginRight: spacing.xs },
+    compactMetadata: { marginTop: spacing.xxs },
 });

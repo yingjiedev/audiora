@@ -30,7 +30,7 @@ export default function OnlineMusicLibrary() {
     const charts = useLibraryCharts(plugin, effectiveIndex);
     const { width } = useWindowDimensions();
     const contentWidth = width - spacing.xxxl * 2;
-    const cardWidth = Math.min(480, contentWidth * (charts.charts.length > 1 ? 0.92 : 1));
+    const cardWidth = Math.min(480, charts.charts.length > 1 ? width * 0.62 : contentWidth);
     const cardStride = cardWidth + spacing.sm;
     const openManagement = () => navigate(ROUTE_PATH.SETTING, { type: "plugin" });
     const openCatalog = () => navigate(ROUTE_PATH.TOP_LIST, { initialPluginHash: plugin?.hash });
@@ -39,7 +39,7 @@ export default function OnlineMusicLibrary() {
     return (
         <ScrollView testID="library-online-content" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             {plugin ? (
-                <View style={[styles.sourceBar, { backgroundColor: colors.card }]}>
+                <View style={styles.sourceBar}>
                     <Icon name="circle-stack" size={rpx(26)} color={colors.textSecondary} />
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sourcePicker} contentContainerStyle={styles.sourceOptions}>
                         {enabledPlugins.map(source => {
@@ -51,7 +51,7 @@ export default function OnlineMusicLibrary() {
                                         setSelectedHash(source.hash); setVisibleCard({ hash: source.hash, index: 0 });
                                     }} style={({ pressed }) => [styles.sourceOption, { opacity: pressed ? 0.7 : 1 }]}>
                                     <View style={[styles.sourceOptionContent, enabledPlugins.length > 1 && selected && { backgroundColor: colors.tonalSurface }]}>
-                                        <ThemeText numberOfLines={1} fontSize="description" fontWeight="medium"
+                                        <ThemeText numberOfLines={1} fontSize="subTitle" fontWeight="semibold"
                                             color={enabledPlugins.length > 1 && selected ? colors.onTonal : colors.text}>{displayName(source)}</ThemeText>
                                     </View>
                                 </Pressable>
@@ -68,18 +68,16 @@ export default function OnlineMusicLibrary() {
                         style={styles.iconAction} onPress={openManagement}>
                         <ThemeText fontSize="description" fontColor="textSecondary">{t("musicLibrary.manage")}</ThemeText>
                     </Pressable>
+                    {charts.hasCatalog ? (
+                        <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.allCharts")} style={styles.textAction} onPress={openCatalog}>
+                            <ThemeText fontSize="description" fontColor="textSecondary">{t("myMusic.viewAllShort")}</ThemeText>
+                            <Icon name="chevron-right" size={rpx(18)} color={colors.textSecondary} />
+                        </Pressable>
+                    ) : null}
                 </View>
-            ) : null}
-
-            <View style={styles.heading}>
+            ) : <View style={styles.heading}>
                 <ThemeText fontSize="title" fontWeight="semibold" style={styles.headingTitle}>{t("musicLibrary.charts")}</ThemeText>
-                {charts.hasCatalog ? (
-                    <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.allCharts")} style={styles.textAction} onPress={openCatalog}>
-                        <ThemeText fontSize="description" fontColor="textSecondary">{t("myMusic.viewAllShort")}</ThemeText>
-                        <Icon name="chevron-right" size={rpx(18)} color={colors.textSecondary} />
-                    </Pressable>
-                ) : null}
-            </View>
+            </View>}
 
             {charts.charts.length ? (
                 <FlatList key={plugin?.hash} testID="library-chart-deck" horizontal data={charts.charts}
@@ -102,25 +100,24 @@ export default function OnlineMusicLibrary() {
                             <View style={[styles.chartCard, { width: cardWidth, backgroundColor: colors.card }]}>
                                 <View style={styles.chartHeader}>
                                     <View style={styles.chartTitleBlock}>
-                                        <ThemeText fontSize="subTitle" fontWeight="semibold" numberOfLines={2}>{title}</ThemeText>
-                                        <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.sourceName}>{displayName(plugin)}</ThemeText>
+                                        <ThemeText fontSize="title" fontWeight="semibold" numberOfLines={2}>{title}</ThemeText>
                                     </View>
                                     {charts.hasDetails ? (
                                         <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.playChartPreview", { name: title, count: musicList.length })}
                                             accessibilityState={{ disabled: !ready }} disabled={!ready}
                                             style={({ pressed }) => [styles.playAction, { opacity: pressed ? 0.7 : 1 }]}
                                             onPress={() => play(musicList[0])}>
-                                            <View style={[styles.playContent, { backgroundColor: ready ? colors.tonalSurface : colors.surface }]}>
-                                                <Icon name="play" size={rpx(24)} color={ready ? colors.onTonal : colors.textSecondary} />
+                                            <View style={[styles.playContent, { backgroundColor: colors.surface }]}>
+                                                <Icon name="play" size={rpx(20)} color={ready ? colors.text : colors.textSecondary} />
                                             </View>
                                         </Pressable>
                                     ) : null}
                                 </View>
                                 {musicList.length ? musicList.map((music, index) => (
-                                    <MusicItem key={`${music.platform}@${music.id}`} musicItem={music} musicSheet={sheet} actions={[]}
-                                        left={<ThemeText style={styles.rank} fontWeight={index < 3 ? "semibold" : "regular"}
+                                    <MusicItem key={`${music.platform}@${music.id}`} musicItem={music} musicSheet={sheet} actions={[]} density="compact"
+                                        left={<ThemeText style={styles.rank} fontWeight={index < 3 ? "bold" : "medium"}
                                             color={isSameMediaItem(music, currentMusic) ? colors.active : colors.textSecondary}>{index + 1}</ThemeText>}
-                                        containerStyle={styles.musicRow} onItemPress={play} />
+                                        onItemPress={play} />
                                 )) : (
                                     <View style={styles.chartState}>
                                         {charts.hasDetails && (!preview || preview.state === "loading") ? (
@@ -138,7 +135,7 @@ export default function OnlineMusicLibrary() {
                                 )}
                                 <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.openChart", { name: title })}
                                     style={[styles.chartFooter, { borderTopColor: colors.divider }]} onPress={charts.hasDetails ? openDetail : openCatalog}>
-                                    <ThemeText fontSize="description" fontColor="textSecondary">{t(charts.hasDetails ? "musicLibrary.fullChart" : "musicLibrary.allCharts")}</ThemeText>
+                                    <ThemeText fontSize="caption" fontColor="textSecondary">{t(charts.hasDetails ? "musicLibrary.fullChart" : "musicLibrary.allCharts")}</ThemeText>
                                     <Icon name="chevron-right" size={rpx(18)} color={colors.textSecondary} />
                                 </Pressable>
                             </View>
@@ -168,26 +165,24 @@ export default function OnlineMusicLibrary() {
 
 const styles = StyleSheet.create({
     content: { paddingHorizontal: spacing.xxxl, paddingTop: spacing.xs, paddingBottom: spacing.xxxl },
-    sourceBar: { borderRadius: radius.lg, paddingHorizontal: spacing.sm, flexDirection: "row", alignItems: "center", gap: spacing.xxs },
+    sourceBar: { flexDirection: "row", alignItems: "center", gap: spacing.xxs },
     sourcePicker: { flex: 1, minWidth: 0 },
     sourceOptions: { alignItems: "center", gap: spacing.xxs },
     sourceOption: { minHeight: minimumTouch, minWidth: minimumTouch, justifyContent: "center" },
     sourceOptionContent: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, borderRadius: radius.sm, maxWidth: rpx(220) },
     iconAction: { minHeight: minimumTouch, minWidth: minimumTouch, alignItems: "center", justifyContent: "center" },
-    heading: { marginTop: spacing.lg, minHeight: minimumTouch, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+    heading: { minHeight: minimumTouch, flexDirection: "row", alignItems: "center" },
     headingTitle: { flex: 1, minWidth: 0 },
     textAction: { minHeight: minimumTouch, minWidth: minimumTouch, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xxs },
-    deck: { marginHorizontal: -spacing.xxxl, marginTop: spacing.xs },
+    deck: { marginHorizontal: -spacing.xxxl, marginTop: spacing.sm },
     deckContent: { paddingHorizontal: spacing.xxxl, gap: spacing.sm, alignItems: "flex-start" },
-    chartCard: { borderRadius: radius.xl, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-    chartHeader: { minHeight: minimumTouch, flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
+    chartCard: { borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+    chartHeader: { minHeight: minimumTouch, flexDirection: "row", alignItems: "center", gap: spacing.xs, marginBottom: spacing.xxs },
     chartTitleBlock: { flex: 1, minWidth: 0 },
-    sourceName: { marginTop: spacing.xxs },
     playAction: { minWidth: minimumTouch, minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
-    playContent: { minWidth: Math.max(36, rpx(64)), minHeight: Math.max(32, rpx(56)), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-    musicRow: { paddingHorizontal: 0 },
-    rank: { width: rpx(40), marginRight: spacing.sm, textAlign: "center", fontSize: fontRpx(24) },
-    chartFooter: { minHeight: minimumTouch, paddingVertical: spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.xs },
+    playContent: { width: rpx(64), height: rpx(40), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+    rank: { width: rpx(32), marginRight: spacing.xs, textAlign: "center", fontSize: fontRpx(22) },
+    chartFooter: { minHeight: minimumTouch, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.xs },
     chartState: { minHeight: rpx(200), alignItems: "center", justifyContent: "center", paddingVertical: spacing.lg },
     emptyCard: { borderRadius: radius.xl, padding: spacing.xl, marginTop: spacing.xs, alignItems: "center" },
     stateDescription: { marginTop: spacing.sm, textAlign: "center" },

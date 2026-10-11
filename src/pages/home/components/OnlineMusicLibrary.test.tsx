@@ -11,7 +11,7 @@ import MusicItem from "@/components/mediaItem/musicItem";
 import OnlineMusicLibrary from "./OnlineMusicLibrary";
 
 const mockNavigate = jest.fn();
-const mockSongs = Array.from({ length: 5 }, (_, index) => ({ id: String(index), platform: "source", title: `Song ${index}`, artist: "Artist", album: "Album", artwork: "", duration: 180 }));
+const mockSongs = Array.from({ length: 10 }, (_, index) => ({ id: String(index), platform: "source", title: `Song ${index}`, artist: "Artist", album: "Album", artwork: "", duration: 180 }));
 const mockSheet = { id: "chart", platform: "source", title: "Real chart" };
 const mockSources = [
     { hash: "search", name: "Search Source", supportedMethods: new Set(["search", "getTopLists", "getTopListDetail"]), enabled: true },
@@ -85,14 +85,27 @@ describe("online library charts", () => {
     it("uses shared rows and queues exactly the visible chart preview with context", () => {
         render();
         const rows = renderer.root.findAllByType(MusicItem);
-        expect(rows).toHaveLength(5);
-        expect(rows[4].props.actions).toEqual([]);
-        act(() => rows[4].props.onItemPress(mockSongs[4]));
-        expect(TrackPlayer.playWithReplacePlayList).toHaveBeenLastCalledWith(mockSongs[4], mockSongs, { routeName: "top-list-detail", sheet: { ...mockSheet, musicList: mockSongs } });
-        act(() => button(label("musicLibrary.playChartPreview", { name: "Real chart", count: 5 })).props.onPress());
+        expect(rows).toHaveLength(10);
+        expect(rows[9].props.actions).toEqual([]);
+        expect(rows[9].props.density).toBe("compact");
+        act(() => rows[9].props.onItemPress(mockSongs[9]));
+        expect(TrackPlayer.playWithReplacePlayList).toHaveBeenLastCalledWith(mockSongs[9], mockSongs, { routeName: "top-list-detail", sheet: { ...mockSheet, musicList: mockSongs } });
+        act(() => button(label("musicLibrary.playChartPreview", { name: "Real chart", count: 10 })).props.onPress());
         expect(TrackPlayer.playWithReplacePlayList).toHaveBeenLastCalledWith(mockSongs[0], mockSongs, expect.anything());
         act(() => button(label("musicLibrary.openChart", { name: "Real chart" })).props.onPress());
         expect(mockNavigate).toHaveBeenLastCalledWith("top-list-detail", { pluginHash: "search", topList: mockSheet });
+    });
+
+    it("uses actual short previews and exposes the full catalog without repeated source labels", () => {
+        const short = mockSongs.slice(0, 2);
+        mockChartState.getPreview.mockReturnValue({ state: "ready", musicList: short, sheet: mockSheet });
+        render();
+        expect(renderer.root.findAllByType(MusicItem)).toHaveLength(2);
+        act(() => button(label("musicLibrary.playChartPreview", { name: "Real chart", count: 2 })).props.onPress());
+        expect(TrackPlayer.playWithReplacePlayList).toHaveBeenLastCalledWith(short[0], short, expect.anything());
+        expect(renderer.root.findAllByType(ThemeText).filter(node => node.props.children === "Search Source")).toHaveLength(1);
+        act(() => button("musicLibrary.allCharts").props.onPress());
+        expect(mockNavigate).toHaveBeenLastCalledWith("top-list", { initialPluginHash: "search" });
     });
 
     it("switches sources, resets the visible index and falls back when a source is removed", () => {
@@ -147,12 +160,12 @@ describe("online library charts", () => {
     ] as const)("uses semantic colors on actual chart surfaces (%s)", (palette, dark) => {
         mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
         render();
-        const play = button(label("musicLibrary.playChartPreview", { name: "Real chart", count: 5 }));
-        const fill = play.findAllByType(View).map(node => StyleSheet.flatten(node.props.style)).find(style => style?.backgroundColor === mockColors.tonalSurface)!;
-        expect(play.findByType(Icon).props.color).toBe(mockColors.onTonal);
+        const play = button(label("musicLibrary.playChartPreview", { name: "Real chart", count: 10 }));
+        const fill = play.findAllByType(View).map(node => StyleSheet.flatten(node.props.style)).find(style => style?.backgroundColor === mockColors.surface)!;
+        expect(play.findByType(Icon).props.color).toBe(mockColors.text);
         const card = blendOver(mockColors.card, mockColors.pageBackground);
         const action = blendOver(fill.backgroundColor!, card);
-        expect(contrastRatio(blendOver(mockColors.onTonal, action), action)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(blendOver(mockColors.text, action), action)).toBeGreaterThanOrEqual(4.5);
         expect(renderer.root.findAllByType(MusicItem)[0].props.left.props.color).toBe(mockColors.active);
         expect(renderer.root.findAllByType(MusicItem)[1].props.left.props.color).toBe(mockColors.textSecondary);
     });
