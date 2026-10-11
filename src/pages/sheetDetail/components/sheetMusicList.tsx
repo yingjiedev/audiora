@@ -21,8 +21,6 @@ export default function SheetMusicList() {
                 musicSheet={musicSheet}
                 showIndex
                 state={RequestStateCode.IDLE}
-                variant="card"
-                itemSpacing={12}
                 highlightMusicItem={currentMusic}
 
             />

@@ -55,8 +55,6 @@ export default function History() {
                     musicList={musicHistoryList}
                     showIndex
                     state={RequestStateCode.IDLE}
-                    variant="card"
-                    itemSpacing={12}
                     musicSheet={{
                         id: musicHistorySheetId,
                         title: t("history.title"),

@@ -89,3 +89,41 @@ No paired native visual comparison has been performed. No visual iteration is cl
 final result: blocked
 
 Blocker: native visual evidence is intentionally deferred to user manual acceptance under repository preview instructions.
+
+---
+
+# Shared song list visual verification
+
+- Source visual truth: user attachments `ee7e58cfb1a098d38dd4ef12c43617ca.jpg` (search) and `6d5720c670e4d282895ec47ae26281e2.jpg` (favorites).
+- Provided pre-change implementation: `18490df32c3627379c43f4565c903ff7.jpg` (search). All three images are 1220 × 2656 pixels, displayed at 941 × 2048.
+- Implementation: native React Native shared `MusicItem`; no post-change runtime screenshot captured.
+- Viewport: Android; runtime viewport and density not captured. No density normalization or paired post-change comparison is claimed.
+- State: search results, favorites, local songs, album/playlist songs, artist songs, and editing mode. Source screenshots have different results and tabs; only row structure is compared.
+- Full-view evidence: supplied references inspected; reference rows use a continuous page background with title/artist hierarchy. The supplied old app adds covers, raised containers, borders, shadows, and a separate source/duration column.
+- Focused evidence: supplied rows inspected for sequence numbers, title/artist alignment, badges, and right actions. Post-change native typography and tap geometry await manual acceptance.
+
+## Findings and implementation
+
+- [P1] Per-song cards compete with song titles and fragment the list. Removed both scene wrappers and the card variant from the common song list.
+- [P2] Covers and source columns consume title space. Default rows now omit covers, use two text lines, and place real quality/VIP/MV/local status and duration in the secondary line. Full source metadata stays in the existing options panel.
+- [P2] Scene-specific wrappers can drift. Search, favorites, local songs, playlist/album songs, artist songs, and the legacy history screen use the same `MusicItem` row. Sequence numbers, optional cover, and typed actions are configuration.
+- [P2] Adjacent controls must not trigger row playback. Text/leading content and actions use sibling press targets; automated tests cover play, favorite, next-play, options, and editing isolation. Native hit testing remains manual.
+
+## Required fidelity surfaces
+
+- Fonts/typography: existing app font and 28/22rpx title/metadata sizes, single-line truncation, literal keyword highlights, current-track primary color. Runtime rendering and long metadata await review.
+- Spacing/layout: one shared 120rpx row minimum, 32rpx left inset, 8rpx metadata gap; 44 × 48dp minimum action targets. No per-song border, radius, shadow, or persistent row fill. Sequence numbers remain aligned in collection lists.
+- Colors/tokens: existing theme foreground, secondary, primary, pressed state, and favorite danger tokens; existing factual badges reused. Reference green is mapped to the app's configurable primary color.
+- Image/assets: default reference-style rows contain no covers; optional real artwork remains supported. Existing icon assets are reused, including the app's next-play icon. No fabricated artwork, social counts, or quality badges.
+- Copy/content: existing localized action labels; actual artist/album/duration fields. Search keeps the current playback preference and query highlights. No data migration.
+
+## Comparison history and acceptance
+
+The supplied pre-change screenshots guided the fixes. No post-change native capture or visual pass is claimed. Repository instructions defer UI acceptance to the user and prohibit automatic device capture or substitute visual acceptance.
+
+- Automated: 81 Jest suites / 590 tests passed, including 22 new row/highlight/adapter cases; runtime reference, motion, color, and UI guards passed.
+- Manual: verify light/dark appearance, long titles and metadata, action hit targets, current-song highlighting, list scrolling, favorite updates, and batch editing on the new APK.
+
+final result: blocked
+
+Blocker: post-change native visual evidence is deferred to user manual acceptance; the user requested packaging before connecting the device.
