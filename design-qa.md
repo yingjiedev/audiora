@@ -327,3 +327,9 @@ final result: blocked (native visual acceptance pending user under repository ha
 - This is a correction based on an inspected user screenshot, not a newly captured native visual pass. Per AGENTS.md, build and data-preserving installation will stop after actual version confirmation; the user performs visual and functional acceptance. Native screenshot capture, app launch and emulator are not performed. iOS remains unverified. Preview delivery record follows after verification.
 
 Source/data/color regression result: pass. Native visual acceptance: pending user.
+
+- Native-source corroboration: this installed React Native version's Android `BorderDrawable.getPathEffect` uses a dashed mark/gap length of three times the border width. A 1dp border therefore uses 3dp dash/gap segments around roughly 6dp cells. `BorderRadiusStyle` scales oversized radii to element edge lengths; the single 999rpx corner can span the small summary. Source was inspected locally; this explains the screenshot without claiming a new native visual verification.
+- Delivered: app source `57d521037a1fea445e1b235c95688b40fafc084d`; `0.3.1-preview.i88.gridfix.20261011.222830`, versionCode `1791728922`, package `io.github.yingjiedev.audiora`, arm64-v8a. Metadata, source identity, v2 single signer, all three font byte/hash comparisons and vinyl bitmap verified. SHA-256 `AF928D156BE071D2FB89E30935861363B7EA780D83D585BCA300706BFA6CD392`; APK and verification JSON retained under `D:/audiora-previews/issue-88/`.
+- Physical phone at `192.168.31.232:38437` had the matching Inset-preview signing certificate. `adb install -r` upgraded from `1791706443` while preserving app data. Actual installed version and code `1791728922` confirmed, then all device operations stopped. User performs native visual acceptance; no app launch or screenshot capture. iOS unverified.
+
+final result: blocked (native visual acceptance pending user under repository handoff rules)
