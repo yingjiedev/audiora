@@ -349,4 +349,3 @@ Source/data/color checks: pass. Native visual acceptance: pending user.
 - Installed with `adb install -r` on the paired physical phone at `192.168.31.232:38437`, upgrading from `0.3.1-preview.i88.gridfix.20261011.222830` / `1791728922` with matching certificates and data preserved. Exact installed version/code `1791730108` confirmed. Device operations stopped; user checks rounded filled cells, unknown/zero/active states, wider Today layout and long-duration/narrow/theme states. No app launch, screenshot capture or native visual acceptance claim.
 
 Source/build/install result: pass. Native visual acceptance: pending user.
-
