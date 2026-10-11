@@ -208,10 +208,12 @@ export default function MyMusicOverview() {
                             key={entry.key}
                             accessibilityRole="button"
                             accessibilityLabel={entry.description}
-                            style={({ pressed }) => [styles.playlistAction, entry.key === "create" ? { backgroundColor: colors.primary } : null, { opacity: pressed ? 0.7 : 1 }]}
+                            style={({ pressed }) => [styles.playlistAction, { opacity: pressed ? 0.7 : 1 }]}
                             onPress={entry.onPress}>
-                            <Icon name={entry.icon} size={rpx(28)} color={entry.key === "create" ? colors.onPrimary : colors.textSecondary} />
-                            <ThemeText fontSize="description" fontWeight="medium" color={entry.key === "create" ? colors.onPrimary : colors.textSecondary} style={styles.inlineLabel}>{entry.title}</ThemeText>
+                            <View style={[styles.playlistActionContent, entry.key === "create" ? [styles.createPlaylistContent, { backgroundColor: colors.tonalSurface }] : null]}>
+                                <Icon name={entry.icon} size={rpx(28)} color={entry.key === "create" ? colors.onTonal : colors.textSecondary} />
+                                <ThemeText fontSize="description" fontWeight="medium" color={entry.key === "create" ? colors.onTonal : colors.textSecondary} style={[styles.inlineLabel, styles.playlistActionLabel]}>{entry.title}</ThemeText>
+                            </View>
                         </Pressable>
                     ))}
                 </View>
@@ -380,8 +382,11 @@ const styles = StyleSheet.create({
     playBadge: { position: "absolute", right: spacing.xs, bottom: spacing.xs, width: rpx(40), height: rpx(40), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
     recentTitle: { marginTop: spacing.xs, lineHeight: recentTitleLineHeight, height: recentTitleLineHeight },
     recentArtist: { marginTop: spacing.xs },
-    playlistActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.xs },
-    playlistAction: { flex: 1, minWidth: rpx(160), minHeight: minimumTouch, borderRadius: radius.pill, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xs },
+    playlistActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.xl },
+    playlistAction: { flex: 1, minWidth: rpx(160), minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
+    playlistActionContent: { minHeight: Math.max(32, rpx(64)), maxWidth: "100%", flexShrink: 1, borderRadius: radius.pill, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md, paddingVertical: spacing.xxs },
+    createPlaylistContent: { minWidth: rpx(152) },
+    playlistActionLabel: { flexShrink: 1 },
     playlistList: { borderRadius: radius.lg, overflow: "hidden" },
     playlistRow: { minHeight: rpx(116), paddingLeft: spacing.md, flexDirection: "row", alignItems: "center" },
     playlistCover: { width: rpx(84), height: rpx(84), borderRadius: radius.sm },

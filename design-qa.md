@@ -88,6 +88,19 @@ No paired native visual comparison has been performed. No visual iteration is cl
 
 final result: blocked
 
+---
+
+# Compact Create playlist action (2026-10-11)
+
+- Evidence: the user-provided screenshot `1a8e85faf51ced230009a91018200b21.jpg` shows the solid blue Create pill filling the entire third touch column and crowding the playlist below. The user authorized the recommended local correction.
+- Corrected: three equal outer touch areas retain their separate import/ID/create operations. The Create background now belongs to a smaller inner content pill, using `tonalSurface` / `onTonal`; the outer touch height stays at least 44dp. Content has a minimum 32dp/64rpx height, expands for larger text, and has bounded width and a shrinkable label. All three actions share one vertical center. The row-to-list gap increases from 8rpx to 24rpx.
+- Validation: color regression passed (13 suites / 135 tests), including all 19 existing My-page cases and rendered Create surface/foreground checks in light, dark, custom and alpha-custom themes. The existing three-action route regression passes. Changed-source ESLint has zero errors/warnings; color/UI/runtime-reference guards and diff checks pass. Full-repository lint retains 14 existing errors / 101 warnings; its two unrelated automatic changes were restored.
+- Native visual acceptance is pending user. No device screenshots or substitute UI acceptance performed; preview delivery stops after data-preserving installation and exact version confirmation per repository instructions.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked
+
 Blocker: native visual evidence is intentionally deferred to user manual acceptance under repository preview instructions.
 
 ---
