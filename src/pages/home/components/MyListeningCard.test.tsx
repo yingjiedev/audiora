@@ -48,7 +48,10 @@ describe("MyListeningCard", () => {
         const number = text().find(node => node.props.children === "41")!;
         const suffix = text().find(node => node.props.children === unit)!;
         expect(StyleSheet.flatten(number.props.style).fontSize).toBeGreaterThan(StyleSheet.flatten(suffix.props.style).fontSize);
-        expect(suffix.props.fontColor).toBe("textSecondary");
+        expect(suffix.props.color).toBe(mockColors.onCardInsetSecondary);
+        const todayPlays = language["listening.todayPlays"].replace("{count}", "1");
+        expect(renderer.root.findByProps({ accessibilityLabel: language["listening.openReport"] }).props.accessibilityHint).toContain(todayPlays);
+        expect(text().map(node => node.props.children)).toContain(todayPlays);
         expect(text().map(node => node.props.children)).not.toContain(mockLanguage["listening.collection"]);
     });
 
@@ -64,7 +67,9 @@ describe("MyListeningCard", () => {
         });
         expect(mockNavigate.mock.calls).toEqual([["favorite", { id: "favorites" }], ["report"], ["report"]]);
         expect(today.props.accessibilityHint).toBe("41 秒 · 播放 1 次");
-        expect(report.props.accessibilityHint).toBe("10/11 起记录 · 活跃 1 天");
+        expect(report.props.accessibilityHint).toBe("10/11 起记录 · 活跃 1 天 · 今日播放 1 次");
+        expect(report.findAll(node => node.type === "ThemeText" as any && node.props.children === "今日播放 1 次")).toHaveLength(1);
+        expect(today.findAll(node => node.type === "ThemeText" as any).map(node => node.props.children)).not.toContain("今日播放 1 次");
         const previewCells = renderer.root.findAll(node => typeof node.props.testID === "string" && node.props.testID.startsWith("listening-day-"));
         expect(new Set(previewCells.map(node => node.props.testID)).size).toBe(91);
     });
@@ -77,6 +82,6 @@ describe("MyListeningCard", () => {
         act(() => renderer.update(<MyListeningCard count={0} />));
         expect(renderer.root.findByProps({ accessibilityLabel: zhCN["home.favoriteSheet"] }).props.disabled).toBe(true);
         expect(renderer.root.findByProps({ accessibilityLabel: "0 秒" })).toBeDefined();
-        expect(renderer.root.findByProps({ accessibilityLabel: zhCN["listening.openReport"] }).props.accessibilityHint).toBe("10/11 起记录 · 活跃 0 天");
+        expect(renderer.root.findByProps({ accessibilityLabel: zhCN["listening.openReport"] }).props.accessibilityHint).toBe("10/11 起记录 · 活跃 0 天 · 今日播放 0 次");
     });
 });

@@ -42,7 +42,13 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
                         {column.map((day, weekday) => {
                             if (!day) return <View key={`padding-${weekday}`} style={styles.cell} />;
                             const level = activityLevel(day.seconds);
-                            return <View key={day.date} testID={`listening-day-${day.date}`} style={[styles.cell, day.recorded ? { backgroundColor: fills[level] } : { borderColor: colors.border, borderWidth: StyleSheet.hairlineWidth, borderStyle: "dashed" }]} />;
+                            return (
+                                <View key={day.date} testID={`listening-day-${day.date}`} style={[
+                                    styles.cell,
+                                    day.recorded ? { backgroundColor: fills[level] } : styles.unrecorded,
+                                    (!day.recorded || level === 0) && { borderColor: colors.activityOutline, borderWidth: 1 },
+                                ]} />
+                            );
                         })}
                     </View>
                 ))}
@@ -51,10 +57,10 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
                 <>
                     {days.length > 0 && <View style={styles.range}><ThemeText fontSize="tag" fontColor="textSecondary">{days[0].date}</ThemeText><ThemeText fontSize="tag" fontColor="textSecondary">{days[days.length - 1].date}</ThemeText></View>}
                     <View style={styles.legend}>
-                        <View style={[styles.legendCell, { borderColor: colors.border, borderWidth: StyleSheet.hairlineWidth, borderStyle: "dashed" }]} />
+                        <View style={[styles.legendCell, styles.unrecorded, { borderColor: colors.activityOutline, borderWidth: 1 }]} />
                         <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.unknownLabel}>{t("listening.unrecorded")}</ThemeText>
                         <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.less")}</ThemeText>
-                        {fills.map((fill, index) => <View key={index} style={[styles.legendCell, { backgroundColor: fill }]} />)}
+                        {fills.map((fill, index) => <View key={index} style={[styles.legendCell, { backgroundColor: fill }, index === 0 && { borderColor: colors.activityOutline, borderWidth: 1 }]} />)}
                         <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.more")}</ThemeText>
                     </View>
                 </>
@@ -65,10 +71,11 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
 
 const styles = StyleSheet.create({
     wrapper: { width: "100%", marginTop: spacing.lg },
-    compact: { width: rpx(230), maxWidth: "100%" },
+    compact: { width: rpx(188), maxWidth: "100%" },
     grid: { flexDirection: "row", gap: spacing.xxs },
     column: { flex: 1, gap: spacing.xxs },
     cell: { width: "100%", aspectRatio: 1, borderRadius: radius.xs / 2 },
+    unrecorded: { borderStyle: "dashed" },
     weekdays: { width: rpx(34) },
     weekday: { flex: 1, justifyContent: "center" },
     range: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },

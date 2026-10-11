@@ -7,6 +7,7 @@ export interface ILanguageData {
     "listening.seconds": string;
     "listening.hoursMinutes": string;
     "listening.playCount": string;
+    "listening.todayPlays": string;
     "listening.activity": string;
     "listening.recentActive": string;
     "listening.recordedActivity": string;

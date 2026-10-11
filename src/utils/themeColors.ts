@@ -52,10 +52,16 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const playerTextSecondary = readableAccent(Color(playerText).mix(Color(playerSurface), 0.28).hex(), playerGradient, colorContrastMinimum.text);
     const playerTextTertiary = readableAccent(Color(playerText).mix(Color(playerSurface), 0.36).hex(), playerGradient, colorContrastMinimum.text);
     const tonalSurface = Color(blendOver(card, page)).mix(Color(primaryOpaque), 0.16).hex();
+    const cardBackground = blendOver(card, page);
+    const cardInset = Color(blendOver(surface, page)).mix(Color(cardBackground), 0.5).hex();
+    const insetBackgrounds = [cardBackground, cardInset];
+    const onCardInset = readableAccent(safeColor(colors.text, preset.text).hex(), insetBackgrounds, colorContrastMinimum.text);
+    const onCardInsetSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), insetBackgrounds, colorContrastMinimum.text);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
     const activityEmpty = Color(blendOver(surface, page)).mix(Color(blendOver(card, page)), 0.3).hex();
     const activityBackgrounds = [blendOver(card, page), activityEmpty];
+    const activityOutline = readableAccent(Color(onCardInsetSecondary).mix(Color(cardBackground), 0.5).hex(), activityBackgrounds, colorContrastMinimum.control);
     const activityLow = readableAccent(Color(primaryOpaque).mix(Color(blendOver(card, page)), 0.5).hex(), activityBackgrounds, colorContrastMinimum.control);
     const activityStrong = readableAccent(primaryText, activityBackgrounds, colorContrastMinimum.text);
     const activityLevels = [0, 0.33, 0.66, 1].map(weight => readableAccent(Color(activityLow).mix(Color(activityStrong), weight).hex(), activityBackgrounds, colorContrastMinimum.control));
@@ -69,7 +75,11 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         onPrimary: bestForeground(blendOver(primary, blendOver(card, page)), [mediaOnDark, lightColors.text, controlNeutralDark]),
         tonalSurface,
         onTonal: readableAccent(primaryOpaque, [tonalSurface], colorContrastMinimum.text),
+        cardInset,
+        onCardInset,
+        onCardInsetSecondary,
         activityEmpty,
+        activityOutline,
         activityLevels,
         success: readableAccent(safeColor(colors.success, preset.success).hex(), backgrounds, colorContrastMinimum.text),
         warning: readableAccent(safeColor(colors.warning, preset.warning).hex(), backgrounds, colorContrastMinimum.text),

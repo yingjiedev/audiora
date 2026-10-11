@@ -39,7 +39,8 @@ Audiora 使用蓝色主色、蓝灰表面和少量紫色装饰。参考产品用
 - `ThemeText` 的 `fontColor="primary"` 自动使用 `primaryText`。主色填充按钮的文字使用 `onPrimary`。显式 `color` 和样式覆盖必须由调用者确认实际背景上的可读性。
 - 作者、副标题优先尊重主题配置的 `textSecondary`；旧配置缺少该字段时才使用派生回落。
 - 次级按钮与音质/VIP 徽标用 `tonalSurface` / `onTonal`，标签文字承担具体含义。选中时间、确认按钮使用主色填充与 `onPrimary`，定时进度使用 `active`；不固定使用另一套蓝紫渐变。
-- 听歌活跃图使用派生的 `activityEmpty` / `activityLevels`。四档非零时长保持主题主色，最低档也须与零值底和卡片实际合成底达到 3:1，不能用按钮的浅色 `tonalSurface` 代替真实活跃状态。记录开始前使用空心虚线并提供“未记录”图例，范围外的日历补位保持空白。起始日期和活跃天数提供文字摘要，避免只凭色差解释数据；未知自定义壁纸的实机对比度仍需验收。
+- 主卡片内嵌摘要使用派生的 `cardInset`，由当前主题表面和卡片的合成色混合，不能另选原始装饰颜色。`onCardInset` / `onCardInsetSecondary` 对内嵌底与主卡底同时校准至 4.5:1，使曲边跨越的文字仍可读；用户的卡片透明度与配置不改写。
+- 听歌活跃图使用派生的 `activityEmpty` / `activityLevels` / `activityOutline`。四档非零时长保持主题主色，最低档也须与零值底和卡片实际合成底达到 3:1，不能用按钮的浅色 `tonalSurface` 代替真实活跃状态。网格边界 `activityOutline` 同样对卡片合成底与零值底达到 3:1；缩略图用至少 1dp 边界，防止极细虚线格消失。记录开始前使用空心虚线，记录后的零值日使用浅底与实线，并提供“未记录”图例；范围外的日历补位保持空白。起始日期和活跃天数提供文字摘要，避免只凭色差解释数据；未知自定义壁纸的实机对比度仍需验收。
 - 成功、警告和危险状态的前景按普通文字门槛派生；危险填充文字用 `onDanger`，浅底用 `dangerSurface`。不得把透明度字符串直接拼在可能为 RGBA 的主题色末尾。
 - 图片上的白底按钮用 `inverseSurface` / `onInverse`；沉浸播放器的歌词强调用 `mediaAccent`，喜欢用 `mediaFavorite`，其余用 `onMedia*`。`mediaAmbientGradient` 跟随主色，仅用于封面氛围层。
 - `panelGradient` 保留表面 RGB 并补足不透明度；`modalScrim` 提供遮罩 RGB，弹层保留各自的遮罩透明度和动画。透明面板外部不额外加遮罩。

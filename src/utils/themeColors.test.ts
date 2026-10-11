@@ -12,6 +12,12 @@ describe("Audiora semantic colors", () => {
     ] as const)("makes even brief activity distinguishable from an empty cell in the %s theme", (_name, palette, dark) => {
         const colors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
         expect(new Set(colors.activityLevels).size).toBe(4);
+        expect(contrastRatio(colors.activityOutline, blendOver(colors.card, colors.pageBackground))).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(colors.activityOutline, colors.activityEmpty)).toBeGreaterThanOrEqual(3);
+        for (const foreground of [colors.onCardInset, colors.onCardInsetSecondary]) {
+            expect(contrastRatio(foreground, colors.cardInset)).toBeGreaterThanOrEqual(4.5);
+            expect(contrastRatio(foreground, blendOver(colors.card, colors.pageBackground))).toBeGreaterThanOrEqual(4.5);
+        }
         for (const fill of colors.activityLevels) {
             expect(contrastRatio(fill, colors.activityEmpty)).toBeGreaterThanOrEqual(3);
             expect(contrastRatio(fill, colors.card)).toBeGreaterThanOrEqual(3);
@@ -42,6 +48,29 @@ describe("Audiora semantic colors", () => {
                 expect(contrastRatio(colors.favorite, background)).toBeGreaterThanOrEqual(3);
             }
         }
+    });
+
+    it.each([false, true])("calibrates inset labels and calendar boundaries on translucent custom surfaces (dark=%s)", dark => {
+        const palette = dark ? darkColors : lightColors;
+        const input = {
+            ...palette, background: "transparent", primary: "rgba(112, 64, 216, 0.3)",
+            card: Color(palette.card).alpha(0.7).toString(),
+            surface: Color(palette.surface).alpha(0.45).toString(),
+        };
+        const before = { ...input };
+        const colors = resolveThemeColors(input, dark);
+        const actualCard = blendOver(colors.card, palette.pageBackground);
+        expect(Color(colors.cardInset).alpha()).toBe(1);
+        for (const foreground of [colors.onCardInset, colors.onCardInsetSecondary]) {
+            expect(contrastRatio(foreground, actualCard)).toBeGreaterThanOrEqual(4.5);
+            expect(contrastRatio(foreground, colors.cardInset)).toBeGreaterThanOrEqual(4.5);
+        }
+        for (const background of [actualCard, colors.activityEmpty]) {
+            expect(contrastRatio(colors.activityOutline, background)).toBeGreaterThanOrEqual(3);
+        }
+        expect(input).toEqual(before);
+        expect(colors.card).toBe(input.card);
+        expect(colors.surface).toBe(input.surface);
     });
 
     it("uses a visible lavender tint while keeping primary controls blue", () => {

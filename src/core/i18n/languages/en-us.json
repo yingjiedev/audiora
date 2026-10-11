@@ -6,6 +6,7 @@
     "listening.seconds": "{count} sec",
     "listening.hoursMinutes": "{hours} hr {minutes} min",
     "listening.playCount": "{count} plays",
+    "listening.todayPlays": "{count} plays today",
     "listening.activity": "Listening activity",
     "listening.recentActive": "{count} active days in the last {days} days",
     "listening.recordedActivity": "Since {date} · {count} active days",

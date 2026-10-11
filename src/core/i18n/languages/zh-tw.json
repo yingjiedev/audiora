@@ -6,6 +6,7 @@
     "listening.seconds": "{count} 秒",
     "listening.hoursMinutes": "{hours} 小時 {minutes} 分",
     "listening.playCount": "播放 {count} 次",
+    "listening.todayPlays": "今日播放 {count} 次",
     "listening.activity": "聽歌足跡",
     "listening.recentActive": "近 {days} 天，活躍 {count} 天",
     "listening.recordedActivity": "{date} 起記錄 · 活躍 {count} 天",

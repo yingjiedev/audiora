@@ -22,10 +22,13 @@ describe("ActivityGrid", () => {
             renderer = TestRenderer.create(<ActivityGrid days={calendarDays(data, 91, now)} startedAt={data.startedAt} compact />);
         });
         const cellStyle = (date: string) => StyleSheet.flatten(renderer.root.findByProps({ testID: `listening-day-${date}` }).props.style);
-        expect(cellStyle("2026-10-09")).toMatchObject({ borderStyle: "dashed" });
+        expect(cellStyle("2026-10-09")).toMatchObject({ borderStyle: "dashed", borderWidth: 1, borderColor: mockColors.activityOutline });
         expect(cellStyle("2026-10-09").backgroundColor).toBeUndefined();
         expect(cellStyle("2026-10-10").backgroundColor).toBe(mockColors.activityEmpty);
+        expect(cellStyle("2026-10-10")).toMatchObject({ borderWidth: 1, borderColor: mockColors.activityOutline });
+        expect(cellStyle("2026-10-10").borderStyle).toBeUndefined();
         expect(cellStyle("2026-10-11").backgroundColor).toBe(mockColors.activityLevels[0]);
+        expect(cellStyle("2026-10-11").borderWidth).toBeUndefined();
         expect(renderer.root.findAll(node => node.props.accessibilityLabel === "1 active, 89 unrecorded").length).toBeGreaterThan(0);
         expect(renderer.root.findAll(node => node.props.children === "listening.unrecorded")).toHaveLength(0);
     });
