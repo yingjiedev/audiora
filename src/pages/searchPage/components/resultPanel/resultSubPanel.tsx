@@ -9,6 +9,8 @@ import { searchResultsAtom } from "../../store/atoms";
 import { renderMap } from "./results";
 import DefaultResults from "./results/defaultResults";
 import ResultWrapper from "./resultWrapper";
+import { useParams } from "@/core/router";
+import { scopeSearchPlugins } from "../../common/searchScope";
 
 interface IResultSubPanelProps {
     tab: ICommon.SupportMediaType;
@@ -59,10 +61,11 @@ function getSubRouterScene(
 }
 
 function ResultSubPanel(props: IResultSubPanelProps) {
+    const params = useParams<"search-page">();
     const [index, setIndex] = useState(0);
     const getDisplayName = usePluginDisplayNameResolver();
     // Do not over-memoize: plugins can load/enable after mount.
-    const routes = PluginManager.getSortedSearchablePlugins(props.tab).map(
+    const routes = scopeSearchPlugins(PluginManager.getSortedSearchablePlugins(props.tab), params?.pluginHash).map(
         _ => ({
             key: _.hash,
             title: getDisplayName(_),

@@ -61,7 +61,7 @@ type RouterParamsBase = Record<RoutePaths, any>;
 interface RouterParams extends RouterParamsBase {
     home: undefined;
     "music-detail": undefined;
-    "search-page": undefined;
+    "search-page": { pluginHash?: string } | undefined;
     "local-sheet-detail": {
         id: string;
     };

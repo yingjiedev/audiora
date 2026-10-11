@@ -908,6 +908,17 @@ export interface ILanguageData {
     "home.exploreMusic": string;
     "home.recommendForYou": string;
     "home.recommendDescription": string;
+    "musicLibrary.tracks": string;
+    "musicLibrary.deviceMusic": string;
+    "musicLibrary.unknownAlbum": string;
+    "musicLibrary.localHint": string;
+    "musicLibrary.manageMusic": string;
+    "musicLibrary.playAllCount": string;
+    "musicLibrary.backToGroups": string;
+    "musicLibrary.connectedSources": string;
+    "musicLibrary.onlineHint": string;
+    "musicLibrary.searchLocal": string;
+    "musicLibrary.searchSourcePlaceholder": string;
     "musicLibrary.onlineMusic": string;
     "musicLibrary.allTracks": string;
     "musicLibrary.browseArtists": string;

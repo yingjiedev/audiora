@@ -5,13 +5,19 @@ import { getDefaultStore, useAtom, useSetAtom } from "jotai";
 import { useCallback, useRef } from "react";
 import { PageStatus, pageStatusAtom, searchResultsAtom } from "../store/atoms";
 import PluginManager, { Plugin } from "@/core/pluginManager";
+import { useParams } from "@/core/router";
+import { scopeSearchPlugins } from "../common/searchScope";
 
 export default function useSearch() {
+    const params = useParams<"search-page">();
+    const sourceHash = params?.pluginHash;
     const setPageStatus = useSetAtom(pageStatusAtom);
     const [searchResults, setSearchResults] = useAtom(searchResultsAtom);
 
     // 当前正在搜索
     const currentQueryRef = useRef<string>("");
+    const currentScopeRef = useRef(sourceHash);
+    currentScopeRef.current = sourceHash;
 
     /**
      * query: 搜索词
@@ -26,15 +32,12 @@ export default function useSearch() {
             type?: ICommon.SupportMediaType,
             pluginHash?: string,
         ) {
-            /** 如果没有指定插件，就用所有插件搜索 */
+            /** Explicit pagination sources override the library's source scope. */
 
-            let plugins: Plugin[] = [];
-            if (pluginHash) {
-                const tgtPlugin = PluginManager.getByHash(pluginHash);
-                tgtPlugin && (plugins = [tgtPlugin]);
-            } else {
-                plugins = PluginManager.getSearchablePlugins();
-            }
+            const plugins: Plugin[] = scopeSearchPlugins(
+                PluginManager.getSearchablePlugins(type),
+                pluginHash ?? sourceHash,
+            );
             if (plugins.length === 0) {
                 setPageStatus(PageStatus.NO_PLUGIN);
                 return;
@@ -111,7 +114,7 @@ export default function useSearch() {
                         searchType,
                     );
                     /** 如果搜索结果不是本次结果 */
-                    if (currentQueryRef.current !== query) {
+                    if (currentQueryRef.current !== query || currentScopeRef.current !== sourceHash) {
                         return;
                     }
                     /** 切换到结果页 */
@@ -151,6 +154,7 @@ export default function useSearch() {
                         }),
                     );
                 } catch (e: any) {
+                    if (currentScopeRef.current !== sourceHash) return;
                     errorLog("搜索失败", e?.message);
                     devLog(
                         "error",
@@ -168,18 +172,20 @@ export default function useSearch() {
                         produce(draft => {
                             const prevMediaResult = draft[searchType];
                             const failedPluginResult = prevMediaResult[_hash] ?? {
+                                state: RequestStateCode.ERROR,
                                 data: [],
                             };
 
                             failedPluginResult.state =
                                 RequestStateCode.ERROR;
+                            prevMediaResult[_hash] = failedPluginResult;
                             return draft;
                         }),
                     );
                 }
             });
         },
-        [searchResults],
+        [searchResults, setPageStatus, setSearchResults, sourceHash],
     );
 
     return search;
