@@ -205,7 +205,8 @@ Source/color regression result: pass. Native visual acceptance: pending user.
 - Validation: full Jest regression passed (86 suites / 651 tests), including 12 My-page cases. Final color regression passed (13 suites / 128 tests) after completing test fixture types, covering light/dark/custom tonal foregrounds and existing player controls; final language checks passed (4 tests). Color, runtime-reference, motion and UI guards passed. Changed-file TypeScript comparison has zero diagnostics, and modified-source ESLint has zero errors/warnings. Repository lint retains 14 existing errors / 101 warnings; unrelated automatic edits were restored.
 - Implementation screenshot and paired visual comparison: unavailable. No device capture is requested; repository instructions explicitly require stopping after preview installation/version confirmation for user acceptance, overriding the skill's automatic visual gate. Neither passing tests nor compilation establishes native visual quality.
 - Pending checks: rendered typography, cover cropping, margins, empty states, long titles/version, native dark/custom themes and scroll access above the expanded player. No navigation, player animation, overlay hit-test or native runtime redesign is included.
+- Preview delivered: source `db1eeffb`, version `0.3.1-preview.i88.mine.20261011.114141`, versionCode `1791690110`, arm64-v8a. Actual APK metadata, v2 single signer, three font hashes and vinyl resource verified; the installed certificate matched and `adb install -r` preserved data. Installed version/code confirmed on the user's connected physical device. Device work stopped at this point without screenshots or UI acceptance.
 
 Source/function/color regression result: pass. Native visual acceptance: pending user.
 
-final result: blocked (native visual comparison intentionally deferred to user acceptance)
+final result: blocked
