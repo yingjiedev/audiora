@@ -9,7 +9,7 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { controlSize, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import { useListeningStats } from "@/core/listeningStats";
-import { calendarDays, summarizeListening } from "@/core/listeningStatsModel";
+import { calendarDays, localDateKey, summarizeListening } from "@/core/listeningStatsModel";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import useColors from "@/hooks/useColors";
 import rpx, { fontRpx } from "@/utils/rpx";
@@ -21,9 +21,15 @@ export default function MyListeningCard({ sheetId, count, cover }: { sheetId?: s
     const { t } = useI18N();
     const navigate = useNavigate();
     const data = useListeningStats();
-    const days = calendarDays(data, 56);
+    const days = calendarDays(data, 91);
     const today = days[days.length - 1];
     const summary = summarizeListening(days);
+    const startDate = localDateKey(data.startedAt);
+    const startLabel = startDate.slice(0, 4) === today.date.slice(0, 4) ? startDate.slice(5).replace("-", "/") : startDate;
+    const activityHint = startDate > days[0].date
+        ? t("listening.recordedActivity", { date: startLabel, count: summary.activeDays })
+        : t("listening.recentActive", { days: days.length, count: summary.activeDays });
+    const todayTime = listeningTimeLabel(today.seconds, t.bind(null));
     const openTrends = () => navigate(ROUTE_PATH.LISTENING_REPORT);
     return (
         <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -44,58 +50,60 @@ export default function MyListeningCard({ sheetId, count, cover }: { sheetId?: s
                         </View>
                     )}
                     <View style={styles.favoriteText}>
-                        <View style={styles.eyebrow}>
+                        <View style={styles.favoriteHeading}>
                             <Icon name="heart" size={rpx(18)} color={colors.favorite} />
-                            <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.collection")}</ThemeText>
+                            <ThemeText fontSize="title" fontWeight="semibold" style={styles.favoriteTitle}>{t("home.favoriteSheet")}</ThemeText>
                         </View>
-                        <ThemeText fontSize="title" fontWeight="semibold" style={styles.favoriteTitle}>{t("home.favoriteSheet")}</ThemeText>
-                        <View style={styles.countRow}>
-                            <ThemeText fontSize="description" color={colors.primaryText}>{t("home.songCount", { count })}</ThemeText>
-                            <Icon name="chevron-right" size={rpx(20)} color={colors.textSecondary} />
-                        </View>
+                        <ThemeText fontSize="description" color={colors.primaryText} style={styles.count}>{t("home.songCount", { count })}</ThemeText>
                     </View>
+                    <Icon name="chevron-right" size={rpx(20)} color={colors.textSecondary} />
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel={t("listening.todayEntry")} onPress={openTrends}
-                    style={({ pressed }) => [styles.today, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}>
+                <View style={[styles.today, { backgroundColor: colors.surface }]}>
                     <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.today")}</ThemeText>
-                    <ThemeText fontSize="title" fontWeight="semibold" style={styles.todayValue}>{listeningTimeLabel(today.seconds, t.bind(null))}</ThemeText>
+                    <ThemeText accessible accessibilityLabel={todayTime} style={styles.todayValue}>
+                        {todayTime.split(/(\d+)/).map((part, index) => (
+                            <ThemeText key={index} fontColor={/^\d+$/.test(part) ? "text" : "textSecondary"} fontWeight={/^\d+$/.test(part) ? "semibold" : "regular"} style={/^\d+$/.test(part) ? styles.todayNumber : styles.todayUnit}>{part}</ThemeText>
+                        ))}
+                    </ThemeText>
                     <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.playCount", { count: today.plays })}</ThemeText>
-                </Pressable>
+                </View>
             </View>
             <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-            <Pressable accessibilityRole="button" accessibilityLabel={t("listening.openReport")} onPress={openTrends}
+            <Pressable accessibilityRole="button" accessibilityLabel={t("listening.openReport")} accessibilityHint={activityHint} onPress={openTrends}
                 style={({ pressed }) => [styles.activity, { opacity: pressed ? 0.7 : 1 }]}>
                 <View style={styles.activityText}>
-                    <ThemeText fontSize="subTitle" fontWeight="medium">{t("listening.activity")}</ThemeText>
+                    <ThemeText fontSize="description" fontWeight="semibold">{t("listening.activity")}</ThemeText>
                     <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.activityHint}>
-                        {summary.activeDays ? t("listening.recentActive", { count: summary.activeDays }) : t("listening.startHint")}
+                        {activityHint}
                     </ThemeText>
                     <View style={styles.reportLink}>
-                        <ThemeText fontSize="tag" color={colors.primaryText}>{t("listening.viewTrends")}</ThemeText>
+                        <ThemeText fontSize="caption" color={colors.primaryText}>{t("listening.viewTrends")}</ThemeText>
                         <Icon name="chevron-right" size={rpx(18)} color={colors.primaryText} />
                     </View>
                 </View>
-                <ActivityGrid days={days} compact />
+                <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ActivityGrid days={days} startedAt={data.startedAt} compact /></View>
             </Pressable>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    card: { width: "100%", borderRadius: radius.xl, padding: spacing.lg },
+    card: { width: "100%", borderRadius: radius.xl, padding: Math.max(14, spacing.xl) },
     top: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.md },
-    favorite: { flex: 1, minWidth: rpx(340), minHeight: minimumTouch, flexDirection: "row", alignItems: "center", gap: spacing.md },
-    cover: { width: rpx(112), height: rpx(112), borderRadius: radius.md },
+    favorite: { flex: 1, minWidth: rpx(300), minHeight: minimumTouch, flexDirection: "row", alignItems: "center", gap: spacing.md },
+    cover: { width: Math.max(60, rpx(112)), height: Math.max(60, rpx(112)), borderRadius: radius.md },
     placeholder: { alignItems: "center", justifyContent: "center" },
     favoriteText: { flex: 1, minWidth: 0 },
-    eyebrow: { flexDirection: "row", alignItems: "center", gap: spacing.xxs, marginBottom: spacing.xxs },
-    favoriteTitle: { fontSize: fontRpx(30) },
-    countRow: { flexDirection: "row", alignItems: "center", gap: spacing.xxs, marginTop: spacing.xs },
-    today: { minWidth: rpx(150), minHeight: minimumTouch, padding: spacing.md, borderRadius: radius.md, justifyContent: "center" },
-    todayValue: { marginVertical: spacing.xxs, fontSize: fontRpx(32) },
-    divider: { height: StyleSheet.hairlineWidth, marginVertical: spacing.lg },
-    activity: { minHeight: minimumTouch, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
-    activityText: { flex: 1, minWidth: rpx(260) },
+    favoriteHeading: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xxs },
+    favoriteTitle: { fontSize: Math.max(20, fontRpx(38)) },
+    count: { marginTop: spacing.xs },
+    today: { minWidth: rpx(144), paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderTopRightRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderTopLeftRadius: radius.xs, borderBottomRightRadius: radius.xs, justifyContent: "center" },
+    todayValue: { marginVertical: spacing.xxs },
+    todayNumber: { fontSize: Math.max(22, fontRpx(42)) },
+    todayUnit: { fontSize: Math.max(12, fontRpx(22)) },
+    divider: { height: StyleSheet.hairlineWidth, marginVertical: Math.max(12, spacing.xl) },
+    activity: { minHeight: minimumTouch, flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md },
+    activityText: { flex: 1, minWidth: rpx(240) },
     activityHint: { marginTop: spacing.xs },
-    reportLink: { minHeight: rpx(36), flexDirection: "row", alignItems: "center", gap: spacing.xxs, marginTop: spacing.xs },
+    reportLink: { flexDirection: "row", alignItems: "center", gap: spacing.xxs, marginTop: spacing.xs },
 });

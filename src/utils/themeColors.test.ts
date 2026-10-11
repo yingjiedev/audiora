@@ -4,6 +4,21 @@ import { bestForeground, blendOver, contrastRatio } from "./colorContrast";
 import { readableAccent, resolveThemeColors } from "./themeColors";
 
 describe("Audiora semantic colors", () => {
+    it.each([
+        ["light", lightColors, false],
+        ["dark", darkColors, true],
+        ["custom", { ...lightColors, primary: "#EFA322" }, false],
+        ["custom-alpha", { ...lightColors, primary: "rgba(56, 103, 244, 0.35)" }, false],
+    ] as const)("makes even brief activity distinguishable from an empty cell in the %s theme", (_name, palette, dark) => {
+        const colors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
+        expect(new Set(colors.activityLevels).size).toBe(4);
+        for (const fill of colors.activityLevels) {
+            expect(contrastRatio(fill, colors.activityEmpty)).toBeGreaterThanOrEqual(3);
+            expect(contrastRatio(fill, colors.card)).toBeGreaterThanOrEqual(3);
+        }
+        expect(colors.activityLevels[3]).toBe(colors.active);
+    });
+
     it.each([false, true])("keeps actual text, controls and state colors readable (dark=%s)", dark => {
         const palette = dark ? darkColors : lightColors;
         const colors = resolveThemeColors({ ...palette, background: "transparent" }, dark);

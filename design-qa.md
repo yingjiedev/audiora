@@ -273,3 +273,18 @@ Source/function/color checks: pass. Native visual comparison: pending user.
 - Installed using `adb install -r` on the user's physical phone at `192.168.31.232:39053`; previous Create-preview signer matched. Upgrade from versionCode `1791700093` preserved data. Actual installed version and versionCode `1791702474` confirmed; all device operations then stopped. Screenshot capture, app launch and UI acceptance were not performed. iOS native validation remains unperformed. User should inspect the new card, independent Favorites/trends entrances, short actual playback and period switching in their selected themes.
 
 final result: blocked (native visual acceptance pending user under repository handoff rules)
+
+---
+
+# My-page summary proportion and calendar clarity (2026-10-11)
+
+- Evidence: the user's current screenshot `ec464a3b33cb9a88db994ecd6cff96e3.jpg` and corner-summary reference `codex-clipboard-f0613323-b76a-4083-9feb-3d98b7661b28.png`. The bounded audit identified an oversized near-square calendar, repeated collection labels, competing title/value weights, redundant trend entrances and barely visible short activity. The user authorized those corrections.
+- Layout: retains a full-width two-tier collection summary. Favorites has a real cover, one title, count and a right-edge chevron. Today's measured duration is a static corner summary with prominent numerals and smaller translated units. The lower tier contains one explicit trend button, a truthful active-day summary and a compact horizontal 91-day calendar. No fixed card height; narrow groups can wrap and collection/report targets remain at least 44dp. No new raster or icon assets, commercial modules or native-project changes.
+- Calendar semantics: shared Monday-first columns contain exactly 91 requested dates, with transparent leading/trailing padding outside the range. Before-recording days use an unfilled dashed outline; recorded zero days use a light fill; any actual positive time uses a visible accent. Real entries caused by device-clock changes remain visible even before startedAt. The full report includes weekday labels, exact date endpoints and an unknown-state legend. Three language files and their types are aligned.
+- Color checks: centralized activityEmpty/activityLevels derive from the user's existing semantic theme. All four positive levels meet 3:1 against the composed card and zero-cell background in tested light/dark/custom/alpha-custom themes, including a 41-second record. The strongest level retains active. No hard-coded business colors or weakened baselines.
+- Validation: full Jest passed (94 suites / 702 tests), including 15 new calendar, rendering, duration/localization and color cases. Required color suite passed (13 suites / 140 tests). Color/UI/runtime-reference/motion guards passed. Changed-source ESLint has zero errors/warnings; full lint retains 14 pre-existing errors / 101 warnings, and its unrelated auto-edits were restored. Explicit compiler comparison has no diagnostics for changed/new files; unrelated repository diagnostics remain. Diff whitespace checks are applied before commit.
+- Native visual acceptance is pending user. No device screenshot, emulator, app launch or substitute visual pass is performed. Source and component tests do not prove the final device appearance, custom-wallpaper contrast or iOS rendering. Delivery follows AGENTS.md: install with data preserved, confirm the exact version, then stop.
+
+Source/function/color checks: pass. Native visual comparison: pending user.
+
+final result: blocked (native visual acceptance pending user under repository handoff rules)

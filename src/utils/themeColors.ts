@@ -54,6 +54,11 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const tonalSurface = Color(blendOver(card, page)).mix(Color(primaryOpaque), 0.16).hex();
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
+    const activityEmpty = Color(blendOver(surface, page)).mix(Color(blendOver(card, page)), 0.3).hex();
+    const activityBackgrounds = [blendOver(card, page), activityEmpty];
+    const activityLow = readableAccent(Color(primaryOpaque).mix(Color(blendOver(card, page)), 0.5).hex(), activityBackgrounds, colorContrastMinimum.control);
+    const activityStrong = readableAccent(primaryText, activityBackgrounds, colorContrastMinimum.text);
+    const activityLevels = [0, 0.33, 0.66, 1].map(weight => readableAccent(Color(activityLow).mix(Color(activityStrong), weight).hex(), activityBackgrounds, colorContrastMinimum.control));
     const danger = readableAccent(safeColor(colors.danger, preset.danger).hex(), backgrounds, colorContrastMinimum.text);
     return {
         ...colors,
@@ -64,6 +69,8 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         onPrimary: bestForeground(blendOver(primary, blendOver(card, page)), [mediaOnDark, lightColors.text, controlNeutralDark]),
         tonalSurface,
         onTonal: readableAccent(primaryOpaque, [tonalSurface], colorContrastMinimum.text),
+        activityEmpty,
+        activityLevels,
         success: readableAccent(safeColor(colors.success, preset.success).hex(), backgrounds, colorContrastMinimum.text),
         warning: readableAccent(safeColor(colors.warning, preset.warning).hex(), backgrounds, colorContrastMinimum.text),
         danger,

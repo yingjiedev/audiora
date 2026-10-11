@@ -67,7 +67,7 @@ export default function ListeningReport() {
                         <ThemeText fontSize="subTitle" fontWeight="semibold">{t("listening.activity")}</ThemeText>
                         <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.activityRange")}</ThemeText>
                     </View>
-                    <ActivityGrid days={calendarDays(data, 91)} />
+                    <ActivityGrid days={calendarDays(data, 91)} startedAt={data.startedAt} />
                 </View>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <ThemeText fontSize="subTitle" fontWeight="semibold">{t("listening.topSongs")}</ThemeText>

@@ -6,6 +6,7 @@ import { useI18N } from "@/core/i18n";
 import { ListeningDay } from "@/core/listeningStatsModel";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
+import { activityWeeks } from "./activityCalendar";
 
 export function activityLevel(seconds: number) {
     if (seconds <= 0) return 0;
@@ -15,35 +16,48 @@ export function activityLevel(seconds: number) {
     return 4;
 }
 
-export default function ActivityGrid({ days, compact = false }: { days: ListeningDay[]; compact?: boolean }) {
+export default function ActivityGrid({ days, startedAt, compact = false }: { days: ListeningDay[]; startedAt: number; compact?: boolean }) {
     const colors = useColors();
     const { t } = useI18N();
-    const columns = Array.from({ length: Math.ceil(days.length / 7) }, (_, index) => days.slice(index * 7, index * 7 + 7));
-    const fills = [colors.surface, colors.tonalSurface, colors.primary, colors.primary, colors.active];
-    const opacities = [1, 1, 0.45, 0.75, 1];
+    const columns = activityWeeks(days, startedAt);
+    const fills = [colors.activityEmpty, ...colors.activityLevels];
     const activeDays = days.filter(day => day.seconds > 0).length;
+    const unrecorded = columns.flat().filter(day => day && !day.recorded).length;
     return (
         <View
             accessible
             accessibilityRole="image"
-            accessibilityLabel={t("listening.activitySummary", { days: days.length, active: activeDays })}
+            accessibilityLabel={t("listening.activitySummary", { days: days.length, active: activeDays, unrecorded })}
             style={compact ? styles.compact : styles.wrapper}>
             <View style={styles.grid} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {!compact && (
+                    <View style={styles.weekdays}>
+                        {[t("listening.monday"), "", t("listening.wednesday"), "", t("listening.friday"), "", ""].map((label, index) => (
+                            <View key={index} style={styles.weekday}><ThemeText fontSize="tag" fontColor="textSecondary">{label}</ThemeText></View>
+                        ))}
+                    </View>
+                )}
                 {columns.map((column, index) => (
                     <View key={index} style={styles.column}>
-                        {column.map(day => {
+                        {column.map((day, weekday) => {
+                            if (!day) return <View key={`padding-${weekday}`} style={styles.cell} />;
                             const level = activityLevel(day.seconds);
-                            return <View key={day.date} style={[styles.cell, { backgroundColor: fills[level], opacity: opacities[level] }]} />;
+                            return <View key={day.date} testID={`listening-day-${day.date}`} style={[styles.cell, day.recorded ? { backgroundColor: fills[level] } : { borderColor: colors.border, borderWidth: StyleSheet.hairlineWidth, borderStyle: "dashed" }]} />;
                         })}
                     </View>
                 ))}
             </View>
             {!compact && (
-                <View style={styles.legend}>
-                    <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.less")}</ThemeText>
-                    {fills.map((fill, index) => <View key={index} style={[styles.legendCell, { backgroundColor: fill, opacity: opacities[index] }]} />)}
-                    <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.more")}</ThemeText>
-                </View>
+                <>
+                    {days.length > 0 && <View style={styles.range}><ThemeText fontSize="tag" fontColor="textSecondary">{days[0].date}</ThemeText><ThemeText fontSize="tag" fontColor="textSecondary">{days[days.length - 1].date}</ThemeText></View>}
+                    <View style={styles.legend}>
+                        <View style={[styles.legendCell, { borderColor: colors.border, borderWidth: StyleSheet.hairlineWidth, borderStyle: "dashed" }]} />
+                        <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.unknownLabel}>{t("listening.unrecorded")}</ThemeText>
+                        <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.less")}</ThemeText>
+                        {fills.map((fill, index) => <View key={index} style={[styles.legendCell, { backgroundColor: fill }]} />)}
+                        <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.more")}</ThemeText>
+                    </View>
+                </>
             )}
         </View>
     );
@@ -51,10 +65,14 @@ export default function ActivityGrid({ days, compact = false }: { days: Listenin
 
 const styles = StyleSheet.create({
     wrapper: { width: "100%", marginTop: spacing.lg },
-    compact: { width: rpx(240), maxWidth: "100%" },
+    compact: { width: rpx(230), maxWidth: "100%" },
     grid: { flexDirection: "row", gap: spacing.xxs },
     column: { flex: 1, gap: spacing.xxs },
     cell: { width: "100%", aspectRatio: 1, borderRadius: radius.xs / 2 },
-    legend: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: spacing.xxs, marginTop: spacing.md },
+    weekdays: { width: rpx(34) },
+    weekday: { flex: 1, justifyContent: "center" },
+    range: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },
+    legend: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: spacing.xxs, marginTop: spacing.md },
+    unknownLabel: { marginRight: spacing.xs },
     legendCell: { width: rpx(16), height: rpx(16), borderRadius: radius.xs / 2 },
 });

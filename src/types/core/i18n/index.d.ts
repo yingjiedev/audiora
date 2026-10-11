@@ -9,6 +9,11 @@ export interface ILanguageData {
     "listening.playCount": string;
     "listening.activity": string;
     "listening.recentActive": string;
+    "listening.recordedActivity": string;
+    "listening.unrecorded": string;
+    "listening.monday": string;
+    "listening.wednesday": string;
+    "listening.friday": string;
     "listening.startHint": string;
     "listening.openReport": string;
     "listening.viewTrends": string;
