@@ -344,3 +344,9 @@ final result: blocked (native visual acceptance pending user under repository ha
 - Native appearance is pending user acceptance. User screenshots were inspected; no fresh device screenshot, app launch, emulator or substitute acceptance is performed. Per AGENTS.md, preview delivery ends after data-preserving installation and exact version confirmation. iOS and unknown custom wallpapers remain unverified.
 
 Source/data/color checks: pass. Native visual acceptance: pending user.
+
+- Delivered: app source `437523545f8c0754e8ac669d1cafd637fce7ef57`; `0.3.1-preview.i88.rounded.20261011.224826`, versionCode `1791730108`, package `io.github.yingjiedev.audiora`, ABI `arm64-v8a`. SHA-256 `D60837088301DAD570C03E4CF7D8062CC1EAAA12E683A71BA4EACEC33DC66AFD`. Actual metadata, exact clean build source, v2 single signer, all three font bytes/hashes and vinyl bitmap verified. APK and verification JSON retained under `D:/audiora-previews/issue-88/`.
+- Installed with `adb install -r` on the paired physical phone at `192.168.31.232:38437`, upgrading from `0.3.1-preview.i88.gridfix.20261011.222830` / `1791728922` with matching certificates and data preserved. Exact installed version/code `1791730108` confirmed. Device operations stopped; user checks rounded filled cells, unknown/zero/active states, wider Today layout and long-duration/narrow/theme states. No app launch, screenshot capture or native visual acceptance claim.
+
+Source/build/install result: pass. Native visual acceptance: pending user.
+
