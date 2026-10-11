@@ -360,3 +360,8 @@ Source/build/install result: pass. Native visual acceptance: pending user.
 - Native visual acceptance remains pending user. No fresh device screenshot, app launch, emulator or substitute acceptance is performed. After data-preserving installation and exact version confirmation, device operations stop. User should inspect My/Library page switching, empty/populated states, category members, scan/cancel, long text and selected themes; iOS and unknown wallpapers remain unverified.
 
 Source/function/color checks: pass. Native visual acceptance: pending user.
+
+- Delivered: application source ae73831c9a358e4342b432a19302f8f9959fe377; version 0.3.1-preview.i88.library.20261011.232742, versionCode 1791732472, package io.github.yingjiedev.audiora, ABI arm64-v8a. SHA-256 0AC02527B3D28EB9143AF1C1A330F147BC292785E70BE06B15FF7B1D8DA03194. Exact APK metadata, clean build source, v2 single signer, all three fonts' bytes/hashes and vinyl resource verified. APK and verification JSON retained under D:/audiora-previews/issue-88/.
+- Installed with adb install -r on the paired physical phone at 192.168.31.232:38437, upgrading from 0.3.1-preview.i88.rounded.20261011.224826 / 1791730108 with matching certificates and data preserved. Exact installed version/code 1791732472 confirmed. All device operations stopped at confirmation; native visual/function acceptance remains pending user. No app launch, screenshot capture or emulator was performed.
+
+Source/build/install result: pass. Native visual acceptance: pending user.
