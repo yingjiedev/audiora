@@ -1,12 +1,15 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import ThemeText from "@/components/base/themeText";
-import { radius, spacing } from "@/constants/designSystem";
+import { spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import { ListeningDay } from "@/core/listeningStatsModel";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import { activityWeeks } from "./activityCalendar";
+
+const minimumCellSize = 8;
+const cellGap = Math.max(2, spacing.xxs);
 
 export function activityLevel(seconds: number) {
     if (seconds <= 0) return 0;
@@ -20,6 +23,8 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
     const colors = useColors();
     const { t } = useI18N();
     const columns = activityWeeks(days, startedAt);
+    // 91 days can occupy 14 weeks. Tiny dashed RN borders become arcs on Android.
+    const compactWidth = Math.max(rpx(230), columns.length * minimumCellSize + Math.max(0, columns.length - 1) * cellGap);
     const fills = [colors.activityEmpty, ...colors.activityLevels];
     const activeDays = days.filter(day => day.seconds > 0).length;
     const unrecorded = columns.flat().filter(day => day && !day.recorded).length;
@@ -28,7 +33,7 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
             accessible
             accessibilityRole="image"
             accessibilityLabel={t("listening.activitySummary", { days: days.length, active: activeDays, unrecorded })}
-            style={compact ? styles.compact : styles.wrapper}>
+            style={compact ? [styles.compact, { width: compactWidth }] : styles.wrapper}>
             <View style={styles.grid} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                 {!compact && (
                     <View style={styles.weekdays}>
@@ -71,15 +76,15 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
 
 const styles = StyleSheet.create({
     wrapper: { width: "100%", marginTop: spacing.lg },
-    compact: { width: rpx(188), maxWidth: "100%" },
-    grid: { flexDirection: "row", gap: spacing.xxs },
-    column: { flex: 1, gap: spacing.xxs },
-    cell: { width: "100%", aspectRatio: 1, borderRadius: radius.xs / 2 },
-    unrecorded: { borderStyle: "dashed" },
+    compact: { flexShrink: 0 },
+    grid: { flexDirection: "row", gap: cellGap },
+    column: { flex: 1, minWidth: minimumCellSize, gap: cellGap },
+    cell: { width: "100%", aspectRatio: 1, borderRadius: 1 },
+    unrecorded: { borderStyle: "solid" },
     weekdays: { width: rpx(34) },
     weekday: { flex: 1, justifyContent: "center" },
     range: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },
     legend: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: spacing.xxs, marginTop: spacing.md },
     unknownLabel: { marginRight: spacing.xs },
-    legendCell: { width: rpx(16), height: rpx(16), borderRadius: radius.xs / 2 },
+    legendCell: { width: Math.max(minimumCellSize, rpx(16)), height: Math.max(minimumCellSize, rpx(16)), borderRadius: 1 },
 });

@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     favoriteTitle: { fontSize: Math.max(18, fontRpx(32)), flexShrink: 1 },
     count: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xxs, marginTop: spacing.xs },
     today: { minWidth: rpx(160), maxWidth: "100%", minHeight: minimumTouch, marginLeft: "auto", paddingLeft: spacing.xl, paddingRight: cardPadding, paddingVertical: Math.max(12, spacing.lg), alignItems: "center", justifyContent: "center" },
-    todaySurface: { borderBottomLeftRadius: radius.pill },
+    todaySurface: { borderBottomLeftRadius: radius.xl },
     todayValueRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     todayValue: { flexShrink: 1 },
     todayBadge: { padding: spacing.xxs, borderRadius: radius.pill },

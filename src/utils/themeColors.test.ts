@@ -4,6 +4,12 @@ import { bestForeground, blendOver, contrastRatio } from "./colorContrast";
 import { readableAccent, resolveThemeColors } from "./themeColors";
 
 describe("Audiora semantic colors", () => {
+    it("keeps the light corner surface distinct from the card and page", () => {
+        const colors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+        expect(contrastRatio(colors.cardInset, colors.card)).toBeGreaterThanOrEqual(1.15);
+        expect(contrastRatio(colors.cardInset, colors.pageBackground)).toBeGreaterThanOrEqual(1.08);
+    });
+
     it.each([
         ["light", lightColors, false],
         ["dark", darkColors, true],

@@ -53,7 +53,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const playerTextTertiary = readableAccent(Color(playerText).mix(Color(playerSurface), 0.36).hex(), playerGradient, colorContrastMinimum.text);
     const tonalSurface = Color(blendOver(card, page)).mix(Color(primaryOpaque), 0.16).hex();
     const cardBackground = blendOver(card, page);
-    const cardInset = Color(blendOver(surface, page)).mix(Color(cardBackground), 0.5).hex();
+    const cardInset = Color(tonalSurface).mix(Color(blendOver(surface, page)), 0.25).hex();
     const insetBackgrounds = [cardBackground, cardInset];
     const onCardInset = readableAccent(safeColor(colors.text, preset.text).hex(), insetBackgrounds, colorContrastMinimum.text);
     const onCardInsetSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), insetBackgrounds, colorContrastMinimum.text);
