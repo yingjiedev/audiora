@@ -117,6 +117,7 @@
     "toast.currentQualityNotAvailableForCurrentMusic": "Current quality not available for this song",
     "toast.musicQualityDowngraded": "{quality} is not available for this song, downgraded to {alternative}",
     "toast.mediaSourceUnavailable": "Unable to load the audio source. Try again later or switch the source plugin.",
+    "toast.consecutivePlayFailStopped": "Several tracks in a row failed to play. Auto-advance stopped.",
     "toast.commmentNotAvaliableForCurrentMusic": "No comments available for current song",
     "toast.addToNextPlay": "Added to play next",
     "toast.beginDownload": "Download started, please don't close the app until all downloads complete",

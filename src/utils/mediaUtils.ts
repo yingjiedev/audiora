@@ -233,6 +233,32 @@ export function isSameMediaItem(
     return !!(a && b && a.id == b.id && a.platform === b.platform);
 }
 
+/**
+ * 按 platform + id 去重，保留第一次出现的那一项（含其携带的音质/封面信息）。
+ *
+ * 播放队列的下标是靠 `createMediaIndexMap` 反查的，而它遇到重复项只会保留最后一个下标
+ * ——队列里一旦出现同 platform + id 的重复项，`currentIndex` 就会和真实位置错位，
+ * 最坏情况下「下一首 == 当前首」，点下一首毫无反应。所以入队前先去重。
+ */
+export function dedupeMediaItems<T extends ICommon.IMediaBase>(
+    mediaItems: T[],
+): T[] {
+    const seen = new Set<string>();
+    const result: T[] = [];
+    for (const item of mediaItems) {
+        if (!item) {
+            continue;
+        }
+        const key = getMediaUniqueKey(item);
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        result.push(item);
+    }
+    return result;
+}
+
 
 /** 获取复位的mediaItem */
 export function resetMediaItem<T extends ICommon.IMediaBase>(

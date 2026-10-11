@@ -8,8 +8,9 @@ import { MusicRepeatMode } from "@/constants/repeatModeConst";
 import delay from "@/utils/delay";
 import getUrlExt from "@/utils/getUrlExt";
 import { appendStartupBreadcrumb, errorLog, trace, devLog } from "@/utils/log";
-import { createMediaIndexMap } from "@/utils/mediaIndexMap";
+import { createMediaIndexMap, wrapIndex } from "@/utils/mediaIndexMap";
 import {
+    dedupeMediaItems,
     isSameMediaItem,
 } from "@/utils/mediaUtils";
 import Toast from "@/utils/toast";
@@ -54,6 +55,7 @@ import { EncryptedSourceError, QmcKeyError } from "@/service/mflac/songKey";
 import { adaptMediaSourceForPlayback, canReuseMediaSourceForPlayback } from "./mediaSourceAdapter";
 import { refreshCurrentSource } from "./refreshCurrentSource";
 import SeekCoordinator from "./seekCoordinator";
+import PlayFailPolicy from "./playFailPolicy";
 
 
 
@@ -67,6 +69,14 @@ const playListAtom = atom<IMusic.IMusicItem[]>([]);
  * 逐档请求是串行的，插件/后端异常时会把整张音质表打满，这里兜住最坏耗时。
  */
 const QUALITY_FALLBACK_BUDGET_MS = 5000;
+
+/**
+ * 自动切下一首的去重窗口（毫秒）。
+ *
+ * 兜底的 PlaybackQueueEnded 与假曲触发的 PlaybackActiveTrackChanged 会前后脚到达，
+ * 两个都放行就会一次跳两首。窗口内只认第一次。
+ */
+const AUTO_ADVANCE_GUARD_MS = 2000;
 
 function isLoopbackHttpUrl(url?: string) {
     if (!url) {
@@ -112,6 +122,10 @@ class TrackPlayer extends EventEmitter<{
     // from and back to the same media item during an asynchronous refresh.
     private currentMusicRevision = 0;
     private seekCoordinator = new SeekCoordinator();
+    // 连续取源失败的收敛策略：整列都取不到源时不再无限自动跳曲
+    private playFailPolicy = new PlayFailPolicy();
+    // 上一次自动切下一首的时间戳，用于给两条自动切歌路径去重
+    private lastAutoAdvanceAt = 0;
     // 播放队列索引map
     private playListIndexMap = createMediaIndexMap([] as IMusic.IMusicItem[]);
 
@@ -319,27 +333,36 @@ class TrackPlayer extends EventEmitter<{
                         evt.lastIndex === 0 &&
                         evt.track?.url === TrackPlayer.fakeAudioUrl
                     ) {
-                        const shouldPause = this.pauseAfterCurrentTrackEnd;
-
-                        // This request is consumed by the current natural track end.
-                        // A later timer can request it again for the next track.
-                        this.pauseAfterCurrentTrackEnd = false;
-                        trace("queue reached fake next track");
-                        this.emit(TrackPlayerEvents.PlayEnd);
-                        if (shouldPause) {
-                            await ReactNativeTrackPlayer.pause();
-                            return;
-                        }
-                        if (
-                            this.repeatMode ===
-                            MusicRepeatMode.SINGLE
-                        ) {
-                            await this.play(null, true);
-                        } else {
-                            // 当前生效的歌曲是下一曲的标记
-                            await this.skipToNext();
-                        }
+                        await this.handleCurrentTrackEnd("fake-track");
                     }
+                },
+            );
+
+            /**
+             * 兜底：上面那条路径的三个条件（index===1 / lastIndex===0 / url===fakeAudioUrl）
+             * 任一不成立，自动切歌就整条失效，播放会永久停在那一首。队列结束事件至少能在
+             * 假曲被当成 0 时长直接放完的情况下补上这一刀。窗口内已切过就跳过，避免跳两首。
+             */
+            ReactNativeTrackPlayer.addEventListener(
+                Event.PlaybackQueueEnded,
+                async () => {
+                    if (
+                        Date.now() - this.lastAutoAdvanceAt <
+                        AUTO_ADVANCE_GUARD_MS
+                    ) {
+                        return;
+                    }
+                    if (this.isPlayListEmpty() || !this.currentMusic) {
+                        return;
+                    }
+                    void appendStartupBreadcrumb(
+                        "trackplayer-queue-ended-fallback",
+                        {
+                            title: this.currentMusic.title,
+                            repeatMode: this.repeatMode,
+                        },
+                    );
+                    await this.handleCurrentTrackEnd("queue-ended");
                 },
             );
 
@@ -406,7 +429,7 @@ class TrackPlayer extends EventEmitter<{
         if (len === 0) {
             return null;
         }
-        return playList[(index + len) % len];
+        return playList[wrapIndex(index, len)];
     }
 
     isPlayListEmpty() {
@@ -873,6 +896,8 @@ class TrackPlayer extends EventEmitter<{
 
             // 9. 设置音源并立即开始播放 - CRITICAL: 不等待任何其他操作
             await this.setTrackSource(track as Track);
+            // 真有音源交给了播放器：连续失败计数归零
+            this.playFailPolicy.noteSuccess();
 
             devLog("info", "[TrackPlayer] Playback started successfully", {
                 timestamp: Date.now(),
@@ -942,6 +967,17 @@ class TrackPlayer extends EventEmitter<{
                 await this.handlePlayFail();
             } else if (message === PlayFailReason.PLAY_LIST_IS_EMPTY) {
                 // 队列是空的，不应该出现这种情况
+            } else {
+                // 插件抛错、网络异常、超时…以前到这里就被静默吞掉：
+                // native 队列停在 audiora://proposed-audio 这个不可播放的占位 url 上，
+                // 既不报错也不恢复，表现同样是「卡住、点下一首没反应」。
+                // 统一按一次播放失败处理（自动跳曲 / 到上限就停）。
+                errorLog("播放失败（未分类异常）", {
+                    title: musicItem?.title,
+                    platform: musicItem?.platform,
+                    message,
+                });
+                await this.handlePlayFail();
             }
         }
     }
@@ -1123,8 +1159,13 @@ class TrackPlayer extends EventEmitter<{
         musicItem: IMusic.IMusicItem,
         newPlayList: IMusic.IMusicItem[],
     ): Promise<void> {
+        // 入队前先去重：重复项会让 createMediaIndexMap 只保留最后一个下标，
+        // currentIndex 与真实位置错位后可能出现「下一首 == 当前首」的死循环。
+        newPlayList = dedupeMediaItems(newPlayList);
         if (newPlayList.length !== 0) {
             const now = Date.now();
+            // 用户重新起播一整张列表：连续失败计数也随之归零
+            this.playFailPolicy.noteSuccess();
             if (newPlayList.length > TrackPlayer.maxMusicQueueLength) {
                 newPlayList = this.shrinkPlayListToSize(
                     newPlayList,
@@ -1379,12 +1420,52 @@ class TrackPlayer extends EventEmitter<{
     }
 
 
-    private async handlePlayFail() {
-        // 如果自动跳转下一曲, 500s后自动跳转
-        if (!this.configService.getConfig("basic.autoStopWhenError")) {
-            await delay(500);
+    /**
+     * 本曲播放结束，推进到下一条该播的曲目。
+     *
+     * 两条触发路径共用这里：假曲触发的 PlaybackActiveTrackChanged（主）与
+     * PlaybackQueueEnded（兜底）。`lastAutoAdvanceAt` 让它们不会各跳一次。
+     */
+    private async handleCurrentTrackEnd(reason: "fake-track" | "queue-ended") {
+        const shouldPause = this.pauseAfterCurrentTrackEnd;
+
+        // This request is consumed by the current natural track end.
+        // A later timer can request it again for the next track.
+        this.pauseAfterCurrentTrackEnd = false;
+        this.lastAutoAdvanceAt = Date.now();
+        trace("queue reached end of current track", { reason });
+        this.emit(TrackPlayerEvents.PlayEnd);
+        if (shouldPause) {
+            await ReactNativeTrackPlayer.pause();
+            return;
+        }
+        if (this.repeatMode === MusicRepeatMode.SINGLE) {
+            await this.play(null, true);
+        } else {
+            // 当前生效的歌曲是下一曲的标记
             await this.skipToNext();
         }
+    }
+
+    private async handlePlayFail() {
+        // 用户设置了「播放失败时自动暂停」：不推进，停在原地
+        if (this.configService.getConfig("basic.autoStopWhenError")) {
+            return;
+        }
+        // 连续失败到上限就停下来。整张队列都取不到源时继续跳没有意义，
+        // 只会让宿主在后台一首首空转，UI 看上去像卡死、手动切歌也被同一条链吞掉。
+        if (!this.playFailPolicy.consumeAutoAdvance()) {
+            devLog("warn", "[TrackPlayer] 连续取源失败达到上限，停止自动跳下一首", {
+                consecutive: this.playFailPolicy.consecutiveFailures,
+                title: this.currentMusic?.title,
+                platform: this.currentMusic?.platform,
+            });
+            Toast.warn(i18n.t("toast.consecutivePlayFailStopped"));
+            return;
+        }
+        // 如果自动跳转下一曲, 500s后自动跳转
+        await delay(500);
+        await this.skipToNext();
     }
 
     /**

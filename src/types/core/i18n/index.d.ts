@@ -138,6 +138,7 @@ export interface ILanguageData {
     "toast.currentQualityNotAvailableForCurrentMusic": string; // 当前音乐的质量在此设备上不可用
     "toast.musicQualityDowngraded": string; // 歌曲不支持{quality}，已降级至{alternative}
     "toast.mediaSourceUnavailable": string; // 取不到音源（插件/音源服务异常）
+    "toast.consecutivePlayFailStopped": string; // 连续多首取不到源，自动切歌已停止
     "toast.commmentNotAvaliableForCurrentMusic": string; // 当前音乐无法进行评论
     "toast.addToNextPlay": string; // 添加到下一曲
     "toast.beginDownload": string; // 开始下载
