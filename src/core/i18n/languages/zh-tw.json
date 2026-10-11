@@ -106,6 +106,7 @@
     "myMusic.historyHint": "聽過的歌曲會留在這裡，隨時重溫",
     "myMusic.playlistsHint": "匯入喜歡的歌單，或新增一份音樂收藏",
     "myMusic.tools": "音樂工具",
+    "myMusic.previewVersion": "{version} · 預覽版",
     "home.noCustomPlaylists": "還沒有自建歌單",
     "home.scanLocal": "掃描本地",
     "home.import.short": "導入",

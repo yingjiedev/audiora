@@ -18,7 +18,8 @@ const mockSheetsSeed = [
     { id: "road-trip", title: "Road Trip", worksNum: 8, platform: "local", coverImg: "trip-cover" },
 ];
 let mockHistory = mockHistorySeed;
-let mockSheets = mockSheetsSeed;
+let mockSheets: IMusic.IMusicSheetItemBase[] = mockSheetsSeed;
+let mockFavoriteMusic = mockHistorySeed;
 let mockStarred = [{ id: "starred", platform: "remote" }];
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 let mockVersion = "0.3.1-preview.i88.mine.20261011.120000";
@@ -37,6 +38,7 @@ jest.mock("@/core/i18n", () => ({
             if (key === "myMusic.openPlaylist") return `Open ${args?.title}`;
             if (key === "myMusic.playRecent") return `Play ${args?.title} by ${args?.artist}`;
             if (key === "home.currentVersion") return `Version ${args?.version}`;
+            if (key === "myMusic.previewVersion") return `${args?.version} · Preview`;
             return key;
         },
     }),
@@ -47,6 +49,7 @@ jest.mock("@/core/musicSheet", () => ({
     default: { defaultSheet: { id: "favorite" } },
     useSheetsBase: () => mockSheets,
     useStarredSheets: () => mockStarred,
+    useSheetItem: () => ({ musicList: mockFavoriteMusic }),
 }));
 jest.mock("@/core/pluginManager", () => ({
     usePluginDisplayNameResolver: () => (platform: string) => mockDisplayNames[platform] ?? platform,
@@ -61,7 +64,12 @@ jest.mock("@/core/router", () => ({
 }));
 jest.mock("react-native-device-info", () => ({ getVersion: () => mockVersion }));
 jest.mock("@/hooks/useColors", () => () => mockColors);
-jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value }));
+jest.mock("@/utils/rpx", () => ({
+    __esModule: true,
+    default: (value: number) => value,
+    fontRpx: (value: number) => value,
+    fontRpxRound: (value: number) => Math.round(value),
+}));
 
 describe("MyMusicOverview", () => {
     let renderer: TestRenderer.ReactTestRenderer;
@@ -77,6 +85,7 @@ describe("MyMusicOverview", () => {
         jest.clearAllMocks();
         mockHistory = mockHistorySeed;
         mockSheets = mockSheetsSeed;
+        mockFavoriteMusic = mockHistorySeed;
         mockStarred = [{ id: "starred", platform: "remote" }];
         mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
         mockDisplayNames = {};
@@ -193,13 +202,57 @@ describe("MyMusicOverview", () => {
         expect(mockHistory[0].platform).toBe("source-a");
     });
 
-    it("preserves long installed version text and covers from real collections", () => {
+    it("shows a short preview version while retaining its full identity in the About entrance", () => {
         render();
-        const version = textNodes().find(node => node.props.children === `Version ${mockVersion}`);
-        expect(version).toBeDefined();
-        expect(version?.props.numberOfLines).toBeUndefined();
+        expect(textNodes().some(node => node.props.children === "0.3.1 · Preview")).toBe(true);
+        expect(textNodes().some(node => node.props.children === `Version ${mockVersion}`)).toBe(false);
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.aboutAndUpdate" }).props.accessibilityHint).toBe(`Version ${mockVersion}`);
+        press("home.aboutAndUpdate");
+        expect(mockNavigate).toHaveBeenCalledWith("setting", { type: "about" });
         const imageSources = renderer.root.findAll(node => node.type === "FastImage" as unknown as React.ElementType).map(node => node.props.source);
         expect(imageSources).toEqual(expect.arrayContaining(["favorite-cover", "trip-cover", "cover-a", "cover-b"]));
+    });
+
+    it("keeps stable and other version labels intact", () => {
+        mockVersion = "0.3.0";
+        render();
+        expect(textNodes().some(node => node.props.children === "Version 0.3.0")).toBe(true);
+        mockVersion = "0.4.0-beta.1";
+        act(() => renderer.update(<MyMusicOverview />));
+        expect(textNodes().some(node => node.props.children === "Version 0.4.0-beta.1")).toBe(true);
+    });
+
+    it("uses actual favorite artwork when sheet metadata has no cover and updates with the collection", () => {
+        mockSheets = [{ ...mockSheetsSeed[0], coverImg: undefined }, mockSheetsSeed[1]];
+        mockFavoriteMusic = [{ ...mockHistorySeed[0], artwork: "" }, { ...mockHistorySeed[1], artwork: "saved-cover" }];
+        render();
+        const sources = () => renderer.root.findAll(node => node.type === "FastImage" as unknown as React.ElementType).map(node => node.props.source);
+        expect(sources()).toContain("saved-cover");
+        mockFavoriteMusic = [{ ...mockHistorySeed[0], artwork: "new-favorite-cover" }];
+        act(() => renderer.update(<MyMusicOverview />));
+        expect(sources()).toContain("new-favorite-cover");
+        expect(sources()).not.toContain("saved-cover");
+        press("home.favoriteSheet");
+        expect(mockNavigate).toHaveBeenCalledWith("local-sheet-detail", { id: "favorite" });
+    });
+
+    it("reserves matching title space for short and long songs and responds to strip layout changes", () => {
+        mockHistory = [mockHistorySeed[0], { ...mockHistorySeed[1], title: "A very long song title across two lines" }];
+        render();
+        const titles = textNodes().filter(node => mockHistory.some(music => music.title === node.props.children));
+        const titleStyles = titles.map(node => StyleSheet.flatten(node.props.style));
+        expect(titleStyles[0].height).toBe(titleStyles[1].height);
+        expect(titleStyles[0].height).toBe(titleStyles[0].lineHeight * 2);
+        const strip = renderer.root.findAll(node => node.props.horizontal === true && typeof node.props.onLayout === "function")[0];
+        const songButton = renderer.root.findByProps({ accessibilityLabel: "Play Evening by Artist A" });
+        act(() => strip.props.onLayout({ nativeEvent: { layout: { width: 360 } } }));
+        const wideWidth = StyleSheet.flatten(songButton.props.style({ pressed: false })).width;
+        act(() => strip.props.onLayout({ nativeEvent: { layout: { width: 250 } } }));
+        const narrowWidth = StyleSheet.flatten(songButton.props.style({ pressed: false })).width;
+        expect(wideWidth).not.toBe(narrowWidth);
+        expect(narrowWidth).toBeLessThan(250);
+        press("Play Evening by Artist A");
+        expect(TrackPlayer.play).toHaveBeenCalledWith(mockHistory[0]);
     });
 
     it.each([
@@ -209,8 +262,12 @@ describe("MyMusicOverview", () => {
     ] as const)("uses readable semantic surfaces in the %s theme", (_name, palette, dark) => {
         mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
         render();
-        const heroTexts = textNodes().filter(node => node.props.color === mockColors.onTonal);
-        expect(heroTexts.length).toBeGreaterThan(0);
+        mockSheets = [{ ...mockSheetsSeed[0], coverImg: undefined }, mockSheetsSeed[1]];
+        mockFavoriteMusic = [];
+        act(() => renderer.update(<MyMusicOverview />));
+        expect(textNodes().filter(node => node.props.color === mockColors.onTonal)).toHaveLength(0);
+        expect(contrastRatio(mockColors.text, mockColors.card)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(mockColors.primaryText, mockColors.card)).toBeGreaterThanOrEqual(4.5);
         expect(contrastRatio(mockColors.onTonal, mockColors.tonalSurface)).toBeGreaterThanOrEqual(4.5);
         expect(contrastRatio(mockColors.favorite, mockColors.tonalSurface)).toBeGreaterThanOrEqual(3);
         const surfaces = renderer.root.findAll(node => node.props.style && typeof node.props.style !== "function").map(node => StyleSheet.flatten(node.props.style)?.backgroundColor);

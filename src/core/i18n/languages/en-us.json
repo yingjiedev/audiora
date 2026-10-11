@@ -106,6 +106,7 @@
     "myMusic.historyHint": "The songs you play will be here to revisit",
     "myMusic.playlistsHint": "Import a playlist you love, or create your own collection",
     "myMusic.tools": "Music tools",
+    "myMusic.previewVersion": "{version} · Preview",
     "home.noCustomPlaylists": "No custom playlists yet",
     "home.scanLocal": "Scan Local",
     "home.import.short": "Import",

@@ -119,6 +119,7 @@ export interface ILanguageData {
     "myMusic.historyHint": string;
     "myMusic.playlistsHint": string;
     "myMusic.tools": string;
+    "myMusic.previewVersion": string;
     "home.noCustomPlaylists": string;
     "home.scanLocal": string;
     "home.import.short": string;

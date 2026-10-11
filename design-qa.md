@@ -210,3 +210,17 @@ Source/color regression result: pass. Native visual acceptance: pending user.
 Source/function/color regression result: pass. Native visual acceptance: pending user.
 
 final result: blocked
+
+---
+
+# My music page refinement after screenshot review (2026-10-11)
+
+- Evidence: user-provided current top/scrolled screenshots `9f5a71cba14841c5476ee2a62cfd3bb5.jpg` / `735e3f0de51a6c991da29b5cd094a8e1.jpg`, compared with the same supplied reference `bca8756c5cc69cc4625662c803fd4efb.jpg`. The review identified excessive blue emphasis, an oversized collection count, fixed-width cover clipping, uneven artist positions below long titles and a visually heavy empty playlist state.
+- Corrected: compact neutral collection card with smaller brand identity and a normal-sized count; real favorite artwork before a small semantic vector fallback; unboxed shortcuts; consistent 32rpx content alignment; measured recent-cover sizes with complete items and a next-item hint; a shared two-line title slot and lighter play badges; one playlist toolbar and a compact inline empty state; lower-emphasis backup/About tools. The abbreviated preview label still identifies previews and retains the full installed version in About and the accessibility hint.
+- Preserved: every existing route and panel, original playback/source IDs, full history/custom sheets, settings entry and theme preferences. Player navigation, animations and input layering are outside this change.
+- Validation: full Jest passed (87 suites / 661 tests), focused color regression passed (13 suites / 131 tests), and focused page/layout/language regression passed (3 suites / 26 tests). Color, runtime-reference, motion and UI guards passed. Changed-file TypeScript comparison has zero diagnostics and changed-source ESLint has zero errors/warnings. Full-repository lint retains 14 existing errors / 101 warnings; unrelated automatic edits were restored.
+- Post-change native screenshot and visual acceptance are pending. The user's screenshots justify the correction but do not establish its final rendered quality. Per repository instructions, preview delivery stops after data-preserving installation and version confirmation for user acceptance.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked
