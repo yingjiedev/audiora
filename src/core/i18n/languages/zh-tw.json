@@ -98,6 +98,8 @@
     "home.mine": "我的",
     "home.personalTagline": "把喜歡的音樂留在這裡",
     "myMusic.downloadsHint": "任務與進度",
+    "myMusic.pluginCount": "{count}個",
+    "myMusic.viewAllShort": "全部",
     "myMusic.createPlaylist": "新增",
     "myMusic.viewRecent": "查看全部播放歷史",
     "myMusic.openPlaylist": "開啟歌單：{title}",

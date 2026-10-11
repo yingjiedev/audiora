@@ -98,6 +98,8 @@
     "home.mine": "Mine",
     "home.personalTagline": "Keep the music you love close",
     "myMusic.downloadsHint": "Tasks & progress",
+    "myMusic.pluginCount": "{count} plugins",
+    "myMusic.viewAllShort": "All",
     "myMusic.createPlaylist": "Create",
     "myMusic.viewRecent": "View all listening history",
     "myMusic.openPlaylist": "Open playlist: {title}",

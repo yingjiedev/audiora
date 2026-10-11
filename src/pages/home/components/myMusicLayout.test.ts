@@ -1,29 +1,33 @@
-import { getRecentCoverWidth } from "./myMusicLayout";
+import { getRecentPageLayout } from "./myMusicLayout";
 
 describe("recent music cover layout", () => {
-    it("fits three whole covers plus the next-cover hint on a phone", () => {
-        const width = getRecentCoverWidth(360, 8, 96);
-        expect(width).toBeGreaterThanOrEqual(96);
-        expect(width * 3 + 8 * 3).toBeLessThan(360);
-        expect(width * 3 + 8 * 4).toBeCloseTo(360);
+    it("fills a phone page with three whole covers and no partial next title", () => {
+        const layout = getRecentPageLayout(360, 12, 96);
+        expect(layout.columns).toBe(3);
+        expect(layout.coverWidth).toBeGreaterThanOrEqual(96);
+        expect(layout.coverWidth * 3 + layout.gap * 2).toBeCloseTo(layout.width);
     });
 
     it("uses two readable covers when three would be too narrow", () => {
-        const width = getRecentCoverWidth(280, 8, 96);
-        expect(width).toBeGreaterThanOrEqual(96);
-        expect(width * 2 + 8 * 3).toBeCloseTo(280);
+        const layout = getRecentPageLayout(280, 12, 96);
+        expect(layout.columns).toBe(2);
+        expect(layout.coverWidth).toBeGreaterThanOrEqual(96);
+        expect(layout.coverWidth * 2 + layout.gap).toBeCloseTo(280);
     });
 
-    it("reflows wider containers into four complete covers", () => {
-        const width = getRecentCoverWidth(700, 16, 96);
-        expect(width * 4 + 16 * 5).toBeCloseTo(700);
+    it("keeps wide containers on three complete items per page", () => {
+        const layout = getRecentPageLayout(700, 16, 96);
+        expect(layout.columns).toBe(3);
+        expect(layout.coverWidth * 3 + layout.gap * 2).toBeCloseTo(700);
     });
 
     it("keeps a complete cover inside an exceptionally narrow container", () => {
-        expect(getRecentCoverWidth(24, 16, 96)).toBe(12);
+        const layout = getRecentPageLayout(24, 16, 96);
+        expect(layout.columns).toBe(1);
+        expect(layout.coverWidth).toBe(24);
     });
 
     it.each([0, -1, Number.NaN])("provides a finite initial size before valid layout: %s", viewportWidth => {
-        expect(getRecentCoverWidth(viewportWidth, 8, 96)).toBe(96);
+        expect(getRecentPageLayout(viewportWidth, 8, 96).coverWidth).toBe(96);
     });
 });

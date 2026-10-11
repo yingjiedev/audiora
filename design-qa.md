@@ -225,3 +225,18 @@ final result: blocked
 Source/function/color regression result: pass. Native visual acceptance: pending user.
 
 final result: blocked
+
+---
+
+# My music page hierarchy and four shortcuts (2026-10-11)
+
+- Evidence: current top/scrolled screenshots `11a6def2b8e5a75cda1fcba962b5e8ce.jpg` / `f800f4c1e2a0606058b71a0e2b95f796.jpg` and reference `bca8756c5cc69cc4625662c803fd4efb.jpg`. The second review identified competing brand/collection groups, artificial blank title lines, slivers of the fourth song's text, and a heavy zero-playlist management area. The user authorized the recommendations and requested Plugin Management as the fourth shortcut.
+- Corrected: one neutral Favorites entry with a larger real cover and compact count, secondary brand mark in the header, consistent 40rpx margins, lighter section/tool typography and neutral All links. History/downloads/starred/plugin management are four equal shortcuts using existing icons. The new entry subscribes to the installed-plugin count and opens the existing setting/plugin screen, including with zero plugins.
+- Recent songs now use a single title line and one artist line, with full original titles in accessibility labels. Actual measured width determines up to three complete items per native horizontal page; narrow containers use two or one, partial last pages remain intact, and resizing reflows without changing playback identifiers. The bottom player's continuous marquee and input/animation layers are unchanged.
+- Playlist import/ID/create retain separate existing panels; the row loses its large white plate, Create uses primary/onPrimary, and zero custom sheets use one concise hint. Full custom playlists, favorites, history, settings, backup, About and existing theme data remain available.
+- Validation: full Jest passed (87 suites / 665 tests), including 19 My-page and 7 layout cases. Color regression passed (13 suites / 135 tests), including the rendered Create button foreground/fill in light/dark/custom/alpha-custom themes. Color, runtime-reference, motion and UI guards passed; changed-file TypeScript comparison has zero diagnostics and changed-source ESLint has zero errors/warnings. Full lint retains 14 existing errors / 101 warnings; its two unrelated automatic edits were restored.
+- Native screenshots and visual acceptance remain pending. This repository requires stopping after installation/version confirmation for the user's manual acceptance. Tests validate routes, data preservation, layout arithmetic and semantic colors, not the final native visual appearance. No device screenshot, emulator or substitute visual pass is claimed.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked

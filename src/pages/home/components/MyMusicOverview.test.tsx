@@ -4,7 +4,7 @@ import TestRenderer, { act } from "react-test-renderer";
 import { showPanel } from "@/components/panels/usePanel";
 import { darkColors, lightColors } from "@/constants/colorPalette";
 import TrackPlayer from "@/core/trackPlayer";
-import { contrastRatio } from "@/utils/colorContrast";
+import { blendOver, contrastRatio } from "@/utils/colorContrast";
 import { resolveThemeColors } from "@/utils/themeColors";
 import MyMusicOverview from "./MyMusicOverview";
 
@@ -21,6 +21,7 @@ let mockHistory = mockHistorySeed;
 let mockSheets: IMusic.IMusicSheetItemBase[] = mockSheetsSeed;
 let mockFavoriteMusic = mockHistorySeed;
 let mockStarred = [{ id: "starred", platform: "remote" }];
+let mockPlugins = [{ name: "source-a" }, { name: "source-b" }];
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 let mockVersion = "0.3.1-preview.i88.mine.20261011.120000";
 let mockDisplayNames: Record<string, string> = {};
@@ -39,6 +40,7 @@ jest.mock("@/core/i18n", () => ({
             if (key === "myMusic.playRecent") return `Play ${args?.title} by ${args?.artist}`;
             if (key === "home.currentVersion") return `Version ${args?.version}`;
             if (key === "myMusic.previewVersion") return `${args?.version} · Preview`;
+            if (key === "myMusic.pluginCount") return `${args?.count ?? 0} plugins`;
             return key;
         },
     }),
@@ -52,6 +54,7 @@ jest.mock("@/core/musicSheet", () => ({
     useSheetItem: () => ({ musicList: mockFavoriteMusic }),
 }));
 jest.mock("@/core/pluginManager", () => ({
+    usePlugins: () => mockPlugins,
     usePluginDisplayNameResolver: () => (platform: string) => mockDisplayNames[platform] ?? platform,
 }));
 jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { play: jest.fn() } }));
@@ -87,6 +90,7 @@ describe("MyMusicOverview", () => {
         mockSheets = mockSheetsSeed;
         mockFavoriteMusic = mockHistorySeed;
         mockStarred = [{ id: "starred", platform: "remote" }];
+        mockPlugins = [{ name: "source-a" }, { name: "source-b" }];
         mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
         mockDisplayNames = {};
         mockVersion = "0.3.1-preview.i88.mine.20261011.120000";
@@ -99,6 +103,7 @@ describe("MyMusicOverview", () => {
         press("home.favoriteSheet");
         press("home.downloadManagement");
         press("home.starredPlaylists");
+        press("sidebar.pluginManagement");
         press("sidebar.backupAndResume");
         press("home.aboutAndUpdate");
         press("home.viewAll");
@@ -108,6 +113,7 @@ describe("MyMusicOverview", () => {
             ["local-sheet-detail", { id: "favorite" }],
             ["downloading"],
             ["sheet-browser", { sheetType: "starred" }],
+            ["setting", { type: "plugin" }],
             ["setting", { type: "backup" }],
             ["setting", { type: "about" }],
             ["sheet-browser", { sheetType: "local" }],
@@ -153,7 +159,7 @@ describe("MyMusicOverview", () => {
         mockStarred = [];
         render();
         expect(textNodes().some(node => node.props.children === "myMusic.historyEmpty")).toBe(true);
-        expect(textNodes().some(node => node.props.children === "home.noCustomPlaylists")).toBe(true);
+        expect(textNodes().some(node => node.props.children === "myMusic.playlistsHint")).toBe(true);
         expect(renderer.root.findByProps({ accessibilityLabel: "home.starredPlaylists" }).props.accessibilityHint).toBe("0 playlists");
         press("home.exploreMusic");
         press("home.newPlaylist.a11y");
@@ -236,29 +242,79 @@ describe("MyMusicOverview", () => {
         expect(mockNavigate).toHaveBeenCalledWith("local-sheet-detail", { id: "favorite" });
     });
 
-    it("reserves matching title space for short and long songs and responds to strip layout changes", () => {
+    it("uses one title line for short and long songs and responds to strip layout changes", () => {
         mockHistory = [mockHistorySeed[0], { ...mockHistorySeed[1], title: "A very long song title across two lines" }];
         render();
         const titles = textNodes().filter(node => mockHistory.some(music => music.title === node.props.children));
         const titleStyles = titles.map(node => StyleSheet.flatten(node.props.style));
         expect(titleStyles[0].height).toBe(titleStyles[1].height);
-        expect(titleStyles[0].height).toBe(titleStyles[0].lineHeight * 2);
-        const strip = renderer.root.findAll(node => node.props.horizontal === true && typeof node.props.onLayout === "function")[0];
-        const songButton = renderer.root.findByProps({ accessibilityLabel: "Play Evening by Artist A" });
-        act(() => strip.props.onLayout({ nativeEvent: { layout: { width: 360 } } }));
-        const wideWidth = StyleSheet.flatten(songButton.props.style({ pressed: false })).width;
-        act(() => strip.props.onLayout({ nativeEvent: { layout: { width: 250 } } }));
-        const narrowWidth = StyleSheet.flatten(songButton.props.style({ pressed: false })).width;
+        expect(titleStyles[0].height).toBe(titleStyles[0].lineHeight);
+        expect(titles.every(node => node.props.numberOfLines === 1)).toBe(true);
+        const strip = () => renderer.root.findAll(node => node.props.horizontal === true && typeof node.props.onLayout === "function")[0];
+        const songButton = () => renderer.root.findByProps({ accessibilityLabel: "Play Evening by Artist A" });
+        act(() => strip().props.onLayout({ nativeEvent: { layout: { width: 360 } } }));
+        const wideWidth = StyleSheet.flatten(songButton().props.style({ pressed: false })).width;
+        act(() => strip().props.onLayout({ nativeEvent: { layout: { width: 250 } } }));
+        const narrowWidth = StyleSheet.flatten(songButton().props.style({ pressed: false })).width;
         expect(wideWidth).not.toBe(narrowWidth);
-        expect(narrowWidth).toBeLessThan(250);
+        expect(narrowWidth).toBe(250);
         press("Play Evening by Artist A");
         expect(TrackPlayer.play).toHaveBeenCalledWith(mockHistory[0]);
+    });
+
+    it("keeps four shortcuts in order and opens the real plugin manager even with no plugins", () => {
+        render();
+        const shortcuts = ["home.playHistory", "home.downloadManagement", "home.starredPlaylists", "sidebar.pluginManagement"];
+        const quickRow = renderer.root.findByProps({ accessibilityLabel: shortcuts[0] }).parent;
+        expect(quickRow?.children.map(child => typeof child === "string" ? child : child.props.accessibilityLabel)).toEqual(shortcuts);
+        expect(textNodes().some(node => node.props.children === "2 plugins")).toBe(true);
+        mockPlugins = [];
+        act(() => renderer.update(<MyMusicOverview />));
+        expect(textNodes().some(node => node.props.children === "0 plugins")).toBe(true);
+        press("sidebar.pluginManagement");
+        expect(mockNavigate).toHaveBeenCalledWith("setting", { type: "plugin" });
+    });
+
+    it("groups all six songs into full pages and reflows without losing playback destinations", () => {
+        mockHistory = Array.from({ length: 6 }, (_, index) => ({ ...mockHistorySeed[0], id: `song-${index}`, title: `Song ${index}` }));
+        render();
+        const getStrip = () => renderer.root.findAll(node => node.props.horizontal === true && typeof node.props.onLayout === "function")[0];
+        act(() => getStrip().props.onLayout({ nativeEvent: { layout: { width: 600 } } }));
+        const strip = getStrip();
+        expect(strip.props.pagingEnabled).toBe(true);
+        const pages = strip.props.children as React.ReactElement<any>[];
+        expect(pages).toHaveLength(2);
+        expect(pages.map(page => page.props.children.length)).toEqual([3, 3]);
+        const pageStyle = StyleSheet.flatten(pages[0].props.style);
+        const coverStyle = StyleSheet.flatten(pages[0].props.children[0].props.style({ pressed: false }));
+        expect(coverStyle.width * 3 + pageStyle.gap * 2).toBeCloseTo(pageStyle.width);
+        act(() => getStrip().props.onLayout({ nativeEvent: { layout: { width: 400 } } }));
+        const twoColumnPages = getStrip().props.children as React.ReactElement<any>[];
+        expect(twoColumnPages.map(page => page.props.children.length)).toEqual([2, 2, 2]);
+        act(() => getStrip().props.onLayout({ nativeEvent: { layout: { width: 240 } } }));
+        const narrowPages = getStrip().props.children as React.ReactElement<any>[];
+        expect(narrowPages).toHaveLength(6);
+        press("Play Song 5 by Artist A");
+        expect(TrackPlayer.play).toHaveBeenCalledWith(mockHistory[5]);
+    });
+
+    it("retains the last partial page and full accessible titles without an empty title line", () => {
+        mockHistory = Array.from({ length: 5 }, (_, index) => ({ ...mockHistorySeed[0], id: `song-${index}`, title: `Long original song title ${index}` }));
+        render();
+        const strip = renderer.root.findAll(node => node.props.horizontal === true && typeof node.props.onLayout === "function")[0];
+        act(() => strip.props.onLayout({ nativeEvent: { layout: { width: 600 } } }));
+        const currentStrip = renderer.root.findAll(node => node.props.horizontal === true && typeof node.props.onLayout === "function")[0];
+        const pages = currentStrip.props.children as React.ReactElement<any>[];
+        expect(pages.map(page => page.props.children.length)).toEqual([3, 2]);
+        press("Play Long original song title 4 by Artist A");
+        expect(TrackPlayer.play).toHaveBeenCalledWith(mockHistory[4]);
     });
 
     it.each([
         ["light", lightColors, false],
         ["dark", darkColors, true],
         ["custom", { ...lightColors, primary: "#EFA322" }, false],
+        ["custom-alpha", { ...lightColors, primary: "rgba(56, 103, 244, 0.35)" }, false],
     ] as const)("uses readable semantic surfaces in the %s theme", (_name, palette, dark) => {
         mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
         render();
@@ -270,6 +326,10 @@ describe("MyMusicOverview", () => {
         expect(contrastRatio(mockColors.primaryText, mockColors.card)).toBeGreaterThanOrEqual(4.5);
         expect(contrastRatio(mockColors.onTonal, mockColors.tonalSurface)).toBeGreaterThanOrEqual(4.5);
         expect(contrastRatio(mockColors.favorite, mockColors.tonalSurface)).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(mockColors.onPrimary, blendOver(mockColors.primary, mockColors.pageBackground))).toBeGreaterThanOrEqual(4.5);
+        const create = renderer.root.findByProps({ accessibilityLabel: "home.newPlaylist.a11y" });
+        expect(StyleSheet.flatten(create.props.style({ pressed: false })).backgroundColor).toBe(mockColors.primary);
+        expect(create.findByType("ThemeText" as unknown as React.ElementType).props.color).toBe(mockColors.onPrimary);
         const surfaces = renderer.root.findAll(node => node.props.style && typeof node.props.style !== "function").map(node => StyleSheet.flatten(node.props.style)?.backgroundColor);
         expect(surfaces).toContain(mockColors.tonalSurface);
         expect(surfaces).toContain(mockColors.card);

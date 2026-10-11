@@ -111,6 +111,8 @@ export interface ILanguageData {
     "home.mine": string;
     "home.personalTagline": string;
     "myMusic.downloadsHint": string;
+    "myMusic.pluginCount": string;
+    "myMusic.viewAllShort": string;
     "myMusic.createPlaylist": string;
     "myMusic.viewRecent": string;
     "myMusic.openPlaylist": string;
