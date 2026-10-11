@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 
 import NavBar from "./components/navBar";
-import MusicBar from "@/components/musicBar";
+import PlayerDock from "@/components/musicBar/playerDock";
 import { SafeAreaView } from "react-native-safe-area-context";
 import StatusBar from "@/components/base/statusBar";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
@@ -17,6 +17,7 @@ import { openPlayer } from "@/core/playerOverlay";
 
 function Home() {
     const [activeTab, setActiveTab] = useState<"home" | "library" | "mine">("home");
+    const [dockHeight, setDockHeight] = useState(0);
     
     useEffect(() => {
         // 检查是否需要在启动后打开播放详情页
@@ -31,7 +32,7 @@ function Home() {
     return (
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
-            <HorizontalSafeAreaView style={globalStyle.flex1}>
+            <HorizontalSafeAreaView style={[globalStyle.flex1, { marginBottom: dockHeight }]}>
                 {activeTab === "mine" ? (
                     <MyMusicOverview />
                 ) : activeTab === "library" ? (
@@ -43,12 +44,18 @@ function Home() {
                     </>
                 )}
             </HorizontalSafeAreaView>
-            <MusicBar />
-            <HomeBottomNavigation
-                activeTab={activeTab}
-                onSelectHome={() => setActiveTab("home")}
-                onSelectLibrary={() => setActiveTab("library")}
-                onSelectMine={() => setActiveTab("mine")}
+            <PlayerDock
+                collapseKey={activeTab}
+                onDockHeightChange={setDockHeight}
+                bottomNavigation={(
+                    <HomeBottomNavigation
+                        integrated
+                        activeTab={activeTab}
+                        onSelectHome={() => setActiveTab("home")}
+                        onSelectLibrary={() => setActiveTab("library")}
+                        onSelectMine={() => setActiveTab("mine")}
+                    />
+                )}
             />
         </SafeAreaView>
     );

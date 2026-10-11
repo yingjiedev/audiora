@@ -5,6 +5,7 @@ import { ImgAsset } from "@/constants/assetsConst";
 import i18n, { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import { openPlayer } from "@/core/playerOverlay";
+import { showPanel } from "@/components/panels/usePanel";
 import TrackPlayer, { useMusicState, useProgress } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
@@ -138,6 +139,7 @@ function ContinueListening(props: {
             <Pressable
                 style={[
                     styles.continueCard,
+                    { shadowColor: colors.shadow },
                     {
                         backgroundColor: colors.card,
                         borderColor: Color(colors.text).alpha(0.06).toString(),
@@ -173,7 +175,7 @@ function ContinueListening(props: {
                                         .toString(),
                                 },
                             ]}>
-                            <ThemeText fontSize="tag" color={colors.primary}>
+                            <ThemeText fontSize="tag" color={colors.primaryText}>
                                 {getPluginDisplayName(featuredMusic.platform)}
                             </ThemeText>
                         </View>
@@ -239,7 +241,7 @@ function ContinueListening(props: {
                                 : "play"
                         }
                         size={rpx(36)}
-                        color={colors.primary}
+                        color={colors.primaryText}
                     />
                 </Pressable>
             </Pressable>
@@ -330,7 +332,7 @@ function QuickAccess(props: {
             artwork: ImgAsset.quickHistory,
             title: t("home.playHistory"),
             subtitle: t("home.songCount", { count: historyCount }),
-            action: () => navigate(ROUTE_PATH.HISTORY),
+            action: () => showPanel("PlayList", { initialTab: "history" }),
         },
         {
             key: "favorite",
@@ -465,7 +467,7 @@ function Discovery(props: {
                     <ThemeText
                         fontSize="description"
                         fontWeight="semibold"
-                        color={colors.primary}>
+                        color={colors.primaryText}>
                         {t("common.view")}
                     </ThemeText>
                 </Pressable>
@@ -503,7 +505,7 @@ function Discovery(props: {
                                     <ThemeText
                                         numberOfLines={1}
                                         fontSize="tag"
-                                        color={colors.primary}>
+                                        color={colors.primaryText}>
                                         {item.type}
                                     </ThemeText>
                                 </View>
@@ -574,7 +576,7 @@ function Discovery(props: {
                         <Icon
                             name="trophy"
                             size={rpx(34)}
-                            color={colors.primary}
+                            color={colors.primaryText}
                         />
                     </View>
                     <View style={styles.discoveryText}>
@@ -704,7 +706,6 @@ const styles = StyleSheet.create({
         padding: rpx(20),
         flexDirection: "row",
         alignItems: "center",
-        shadowColor: "#2D4A78",
         shadowOffset: { width: 0, height: rpx(8) },
         shadowOpacity: 0.1,
         shadowRadius: rpx(18),

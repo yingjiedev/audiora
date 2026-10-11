@@ -9,6 +9,8 @@ import { musicIsPaused } from "@/utils/trackUtils";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React from "react";
 import { ImageBackground, Pressable, StyleSheet, View } from "react-native";
+import useColors from "@/hooks/useColors";
+import Color from "color";
 import { useTheme } from "@react-navigation/native";
 
 export default function HomeHero() {
@@ -17,6 +19,7 @@ export default function HomeHero() {
     const navigate = useNavigate();
     const { t } = useI18N();
     const { dark } = useTheme();
+    const colors = useColors();
     const isPlaying = !!currentMusic && !musicIsPaused(musicState);
 
     return (
@@ -32,19 +35,19 @@ export default function HomeHero() {
                 resizeMode="stretch"
                 style={styles.image}
                 imageStyle={styles.imageRadius}>
-                <View style={[styles.shade, dark ? styles.shadeDark : null]} />
+                <View style={[styles.shade, { backgroundColor: Color(colors.onMediaScrim).alpha(dark ? 0.34 : 0.08).toString() }]} />
                 <View style={styles.copy}>
                     <ThemeText
                         fontSize="section"
                         fontWeight="bolder"
-                        color="#FFFFFF"
-                        style={styles.title}>
+                        color={colors.onMedia}
+                        style={[styles.title, { textShadowColor: Color(colors.onMediaScrim).alpha(0.28).toString() }]}>
                         {t("home.welcomeTitle")}
                     </ThemeText>
                     <ThemeText
                         fontSize="description"
                         fontWeight="semibold"
-                        color="rgba(255,255,255,0.9)"
+                        color={colors.onMediaSecondary}
                         style={styles.subtitle}>
                         {t("home.welcomeSubtitle")}
                     </ThemeText>
@@ -93,11 +96,6 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(10,34,91,0.08)",
-    },
-    // 深色模式下 hero 图过亮会跟整页脱节，压一层深色蒙版
-    shadeDark: {
-        backgroundColor: "rgba(4,10,28,0.34)",
     },
     copy: {
         width: "62%",
@@ -106,7 +104,6 @@ const styles = StyleSheet.create({
     title: {
         fontSize: fontRpx(44),
         lineHeight: fontRpx(54),
-        textShadowColor: "rgba(10,28,72,0.28)",
         textShadowOffset: { width: 0, height: rpx(2) },
         textShadowRadius: rpx(8),
     },

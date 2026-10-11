@@ -72,12 +72,12 @@ function FailedRow(props: { record: IDownloadRecord }) {
                 <Icon
                     name="arrow-path"
                     size={rpx(28)}
-                    color={colors.primary}
+                    color={colors.primaryText}
                 />
                 <ThemeText
                     fontSize="description"
                     fontWeight="medium"
-                    style={{ color: colors.primary, marginLeft: rpx(6) }}>
+                    style={{ color: colors.primaryText, marginLeft: rpx(6) }}>
                     {t("downloading.action.retry")}
                 </ThemeText>
             </TouchableOpacity>
@@ -137,9 +137,7 @@ export default function FailedList() {
                     style={[
                         styles.batchButton,
                         {
-                            backgroundColor: colors.danger
-                                ? `${colors.danger}1F`
-                                : colors.surfaceElevated,
+                            backgroundColor: colors.dangerSurface,
                         },
                     ]}
                     onPress={() => {

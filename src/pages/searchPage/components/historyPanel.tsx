@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -24,6 +25,7 @@ import Empty from "@/components/base/empty";
 import { useI18N } from "@/core/i18n";
 
 export default function () {
+    const colors = useColors();
     const [history, setHistory] = useState<string[] | null>(null);
     const search = useSearch();
 
@@ -42,7 +44,7 @@ export default function () {
                 <Loading />
             ) : (
                 <>
-                    <View style={style.header}>
+                    <View style={[style.header, { borderBottomColor: colors.divider }]}>
                         <ThemeText fontSize="title" fontWeight="semibold">
                             {t("searchPage.history")}
                         </ThemeText>
@@ -105,7 +107,6 @@ const style = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         borderBottomWidth: rpx(1),
-        borderBottomColor: "rgba(0,0,0,0.06)",
     },
     historyContent: {
         width: "100%",

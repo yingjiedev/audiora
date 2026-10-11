@@ -179,7 +179,7 @@ export default function PlayById() {
                                                     numberOfLines={1}
                                                     style={{
                                                         color: isSelected
-                                                            ? "#fff"
+                                                            ? colors.onPrimary
                                                             : colors.text,
                                                     }}>
                                                     {getDisplayName(plugin)}

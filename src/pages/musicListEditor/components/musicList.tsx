@@ -1,7 +1,7 @@
 import React, { memo, useCallback } from "react";
 import { StatusBar, StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
-import MusicItem from "@/components/mediaItem/musicItem";
+import MusicItem, { MUSIC_ITEM_HEIGHT } from "@/components/mediaItem/musicItem";
 import { produce } from "immer";
 import { useAtom, useSetAtom } from "jotai";
 import {
@@ -15,13 +15,11 @@ import CheckBox from "@/components/base/checkbox";
 import useColors from "@/hooks/useColors";
 import Empty from "@/components/base/empty";
 
-const ITEM_HEIGHT = rpx(120);
-
 interface IMusicEditorItemProps {
     index: number;
     editorMusicItem: IEditorMusicItem;
 }
-function _MusicEditorItem(props: IMusicEditorItemProps) {
+function MusicEditorItemView(props: IMusicEditorItemProps) {
     const { index, editorMusicItem } = props;
     const setEditingMusicList = useSetAtom(editingMusicListAtom);
 
@@ -36,12 +34,12 @@ function _MusicEditorItem(props: IMusicEditorItemProps) {
     return (
         <MusicItem
             musicItem={editorMusicItem.musicItem}
-            left={() => (
+            left={
                 <View style={style.checkBox}>
                     <CheckBox checked={editorMusicItem.checked} />
                 </View>
-            )}
-            showMoreIcon={false}
+            }
+            actions={[]}
             itemPaddingRight={rpx(100)}
             onItemPress={onPress}
         />
@@ -49,7 +47,7 @@ function _MusicEditorItem(props: IMusicEditorItemProps) {
 }
 
 const MusicEditorItem = memo(
-    _MusicEditorItem,
+    MusicEditorItemView,
     (prev, curr) =>
         prev.editorMusicItem === curr.editorMusicItem &&
         prev.index === curr.index,
@@ -76,7 +74,7 @@ export default function MusicList() {
             marginTop={marginTop}
             data={editingMusicList}
             renderItem={renderItem}
-            itemHeight={ITEM_HEIGHT}
+            itemHeight={MUSIC_ITEM_HEIGHT}
             onSortEnd={newData => {
                 setEditingMusicList(newData);
                 setMusicListChanged(true);

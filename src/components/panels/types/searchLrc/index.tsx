@@ -83,7 +83,7 @@ export default function SearchLrc(props: INewMusicSheetProps) {
                                     },
                                 ]}>
                                 <ThemeText
-                                    color={colors.primary}
+                                    color={colors.primaryText}
                                     fontWeight="bold">
                                     {t("common.search")}
                                 </ThemeText>

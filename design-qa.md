@@ -49,3 +49,210 @@ The lower pair in the combined comparison is an equal-size panel-only comparison
 - [x] Verify the exact release APK on a connected Android device.
 
 final result: passed
+
+---
+
+# Playback drawer visual verification
+
+- Source visual truth: user attachment `3a1dae1a278d6baac0a6893d95eec025.jpg` (1220 × 2656 pixels, displayed at 941 × 2048).
+- Implementation: native React Native playback drawer; no implementation screenshot captured.
+- Viewport: physical Android device; runtime viewport and density not captured.
+- State: playing queue, song history, and playlist history in light/dark themes await manual acceptance.
+- Density normalization: none; no paired runtime capture is available.
+- Full-view comparison evidence: unavailable. The reference was inspected, but code and passing tests do not establish visual fidelity.
+- Focused region comparison evidence: unavailable for tab typography, row spacing, toolbar icons, current-song indicator, or gesture rendering.
+
+## Findings
+
+Visual verification remains pending. The repository's explicit preview instructions require installation and installed-version confirmation, then stopping for user acceptance; they prohibit device screenshots or substitute visual acceptance unless requested. This instruction takes precedence over the design skill's automatic screenshot workflow.
+
+The implementation uses the existing theme, type sizes, icons, and native panel. Three tabs and live counts replace the old queue header; songs use compact single-line title/artist rows with separate remove and reorder controls. Playlist history uses real collection metadata. The current-song indicator uses existing musical-note/pause icons rather than the reference's equalizer. Dragging commits on release; automatic scrolling at the viewport edge is not implemented. These are implementation facts, not verified visual matches.
+
+## Required fidelity surfaces
+
+- Fonts/typography: existing native typography reused; runtime font rendering, clipping, large text, and selected-tab underline await review.
+- Spacing/layout rhythm: bottom drawer height 62%, 20dp horizontal inset, at least 48dp song rows and action height; runtime safe-area layout awaits review.
+- Colors/tokens: existing panel, foreground, secondary text, and success tokens reused; light/dark runtime contrast awaits review.
+- Image/assets: existing icons and actual collection covers reused; no sample art or fabricated playlist data. Runtime crop and sharpness await review.
+- Copy/content: localized tabs, counts, empty states, and confirmations have automated coverage; runtime truncation and text scaling await review.
+
+## Comparison history
+
+No paired native visual comparison has been performed. No visual iteration is claimed as passed.
+
+## Implementation checklist
+
+- Automated playback-history, tab/action isolation, navigation, stale reorder, and gesture cancellation regressions passed.
+- Build and install a uniquely versioned Android preview; verify package, ABI, fonts, signing certificate, and installed version.
+- User to accept appearance, list scrolling, drag behavior, tab switching, source navigation, and full-player return interactions on the physical device.
+
+final result: blocked
+
+
+Blocker: native visual evidence is intentionally deferred to user manual acceptance under repository preview instructions.
+
+---
+
+# Shared song list visual verification
+
+- Source visual truth: user attachments `ee7e58cfb1a098d38dd4ef12c43617ca.jpg` (search) and `6d5720c670e4d282895ec47ae26281e2.jpg` (favorites).
+- Provided pre-change implementation: `18490df32c3627379c43f4565c903ff7.jpg` (search). All three images are 1220 × 2656 pixels, displayed at 941 × 2048.
+- Implementation: native React Native shared `MusicItem`; no post-change runtime screenshot captured.
+- Viewport: Android; runtime viewport and density not captured. No density normalization or paired post-change comparison is claimed.
+- State: search results, favorites, local songs, album/playlist songs, artist songs, and editing mode. Source screenshots have different results and tabs; only row structure is compared.
+- Full-view evidence: supplied references inspected; reference rows use a continuous page background with title/artist hierarchy. The supplied old app adds covers, raised containers, borders, shadows, and a separate source/duration column.
+- Focused evidence: supplied rows inspected for sequence numbers, title/artist alignment, badges, and right actions. Post-change native typography and tap geometry await manual acceptance.
+
+## Findings and implementation
+
+- [P1] Per-song cards compete with song titles and fragment the list. Removed both scene wrappers and the card variant from the common song list.
+- [P2] Covers and source columns consume title space. Default rows now omit covers, use two text lines, and place real quality/VIP/MV/local status and duration in the secondary line. Full source metadata stays in the existing options panel.
+- [P2] Scene-specific wrappers can drift. Search, favorites, local songs, playlist/album songs, artist songs, and the legacy history screen use the same `MusicItem` row. Sequence numbers, optional cover, and typed actions are configuration.
+- [P2] Adjacent controls must not trigger row playback. Text/leading content and actions use sibling press targets; automated tests cover play, favorite, next-play, options, and editing isolation. Native hit testing remains manual.
+
+## Required fidelity surfaces
+
+- Fonts/typography: existing app font and 28/22rpx title/metadata sizes, single-line truncation, literal keyword highlights, current-track primary color. Runtime rendering and long metadata await review.
+- Spacing/layout: one shared 120rpx row minimum, 32rpx left inset, 8rpx metadata gap; 44 × 48dp minimum action targets. No per-song border, radius, shadow, or persistent row fill. Sequence numbers remain aligned in collection lists.
+- Colors/tokens: existing theme foreground, secondary, primary, pressed state, and favorite danger tokens; existing factual badges reused. Reference green is mapped to the app's configurable primary color.
+- Image/assets: default reference-style rows contain no covers; optional real artwork remains supported. Existing icon assets are reused, including the app's next-play icon. No fabricated artwork, social counts, or quality badges.
+- Copy/content: existing localized action labels; actual artist/album/duration fields. Search keeps the current playback preference and query highlights. No data migration.
+
+## Comparison history and acceptance
+
+The supplied pre-change screenshots guided the fixes. No post-change native capture or visual pass is claimed. Repository instructions defer UI acceptance to the user and prohibit automatic device capture or substitute visual acceptance.
+
+- Automated: 81 Jest suites / 590 tests passed, including 22 new row/highlight/adapter cases; runtime reference, motion, color, and UI guards passed.
+- Manual: verify light/dark appearance, long titles and metadata, action hit targets, current-song highlighting, list scrolling, favorite updates, and batch editing on the new APK.
+
+final result: blocked
+
+Blocker: post-change native visual evidence is deferred to user manual acceptance; the user requested packaging before connecting the device.
+
+---
+
+# Audiora color system verification
+
+- Accepted target: the user-approved blue primary / blue-gray surfaces / limited purple accents proposal, following the complaint that the expanded player's mint gradient differed from the app palette.
+- Source reference: the user selected the previously captured homepage with expanded PlayerDock. New analysis captures showed the system lock screen and were rejected as app evidence.
+- Implementation: `COLOR_SYSTEM.md`, the repository instructions, centralized preset palette, pure semantic derivation, shared text component, PlayerDock, seek bar, song-row favorites, queue highlighting, and PR color CI.
+- Spacing, artwork, copy, press regions, overlay lifecycle, gestures, and navigation were preserved. No post-change native appearance capture is claimed.
+
+## Findings addressed
+
+- The light player bypassed the theme primary by choosing the green branding stop. Its panel now derives a subtle 6% / 2% / 0% primary tint from the current surface.
+- Queue selection used success green; selection now uses the readable active primary role.
+- Likes shared the danger role; favorites and destructive/status colors now have separate preset values and component roles.
+- Secondary text ignored configured theme values; the hook now honors them before applying legacy fallbacks.
+- Color lint could pass imported but inappropriate brand colors. The combined check now restricts raw-palette access, decorative color imports, and success/danger usage in migrated playback components; the broad constants-directory exemption was removed.
+- Primary text and button foreground account for rendered backgrounds. Tests cover alpha compositing, custom primary opacity, both presets, representative custom accents, transparent custom surfaces, gradient interpolation, invalid primary fallback, and incompatible surface limits.
+
+## Verification and acceptance
+
+- Automated: 84 Jest suites / 619 tests passed (29 added in this change); color, runtime-reference, motion and UI checks passed. Modified source files have zero ESLint errors/warnings and zero TypeScript diagnostics. Full-repository ESLint retains its existing 61 errors / 140 warnings.
+- CI: color checks and the focused color/theme/component regression suite run for affected PR changes.
+- Documentation: the checked-in color requirements define usage, exceptions, contrast limits, theme preservation, visual acceptance and progressive legacy cleanup.
+- Native: the new colors are not yet packaged or accepted on Android/iOS. Manual acceptance should compare light/dark/custom themes, compact/expanded player, queue, search/favorites/local lists and settings.
+
+final result: blocked
+
+Blocker: post-change native visual evidence awaits a new preview and user manual acceptance; source implementation and automated checks are complete.
+
+---
+
+# App-wide color migration (2026-10-11)
+
+- Target: apply `COLOR_SYSTEM.md` throughout the existing Android application while preserving player/navigation/gesture geometry and animations.
+- Source audit: the guarded business-color inventory decreased from 180 occurrences in 47 files to zero. The baseline was tightened to zero after migration; common named colors are now checked alongside hex/RGB/HSL values. Preset/configuration/native lyric inputs, generated assets and the independent web preview retain their documented boundaries.
+- Corrected: fixed-color controls in dialogs, sleep timer, links, switches, toast statuses, badges, library actions, song lists, search, downloads, settings, lyrics, album information and MV controls. The immersive cover tint now follows primary with a limited purple ambient stop. Destructive-fill foreground is independent of primary-fill foreground; RGBA error tints no longer use hex suffix concatenation.
+- Contrast: light/dark presets, bright/transparent custom primary, tonal badges, warnings, destructive fills and opaque panel RGB are covered. A custom blue exposed a 4.486:1 button foreground; a neutral fallback now meets the unrounded 4.5:1 text threshold. Real cover imagery and arbitrary incompatible custom surfaces still require native/manual checks.
+- Performance: semantic results are reused across consumers of the same immutable theme; mode/color-object changes invalidate them. This avoids repeating contrast derivation per mounted lyric row.
+- Validation: 85 suites / 628 tests passed, plus the final language-package check (4 tests). Color, runtime-reference, animation-callback and UI guards passed. Changed source has zero ESLint errors and four existing warnings; TypeScript has ten existing diagnostics and zero introduced diagnostics. Repository ESLint retains 43 existing errors and 138 warnings.
+- Handoff: a new signed arm64 preview is built from the committed source, with actual package/version/signature/font/resource verification and preserve-data installation recorded in the preview verification JSON. Per `AGENTS.md`, installation stops after confirming the installed version. Light/dark/custom appearance and interactive acceptance remain with the user; no post-migration native screenshot or visual pass is claimed.
+
+Source/color regression result: pass. Native visual acceptance: pending user.
+
+---
+
+# Release branch conflict resolution (2026-10-11)
+
+- Synced `release/0.3.0` at `c4fed382` (plugin display names, #106). Resolved the three conflicts by preserving the shared flat MusicItem and three-tab playback drawer, while applying live display-name resolution to homepage sources and the sheet-history source fallback. Song rows keep their existing title/artist layout without restoring old platform tags or cards.
+- Plugin display names affect presentation only; playback, lookup, stored history and route identifiers retain their original platform values. Existing semantic text colors and the purple player gradient are preserved.
+- Completed the two new translation declarations and fixed template-literal storage-key typing and the radio callback's string/number narrowing in the incoming plugin feature.
+- Validation: all 86 Jest suites / 642 tests passed; final affected-file regression passed (4 suites / 25 tests), and color regression passed (12 suites / 116 tests). Added homepage rename/color/identifier coverage and sheet-history display-name/author/identifier coverage. Color, runtime-reference, motion and UI checks passed. Resolved files and supplemental fixes have zero ESLint errors/warnings; merge-file TypeScript comparison has two existing diagnostics and zero introduced diagnostics. `npm run lint` still reports existing repository findings; its unrelated automatic edits were restored.
+- This conflict resolution does not produce a new APK or perform device acceptance. The previously installed purple preview remains built from `add4fa5e`; the merge includes the later plugin-display-name changes.
+
+Source regression result: pass. Native visual acceptance remains with the user.
+
+---
+
+# Expanded player purple gradient (2026-10-11)
+
+- Evidence: the user's screenshot of `0.3.1-preview.i88.colors.20261011.105538` shows that the 6% blue tint is barely visible. The user requested trying purple.
+- Change: the expanded player now blends the theme's purple decorative accent into the opaque panel at 28% / 12% / 0%. Default light stops are #E9D6FC / #F6EEFE / #FFFFFF; dark stops are #4B4380 / #333763 / #212E4E. Primary controls retain their blue/theme role. Custom decorative accents remain configurable, with a safe preset fallback.
+- Readability: the stronger tint exposed insufficient contrast in existing secondary/tertiary player text. Those roles are now calibrated across the gradient; preset light/dark tests sample both rendered gradient segments and enforce the unrounded 4.5:1 threshold.
+- Validation: all 12 color suites / 115 tests passed, including actual native gradient binding, separate primary/decorative overrides, missing/invalid accents and opaque custom accents. Color, runtime-reference, animation and UI checks passed. Modified source has zero ESLint errors/warnings; PR type comparison retains ten existing diagnostics and zero introduced diagnostics. The previous change's missing placeholder key declaration was completed. Full repository lint still has existing findings. No component layout, animation, navigation or hit-region changes were made.
+- Native acceptance: deliver a new uniquely versioned preview, verify the artifact and preserve-data installation, then leave visual comparison with the user per repository instructions. No post-change screenshot or native visual pass is claimed.
+
+Source/color regression result: pass. Native visual acceptance: pending user.
+
+---
+
+# My music page redesign (2026-10-11)
+
+- Reference: user attachments `9d90ad05659eb4f73aab3cda1ba85d29.jpg` (current page) and `bca8756c5cc69cc4625662c803fd4efb.jpg` (reference), each 1220 × 2656 pixels. The user requested an original redesign preserving Audiora's existing functions, rather than a faithful clone.
+- Design: a tonal Audiora music-collection hero with a prominent Favorites entry; three compact history/download/starred shortcuts; a six-song cover strip; a dedicated playlist toolbar and full custom-playlist list; backup/version tools below. Palette, assets and type come from the existing application. Reference membership, cash, check-in, social content, branding and exclusive illustrations are not introduced.
+- Functional preservation and visual decisions are recorded in `docs/design/my-music-page.md`. Original navigation and panel destinations, saved history, song/platform identifiers and existing playlist data remain intact. Favorites no longer incorrectly falls back to a custom playlist when loading; the long installed version can wrap.
+- Validation: full Jest regression passed (86 suites / 651 tests), including 12 My-page cases. Final color regression passed (13 suites / 128 tests) after completing test fixture types, covering light/dark/custom tonal foregrounds and existing player controls; final language checks passed (4 tests). Color, runtime-reference, motion and UI guards passed. Changed-file TypeScript comparison has zero diagnostics, and modified-source ESLint has zero errors/warnings. Repository lint retains 14 existing errors / 101 warnings; unrelated automatic edits were restored.
+- Implementation screenshot and paired visual comparison: unavailable. No device capture is requested; repository instructions explicitly require stopping after preview installation/version confirmation for user acceptance, overriding the skill's automatic visual gate. Neither passing tests nor compilation establishes native visual quality.
+- Pending checks: rendered typography, cover cropping, margins, empty states, long titles/version, native dark/custom themes and scroll access above the expanded player. No navigation, player animation, overlay hit-test or native runtime redesign is included.
+- Preview delivered: source `db1eeffb`, version `0.3.1-preview.i88.mine.20261011.114141`, versionCode `1791690110`, arm64-v8a. Actual APK metadata, v2 single signer, three font hashes and vinyl resource verified; the installed certificate matched and `adb install -r` preserved data. Installed version/code confirmed on the user's connected physical device. Device work stopped at this point without screenshots or UI acceptance.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked
+
+---
+
+# My music page refinement after screenshot review (2026-10-11)
+
+- Evidence: user-provided current top/scrolled screenshots `9f5a71cba14841c5476ee2a62cfd3bb5.jpg` / `735e3f0de51a6c991da29b5cd094a8e1.jpg`, compared with the same supplied reference `bca8756c5cc69cc4625662c803fd4efb.jpg`. The review identified excessive blue emphasis, an oversized collection count, fixed-width cover clipping, uneven artist positions below long titles and a visually heavy empty playlist state.
+- Corrected: compact neutral collection card with smaller brand identity and a normal-sized count; real favorite artwork before a small semantic vector fallback; unboxed shortcuts; consistent 32rpx content alignment; measured recent-cover sizes with complete items and a next-item hint; a shared two-line title slot and lighter play badges; one playlist toolbar and a compact inline empty state; lower-emphasis backup/About tools. The abbreviated preview label still identifies previews and retains the full installed version in About and the accessibility hint.
+- Preserved: every existing route and panel, original playback/source IDs, full history/custom sheets, settings entry and theme preferences. Player navigation, animations and input layering are outside this change.
+- Validation: full Jest passed (87 suites / 661 tests), focused color regression passed (13 suites / 131 tests), and focused page/layout/language regression passed (3 suites / 26 tests). Color, runtime-reference, motion and UI guards passed. Changed-file TypeScript comparison has zero diagnostics and changed-source ESLint has zero errors/warnings. Full-repository lint retains 14 existing errors / 101 warnings; unrelated automatic edits were restored.
+- Post-change native screenshot and visual acceptance are pending. The user's screenshots justify the correction but do not establish its final rendered quality. Per repository instructions, preview delivery stops after data-preserving installation and version confirmation for user acceptance.
+- Preview delivered: source `68417a0b`, version `0.3.1-preview.i88.mine2.20261011.130756`, versionCode `1791695291`, arm64-v8a. Package/version, v2 single signer, all three font hashes and vinyl resource verified; SHA-256 `2E4F1D6AD46878A8461B1C8A70588B269875786715ECCF099C982302A9265CA8`. Existing certificate matched; `adb install -r` upgraded the user's connected physical device from `0.3.1-preview.i88.mine.20261011.114141` preserving data. Installed version/code confirmed; no further device operations or substitute visual acceptance performed.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked
+
+---
+
+# My music page hierarchy and four shortcuts (2026-10-11)
+
+- Evidence: current top/scrolled screenshots `11a6def2b8e5a75cda1fcba962b5e8ce.jpg` / `f800f4c1e2a0606058b71a0e2b95f796.jpg` and reference `bca8756c5cc69cc4625662c803fd4efb.jpg`. The second review identified competing brand/collection groups, artificial blank title lines, slivers of the fourth song's text, and a heavy zero-playlist management area. The user authorized the recommendations and requested Plugin Management as the fourth shortcut.
+- Corrected: one neutral Favorites entry with a larger real cover and compact count, secondary brand mark in the header, consistent 40rpx margins, lighter section/tool typography and neutral All links. History/downloads/starred/plugin management are four equal shortcuts using existing icons. The new entry subscribes to the installed-plugin count and opens the existing setting/plugin screen, including with zero plugins.
+- Recent songs now use a single title line and one artist line, with full original titles in accessibility labels. Actual measured width determines up to three complete items per native horizontal page; narrow containers use two or one, partial last pages remain intact, and resizing reflows without changing playback identifiers. The bottom player's continuous marquee and input/animation layers are unchanged.
+- Playlist import/ID/create retain separate existing panels; the row loses its large white plate, Create uses primary/onPrimary, and zero custom sheets use one concise hint. Full custom playlists, favorites, history, settings, backup, About and existing theme data remain available.
+- Validation: full Jest passed (87 suites / 665 tests), including 19 My-page and 7 layout cases. Color regression passed (13 suites / 135 tests), including the rendered Create button foreground/fill in light/dark/custom/alpha-custom themes. Color, runtime-reference, motion and UI guards passed; changed-file TypeScript comparison has zero diagnostics and changed-source ESLint has zero errors/warnings. Full lint retains 14 existing errors / 101 warnings; its two unrelated automatic edits were restored.
+- Preview delivered: source `15873038`, version `0.3.1-preview.i88.mine3.20261011.135744`, versionCode `1791698291`, arm64-v8a. Actual APK metadata, v2 single signer, three font hashes and vinyl resource verified; SHA-256 `652613D2223913A30F08966288E3909E5803D83E4E48F05516F96010A16DAEDA`. The signer matches the currently installed app. On 2026-10-11 at 14:20 +08:00, `adb install -r` upgraded the user's connected physical device from `0.3.1-preview.i88.mine2.20261011.130756` (versionCode `1791695291`) while preserving data. Installed version/code confirmed; device operations stopped at confirmation. The APK and updated verification report are saved under `D:/audiora-previews/issue-88/`.
+- Native screenshots and visual acceptance remain pending. This repository requires stopping after installation/version confirmation for the user's manual acceptance. Tests validate routes, data preservation, layout arithmetic and semantic colors, not the final native visual appearance. No device screenshot, emulator or substitute visual pass is claimed.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked
+
+---
+
+# Compact Create playlist action (2026-10-11)
+
+- Evidence: the user-provided screenshot `1a8e85faf51ced230009a91018200b21.jpg` shows the solid blue Create pill filling the entire third touch column and crowding the playlist below. The user authorized the recommended local correction.
+- Corrected: three equal outer touch areas retain their separate import/ID/create operations. The Create background now belongs to a smaller inner content pill, using `tonalSurface` / `onTonal`; the outer touch height stays at least 44dp. Content has a minimum 32dp/64rpx height, expands for larger text, and has bounded width and a shrinkable label. All three actions share one vertical center. The row-to-list gap increases from 8rpx to 24rpx.
+- Validation: color regression passed (13 suites / 135 tests), including all 19 existing My-page cases and rendered Create surface/foreground checks in light, dark, custom and alpha-custom themes. The existing three-action route regression passes. Changed-source ESLint has zero errors/warnings; color/UI/runtime-reference guards and diff checks pass. Full-repository lint retains 14 existing errors / 101 warnings; its two unrelated automatic changes were restored.
+- Preview delivered: source `7b4f009a`, version `0.3.1-preview.i88.create.20261011.142757`, versionCode `1791700093`, arm64-v8a. Package/version, v2 single signer, source commit, three font hashes and vinyl resource verified; SHA-256 `D9624900B48E8F5D46E8EA2B817D2A48A3BB39C907B355637FA3B11F3B460E71`. Current installed certificate matched; `adb install -r` upgraded the user's physical phone from `0.3.1-preview.i88.mine3.20261011.135744` (versionCode `1791698291`) while preserving data. Actual installed version/code confirmed and device operations stopped. APK and verification report are under `D:/audiora-previews/issue-88/`.
+- Native visual acceptance is pending user. No device screenshots or substitute UI acceptance performed; preview delivery stops after data-preserving installation and exact version confirmation per repository instructions.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked

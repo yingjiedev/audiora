@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LayoutRectangle, StyleSheet, Text, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -156,6 +157,8 @@ const fontSizeMap = {
 } as Record<number, number>;
 
 export default function Lyric(props: IProps) {
+    const colors = useColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const { onTurnPageClick, isActive = true } = props;
     const orientation = useOrientation();
     const isHorizontal = orientation === "horizontal";
@@ -521,7 +524,7 @@ export default function Lyric(props: IProps) {
                 }}
             />
         );
-    }, [isHorizontal, scheduleLayoutRecenter]);
+    }, [isHorizontal, scheduleLayoutRecenter, styles.empty, styles.emptyHorizontal]);
 
     const handleLyricItemLayout = useCallback(
         (index: number, height: number) => {
@@ -815,7 +818,7 @@ export default function Lyric(props: IProps) {
                         </View>
                     ) : null}
                     {loading ? (
-                        <Loading color="white" />
+                        <Loading color={colors.onMedia} />
                     ) : lyrics?.length ? (
                         <FlatList
                             ref={_ => {
@@ -1058,7 +1061,7 @@ export default function Lyric(props: IProps) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
     horizontalHeader: {
         width: "100%",
         marginTop: rpx(18),
@@ -1079,7 +1082,7 @@ const styles = StyleSheet.create({
         paddingTop: "40%",
     },
     white: {
-        color: "white",
+        color: colors.onMedia,
     },
     lyricMeta: {
         position: "absolute",
@@ -1096,12 +1099,12 @@ const styles = StyleSheet.create({
         bottom: rpx(18),
     },
     lyricMetaText: {
-        color: "white",
+        color: colors.onMedia,
         opacity: 0.8,
         maxWidth: "80%",
     },
     linkText: {
-        color: "#66ccff",
+        color: colors.mediaAccent,
         textDecorationLine: "underline",
     },
     draggingTime: {
@@ -1122,13 +1125,13 @@ const styles = StyleSheet.create({
     singleLine: {
         width: "67%",
         height: 1,
-        backgroundColor: "#cccccc",
+        backgroundColor: colors.onMediaTrack,
         opacity: 0.4,
     },
     playIcon: {
         width: rpx(100),
         textAlign: "right",
-        color: "white",
+        color: colors.onMedia,
     },
     searchLyric: {
         width: rpx(180),
@@ -1136,7 +1139,7 @@ const styles = StyleSheet.create({
         paddingVertical: rpx(10),
         textAlign: "center",
         alignSelf: "center",
-        color: "#66eeff",
+        color: colors.mediaAccent,
         textDecorationLine: "underline",
     },
 });

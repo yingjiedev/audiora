@@ -122,7 +122,9 @@ function PluginItemBase(props: IPluginItemProps) {
                     title: t("pluginSetting.pluginItem.dialog.setAlternativePluginTitle"),
                     defaultSelected: currentIndex === -1 ? undefined : uniqueLabels[currentIndex],
                     onOk(value) {
-                        const target = candidates[uniqueLabels.indexOf(value)];
+                        const target = typeof value === "string"
+                            ? candidates[uniqueLabels.indexOf(value)]
+                            : undefined;
                         pluginManager.setAlternativePluginName(
                             plugin,
                             target && target.name !== plugin.name

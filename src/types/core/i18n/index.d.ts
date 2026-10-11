@@ -1,5 +1,6 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "panel.qualityTranslation.labelPlaceholder": string;
     "media.rawSongKeyRequired": string;
     "media.encryptedSourceFailed": string;
     // 通用词汇
@@ -109,6 +110,18 @@ export interface ILanguageData {
     "home.myMusic": string;
     "home.mine": string;
     "home.personalTagline": string;
+    "myMusic.downloadsHint": string;
+    "myMusic.pluginCount": string;
+    "myMusic.viewAllShort": string;
+    "myMusic.createPlaylist": string;
+    "myMusic.viewRecent": string;
+    "myMusic.openPlaylist": string;
+    "myMusic.playRecent": string;
+    "myMusic.historyEmpty": string;
+    "myMusic.historyHint": string;
+    "myMusic.playlistsHint": string;
+    "myMusic.tools": string;
+    "myMusic.previewVersion": string;
     "home.noCustomPlaylists": string;
     "home.scanLocal": string;
     "home.import.short": string;
@@ -272,6 +285,8 @@ export interface ILanguageData {
     "artistDetail.musicSheet": string; // 音乐歌单
 
     // 插件设置相关
+    "pluginSetting.pluginItem.options.renamePlugin": string;
+    "pluginSetting.pluginItem.dialog.renamePluginTip": string;
     "pluginSetting.pluginItem.options.updatePlugin": string; // 更新插件
     "pluginSetting.pluginItem.options.sharePlugin": string; // 分享插件
     "pluginSetting.pluginItem.options.uninstallPlugin": string; // 卸载插件
@@ -575,6 +590,22 @@ export interface ILanguageData {
 
     // 面板相关 - 播放列表
     "panel.playList.title": string; // 播放列表
+    "panel.playList.tab.queue": string;
+    "panel.playList.tab.history": string;
+    "panel.playList.tab.sheets": string;
+    "panel.playList.recentFirst": string;
+    "panel.playList.addAll": string;
+    "panel.playList.remove": string;
+    "panel.playList.reorder": string;
+    "panel.playList.reorderHint": string;
+    "panel.playList.moveUp": string;
+    "panel.playList.moveDown": string;
+    "panel.playList.emptyQueue": string;
+    "panel.playList.emptyHistory": string;
+    "panel.playList.emptySheets": string;
+    "panel.playList.clear.queue": string;
+    "panel.playList.clear.history": string;
+    "panel.playList.clear.sheets": string;
     "panel.playList.count": string; // 歌曲数量
     "panel.searchLrc.inputPlaceholder": string; // 搜索歌词输入占位符
     "panel.searchLrc.toast.settingSuccess": string; // 设置成功
@@ -891,6 +922,10 @@ export interface ILanguageData {
     "musicBar.a11y.playOrPause": string; // 播放或暂停当前歌曲
     "musicBar.a11y.playlist": string; // 打开播放列表
     "musicBar.a11y.nowPlaying": string; // 正在播放 {title}，歌手 {artist}
+    "musicBar.a11y.expand": string;
+    "musicBar.a11y.collapse": string;
+    "musicBar.a11y.openDetail": string;
+    "musicBar.a11y.compactHint": string;
     "themeSettingsIndex.modeDescription": string;
     "themeSettingsIndex.coverDescription": string;
     "themeSettingsIndex.fontDescription": string;

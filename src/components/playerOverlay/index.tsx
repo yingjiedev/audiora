@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { StyleSheet, View } from "react-native";
 import MusicDetail from "@/pages/musicDetail";
 import { closePlayer, playerOverlayStore } from "@/core/playerOverlay";
@@ -8,19 +8,20 @@ import { closePlayer, playerOverlayStore } from "@/core/playerOverlay";
  *
  * 挂在 Stack.Navigator 之后、Panels/Dialogs 之前：压在页面之上，
  * 但面板、弹窗、Toast、MV 播放器仍盖在播放器上面。打开时挂载、
- * 退场动画结束后卸载；进场时机由 openPlayer() 的调用方先
- * armPlayerTransition() 再开这里，与原先路由版的时序一致。
+ * 退场动画结束后卸载；openPlayer() 统一准备进场动画并分配会话，
+ * 重复打开不会重置动画，过期的退出回调不会关闭新播放器。
  */
 export default function PlayerOverlay() {
-    const { open } = playerOverlayStore.useValue();
+    const { open, sessionId } = playerOverlayStore.useValue();
+    const onClose = useCallback(() => closePlayer(sessionId), [sessionId]);
 
     if (!open) {
         return null;
     }
 
     return (
-        <View style={styles.fill} collapsable={false}>
-            <MusicDetail onClose={closePlayer} />
+        <View style={styles.fill} pointerEvents="box-none" collapsable={false}>
+            <MusicDetail key={sessionId} onClose={onClose} />
         </View>
     );
 }

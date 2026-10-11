@@ -13,6 +13,7 @@ import Icon from "@/components/base/icon.tsx";
 import MusicSheet, { useSheetIsStarred } from "@/core/musicSheet";
 import { MusicRepeatMode } from "@/constants/repeatModeConst";
 import { useI18N } from "@/core/i18n";
+import { useRoute } from "@react-navigation/native";
 
 interface IProps {
     musicList: IMusic.IMusicItem[] | null;
@@ -20,6 +21,7 @@ interface IProps {
     musicSheet?: IMusic.IMusicSheetItem | null;
 }
 export default function (props: IProps) {
+    const route = useRoute();
     const { musicList, canStar, musicSheet } = props;
 
     const sheetName = musicSheet?.title;
@@ -36,7 +38,7 @@ export default function (props: IProps) {
             <Pressable
                 style={style.playAll}
                 onPress={() => {
-                    if (musicList) {
+                    if (musicList?.length) {
                         let defaultPlayMusic = musicList[0];
                         if (
                             TrackPlayer.repeatMode ===
@@ -50,6 +52,7 @@ export default function (props: IProps) {
                         TrackPlayer.playWithReplacePlayList(
                             defaultPlayMusic,
                             musicList,
+                            musicSheet ? { sheet: musicSheet, routeName: route.name } : undefined,
                         );
                     }
                 }}>
@@ -65,7 +68,7 @@ export default function (props: IProps) {
                 <IconButton
                     name={starred ? "heart" : "heart-outline"}
                     sizeType={"normal"}
-                    color={starred ? "#e31639" : undefined}
+                    color={starred ? colors.favorite : undefined}
                     style={style.optionButton}
                     onPress={async () => {
                         if (!starred) {

@@ -3,7 +3,6 @@ import ListFooter from "@/components/base/listFooter";
 import Loading from "@/components/base/loading";
 import { RequestStateCode } from "@/constants/commonConst";
 import useOrientation from "@/hooks/useOrientation";
-import rpx from "@/utils/rpx";
 import { FlashList } from "@shopify/flash-list";
 import { useAtomValue } from "jotai";
 import React, { memo, useCallback, useEffect, useState } from "react";
@@ -53,6 +52,7 @@ function ResultWrapper(props: IResultWrapperProps) {
             index={index}
             pluginHash={pluginHash}
             pluginSearchResultRef={pluginSearchResultRef}
+            query={searchResult?.query ?? query}
         />
     );
 
@@ -77,7 +77,6 @@ function ResultWrapper(props: IResultWrapperProps) {
                     searchState === RequestStateCode.IDLE) &&
                     search(undefined, undefined, tab, pluginHash);
             }}
-            estimatedItemSize={tab === "sheet" ? rpx(306) : rpx(120)}
             numColumns={
                 tab === "sheet" ? (orientation === "vertical" ? 3 : 4) : 1
             }

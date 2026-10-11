@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React from "react";
 import { Image, StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -8,9 +9,10 @@ interface IColorBlockProps {
 }
 export default function ColorBlock(props: IColorBlockProps) {
     const { color } = props;
+    const colors = useColors();
 
     return (
-        <View style={[styles.showBar]}>
+        <View style={[styles.showBar, { borderColor: colors.border }]}>
             <Image
                 resizeMode="repeat"
                 source={ImgAsset.transparentBg}
@@ -34,7 +36,6 @@ const styles = StyleSheet.create({
         height: rpx(50),
         borderWidth: 1,
         borderStyle: "solid",
-        borderColor: "#ccc",
     },
     showBarContent: {
         width: "100%",

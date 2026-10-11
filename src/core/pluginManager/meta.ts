@@ -129,7 +129,7 @@ class PluginMeta {
 
     /** 设置显示名；传空值表示删除自定义、恢复插件本身的平台名 */
     setDisplayName(pluginPlatform: IPluginPlatform, displayName: string | null) {
-        const key = `${pluginPlatform}${displayNameSuffix}`;
+        const key = `${pluginPlatform}${displayNameSuffix}` as const;
         if (displayName) {
             this.setMetaStorage(key, displayName);
         } else {

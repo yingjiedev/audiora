@@ -3,22 +3,30 @@ import Icon, { IIconName } from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
+import { controlSize, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import { useMusicHistory } from "@/core/musicHistory";
-import MusicSheet, { useSheetsBase, useStarredSheets } from "@/core/musicSheet";
+import MusicSheet, { useSheetItem, useSheetsBase, useStarredSheets } from "@/core/musicSheet";
+import { usePluginDisplayNameResolver, usePlugins } from "@/core/pluginManager";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
+import TrackPlayer from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
-import rpx from "@/utils/rpx";
-import Color from "color";
-import React, { useMemo } from "react";
+import rpx, { fontRpx } from "@/utils/rpx";
+import React, { useState } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import DeviceInfo from "react-native-device-info";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { getRecentPageLayout } from "./myMusicLayout";
 
-type IQuickEntry = {
+const RECENT_PREVIEW_LIMIT = 6;
+const minimumTouch = Math.max(44, controlSize.minimumTouch);
+const recentTitleLineHeight = fontRpx(26) * 1.35;
+
+type QuickEntry = {
     key: string;
     icon: IIconName;
     title: string;
     description: string;
+    hint?: string;
     onPress: () => void;
 };
 
@@ -29,70 +37,71 @@ export default function MyMusicOverview() {
     const history = useMusicHistory();
     const sheets = useSheetsBase();
     const starredSheets = useStarredSheets();
+    const plugins = usePlugins();
+    const favoriteSheet = sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id);
+    const favoriteContents = useSheetItem(MusicSheet.defaultSheet.id);
+    const favoriteCover = favoriteSheet?.coverImg || favoriteSheet?.artwork
+        || favoriteContents.musicList?.find(music => music.artwork?.trim())?.artwork;
+    const userSheets = sheets.filter(sheet => sheet.id !== MusicSheet.defaultSheet.id);
     const version = DeviceInfo.getVersion();
-    // 功能块统一使用中性卡片，主色只出现在图标容器内，避免同层级出现多个色相。
-    const iconTint =
-        colors.listActive ?? Color(colors.primary).alpha(0.12).toString();
-
-    const favoriteSheet = useMemo(
-        () =>
-            sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id) ??
-            sheets[0] ??
-            null,
-        [sheets],
-    );
-    const userSheets = useMemo(
-        () => sheets.filter(sheet => sheet.id !== MusicSheet.defaultSheet.id),
-        [sheets],
-    );
-
-    const quickEntries: IQuickEntry[] = [
-        {
-            key: "favorite",
-            icon: "heart",
-            title: t("home.favoriteSheet"),
-            description: t("home.songCount", {
-                count: favoriteSheet?.worksNum ?? 0,
-            }),
-            onPress: () => {
-                if (favoriteSheet) {
-                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
-                        id: favoriteSheet.id,
-                    });
-                }
-            },
-        },
+    const previewBase = /^(\d+\.\d+\.\d+)-preview(?:\.|$)/.exec(version)?.[1];
+    const openHistory = () => showPanel("PlayList", { initialTab: "history" });
+    const quickEntries: QuickEntry[] = [
         {
             key: "history",
             icon: "clock-outline",
             title: t("home.playHistory"),
             description: t("home.songCount", { count: history.length }),
-            onPress: () => navigate(ROUTE_PATH.HISTORY),
+            onPress: openHistory,
         },
         {
             key: "downloads",
             icon: "arrow-down-tray",
             title: t("home.downloadManagement"),
-            description: t("home.downloadManagementDescription"),
+            description: t("myMusic.downloadsHint"),
+            hint: t("home.downloadManagementDescription"),
             onPress: () => navigate(ROUTE_PATH.DOWNLOADING),
         },
         {
             key: "starred",
             icon: "bookmark-square",
             title: t("home.starredPlaylists"),
-            description: t("home.playlistCount", {
-                count: starredSheets.length,
-            }),
-            onPress: () =>
-                navigate(ROUTE_PATH.SHEET_BROWSER, { sheetType: "starred" }),
+            description: t("home.playlistCount", { count: starredSheets.length }),
+            onPress: () => navigate(ROUTE_PATH.SHEET_BROWSER, { sheetType: "starred" }),
+        },
+        {
+            key: "plugins",
+            icon: "code-bracket-square",
+            title: t("sidebar.pluginManagement"),
+            description: t("myMusic.pluginCount", { count: plugins.length }),
+            hint: t("settingsOverview.sourceDescription"),
+            onPress: () => navigate(ROUTE_PATH.SETTING, { type: "plugin" }),
         },
     ];
-
-    const playlistRows = [
-        ...(favoriteSheet ? [favoriteSheet] : []),
-        ...userSheets,
+    const playlistActions: QuickEntry[] = [
+        {
+            key: "import",
+            icon: "inbox-arrow-down",
+            title: t("home.import.short"),
+            description: t("home.importPlaylist.a11y"),
+            onPress: () => showPanel("ImportMusicSheet"),
+        },
+        {
+            key: "id",
+            icon: "id",
+            title: t("home.playById.short"),
+            description: t("home.playById.a11y"),
+            onPress: () => showPanel("PlayById"),
+        },
+        {
+            key: "create",
+            icon: "plus",
+            title: t("myMusic.createPlaylist"),
+            description: t("home.newPlaylist.a11y"),
+            onPress: () => showPanel("CreateMusicSheet"),
+        },
     ];
-    const managementEntries: IQuickEntry[] = [
+    const managementEntries: QuickEntry[] = [
         {
             key: "backup",
             icon: "circle-stack",
@@ -104,7 +113,8 @@ export default function MyMusicOverview() {
             key: "about",
             icon: "information-circle",
             title: t("home.aboutAndUpdate"),
-            description: t("home.currentVersion", { version }),
+            description: previewBase ? t("myMusic.previewVersion", { version: previewBase }) : t("home.currentVersion", { version }),
+            hint: t("home.currentVersion", { version }),
             onPress: () => navigate(ROUTE_PATH.SETTING, { type: "about" }),
         },
     ];
@@ -112,411 +122,282 @@ export default function MyMusicOverview() {
     return (
         <View style={[styles.wrapper, { backgroundColor: colors.pageBackground }]}>
             <View style={styles.header}>
-                <ThemeText fontSize="appbar" fontWeight="bolder">
-                    {t("home.mine")}
-                </ThemeText>
-                <View style={styles.headerActions}>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("common.setting")}
-                        style={styles.headerAction}
-                        onPress={() =>
-                            navigate(ROUTE_PATH.SETTING, { type: "overview" })
-                        }>
-                        <Icon
-                            name="cog-8-tooth"
-                            size={rpx(34)}
-                            color={colors.text}
-                        />
-                    </Pressable>
+                <View style={styles.headerTitle}>
+                    <ThemeText fontSize="appbar" fontWeight="bold">{t("home.mine")}</ThemeText>
+                    <View style={styles.brandMark} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                        <Image source={ImgAsset.logo} resizeMode="contain" style={styles.logo} accessible={false} />
+                        <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.inlineLabel}>Audiora</ThemeText>
+                    </View>
                 </View>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t("common.setting")}
+                    style={({ pressed }) => [styles.headerAction, { opacity: pressed ? 0.7 : 1 }]}
+                    onPress={() => navigate(ROUTE_PATH.SETTING, { type: "overview" })}>
+                    <Icon name="cog-8-tooth" size={rpx(36)} color={colors.text} />
+                </Pressable>
             </View>
 
-            <ScrollView
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}>
-                <View
-                    style={[styles.profileCard, { backgroundColor: colors.card }]}>
-                    <View
-                        style={[
-                            styles.avatarWrap,
-                            {
-                                backgroundColor: Color(colors.primary)
-                                    .alpha(0.12)
-                                    .toString(),
-                            },
-                        ]}>
-                        <Image
-                            source={ImgAsset.logo}
-                            resizeMode="contain"
-                            style={styles.avatar}
-                        />
-                    </View>
-                    <View style={styles.profileText}>
-                        <ThemeText fontSize="subTitle" fontWeight="bold">
-                            Audiora
-                        </ThemeText>
-                        <ThemeText
-                            fontSize="caption"
-                            fontColor="textSecondary"
-                            numberOfLines={1}
-                            style={styles.profileDescription}>
-                            {t("home.personalTagline")}
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t("home.favoriteSheet")}
+                    accessibilityHint={t("home.songCount", { count: favoriteSheet?.worksNum ?? 0 })}
+                    accessibilityState={{ disabled: !favoriteSheet }}
+                    disabled={!favoriteSheet}
+                    style={({ pressed }) => [styles.favoriteEntry, { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 }]}
+                    onPress={() => {
+                        if (favoriteSheet) navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: favoriteSheet.id });
+                    }}>
+                    {favoriteCover ? (
+                        <FastImage source={favoriteCover} placeholderSource={ImgAsset.albumDefault} style={styles.favoriteCover} />
+                    ) : (
+                        <View style={[styles.favoriteCover, styles.favoritePlaceholder, { backgroundColor: colors.tonalSurface }]}>
+                            <Icon name="heart" size={rpx(40)} color={colors.favorite} />
+                        </View>
+                    )}
+                    <View style={styles.favoriteText}>
+                        <ThemeText fontSize="title" fontWeight="semibold" style={styles.favoriteTitle}>{t("home.favoriteSheet")}</ThemeText>
+                        <ThemeText fontSize="description" color={colors.primaryText} style={styles.favoriteCount}>
+                            {t("home.songCount", { count: favoriteSheet?.worksNum ?? 0 })}
                         </ThemeText>
                     </View>
-                </View>
+                    <Icon name="chevron-right" size={rpx(26)} color={colors.textSecondary} />
+                </Pressable>
 
-                <View style={styles.quickGrid}>
+                <View style={styles.quickRow}>
                     {quickEntries.map(entry => (
                         <Pressable
                             key={entry.key}
                             accessibilityRole="button"
                             accessibilityLabel={entry.title}
-                            style={[
-                                styles.quickCard,
-                                {
-                                    backgroundColor: colors.card,
-                                    borderColor: colors.border,
-                                },
-                            ]}
+                            accessibilityHint={entry.hint ?? entry.description}
+                            style={({ pressed }) => [styles.quickEntry, { opacity: pressed ? 0.7 : 1 }]}
                             onPress={entry.onPress}>
-                            <View
-                                style={[
-                                    styles.quickIcon,
-                                    { backgroundColor: iconTint },
-                                ]}>
-                                <Icon
-                                    name={entry.icon}
-                                    size={rpx(32)}
-                                    color={colors.primary}
-                                />
+                            <View style={styles.quickIcon}>
+                                <Icon name={entry.icon} size={rpx(44)} color={colors.text} />
                             </View>
-                            <View style={styles.quickText}>
-                                <ThemeText
-                                    fontSize="description"
-                                    fontWeight="semibold"
-                                    numberOfLines={1}>
-                                    {entry.title}
-                                </ThemeText>
-                                <ThemeText
-                                    fontSize="caption"
-                                    fontColor="textSecondary"
-                                    numberOfLines={1}
-                                    style={styles.quickDescription}>
-                                    {entry.description}
-                                </ThemeText>
-                            </View>
-                        </Pressable>
-                    ))}
-                </View>
-
-                <View style={[styles.managementCard, { backgroundColor: colors.card }]}>
-                    {managementEntries.map((entry, index) => (
-                        <Pressable
-                            key={entry.key}
-                            accessibilityRole="button"
-                            accessibilityLabel={entry.title}
-                            style={[
-                                styles.managementRow,
-                                index < managementEntries.length - 1
-                                    ? {
-                                        borderBottomColor: Color(colors.text)
-                                            .alpha(0.07)
-                                            .toString(),
-                                        borderBottomWidth: StyleSheet.hairlineWidth,
-                                    }
-                                    : null,
-                            ]}
-                            onPress={entry.onPress}>
-                            <View
-                                style={[
-                                    styles.managementIcon,
-                                    { backgroundColor: iconTint },
-                                ]}>
-                                <Icon name={entry.icon} size={rpx(30)} color={colors.primary} />
-                            </View>
-                            <View style={styles.managementText}>
-                                <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>
-                                    {entry.title}
-                                </ThemeText>
-                                <ThemeText fontSize="caption" fontColor="textSecondary" numberOfLines={1} style={styles.quickDescription}>
-                                    {entry.description}
-                                </ThemeText>
-                            </View>
+                            <ThemeText fontSize="description" fontWeight="medium" style={styles.quickTitle}>{entry.title}</ThemeText>
+                            <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.description}>{entry.description}</ThemeText>
                         </Pressable>
                     ))}
                 </View>
 
                 <View style={styles.sectionHeader}>
-                    <ThemeText fontSize="title" fontWeight="bold">
-                        {t("home.myPlaylists")}
-                    </ThemeText>
-                    <View style={styles.sectionActions}>
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={t("home.importPlaylist.a11y")}
-                            style={styles.sectionAction}
-                            onPress={() => showPanel("ImportMusicSheet")}>
-                            <Icon name="inbox-arrow-down" size={rpx(28)} color={colors.text} />
-                        </Pressable>
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={t("home.playById.a11y")}
-                            style={styles.sectionAction}
-                            onPress={() => showPanel("PlayById")}>
-                            <Icon name="id" size={rpx(28)} color={colors.text} />
-                        </Pressable>
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={t("home.newPlaylist.a11y")}
-                            style={styles.sectionAction}
-                            onPress={() => showPanel("CreateMusicSheet")}>
-                            <Icon name="plus" size={rpx(28)} color={colors.text} />
-                        </Pressable>
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={t("home.viewAll")}
-                            style={[
-                                styles.viewAllAction,
-                                {
-                                    backgroundColor: Color(colors.primary)
-                                        .alpha(0.1)
-                                        .toString(),
-                                },
-                            ]}
-                            onPress={() =>
-                                navigate(ROUTE_PATH.SHEET_BROWSER, {
-                                    sheetType: "local",
-                                })
-                            }>
-                            <ThemeText
-                                fontSize="caption"
-                                fontWeight="semibold"
-                                color={colors.primary}>
-                                {t("home.viewAll")}
-                            </ThemeText>
-                        </Pressable>
-                    </View>
+                    <ThemeText fontSize="title" fontWeight="semibold" style={styles.sectionHeading}>{t("home.recentListening")}</ThemeText>
+                    <TextAction title={t("myMusic.viewAllShort")} label={t("myMusic.viewRecent")} onPress={openHistory} />
                 </View>
+                <RecentMusic musics={history.slice(0, RECENT_PREVIEW_LIMIT)} />
 
-                <View style={[styles.playlistCard, { backgroundColor: colors.card }]}>
-                    {playlistRows.length ? (
-                        playlistRows.map((sheet, index) => (
+                <View style={styles.sectionHeader}>
+                    <View style={styles.sectionTitle}>
+                        <ThemeText fontSize="title" fontWeight="semibold" style={styles.sectionHeading}>{t("home.myPlaylists")}</ThemeText>
+                        <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.inlineLabel}>
+                            {t("home.playlistCount", { count: userSheets.length })}
+                        </ThemeText>
+                    </View>
+                    <TextAction
+                        title={t("myMusic.viewAllShort")}
+                        label={t("home.viewAll")}
+                        onPress={() => navigate(ROUTE_PATH.SHEET_BROWSER, { sheetType: "local" })}
+                    />
+                </View>
+                <View style={styles.playlistActions}>
+                    {playlistActions.map(entry => (
+                        <Pressable
+                            key={entry.key}
+                            accessibilityRole="button"
+                            accessibilityLabel={entry.description}
+                            style={({ pressed }) => [styles.playlistAction, { opacity: pressed ? 0.7 : 1 }]}
+                            onPress={entry.onPress}>
+                            <View style={[styles.playlistActionContent, entry.key === "create" ? [styles.createPlaylistContent, { backgroundColor: colors.tonalSurface }] : null]}>
+                                <Icon name={entry.icon} size={rpx(28)} color={entry.key === "create" ? colors.onTonal : colors.textSecondary} />
+                                <ThemeText fontSize="description" fontWeight="medium" color={entry.key === "create" ? colors.onTonal : colors.textSecondary} style={[styles.inlineLabel, styles.playlistActionLabel]}>{entry.title}</ThemeText>
+                            </View>
+                        </Pressable>
+                    ))}
+                </View>
+                {userSheets.length ? (
+                    <View style={[styles.playlistList, { backgroundColor: colors.card }]}>
+                        {userSheets.map((sheet, index) => (
                             <Pressable
                                 key={sheet.id}
-                                style={[
-                                    styles.playlistRow,
-                                    index < playlistRows.length - 1
-                                        ? {
-                                            borderBottomColor: Color(colors.text)
-                                                .alpha(0.07)
-                                                .toString(),
-                                            borderBottomWidth:
-                                                StyleSheet.hairlineWidth,
-                                        }
-                                        : null,
-                                ]}
-                                onPress={() =>
-                                    navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, {
-                                        id: sheet.id,
-                                    })
-                                }>
-                                <FastImage
-                                    source={sheet.coverImg ?? sheet.artwork}
-                                    placeholderSource={ImgAsset.albumDefault}
-                                    style={styles.playlistCover}
-                                />
-                                <View style={styles.playlistText}>
-                                    <ThemeText
-                                        fontSize="description"
-                                        fontWeight="semibold"
-                                        numberOfLines={1}>
-                                        {sheet.title ?? t("common.unknownName")}
-                                    </ThemeText>
-                                    <ThemeText
-                                        fontSize="caption"
-                                        fontColor="textSecondary"
-                                        style={styles.playlistDescription}>
-                                        {t("home.songCount", {
-                                            count: sheet.worksNum ?? 0,
-                                        })}
-                                    </ThemeText>
+                                accessibilityRole="button"
+                                accessibilityLabel={t("myMusic.openPlaylist", { title: sheet.title ?? t("common.unknownName") })}
+                                style={({ pressed }) => [styles.playlistRow, { opacity: pressed ? 0.7 : 1 }]}
+                                onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: sheet.id })}>
+                                <FastImage source={sheet.coverImg ?? sheet.artwork} placeholderSource={ImgAsset.albumDefault} style={styles.playlistCover} />
+                                <View style={[
+                                    styles.playlistText,
+                                    index < userSheets.length - 1 ? { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth } : null,
+                                ]}>
+                                    <View style={styles.rowText}>
+                                        <ThemeText fontSize="subTitle" fontWeight="medium" numberOfLines={1} style={styles.rowLabel}>{sheet.title ?? t("common.unknownName")}</ThemeText>
+                                        <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.description}>
+                                            {t("home.songCount", { count: sheet.worksNum ?? 0 })}
+                                        </ThemeText>
+                                    </View>
+                                    <Icon name="chevron-right" size={rpx(24)} color={colors.textSecondary} />
                                 </View>
                             </Pressable>
-                        ))
-                    ) : (
-                        <ThemeText
-                            fontSize="description"
-                            fontColor="textSecondary"
-                            style={styles.emptyText}>
-                            {t("home.noCustomPlaylists")}
-                        </ThemeText>
-                    )}
+                        ))}
+                    </View>
+                ) : (
+                    <View style={styles.emptyPlaylists}>
+                        <View style={styles.rowText}>
+                            <ThemeText fontSize="caption" fontColor="textSecondary">{t("myMusic.playlistsHint")}</ThemeText>
+                        </View>
+                    </View>
+                )}
+
+                <View style={styles.toolsHeader}>
+                    <ThemeText fontSize="tag" fontWeight="medium" fontColor="textSecondary">{t("myMusic.tools")}</ThemeText>
+                </View>
+                <View style={[styles.toolsList, { backgroundColor: colors.card }]}>
+                    {managementEntries.map((entry, index) => (
+                        <Pressable
+                            key={entry.key}
+                            accessibilityRole="button"
+                            accessibilityLabel={entry.title}
+                            accessibilityHint={entry.hint ?? entry.description}
+                            style={({ pressed }) => [styles.toolRow, { opacity: pressed ? 0.7 : 1 }]}
+                            onPress={entry.onPress}>
+                            <Icon name={entry.icon} size={rpx(32)} color={colors.textSecondary} />
+                            <View style={[
+                                styles.toolContent,
+                                index === 0 ? { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth } : null,
+                            ]}>
+                                <View style={styles.rowText}>
+                                    <ThemeText fontSize="subTitle" fontWeight="medium" style={styles.rowLabel}>{entry.title}</ThemeText>
+                                    <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.description}>{entry.description}</ThemeText>
+                                </View>
+                                <Icon name="chevron-right" size={rpx(24)} color={colors.textSecondary} />
+                            </View>
+                        </Pressable>
+                    ))}
                 </View>
             </ScrollView>
         </View>
     );
 }
 
+function TextAction({ title, label, onPress }: { title: string; label: string; onPress: () => void }) {
+    const colors = useColors();
+    return (
+        <Pressable accessibilityRole="button" accessibilityLabel={label} style={styles.textAction} onPress={onPress}>
+            <ThemeText fontSize="tag" fontColor="textSecondary">{title}</ThemeText>
+            <Icon name="chevron-right" size={rpx(20)} color={colors.textSecondary} />
+        </Pressable>
+    );
+}
+
+function RecentMusic({ musics }: { musics: IMusic.IMusicItem[] }) {
+    const colors = useColors();
+    const { t } = useI18N();
+    const navigate = useNavigate();
+    const getDisplayName = usePluginDisplayNameResolver();
+    const { width: windowWidth } = useWindowDimensions();
+    const [viewportWidth, setViewportWidth] = useState(Math.max(0, windowWidth - spacing.xxxl * 2));
+    const layout = getRecentPageLayout(viewportWidth, spacing.xl, Math.max(96, rpx(160)));
+    const pages = Array.from({ length: Math.ceil(musics.length / layout.columns) }, (_, index) => musics.slice(index * layout.columns, (index + 1) * layout.columns));
+
+    if (!musics.length) {
+        return (
+            <View style={[styles.emptyRecent, { backgroundColor: colors.surface }]}>
+                <View style={styles.rowText}>
+                    <ThemeText fontSize="content" fontWeight="semibold">{t("myMusic.historyEmpty")}</ThemeText>
+                    <ThemeText fontSize="description" fontColor="textSecondary" style={styles.description}>{t("myMusic.historyHint")}</ThemeText>
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("home.exploreMusic")} style={styles.searchAction} onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
+                    <Icon name="magnifying-glass" size={rpx(34)} color={colors.primaryText} />
+                </Pressable>
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView
+            key={layout.width}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.recentStrip}
+            onLayout={event => {
+                const width = event.nativeEvent.layout.width;
+                if (width > 0) setViewportWidth(width);
+            }}>
+            {pages.map((page, index) => (
+                <View key={index} style={[styles.recentPage, { width: layout.width, gap: layout.gap }]}>
+                    {page.map(music => (
+                        <Pressable
+                            key={`${music.platform}:${music.id}`}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("myMusic.playRecent", { title: music.title ?? t("common.unknownName"), artist: music.artist || t("musicLibrary.unknownArtist") })}
+                            style={({ pressed }) => [styles.recentItem, { width: layout.coverWidth, opacity: pressed ? 0.7 : 1 }]}
+                            onPress={() => TrackPlayer.play(music)}>
+                            <View>
+                                <FastImage source={music.artwork} placeholderSource={ImgAsset.albumDefault} style={styles.recentCover} />
+                                <View style={[styles.playBadge, { backgroundColor: colors.inverseSurface }]}>
+                                    <Icon name="play" size={rpx(24)} color={colors.onInverse} />
+                                </View>
+                            </View>
+                            <ThemeText fontSize="subTitle" fontWeight="medium" numberOfLines={1} style={styles.recentTitle}>{music.title ?? t("common.unknownName")}</ThemeText>
+                            <ThemeText fontSize="tag" fontColor="textSecondary" numberOfLines={1} style={styles.recentArtist}>{music.artist || getDisplayName(music.platform)}</ThemeText>
+                        </Pressable>
+                    ))}
+                </View>
+            ))}
+        </ScrollView>
+    );
+}
+
 const styles = StyleSheet.create({
-    wrapper: {
-        flex: 1,
-        width: "100%",
-    },
-    header: {
-        height: rpx(92),
-        paddingHorizontal: rpx(24),
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    headerActions: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    headerAction: {
-        width: rpx(58),
-        height: rpx(58),
-        marginLeft: rpx(6),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    content: {
-        paddingHorizontal: rpx(24),
-        paddingBottom: rpx(40),
-    },
-    profileCard: {
-        minHeight: rpx(112),
-        borderRadius: rpx(22),
-        paddingHorizontal: rpx(18),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    avatarWrap: {
-        width: rpx(76),
-        height: rpx(76),
-        borderRadius: rpx(38),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    avatar: {
-        width: rpx(58),
-        height: rpx(58),
-    },
-    profileText: {
-        flex: 1,
-        minWidth: 0,
-        marginHorizontal: rpx(16),
-    },
-    profileDescription: {
-        marginTop: rpx(8),
-    },
-    quickGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: rpx(12),
-        marginTop: rpx(18),
-    },
-    quickCard: {
-        width: "46%",
-        flexGrow: 1,
-        minHeight: rpx(106),
-        borderRadius: rpx(20),
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    quickIcon: {
-        width: rpx(56),
-        height: rpx(56),
-        borderRadius: rpx(16),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    quickText: {
-        flex: 1,
-        minWidth: 0,
-        marginLeft: rpx(12),
-    },
-    quickDescription: {
-        marginTop: rpx(6),
-    },
-    managementCard: {
-        borderRadius: rpx(22),
-        overflow: "hidden",
-        marginTop: rpx(6),
-    },
-    managementRow: {
-        minHeight: rpx(94),
-        paddingHorizontal: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    managementIcon: {
-        width: rpx(54),
-        height: rpx(54),
-        borderRadius: rpx(16),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    managementText: {
-        flex: 1,
-        minWidth: 0,
-        marginHorizontal: rpx(14),
-    },
-    sectionHeader: {
-        minHeight: rpx(64),
-        marginTop: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    sectionActions: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    sectionAction: {
-        width: rpx(48),
-        height: rpx(48),
-        marginLeft: rpx(4),
-        borderRadius: rpx(24),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    viewAllAction: {
-        height: rpx(48),
-        paddingHorizontal: rpx(16),
-        marginLeft: rpx(4),
-        borderRadius: rpx(24),
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    playlistCard: {
-        borderRadius: rpx(22),
-        overflow: "hidden",
-    },
-    playlistRow: {
-        minHeight: rpx(104),
-        paddingHorizontal: rpx(16),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    playlistCover: {
-        width: rpx(70),
-        height: rpx(70),
-        borderRadius: rpx(14),
-    },
-    playlistText: {
-        flex: 1,
-        minWidth: 0,
-        marginHorizontal: rpx(14),
-    },
-    playlistDescription: {
-        marginTop: rpx(8),
-    },
-    emptyText: {
-        paddingVertical: rpx(34),
-        textAlign: "center",
-    },
+    wrapper: { flex: 1, width: "100%" },
+    header: { minHeight: rpx(92), paddingHorizontal: spacing.xxxl, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    headerTitle: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: spacing.md },
+    brandMark: { flexDirection: "row", alignItems: "center" },
+    headerAction: { minWidth: minimumTouch, minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
+    content: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.xxxl },
+    logo: { width: rpx(24), height: rpx(24), borderRadius: radius.xs },
+    favoriteEntry: { minHeight: Math.max(minimumTouch, rpx(152)), borderRadius: radius.xl, padding: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.md },
+    favoriteTitle: { fontSize: fontRpx(30) },
+    favoriteText: { flex: 1, minWidth: 0 },
+    favoriteCount: { marginTop: spacing.xs },
+    favoriteCover: { width: rpx(112), height: rpx(112), borderRadius: radius.md },
+    favoritePlaceholder: { alignItems: "center", justifyContent: "center" },
+    inlineLabel: { marginLeft: spacing.xs },
+    description: { marginTop: spacing.xxs },
+    quickRow: { flexDirection: "row", alignItems: "stretch", paddingTop: spacing.xl, paddingBottom: spacing.xs },
+    quickEntry: { flex: 1, minWidth: 0, minHeight: minimumTouch, alignItems: "center", paddingHorizontal: spacing.xxs, paddingBottom: spacing.xs },
+    quickIcon: { height: rpx(48), alignItems: "center", justifyContent: "center" },
+    quickTitle: { flexGrow: 1, marginTop: spacing.xs, textAlign: "center" },
+    sectionHeader: { minHeight: minimumTouch, marginTop: spacing.sm, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.xs },
+    sectionHeading: { fontSize: fontRpx(30) },
+    sectionTitle: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
+    textAction: { minHeight: minimumTouch, minWidth: minimumTouch, flexDirection: "row", alignItems: "center", justifyContent: "flex-end" },
+    recentStrip: { paddingVertical: spacing.xs },
+    recentPage: { flexDirection: "row", alignItems: "flex-start" },
+    recentItem: { minHeight: minimumTouch },
+    recentCover: { width: "100%", aspectRatio: 1, borderRadius: radius.lg },
+    playBadge: { position: "absolute", right: spacing.xs, bottom: spacing.xs, width: rpx(40), height: rpx(40), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+    recentTitle: { marginTop: spacing.xs, lineHeight: recentTitleLineHeight, height: recentTitleLineHeight },
+    recentArtist: { marginTop: spacing.xs },
+    playlistActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.xl },
+    playlistAction: { flex: 1, minWidth: rpx(160), minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
+    playlistActionContent: { minHeight: Math.max(32, rpx(64)), maxWidth: "100%", flexShrink: 1, borderRadius: radius.pill, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md, paddingVertical: spacing.xxs },
+    createPlaylistContent: { minWidth: rpx(152) },
+    playlistActionLabel: { flexShrink: 1 },
+    playlistList: { borderRadius: radius.lg, overflow: "hidden" },
+    playlistRow: { minHeight: rpx(116), paddingLeft: spacing.md, flexDirection: "row", alignItems: "center" },
+    playlistCover: { width: rpx(84), height: rpx(84), borderRadius: radius.sm },
+    playlistText: { flex: 1, minWidth: 0, minHeight: rpx(116), marginLeft: spacing.md, paddingVertical: spacing.md, paddingRight: spacing.md, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    rowText: { flex: 1, minWidth: 0 },
+    rowLabel: { fontSize: fontRpx(24) },
+    emptyPlaylists: { paddingVertical: spacing.sm },
+    emptyRecent: { minHeight: rpx(144), padding: spacing.lg, borderRadius: radius.lg, flexDirection: "row", alignItems: "center", gap: spacing.md },
+    searchAction: { minWidth: minimumTouch, minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
+    toolsList: { borderRadius: radius.md, overflow: "hidden" },
+    toolsHeader: { marginTop: spacing.xl, marginBottom: spacing.sm },
+    toolRow: { minHeight: minimumTouch, paddingLeft: spacing.lg, flexDirection: "row", alignItems: "center" },
+    toolContent: { flex: 1, minWidth: 0, marginLeft: spacing.md, minHeight: minimumTouch, paddingVertical: spacing.md, paddingRight: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.sm },
 });

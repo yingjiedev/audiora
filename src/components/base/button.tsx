@@ -35,7 +35,7 @@ export function Button(props: {
             ]}>
             <ThemeText
                 fontWeight="semibold"
-                color={type === "normal" ? undefined : "white"}>
+                color={type === "normal" ? undefined : colors.onPrimary}>
                 {text}
             </ThemeText>
         </TouchableOpacity>

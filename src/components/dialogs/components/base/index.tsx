@@ -30,6 +30,7 @@ import { ScrollView } from "react-native-gesture-handler";
 import useOrientation from "@/hooks/useOrientation.ts";
 import Config from "@/core/appConfig";
 import Theme from "@/core/theme";
+import Color from "color";
 
 interface IDialogProps {
     onDismiss?: () => void;
@@ -183,7 +184,7 @@ function Dialog(props: IDialogProps) {
                 <TouchableWithoutFeedback
                     style={styles.container}
                     onPress={onDismiss}>
-                    <Animated.View style={[styles.container, containerStyle]} />
+                    <Animated.View style={[styles.container, { backgroundColor: Color(colors.modalScrim).alpha(0.5).toString() }, containerStyle]} />
                 </TouchableWithoutFeedback>
                 <Animated.View
                     style={[
@@ -340,7 +341,7 @@ function BottomButton(props: {
     const hasCustomBackground = useHasCustomBackground();
 
     // 主色上的文字色由 useColors 按对比度算好，避免亮主色上出现白底白字
-    const primaryFontColor = colors.onPrimary ?? "white";
+    const primaryFontColor = colors.onPrimary;
 
     return (
         <TouchableOpacity
@@ -400,14 +401,12 @@ const styles = StyleSheet.create({
         height: "100%",
         left: 0,
         top: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
     },
     dialogContainer: {
         position: "absolute",
         width: "80%",
         zIndex: 16310,
         borderRadius: rpx(28),
-        backgroundColor: "red",
         shadowOffset: {
             width: 0,
             height: 2,

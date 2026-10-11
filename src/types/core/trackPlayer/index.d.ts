@@ -1,6 +1,7 @@
 import type { Progress } from "react-native-track-player";
 import type { MusicRepeatMode } from "@/constants/repeatModeConst";
 import { IInjectable } from "@/types/infra";
+import type { ISheetPlaybackContext } from "@/core/sheetPlaybackHistory";
 import type EventEmitter from "eventemitter3";
 import type { TrackPlayerEvents } from "@/core.defination/trackPlayer";
 
@@ -132,7 +133,8 @@ export interface ITrackPlayer extends IInjectable, EventEmitter<{
      */
     play(
         musicItem?: IMusic.IMusicItem | null,
-        forcePlay?: boolean
+        forcePlay?: boolean,
+        sheetContext?: ISheetPlaybackContext
     ): Promise<void>;
 
     /**
@@ -142,8 +144,12 @@ export interface ITrackPlayer extends IInjectable, EventEmitter<{
      */
     playWithReplacePlayList(
         musicItem: IMusic.IMusicItem,
-        newPlayList: IMusic.IMusicItem[]
+        newPlayList: IMusic.IMusicItem[],
+        sheetContext?: ISheetPlaybackContext
     ): Promise<void>;
+
+    /** Reorder the same queue while preserving current playback and progress. */
+    reorderPlayList(order: IMusic.IMusicItem[]): void;
 
     /**
      * 暂停播放

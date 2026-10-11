@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import StatusBar from "@/components/base/statusBar";
 import globalStyle from "@/constants/globalStyle";
 import useOrientation from "@/hooks/useOrientation";
@@ -10,6 +11,7 @@ import Animated, {
     interpolate,
     runOnJS,
     useAnimatedStyle,
+    useSharedValue,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Background from "./components/background";
@@ -17,6 +19,7 @@ import Bottom from "./components/bottom";
 import Content, { MusicDetailContentTab } from "./components/content";
 import Lyric from "./components/content/lyric";
 import NavBar from "./components/navBar";
+import usePlayerVisibility, { PLAYER_INPUT_THRESHOLD } from "./usePlayerVisibility";
 import Config, { useAppConfig } from "@/core/appConfig";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import useMotion from "@/hooks/useMotion";
@@ -26,7 +29,6 @@ import {
     expandPlayerTransition,
     playerTransition,
     resetPlayerTransition,
-    setPlayerTransitionProgress,
 } from "@/core/playerTransition";
 import {
     dismissDecision,
@@ -46,6 +48,7 @@ interface IMusicDetailProps {
 }
 
 export default function MusicDetail(props: IMusicDetailProps) {
+    const colors = useColors();
     const { onClose } = props;
     const orientation = useOrientation();
     const [isExiting, setIsExiting] = useState(false);
@@ -67,9 +70,14 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const { progress } = playerTransition();
     const motion = useMotion();
     const { height: windowHeight } = useWindowDimensions();
+    const isClosing = useSharedValue(false);
+    const isDragging = useSharedValue(false);
     const closingRef = useRef(false);
     const removalRef = useRef<(() => void) | null>(null);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const acceptsInput = usePlayerVisibility(
+        progress, isDragging, isClosing, isExiting, onClose,
+    );
 
     useEffect(() => {
         const needAwake = Config.getConfig("basic.musicDetailAwake");
@@ -86,9 +94,9 @@ export default function MusicDetail(props: IMusicDetailProps) {
     // Enter: the mini player armed progress to 0 before navigating, so the
     // first frame already sits on the mini artwork and springs to full screen.
     useEffect(() => {
-        if (progress.value < 1) {
-            expandPlayerTransition({ reduceMotion: motion.reduceMotion });
-        }
+        // JS can still read 1 while the queued UI preparation will set 0.
+        // Always queue the spring after preparation; read/write on UI only.
+        expandPlayerTransition({ reduceMotion: motion.reduceMotion });
         return () => {
             cancelAnimation(progress);
             resetPlayerTransition();
@@ -99,12 +107,16 @@ export default function MusicDetail(props: IMusicDetailProps) {
 
     useEffect(() => {
         return () => {
+            closingRef.current = true;
+            isClosing.value = true;
+            isDragging.value = false;
+            removalRef.current = null;
             if (watchdogRef.current) {
                 clearTimeout(watchdogRef.current);
                 watchdogRef.current = null;
             }
         };
-    }, []);
+    }, [isClosing, isDragging]);
 
     /**
      * Single exit path for every way of leaving this screen (back button,
@@ -115,10 +127,11 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const requestClose = useCallback(
         (remove: () => void) => {
             if (closingRef.current) {
-                remove();
                 return;
             }
             closingRef.current = true;
+            isClosing.value = true;
+            isDragging.value = false;
             setIsExiting(true);
             const runRemoval = () => {
                 if (removalRef.current === null) {
@@ -137,7 +150,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
                 reduceMotion: motion.reduceMotion,
             });
         },
-        [motion.reduceMotion],
+        [isClosing, isDragging, motion.reduceMotion],
     );
 
     // Hardware back: the overlay is not in the navigation stack, so
@@ -159,6 +172,10 @@ export default function MusicDetail(props: IMusicDetailProps) {
 
     const onGestureEnd = useCallback(
         (dismiss: boolean, velocityY: number) => {
+            // A queued UI-thread release must not restart an exiting player.
+            if (closingRef.current) {
+                return;
+            }
             if (dismiss) {
                 requestClose(onClose);
                 return;
@@ -179,18 +196,41 @@ export default function MusicDetail(props: IMusicDetailProps) {
         .enabled(dragEnabled)
         .minPointers(1)
         .maxPointers(1)
-        .onBegin(() => {
+        .activeOffsetY(12)
+        .failOffsetX([-16, 16])
+        .onStart(() => {
+            if (isClosing.value) {
+                return;
+            }
+            isDragging.value = true;
             cancelAnimation(progress);
         })
         .onUpdate(e => {
-            setPlayerTransitionProgress(dragProgress(e.translationY, windowHeight));
+            if (isDragging.value && !isClosing.value) {
+                progress.value = dragProgress(e.translationY, windowHeight);
+            }
         })
-        .onEnd(e => {
+        .onEnd((e, success) => {
+            if (!isDragging.value || isClosing.value) {
+                return;
+            }
+            isDragging.value = false;
             runOnJS(onGestureEnd)(
-                dismissDecision(e.translationY, e.velocityY, windowHeight) ===
-                    "dismiss",
-                e.velocityY,
+                success &&
+                    dismissDecision(
+                        e.translationY,
+                        e.velocityY,
+                        windowHeight,
+                    ) === "dismiss",
+                success ? e.velocityY : 0,
             );
+        })
+        .onFinalize(() => {
+            // Failed taps never became active; cancelled active drags must settle.
+            if (isDragging.value && !isClosing.value) {
+                isDragging.value = false;
+                runOnJS(onGestureEnd)(false, 0);
+            }
         });
 
     const backgroundStyle = useAnimatedStyle(() => ({
@@ -205,6 +245,11 @@ export default function MusicDetail(props: IMusicDetailProps) {
     }));
 
     const contentStyle = useAnimatedStyle(() => ({
+        // Alpha alone does not remove native views from hit testing. Keep the
+        // input gate on the UI thread so it changes with the same opacity frame.
+        pointerEvents: !isClosing.value &&
+            (isDragging.value || progress.value > PLAYER_INPUT_THRESHOLD)
+            ? "auto" as const : "none" as const,
         // Chrome (title, controls, lyrics) settles in behind the artwork.
         opacity: interpolate(
             progress.value,
@@ -216,7 +261,9 @@ export default function MusicDetail(props: IMusicDetailProps) {
 
     return (
         <>
-            <Animated.View style={[style.backgroundLayer, backgroundStyle]}>
+            <Animated.View
+                pointerEvents="none"
+                style={[style.backgroundLayer, backgroundStyle]}>
                 <Background
                     immersiveCoverEnabled={immersiveCoverEnabled}
                     renderImmersiveCover={renderImmersiveCover}
@@ -226,6 +273,10 @@ export default function MusicDetail(props: IMusicDetailProps) {
             <GestureDetector gesture={dismissGesture}>
                 <Animated.View
                     style={[globalStyle.fwflex1, contentStyle]}
+                    importantForAccessibility={
+                        acceptsInput ? "auto" : "no-hide-descendants"
+                    }
+                    accessibilityElementsHidden={!acceptsInput}
                     collapsable={false}>
                     <SafeAreaView style={globalStyle.fwflex1}>
                         <StatusBar
@@ -250,7 +301,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
                                 <Bottom />
                             </View>
                             {isHorizontal ? (
-                                <View style={style.divider} />
+                                <View style={[style.divider, { backgroundColor: colors.onMediaTrack }]} />
                             ) : null}
                             {isHorizontal ? (
                                 <View
@@ -290,6 +341,5 @@ const style = StyleSheet.create({
     },
     divider: {
         width: StyleSheet.hairlineWidth,
-        backgroundColor: "rgba(255, 255, 255, 0.12)",
     },
 });
