@@ -88,18 +88,6 @@ No paired native visual comparison has been performed. No visual iteration is cl
 
 final result: blocked
 
----
-
-# Compact Create playlist action (2026-10-11)
-
-- Evidence: the user-provided screenshot `1a8e85faf51ced230009a91018200b21.jpg` shows the solid blue Create pill filling the entire third touch column and crowding the playlist below. The user authorized the recommended local correction.
-- Corrected: three equal outer touch areas retain their separate import/ID/create operations. The Create background now belongs to a smaller inner content pill, using `tonalSurface` / `onTonal`; the outer touch height stays at least 44dp. Content has a minimum 32dp/64rpx height, expands for larger text, and has bounded width and a shrinkable label. All three actions share one vertical center. The row-to-list gap increases from 8rpx to 24rpx.
-- Validation: color regression passed (13 suites / 135 tests), including all 19 existing My-page cases and rendered Create surface/foreground checks in light, dark, custom and alpha-custom themes. The existing three-action route regression passes. Changed-source ESLint has zero errors/warnings; color/UI/runtime-reference guards and diff checks pass. Full-repository lint retains 14 existing errors / 101 warnings; its two unrelated automatic changes were restored.
-- Native visual acceptance is pending user. No device screenshots or substitute UI acceptance performed; preview delivery stops after data-preserving installation and exact version confirmation per repository instructions.
-
-Source/function/color regression result: pass. Native visual acceptance: pending user.
-
-final result: blocked
 
 Blocker: native visual evidence is intentionally deferred to user manual acceptance under repository preview instructions.
 
@@ -250,6 +238,20 @@ final result: blocked
 - Validation: full Jest passed (87 suites / 665 tests), including 19 My-page and 7 layout cases. Color regression passed (13 suites / 135 tests), including the rendered Create button foreground/fill in light/dark/custom/alpha-custom themes. Color, runtime-reference, motion and UI guards passed; changed-file TypeScript comparison has zero diagnostics and changed-source ESLint has zero errors/warnings. Full lint retains 14 existing errors / 101 warnings; its two unrelated automatic edits were restored.
 - Preview delivered: source `15873038`, version `0.3.1-preview.i88.mine3.20261011.135744`, versionCode `1791698291`, arm64-v8a. Actual APK metadata, v2 single signer, three font hashes and vinyl resource verified; SHA-256 `652613D2223913A30F08966288E3909E5803D83E4E48F05516F96010A16DAEDA`. The signer matches the currently installed app. On 2026-10-11 at 14:20 +08:00, `adb install -r` upgraded the user's connected physical device from `0.3.1-preview.i88.mine2.20261011.130756` (versionCode `1791695291`) while preserving data. Installed version/code confirmed; device operations stopped at confirmation. The APK and updated verification report are saved under `D:/audiora-previews/issue-88/`.
 - Native screenshots and visual acceptance remain pending. This repository requires stopping after installation/version confirmation for the user's manual acceptance. Tests validate routes, data preservation, layout arithmetic and semantic colors, not the final native visual appearance. No device screenshot, emulator or substitute visual pass is claimed.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked
+
+---
+
+# Compact Create playlist action (2026-10-11)
+
+- Evidence: the user-provided screenshot `1a8e85faf51ced230009a91018200b21.jpg` shows the solid blue Create pill filling the entire third touch column and crowding the playlist below. The user authorized the recommended local correction.
+- Corrected: three equal outer touch areas retain their separate import/ID/create operations. The Create background now belongs to a smaller inner content pill, using `tonalSurface` / `onTonal`; the outer touch height stays at least 44dp. Content has a minimum 32dp/64rpx height, expands for larger text, and has bounded width and a shrinkable label. All three actions share one vertical center. The row-to-list gap increases from 8rpx to 24rpx.
+- Validation: color regression passed (13 suites / 135 tests), including all 19 existing My-page cases and rendered Create surface/foreground checks in light, dark, custom and alpha-custom themes. The existing three-action route regression passes. Changed-source ESLint has zero errors/warnings; color/UI/runtime-reference guards and diff checks pass. Full-repository lint retains 14 existing errors / 101 warnings; its two unrelated automatic changes were restored.
+- Preview delivered: source `7b4f009a`, version `0.3.1-preview.i88.create.20261011.142757`, versionCode `1791700093`, arm64-v8a. Package/version, v2 single signer, source commit, three font hashes and vinyl resource verified; SHA-256 `D9624900B48E8F5D46E8EA2B817D2A48A3BB39C907B355637FA3B11F3B460E71`. Current installed certificate matched; `adb install -r` upgraded the user's physical phone from `0.3.1-preview.i88.mine3.20261011.135744` (versionCode `1791698291`) while preserving data. Actual installed version/code confirmed and device operations stopped. APK and verification report are under `D:/audiora-previews/issue-88/`.
+- Native visual acceptance is pending user. No device screenshots or substitute UI acceptance performed; preview delivery stops after data-preserving installation and exact version confirmation per repository instructions.
 
 Source/function/color regression result: pass. Native visual acceptance: pending user.
 
