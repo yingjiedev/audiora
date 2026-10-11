@@ -10,6 +10,7 @@ import MusicItem from "@/components/mediaItem/musicItem";
 import PillTabBar from "@/components/base/pillTabBar";
 import ThemeText from "@/components/base/themeText";
 import Icon from "@/components/base/icon";
+import { StyleSheet, View } from "react-native";
 
 const mockNavigate = jest.fn();
 const mockSeed = Array.from({ length: 14 }, (_, index) => ({
@@ -32,6 +33,8 @@ jest.mock("react-native/Libraries/Lists/FlatList", () => {
     ) };
 });
 jest.mock("@/components/base/icon", () => "Icon");
+jest.mock("@/components/base/fastImage", () => "FastImage");
+jest.mock("./OnlineMusicLibrary", () => "OnlineMusicLibrary");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/base/pillTabBar", () => "PillTabBar");
 jest.mock("@/components/mediaItem/musicItem", () => "MusicItem");
@@ -150,26 +153,6 @@ describe("MusicLibraryOverview", () => {
         expect(button("localMusic.scanLocalMusic")).toBeDefined();
     });
 
-    it("hides disabled sources and opens the selected searchable source", () => {
-        render(); online();
-        act(() => button(label("musicLibrary.searchWithSource", { name: "Search Source" })).props.onPress());
-        expect(mockNavigate).toHaveBeenLastCalledWith("search-page", { pluginHash: "search" });
-        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "Disabled Source")).toBe(false);
-        act(() => button(label("musicLibrary.viewEntry", { name: "Stream Source" })).props.onPress());
-        expect(mockNavigate).toHaveBeenLastCalledWith("setting", { type: "plugin" });
-    });
-
-    it("keeps adding sources available when none are enabled", () => {
-        const original = mockPlugins; mockPlugins = [];
-        try {
-            render(); online();
-            act(() => button("musicLibrary.addSource").props.onPress());
-            expect(mockNavigate).toHaveBeenCalledWith("setting", { type: "plugin" });
-        } finally {
-            mockPlugins = original;
-        }
-    });
-
     it.each([
         { dark: false, primary: undefined, card: undefined },
         { dark: true, primary: undefined, card: undefined },
@@ -180,7 +163,7 @@ describe("MusicLibraryOverview", () => {
         mockColors = resolveThemeColors({ ...preset, background: preset.pageBackground, primary: primary ?? preset.primary, card: card ?? preset.card }, dark);
         render();
         const scan = button("localMusic.scanLocalMusic");
-        const scanStyle = scan.props.style({ pressed: false }).find((value: any) => value.backgroundColor);
+        const scanStyle = scan.findAllByType(View).map(node => StyleSheet.flatten(node.props.style)).find(style => style?.backgroundColor === mockColors.tonalSurface)!;
         expect(scanStyle.backgroundColor).toBe(mockColors.tonalSurface);
         expect(scan.findByType(Icon).props.color).toBe(mockColors.onTonal);
         const actualCard = blendOver(mockColors.card, mockColors.pageBackground);

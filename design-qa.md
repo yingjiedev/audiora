@@ -365,3 +365,11 @@ Source/function/color checks: pass. Native visual acceptance: pending user.
 - Installed with adb install -r on the paired physical phone at 192.168.31.232:38437, upgrading from 0.3.1-preview.i88.rounded.20261011.224826 / 1791730108 with matching certificates and data preserved. Exact installed version/code 1791732472 confirmed. All device operations stopped at confirmation; native visual/function acceptance remains pending user. No app launch, screenshot capture or emulator was performed.
 
 Source/build/install result: pass. Native visual acceptance: pending user.
+
+
+## Music Library discovery and spacing follow-up
+
+- Reviewed the user's latest local-artist and online-source screenshots. Reduced local summary emphasis, oversized visible actions and duplicate selection bars; tightened section spacing while retaining 44dp interactive targets, circular artist placeholders and real album artwork.
+- Online source management is a compact source selector with scoped search and management. Real source charts are horizontally browsable neutral cards with five-track previews via public MusicItem rows, truthful preview-play labels and existing full-chart/catalog routes. Directory cache is shared, details load only for the current and next card, failures/empty/unsupported sources remain actionable, and late responses stay source scoped.
+- Focused Jest: 10 suites / 66 tests passed. Color Jest: 16 suites / 169 tests passed. Color/UI guards and runtime-reference check passed. Changed-file ESLint: 0 errors/warnings. Explicit TypeScript check: no changed-file diagnostics; existing repository findings remain. Full repository lint: existing 14 errors / 100 warnings; unrelated auto-formatting restored.
+- Screenshot inputs and the agreed implementation are recorded in docs/design/music-library-page.md. Native appearance, real source responses/audio and iOS remain pending user acceptance; no device capture or substitute visual acceptance was performed.

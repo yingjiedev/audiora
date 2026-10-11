@@ -148,6 +148,17 @@ export interface ILanguageData {
     "home.musicLibrary": string;
     "home.notifications.a11y": string;
     "home.discovery": string;
+    "musicLibrary.selectSource": string;
+    "musicLibrary.charts": string;
+    "musicLibrary.allCharts": string;
+    "musicLibrary.playChartPreview": string;
+    "musicLibrary.chartPreviewUnavailable": string;
+    "musicLibrary.openChart": string;
+    "musicLibrary.fullChart": string;
+    "musicLibrary.chartsUnsupported": string;
+    "musicLibrary.noCharts": string;
+    "musicLibrary.chartsUnsupportedHint": string;
+    "musicLibrary.chartsRetryHint": string;
     "home.myMusic": string;
     "home.mine": string;
     "home.personalTagline": string;
