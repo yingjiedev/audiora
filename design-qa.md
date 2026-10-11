@@ -287,4 +287,7 @@ final result: blocked (native visual acceptance pending user under repository ha
 
 Source/function/color checks: pass. Native visual comparison: pending user.
 
+- Delivered preview: source `464f29ee0337fa45f81195debace32ddd62361ea`, version `0.3.1-preview.i88.summary.20261011.153443`, versionCode `1791704114`, package `io.github.yingjiedev.audiora`, arm64-v8a. SHA-256 `4933D2817654FF4F85B00841C92303D90DF0BACE731608F9202EEEC1F884F42C`. Actual APK metadata, source identity, clean build worktree, v2 single signer, all three font hashes and vinyl resource verified; artifact and report retained under `D:/audiora-previews/issue-88/`.
+- The installed Trends preview (`1791702474`) had a matching certificate. `adb install -r` successfully upgraded the user's physical phone at `192.168.31.232:39053` while preserving data, and exact installed version/code `1791704114` were confirmed. Device operations stopped at confirmation; user performs native visual acceptance.
+
 final result: blocked (native visual acceptance pending user under repository handoff rules)
