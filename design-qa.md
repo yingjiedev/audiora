@@ -194,3 +194,18 @@ Source regression result: pass. Native visual acceptance remains with the user.
 - Native acceptance: deliver a new uniquely versioned preview, verify the artifact and preserve-data installation, then leave visual comparison with the user per repository instructions. No post-change screenshot or native visual pass is claimed.
 
 Source/color regression result: pass. Native visual acceptance: pending user.
+
+---
+
+# My music page redesign (2026-10-11)
+
+- Reference: user attachments `9d90ad05659eb4f73aab3cda1ba85d29.jpg` (current page) and `bca8756c5cc69cc4625662c803fd4efb.jpg` (reference), each 1220 × 2656 pixels. The user requested an original redesign preserving Audiora's existing functions, rather than a faithful clone.
+- Design: a tonal Audiora music-collection hero with a prominent Favorites entry; three compact history/download/starred shortcuts; a six-song cover strip; a dedicated playlist toolbar and full custom-playlist list; backup/version tools below. Palette, assets and type come from the existing application. Reference membership, cash, check-in, social content, branding and exclusive illustrations are not introduced.
+- Functional preservation and visual decisions are recorded in `docs/design/my-music-page.md`. Original navigation and panel destinations, saved history, song/platform identifiers and existing playlist data remain intact. Favorites no longer incorrectly falls back to a custom playlist when loading; the long installed version can wrap.
+- Validation: full Jest regression passed (86 suites / 651 tests), including 12 My-page cases. Final color regression passed (13 suites / 128 tests) after completing test fixture types, covering light/dark/custom tonal foregrounds and existing player controls; final language checks passed (4 tests). Color, runtime-reference, motion and UI guards passed. Changed-file TypeScript comparison has zero diagnostics, and modified-source ESLint has zero errors/warnings. Repository lint retains 14 existing errors / 101 warnings; unrelated automatic edits were restored.
+- Implementation screenshot and paired visual comparison: unavailable. No device capture is requested; repository instructions explicitly require stopping after preview installation/version confirmation for user acceptance, overriding the skill's automatic visual gate. Neither passing tests nor compilation establishes native visual quality.
+- Pending checks: rendered typography, cover cropping, margins, empty states, long titles/version, native dark/custom themes and scroll access above the expanded player. No navigation, player animation, overlay hit-test or native runtime redesign is included.
+
+Source/function/color regression result: pass. Native visual acceptance: pending user.
+
+final result: blocked (native visual comparison intentionally deferred to user acceptance)

@@ -1,158 +1,222 @@
 import React from "react";
+import { StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
+import { showPanel } from "@/components/panels/usePanel";
+import { darkColors, lightColors } from "@/constants/colorPalette";
+import TrackPlayer from "@/core/trackPlayer";
+import { contrastRatio } from "@/utils/colorContrast";
+import { resolveThemeColors } from "@/utils/themeColors";
 import MyMusicOverview from "./MyMusicOverview";
 
 const mockNavigate = jest.fn();
+const mockHistorySeed: IMusic.IMusicItem[] = [
+    { id: "history-1", platform: "source-a", title: "Evening", artist: "Artist A", album: "Album A", artwork: "cover-a", duration: 180 },
+    { id: "history-2", platform: "source-b", title: "Morning", artist: "Artist B", album: "Album B", artwork: "cover-b", duration: 240 },
+];
+const mockSheetsSeed = [
+    { id: "favorite", title: "Favorites", worksNum: 3, platform: "local", coverImg: "favorite-cover" },
+    { id: "road-trip", title: "Road Trip", worksNum: 8, platform: "local", coverImg: "trip-cover" },
+];
+let mockHistory = mockHistorySeed;
+let mockSheets = mockSheetsSeed;
+let mockStarred = [{ id: "starred", platform: "remote" }];
+let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+let mockVersion = "0.3.1-preview.i88.mine.20261011.120000";
+let mockDisplayNames: Record<string, string> = {};
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/components/panels/usePanel", () => ({
-    showPanel: jest.fn(),
-}));
-jest.mock("@/constants/assetsConst", () => ({
-    ImgAsset: {
-        albumDefault: 1,
-        logo: 2,
-    },
-}));
+jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, logo: 2, quickFavorite: 3 } }));
 jest.mock("@/core/i18n", () => ({
     useI18N: () => ({
-        t: (key: string, args?: Record<string, number>) =>
-            key === "home.songCount" ? `${args?.count ?? 0} songs` : key,
+        t: (key: string, args?: Record<string, string | number>) => {
+            if (key === "home.songCount") return `${args?.count ?? 0} songs`;
+            if (key === "home.playlistCount") return `${args?.count ?? 0} playlists`;
+            if (key === "myMusic.openPlaylist") return `Open ${args?.title}`;
+            if (key === "myMusic.playRecent") return `Play ${args?.title} by ${args?.artist}`;
+            if (key === "home.currentVersion") return `Version ${args?.version}`;
+            return key;
+        },
     }),
 }));
-jest.mock("@/core/musicHistory", () => ({
-    useMusicHistory: () => [{ id: "history-1" }, { id: "history-2" }],
-}));
+jest.mock("@/core/musicHistory", () => ({ useMusicHistory: () => mockHistory }));
 jest.mock("@/core/musicSheet", () => ({
     __esModule: true,
-    default: {
-        defaultSheet: { id: "favorite" },
-    },
-    useSheetsBase: () => [
-        {
-            id: "favorite",
-            title: "Favorites",
-            worksNum: 3,
-            platform: "local",
-        },
-        {
-            id: "road-trip",
-            title: "Road Trip",
-            worksNum: 8,
-            platform: "local",
-        },
-    ],
-    useStarredSheets: () => [{ id: "starred", platform: "remote" }],
+    default: { defaultSheet: { id: "favorite" } },
+    useSheetsBase: () => mockSheets,
+    useStarredSheets: () => mockStarred,
 }));
+jest.mock("@/core/pluginManager", () => ({
+    usePluginDisplayNameResolver: () => (platform: string) => mockDisplayNames[platform] ?? platform,
+}));
+jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { play: jest.fn() } }));
 jest.mock("@/core/router", () => ({
     ROUTE_PATH: {
-        DOWNLOADING: "downloading",
-        HISTORY: "history",
-        LOCAL: "local",
-        LOCAL_SHEET_DETAIL: "local-sheet-detail",
-        SETTING: "setting",
-        SHEET_BROWSER: "sheet-browser",
+        DOWNLOADING: "downloading", LOCAL_SHEET_DETAIL: "local-sheet-detail",
+        SETTING: "setting", SHEET_BROWSER: "sheet-browser", SEARCH_PAGE: "search",
     },
     useNavigate: () => mockNavigate,
 }));
-jest.mock("react-native-device-info", () => ({
-    getVersion: () => "0.2.4",
-}));
-jest.mock("@/hooks/useColors", () => () => ({
-    pageBackground: "#F5F8FF",
-    card: "#FFFFFF",
-    primary: "#3978FF",
-    text: "#111827",
-    textSecondary: "#6B7280",
-}));
-jest.mock("@/utils/rpx", () => ({
-    __esModule: true,
-    default: (value: number) => value,
-}));
+jest.mock("react-native-device-info", () => ({ getVersion: () => mockVersion }));
+jest.mock("@/hooks/useColors", () => () => mockColors);
+jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value }));
 
 describe("MyMusicOverview", () => {
+    let renderer: TestRenderer.ReactTestRenderer;
+    const render = () => act(() => {
+        renderer = TestRenderer.create(<MyMusicOverview />);
+    });
+    const press = (label: string) => act(() => {
+        renderer.root.findByProps({ accessibilityLabel: label }).props.onPress();
+    });
+    const textNodes = () => renderer.root.findAll(node => node.type === "ThemeText" as unknown as React.ElementType);
+
     beforeEach(() => {
-        mockNavigate.mockReset();
-        jest.requireMock("@/components/panels/usePanel").showPanel.mockReset();
+        jest.clearAllMocks();
+        mockHistory = mockHistorySeed;
+        mockSheets = mockSheetsSeed;
+        mockStarred = [{ id: "starred", platform: "remote" }];
+        mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+        mockDisplayNames = {};
+        mockVersion = "0.3.1-preview.i88.mine.20261011.120000";
+    });
+    afterEach(() => act(() => renderer?.unmount()));
+
+    it("retains every existing music, playlist and settings destination", () => {
+        render();
+        press("common.setting");
+        press("home.favoriteSheet");
+        press("home.downloadManagement");
+        press("home.starredPlaylists");
+        press("sidebar.backupAndResume");
+        press("home.aboutAndUpdate");
+        press("home.viewAll");
+        press("Open Road Trip");
+        expect(mockNavigate.mock.calls).toEqual([
+            ["setting", { type: "overview" }],
+            ["local-sheet-detail", { id: "favorite" }],
+            ["downloading"],
+            ["sheet-browser", { sheetType: "starred" }],
+            ["setting", { type: "backup" }],
+            ["setting", { type: "about" }],
+            ["sheet-browser", { sheetType: "local" }],
+            ["local-sheet-detail", { id: "road-trip" }],
+        ]);
     });
 
-    it("keeps music and settings destinations together on the My page", () => {
-        let renderer: TestRenderer.ReactTestRenderer;
-
-        act(() => {
-            renderer = TestRenderer.create(<MyMusicOverview />);
-        });
-
-        const settingsButton = renderer!.root.findByProps({
-            accessibilityLabel: "common.setting",
-        });
-        const favorite = renderer!.root.findByProps({
-            accessibilityLabel: "home.favoriteSheet",
-        });
-        const downloads = renderer!.root.findByProps({
-            accessibilityLabel: "home.downloadManagement",
-        });
-
-        act(() => {
-            settingsButton.props.onPress();
-            favorite.props.onPress();
-            downloads.props.onPress();
-        });
-
-        expect(mockNavigate).toHaveBeenNthCalledWith(1, "setting", {
-            type: "overview",
-        });
-        expect(mockNavigate).toHaveBeenNthCalledWith(2, "local-sheet-detail", {
-            id: "favorite",
-        });
-        expect(mockNavigate).toHaveBeenNthCalledWith(3, "downloading");
-        expect(renderer!.root.findAllByProps({
-            accessibilityLabel: "home.localMusic",
-        })).toHaveLength(0);
+    it("retains import, play by ID and create actions as separate buttons", () => {
+        render();
+        press("home.importPlaylist.a11y");
+        press("home.playById.a11y");
+        press("home.newPlaylist.a11y");
+        expect(jest.mocked(showPanel).mock.calls).toEqual([["ImportMusicSheet"], ["PlayById"], ["CreateMusicSheet"]]);
     });
 
-    it("keeps playlist management actions available", () => {
-        let renderer: TestRenderer.ReactTestRenderer;
-
-        act(() => {
-            renderer = TestRenderer.create(<MyMusicOverview />);
-        });
-
-        act(() => {
-            renderer!.root.findByProps({
-                accessibilityLabel: "home.importPlaylist.a11y",
-            }).props.onPress();
-            renderer!.root.findByProps({
-                accessibilityLabel: "home.playById.a11y",
-            }).props.onPress();
-            renderer!.root.findByProps({
-                accessibilityLabel: "home.newPlaylist.a11y",
-            }).props.onPress();
-        });
-
-        expect(
-            jest.requireMock("@/components/panels/usePanel").showPanel,
-        ).toHaveBeenNthCalledWith(1, "ImportMusicSheet");
-        expect(
-            jest.requireMock("@/components/panels/usePanel").showPanel,
-        ).toHaveBeenNthCalledWith(2, "PlayById");
-        expect(
-            jest.requireMock("@/components/panels/usePanel").showPanel,
-        ).toHaveBeenNthCalledWith(3, "CreateMusicSheet");
-    });
-
-    it("opens the played songs drawer from My music", () => {
-        let renderer!: TestRenderer.ReactTestRenderer;
-        act(() => {
-            renderer = TestRenderer.create(<MyMusicOverview />);
-        });
-        act(() => {
-            renderer.root.findByProps({ accessibilityLabel: "home.playHistory" }).props.onPress();
-        });
-        expect(jest.requireMock("@/components/panels/usePanel").showPanel).toHaveBeenCalledWith("PlayList", { initialTab: "history" });
+    it("opens the full history drawer from both history entrances", () => {
+        render();
+        press("home.playHistory");
+        press("myMusic.viewRecent");
+        expect(showPanel).toHaveBeenNthCalledWith(1, "PlayList", { initialTab: "history" });
+        expect(showPanel).toHaveBeenNthCalledWith(2, "PlayList", { initialTab: "history" });
         expect(mockNavigate).not.toHaveBeenCalled();
-        act(() => renderer.unmount());
+    });
+
+    it("bounds the preview without trimming history and plays the original selected source", () => {
+        mockHistory = Array.from({ length: 12 }, (_, index) => ({ ...mockHistorySeed[0], id: `song-${index}`, title: `Song ${index}` }));
+        const historyBeforeRender = [...mockHistory];
+        render();
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
+        const recentButtons = renderer.root.findAll(node => typeof node.props.accessibilityLabel === "string" && node.props.accessibilityLabel.startsWith("Play Song"));
+        expect(new Set(recentButtons.map(node => node.props.accessibilityLabel)).size).toBe(6);
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.playHistory" }).props.accessibilityHint).toBe("12 songs");
+        press("Play Song 4 by Artist A");
+        expect(TrackPlayer.play).toHaveBeenCalledWith(mockHistory[4]);
+        expect(mockHistory).toEqual(historyBeforeRender);
+        press("myMusic.viewRecent");
+        expect(showPanel).toHaveBeenCalledWith("PlayList", { initialTab: "history" });
+    });
+
+    it("shows useful empty states while keeping all management functions available", () => {
+        mockHistory = [];
+        mockSheets = [mockSheetsSeed[0]];
+        mockStarred = [];
+        render();
+        expect(textNodes().some(node => node.props.children === "myMusic.historyEmpty")).toBe(true);
+        expect(textNodes().some(node => node.props.children === "home.noCustomPlaylists")).toBe(true);
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.starredPlaylists" }).props.accessibilityHint).toBe("0 playlists");
+        press("home.exploreMusic");
+        press("home.newPlaylist.a11y");
+        press("home.importPlaylist.a11y");
+        expect(mockNavigate).toHaveBeenCalledWith("search");
+        expect(showPanel).toHaveBeenCalledWith("CreateMusicSheet");
+        expect(showPanel).toHaveBeenCalledWith("ImportMusicSheet");
+    });
+
+    it("never redirects Favorites to a custom playlist before the default sheet is available", () => {
+        mockSheets = [mockSheetsSeed[1]];
+        render();
+        const favorite = renderer.root.findByProps({ accessibilityLabel: "home.favoriteSheet" });
+        expect(favorite.props.disabled).toBe(true);
+        expect(favorite.props.accessibilityHint).toBe("0 songs");
+        press("home.favoriteSheet");
+        expect(mockNavigate).not.toHaveBeenCalled();
+        press("Open Road Trip");
+        expect(mockNavigate).toHaveBeenCalledWith("local-sheet-detail", { id: "road-trip" });
+    });
+
+    it("updates collection counts and recent music when the stores change", () => {
+        render();
+        mockSheets = [{ ...mockSheetsSeed[0], worksNum: 20 }, mockSheetsSeed[1], { ...mockSheetsSeed[1], id: "new-sheet", title: "New Sheet" }];
+        mockHistory = [mockHistorySeed[1]];
+        mockStarred = [...mockStarred, { id: "new-star", platform: "remote" }];
+        act(() => renderer.update(<MyMusicOverview />));
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.favoriteSheet" }).props.accessibilityHint).toBe("20 songs");
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.playHistory" }).props.accessibilityHint).toBe("1 songs");
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.starredPlaylists" }).props.accessibilityHint).toBe("2 playlists");
+        expect(textNodes().some(node => node.props.children === "2 playlists")).toBe(true);
+        press("Open New Sheet");
+        expect(mockNavigate).toHaveBeenCalledWith("local-sheet-detail", { id: "new-sheet" });
+    });
+
+    it("uses plugin display names as a fallback without rewriting the playback identity", () => {
+        mockHistory = [{ ...mockHistorySeed[0], artist: "" }];
+        mockDisplayNames = { "source-a": "My Source" };
+        render();
+        expect(textNodes().some(node => node.props.children === "My Source")).toBe(true);
+        mockDisplayNames = { "source-a": "Renamed Source" };
+        act(() => renderer.update(<MyMusicOverview />));
+        expect(textNodes().some(node => node.props.children === "Renamed Source")).toBe(true);
+        press("Play Evening by musicLibrary.unknownArtist");
+        expect(TrackPlayer.play).toHaveBeenCalledWith(mockHistory[0]);
+        expect(mockHistory[0].platform).toBe("source-a");
+    });
+
+    it("preserves long installed version text and covers from real collections", () => {
+        render();
+        const version = textNodes().find(node => node.props.children === `Version ${mockVersion}`);
+        expect(version).toBeDefined();
+        expect(version?.props.numberOfLines).toBeUndefined();
+        const imageSources = renderer.root.findAll(node => node.type === "FastImage" as unknown as React.ElementType).map(node => node.props.source);
+        expect(imageSources).toEqual(expect.arrayContaining(["favorite-cover", "trip-cover", "cover-a", "cover-b"]));
+    });
+
+    it.each([
+        ["light", lightColors, false],
+        ["dark", darkColors, true],
+        ["custom", { ...lightColors, primary: "#EFA322" }, false],
+    ] as const)("uses readable semantic surfaces in the %s theme", (_name, palette, dark) => {
+        mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
+        render();
+        const heroTexts = textNodes().filter(node => node.props.color === mockColors.onTonal);
+        expect(heroTexts.length).toBeGreaterThan(0);
+        expect(contrastRatio(mockColors.onTonal, mockColors.tonalSurface)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(mockColors.favorite, mockColors.tonalSurface)).toBeGreaterThanOrEqual(3);
+        const surfaces = renderer.root.findAll(node => node.props.style && typeof node.props.style !== "function").map(node => StyleSheet.flatten(node.props.style)?.backgroundColor);
+        expect(surfaces).toContain(mockColors.tonalSurface);
+        expect(surfaces).toContain(mockColors.card);
+        const playIcons = renderer.root.findAll(node => node.type === "Icon" as unknown as React.ElementType && node.props.name === "play");
+        expect(playIcons.every(node => node.props.color === mockColors.onInverse)).toBe(true);
     });
 });

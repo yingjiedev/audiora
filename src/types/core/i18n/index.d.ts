@@ -110,6 +110,15 @@ export interface ILanguageData {
     "home.myMusic": string;
     "home.mine": string;
     "home.personalTagline": string;
+    "myMusic.downloadsHint": string;
+    "myMusic.createPlaylist": string;
+    "myMusic.viewRecent": string;
+    "myMusic.openPlaylist": string;
+    "myMusic.playRecent": string;
+    "myMusic.historyEmpty": string;
+    "myMusic.historyHint": string;
+    "myMusic.playlistsHint": string;
+    "myMusic.tools": string;
     "home.noCustomPlaylists": string;
     "home.scanLocal": string;
     "home.import.short": string;

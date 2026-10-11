@@ -12,7 +12,7 @@
     "lint": "eslint src --fix",
     "typecheck:runtime": "node ./scripts/check-runtime-references.js",
     "check:colors": "node ./scripts/check-hardcoded-colors.mjs && node ./scripts/check-color-semantics.js",
-    "test:colors": "jest --runInBand src/utils/themeColors.test.ts src/hooks/useColors.test.tsx src/components/base/roundActionButton.test.tsx src/utils/colorSystemRules.test.js src/core/theme.test.ts src/core/darkContrast.test.ts src/utils/themePalette.test.ts src/components/base/themeText.test.tsx src/components/musicBar/playerDock.test.tsx src/components/panels/types/playList/body.test.tsx src/components/mediaItem/musicItem.test.tsx src/pages/musicDetail/components/bottom/seekBar.test.tsx",
+    "test:colors": "jest --runInBand src/utils/themeColors.test.ts src/hooks/useColors.test.tsx src/components/base/roundActionButton.test.tsx src/utils/colorSystemRules.test.js src/core/theme.test.ts src/core/darkContrast.test.ts src/utils/themePalette.test.ts src/components/base/themeText.test.tsx src/components/musicBar/playerDock.test.tsx src/components/panels/types/playList/body.test.tsx src/components/mediaItem/musicItem.test.tsx src/pages/musicDetail/components/bottom/seekBar.test.tsx src/pages/home/components/MyMusicOverview.test.tsx",
     "check:motion": "node ./scripts/check-animation-callbacks.js",
     "check:colors:baseline": "node ./scripts/check-hardcoded-colors.mjs --update",
     "check:ui": "node ./scripts/check-ui-conventions.mjs",
