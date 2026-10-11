@@ -267,3 +267,9 @@ final result: blocked
 - Preview build/install record will follow once verified. Native visual acceptance remains pending user, per AGENTS.md. No screenshots from the phone, emulator, automatic UI actions or substitute visual acceptance are performed.
 
 Source/function/color checks: pass. Native visual comparison: pending user.
+
+- Final preview delivered: app source `582d78a94849e32dd79d56a6fb7c5a499bce9feb`; `0.3.1-preview.i88.trends.20261011.150745`, versionCode `1791702474`, package `io.github.yingjiedev.audiora`, arm64-v8a. Final chart summaries retain seconds for short playback instead of rounding it up to a minute; report/language checks passed afterward (2 suites / 6 tests).
+- Verification: real APK metadata, v2 single signer, exact source commit, all three bundled font byte/hash checks and vinyl resource pass. APK SHA-256 `D7E175CCEF572F09AEC7D37BF182AE99D2FA5897195524C8F70FCA9D18E3152C`. Verification JSON and APK retained under `D:/audiora-previews/issue-88/`.
+- Installed using `adb install -r` on the user's physical phone at `192.168.31.232:39053`; previous Create-preview signer matched. Upgrade from versionCode `1791700093` preserved data. Actual installed version and versionCode `1791702474` confirmed; all device operations then stopped. Screenshot capture, app launch and UI acceptance were not performed. iOS native validation remains unperformed. User should inspect the new card, independent Favorites/trends entrances, short actual playback and period switching in their selected themes.
+
+final result: blocked (native visual acceptance pending user under repository handoff rules)
