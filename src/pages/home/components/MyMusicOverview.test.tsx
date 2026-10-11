@@ -46,6 +46,7 @@ jest.mock("@/core/i18n", () => ({
     }),
 }));
 jest.mock("@/core/musicHistory", () => ({ useMusicHistory: () => mockHistory }));
+jest.mock("@/core/listeningStats", () => ({ useListeningStats: () => ({ version: 1, startedAt: 0, days: [] }) }));
 jest.mock("@/core/musicSheet", () => ({
     __esModule: true,
     default: { defaultSheet: { id: "favorite" } },
@@ -61,7 +62,7 @@ jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { play: jest
 jest.mock("@/core/router", () => ({
     ROUTE_PATH: {
         DOWNLOADING: "downloading", LOCAL_SHEET_DETAIL: "local-sheet-detail",
-        SETTING: "setting", SHEET_BROWSER: "sheet-browser", SEARCH_PAGE: "search",
+        SETTING: "setting", SHEET_BROWSER: "sheet-browser", SEARCH_PAGE: "search", LISTENING_REPORT: "listening-report",
     },
     useNavigate: () => mockNavigate,
 }));
@@ -83,6 +84,16 @@ describe("MyMusicOverview", () => {
         renderer.root.findByProps({ accessibilityLabel: label }).props.onPress();
     });
     const textNodes = () => renderer.root.findAll(node => node.type === "ThemeText" as unknown as React.ElementType);
+
+    it("opens listening trends from both new summary entrances while keeping Favorites separate", () => {
+        render();
+        press("listening.todayEntry");
+        press("listening.openReport");
+        expect(mockNavigate).toHaveBeenNthCalledWith(1, "listening-report");
+        expect(mockNavigate).toHaveBeenNthCalledWith(2, "listening-report");
+        press("home.favoriteSheet");
+        expect(mockNavigate).toHaveBeenLastCalledWith("local-sheet-detail", { id: "favorite" });
+    });
 
     beforeEach(() => {
         jest.clearAllMocks();

@@ -6,6 +6,7 @@ import Toast from "@/utils/toast";
 import { musicIsPaused } from "@/utils/trackUtils";
 import PersistStatus from "@/utils/persistStatus";
 import { DeviceEventEmitter, NativeModules } from "react-native";
+import { setupListeningStatsRecorder } from "./listeningStatsRecorder";
 
 let resumeState: State | null;
 
@@ -22,6 +23,7 @@ function pushCompactFavoriteState(musicItem: IMusic.IMusicItem | null) {
 }
 
 module.exports = async function () {
+    setupListeningStatsRecorder();
     // 紧凑通知上的收藏按钮（原生 MusicService 补丁发出的事件）
     DeviceEventEmitter.addListener("remote-favorite", () => {
         const musicItem = trackPlayer.currentMusic;

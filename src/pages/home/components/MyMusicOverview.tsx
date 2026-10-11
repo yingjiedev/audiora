@@ -16,6 +16,7 @@ import React, { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import DeviceInfo from "react-native-device-info";
 import { getRecentPageLayout } from "./myMusicLayout";
+import MyListeningCard from "./MyListeningCard";
 
 const RECENT_PREVIEW_LIMIT = 6;
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
@@ -139,31 +140,7 @@ export default function MyMusicOverview() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("home.favoriteSheet")}
-                    accessibilityHint={t("home.songCount", { count: favoriteSheet?.worksNum ?? 0 })}
-                    accessibilityState={{ disabled: !favoriteSheet }}
-                    disabled={!favoriteSheet}
-                    style={({ pressed }) => [styles.favoriteEntry, { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => {
-                        if (favoriteSheet) navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: favoriteSheet.id });
-                    }}>
-                    {favoriteCover ? (
-                        <FastImage source={favoriteCover} placeholderSource={ImgAsset.albumDefault} style={styles.favoriteCover} />
-                    ) : (
-                        <View style={[styles.favoriteCover, styles.favoritePlaceholder, { backgroundColor: colors.tonalSurface }]}>
-                            <Icon name="heart" size={rpx(40)} color={colors.favorite} />
-                        </View>
-                    )}
-                    <View style={styles.favoriteText}>
-                        <ThemeText fontSize="title" fontWeight="semibold" style={styles.favoriteTitle}>{t("home.favoriteSheet")}</ThemeText>
-                        <ThemeText fontSize="description" color={colors.primaryText} style={styles.favoriteCount}>
-                            {t("home.songCount", { count: favoriteSheet?.worksNum ?? 0 })}
-                        </ThemeText>
-                    </View>
-                    <Icon name="chevron-right" size={rpx(26)} color={colors.textSecondary} />
-                </Pressable>
+                <MyListeningCard sheetId={favoriteSheet?.id} count={favoriteSheet?.worksNum ?? 0} cover={favoriteCover} />
 
                 <View style={styles.quickRow}>
                     {quickEntries.map(entry => (
@@ -359,12 +336,6 @@ const styles = StyleSheet.create({
     headerAction: { minWidth: minimumTouch, minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
     content: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.xxxl },
     logo: { width: rpx(24), height: rpx(24), borderRadius: radius.xs },
-    favoriteEntry: { minHeight: Math.max(minimumTouch, rpx(152)), borderRadius: radius.xl, padding: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.md },
-    favoriteTitle: { fontSize: fontRpx(30) },
-    favoriteText: { flex: 1, minWidth: 0 },
-    favoriteCount: { marginTop: spacing.xs },
-    favoriteCover: { width: rpx(112), height: rpx(112), borderRadius: radius.md },
-    favoritePlaceholder: { alignItems: "center", justifyContent: "center" },
     inlineLabel: { marginLeft: spacing.xs },
     description: { marginTop: spacing.xxs },
     quickRow: { flexDirection: "row", alignItems: "stretch", paddingTop: spacing.xl, paddingBottom: spacing.xs },
