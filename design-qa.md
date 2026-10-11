@@ -387,3 +387,8 @@ Source/build/install result: pass. Native visual/function acceptance: pending us
 - Focused regression: 11 suites / 78 tests passed. Color regression: 16 suites / 171 tests passed. Color/UI guards and runtime references passed. Changed-file ESLint has no errors/warnings. Explicit TypeScript check has no changed-file diagnostics; existing repository diagnostics remain. Repository lint still has 14 existing errors / 100 warnings; unrelated formatting was restored.
 
 Source/function/color checks: pass. Native visual/function acceptance: pending user. Build/install record follows after artifact verification.
+
+- Delivered application source 1902d000ff1a09456668c1c59cef2b284cdf74e7; version 0.3.1-preview.i88.chartsui.20261012.003254, versionCode 1791736375, package io.github.yingjiedev.audiora, ABI arm64-v8a. SHA-256 9FC5333D210F36DEA76AF98F8F8696F1E5F62F72C45EF58A88EF621F0AAAB3BB. Actual APK metadata, clean source commit, v2 single signer, three font files' bytes/hashes and vinyl resource verified; artifacts retained under D:/audiora-previews/issue-88/.
+- Matched the installed certificate and preserved data using adb install -r on 192.168.31.232:38437; upgraded from 0.3.1-preview.i88.charts.20261012.000040 / 1791734441. Exact installed versionName/versionCode 0.3.1-preview.i88.chartsui.20261012.003254 / 1791736375 confirmed, then all device operations stopped. No app launch, device capture or emulator performed. Appearance and real-source/audio acceptance remain pending user.
+
+Source/build/install result: pass. Native visual/function acceptance: pending user.
