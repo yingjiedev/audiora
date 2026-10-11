@@ -31,8 +31,9 @@ export default function SeekBar(props: { variant?: "media" | "surface" }) {
     const { t } = useI18N();
 
     const surface = props.variant === "surface";
-    const foreground = surface ? colors.musicBarText ?? colors.text : colors.onMedia ?? colors.text;
-    const secondary = surface ? colors.textSecondary ?? colors.text : colors.onMediaSecondary ?? foreground;
+    const foreground = surface ? colors.playerText : colors.onMedia ?? colors.text;
+    const secondary = surface ? colors.playerTextSecondary : colors.onMediaSecondary ?? foreground;
+    const progressColor = surface ? colors.active : foreground;
     const track = surface ? Color(foreground).alpha(0.22).toString() : colors.onMediaTrack ?? secondary;
     const duration = Number.isFinite(progress.duration) ? Math.max(0, progress.duration) : 0;
     const currentPosition = Number.isFinite(progress.position) ? progress.position : 0;
@@ -42,9 +43,9 @@ export default function SeekBar(props: { variant?: "media" | "surface" }) {
         <View style={[style.wrapper, surface && style.surfaceWrapper]}>
             <Slider
                 style={[style.slider, surface && style.surfaceSlider]}
-                minimumTrackTintColor={foreground}
+                minimumTrackTintColor={progressColor}
                 maximumTrackTintColor={track}
-                thumbTintColor={foreground}
+                thumbTintColor={progressColor}
                 thumbSize={surface ? Math.max(8, rpx(16)) : undefined}
                 minimumValue={0}
                 maximumValue={duration}

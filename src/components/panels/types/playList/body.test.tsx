@@ -47,7 +47,7 @@ jest.mock("@/components/base/loading", () => "Loading");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1 } }));
 jest.mock("@/core/trackPlayer", () => ({ useCurrentMusic: () => mockCurrent, useMusicState: () => mockPaused }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
-jest.mock("@/hooks/useColors", () => () => ({ text: "#10172D", textSecondary: "#777777", success: "#188A51", card: "#FFFFFF" }));
+jest.mock("@/hooks/useColors", () => () => ({ text: "#10172D", textSecondary: "#777777", active: "#3867F4", success: "#188A51", card: "#FFFFFF" }));
 jest.mock("@/hooks/useMotion", () => () => ({ duration: () => 160 }));
 jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value / 2 }));
 jest.mock("@/utils/mediaUtils", () => ({ getMediaUniqueKey: (item: IMusic.IMusicItem) => `${item.platform}@${item.id}`, isSameMediaItem: (a: IMusic.IMusicItem, b: IMusic.IMusicItem) => a?.id === b?.id && a?.platform === b?.platform }));
@@ -101,7 +101,7 @@ describe("playback drawer song row", () => {
     it("shows a real VIP flag and reflects the current song's paused state", () => {
         mockPaused = true;
         const { renderer } = render({ ...song, fee: 1 });
-        expect(renderer.root.findAllByType(Icon).some(node => node.props.name === "pause" && node.props.color === "#188A51")).toBe(true);
+        expect(renderer.root.findAllByType(Icon).some(node => node.props.name === "pause" && node.props.color === "#3867F4")).toBe(true);
         expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "VIP")).toBe(true);
         act(() => renderer.unmount());
         const free = render(song);

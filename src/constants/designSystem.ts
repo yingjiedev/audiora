@@ -29,21 +29,7 @@ export const controlSize = {
     hero: rpx(112),
 } as const;
 
-export const audioraGradient = [
-    "#00DDB5",
-    "#00BDF2",
-    "#3B82F6",
-    "#6366F1",
-    "#B26EF3",
-] as const;
-
-export const topListGradients = [
-    ["#00DDB5", "#3B82F6"],
-    ["#00BDF2", "#6366F1"],
-    ["#3B82F6", "#B26EF3"],
-    ["#22C7A9", "#667EEA"],
-    ["#4F7DFF", "#D16BA5"],
-] as const;
+export { audioraGradient, topListGradients } from "./colorPalette";
 
 /**
  * Motion tokens — the single source of truth for every animation in the app.
@@ -130,9 +116,7 @@ export const elevation = {
 /**
  * 沉浸层（播放页底图永远是压暗后的封面）上的中性前景色。
  *
- * 这组和主题无关 —— 底图不跟随深浅主题 —— 所以只能是常量；集中放在这里，
+ * 这组和主题无关 —— 底图不跟随深浅主题 —— 所以集中在 colorPalette，
  * 页面侧一律通过 useColors() 的 onMedia* 语义 token 引用，不再出现色值字面量。
  */
-export const mediaOnDark = "#FFFFFF";
-/** 沉浸层的压暗底色，用于顶部遮罩与分隔线 */
-export const mediaScrim = "#050C1C";
+export { mediaOnDark, mediaScrim } from "./colorPalette";

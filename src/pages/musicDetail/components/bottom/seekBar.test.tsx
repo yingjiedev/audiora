@@ -14,6 +14,9 @@ const COLORS = {
     onMediaTrack: "#474F5E",
     text: "#111827",
     textSecondary: "#485574",
+    playerText: "#111827",
+    playerTextSecondary: "#485574",
+    active: "#3978FF",
     border: "#E5E7EB",
 };
 
@@ -46,7 +49,8 @@ describe("SeekBar", () => {
             renderer = TestRenderer.create(<SeekBar variant="surface" />);
         });
         const slider = renderer!.root.findByType(Slider);
-        expect(slider.props.minimumTrackTintColor).toBe(COLORS.text);
+        expect(slider.props.minimumTrackTintColor).toBe(COLORS.active);
+        expect(slider.props.thumbTintColor).toBe(COLORS.active);
         expect(slider.props.maximumTrackTintColor).toBe(Color(COLORS.text).alpha(0.22).toString());
         expect(slider.props.thumbSize).toBe(16);
     });

@@ -10,12 +10,14 @@ import SeekBar from "@/pages/musicDetail/components/bottom/seekBar";
 import MusicInfo from "./musicInfo";
 import PlayerDock from "./playerDock";
 import useAutoExpand from "./useAutoExpand";
+import LinearGradient from "react-native-linear-gradient";
 
 const mockSong = { id: "song", platform: "test", title: "A long song title", artist: "Artist", artwork: "cover.jpg" };
 let mockMusic: typeof mockSong | null = mockSong;
 let mockPaused = true;
 let mockFavorite = false;
 let mockDark = false;
+let mockThemeOverrides: Record<string, string> = {};
 const mockNavigate = jest.fn();
 const mockKeyboardListeners: Record<string, () => void> = {};
 const mockOrigin = { value: null as unknown };
@@ -59,11 +61,11 @@ jest.mock("@/core/musicSheet", () => ({
     default: { defaultSheet: { id: "favorites" }, addMusic: jest.fn(), removeMusic: jest.fn() },
     useFavorite: () => mockFavorite,
 }));
-jest.mock("@/hooks/useColors", () => () => ({
-    primary: "#3867F4", text: "#10172D", textSecondary: "#485574", musicBar: "#FFFFFF",
-    musicBarText: "#10172D", surfaceElevated: "#212E4E", tabBar: "#131C31", card: "#FFFFFF",
-    danger: "#FF4F7B", shadow: "#2D4A78",
-}));
+jest.mock("@/hooks/useColors", () => () => {
+    const { resolveThemeColors } = require("@/utils/themeColors");
+    const { lightColors, darkColors } = require("@/constants/colorPalette");
+    return resolveThemeColors({ ...(mockDark ? darkColors : lightColors), background: "transparent", ...mockThemeOverrides }, mockDark);
+});
 jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value / 2 }));
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: (state: boolean) => state }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: (item: typeof mockSong | null) => item?.artwork }));
@@ -95,6 +97,7 @@ describe("PlayerDock", () => {
         mockPaused = true;
         mockFavorite = false;
         mockDark = false;
+        mockThemeOverrides = {};
         mockOrigin.value = null;
         mockMeasuredFrame = null;
         mockBackPress = undefined;
@@ -109,6 +112,20 @@ describe("PlayerDock", () => {
     });
 
     afterEach(() => jest.restoreAllMocks());
+
+    it.each([false, true])("passes the resolved theme gradient to the expanded native panel (dark=%s)", dark => {
+        mockDark = dark;
+        const renderer = render();
+        expand(renderer);
+        const gradient = renderer.root.findByType(LinearGradient);
+        expect(gradient.props.colors).toEqual(dark ? ["#263459", "#233052", "#212E4E"] : ["#F3F6FE", "#FBFCFF", "#FFFFFF"]);
+        const before = gradient.props.colors;
+        mockThemeOverrides = { primary: "#FFCC00" };
+        act(() => renderer.update(<PlayerDock collapseKey="home" bottomNavigation={null} />));
+        expect(renderer.root.findByType(LinearGradient).props.colors).not.toEqual(before);
+        expect(openPlayer).not.toHaveBeenCalled();
+        act(() => renderer.unmount());
+    });
 
     it("keeps the compact song shortcut and expands through its dedicated gesture callback", () => {
         const renderer = render();

@@ -1,11 +1,6 @@
 import { Theme, useTheme } from "@react-navigation/native";
-import Color from "color";
 import { useMemo } from "react";
-import { bestForeground } from "@/utils/colorContrast";
-import { mediaOnDark, mediaScrim } from "@/constants/designSystem";
-
-/** 主色上前景色的候选：足够亮的主色用近黑，其余用纯白 */
-const onPrimaryCandidates = ["#FFFFFF", "#10172D"];
+import { resolveThemeColors } from "@/utils/themeColors";
 
 type IColors = Theme["colors"];
 
@@ -53,6 +48,12 @@ export interface CustomizedColors extends IColors {
     success?: string;
     danger?: string;
     info?: string;
+    /** 喜欢状态；与危险操作分离 */
+    favorite?: string;
+    /** 主色文字，按实际表面的对比度校准 */
+    primaryText?: string;
+    /** 正在播放、当前选中项的前景色 */
+    active?: string;
     /** paneltabbar 背景色 */
     tabBar?: string;
     /**
@@ -77,39 +78,7 @@ export interface CustomizedColors extends IColors {
 export default function useColors() {
     const { colors, dark } = useTheme();
 
-    const cColors: CustomizedColors = useMemo(() => {
-        const customColors = colors as CustomizedColors;
-        let onPrimary = onPrimaryCandidates[0];
-        try {
-            onPrimary = bestForeground(colors.primary, onPrimaryCandidates);
-        } catch {
-            // 非法主色回落到白字
-        }
-        return {
-            ...customColors,
-            onPrimary,
-            onMedia: mediaOnDark,
-            onMediaSecondary: Color(mediaOnDark).alpha(0.72).toString(),
-            onMediaTrack: Color(mediaOnDark).alpha(0.28).toString(),
-            onMediaScrim: mediaScrim,
-            textSecondary: Color(colors.text).alpha(0.64).toString(),
-            surface: customColors.surface ?? colors.card,
-            surfaceElevated:
-                customColors.surfaceElevated ??
-                (dark
-                    ? Color(colors.card).lighten(0.24).toString()
-                    : Color(colors.card).lighten(0.12).toString()),
-            border: colors.border ?? Color(colors.text).alpha(0.12).toString(),
-            listActive:
-                customColors.listActive ??
-                Color(colors.primary).alpha(0.12).toString(),
-            accentWarm: customColors.accentWarm ?? colors.primary,
-            accentCool:
-                customColors.accentCool ?? customColors.info ?? colors.primary,
-            // @ts-ignore
-            background: colors.pageBackground ?? colors.background,
-        };
-    }, [colors, dark]);
+    const cColors = useMemo(() => resolveThemeColors(colors as CustomizedColors, dark), [colors, dark]);
 
     return cColors;
 }

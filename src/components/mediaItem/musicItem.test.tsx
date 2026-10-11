@@ -23,7 +23,7 @@ jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/badge", () => "Badge");
 jest.mock("@/utils/toast", () => ({ __esModule: true, default: { success: jest.fn(), warn: jest.fn() } }));
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1 } }));
-jest.mock("@/hooks/useColors", () => () => ({ text: "black", textSecondary: "gray", primary: "blue", danger: "red", listActive: "lightgray" }));
+jest.mock("@/hooks/useColors", () => () => ({ text: "black", textSecondary: "gray", primary: "blue", favorite: "pink", danger: "red", listActive: "lightgray" }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: () => undefined }));
 jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getByMedia: () => ({ supportedMethods: new Set(["getMvSource"]) }) } }));
 jest.mock("@/utils/mediaUtils", () => ({ isSameMediaItem: (a: IMusic.IMusicItem, b: IMusic.IMusicItem) => !!b && a.id === b.id && a.platform === b.platform }));

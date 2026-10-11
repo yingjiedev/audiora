@@ -1,4 +1,3 @@
-import Color from "color";
 import React, { ReactNode, useCallback, useEffect, useState } from "react";
 import { BackHandler, Image, Keyboard, Pressable, StyleSheet, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
@@ -10,7 +9,7 @@ import FastImage from "@/components/base/fastImage";
 import ThemeText from "@/components/base/themeText";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
-import { audioraGradient, elevation, radius, spacing } from "@/constants/designSystem";
+import { elevation, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import MusicSheet, { useFavorite } from "@/core/musicSheet";
 import { openPlayer } from "@/core/playerOverlay";
@@ -99,9 +98,8 @@ export default function PlayerDock(props: IPlayerDockProps) {
     const dockBackground = dark
         ? colors.tabBar ?? colors.surface ?? colors.card
         : colors.musicBar ?? colors.card;
-    const foreground = dark ? colors.text : colors.musicBarText ?? colors.text;
-    const cardBackground = dark ? colors.surfaceElevated ?? colors.card : dockBackground;
-    const gradientAccent = dark ? colors.accentCool ?? colors.primary : audioraGradient[0];
+    const foreground = showExpanded ? colors.playerText : dark ? colors.text : colors.musicBarText ?? colors.text;
+    const cardBackground = colors.playerSurface;
     const album = typeof musicItem?.album === "string" ? musicItem.album.trim() : "";
     const artworkRef = useAnimatedRef<Animated.View>();
     const { origin } = playerTransition();
@@ -182,7 +180,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
         }
     };
     const favoriteLabel = isFavorite ? t("musicDetail.a11y.unfavorite") : t("musicDetail.a11y.favorite");
-    const favoriteColor = isFavorite ? colors.danger ?? colors.primary : foreground;
+    const favoriteColor = isFavorite ? colors.favorite : foreground;
 
     return (
         <View testID="player-dock" pointerEvents="box-none" style={styles.root}>
@@ -205,11 +203,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
                         ]}>
                         <LinearGradient
                             pointerEvents="none"
-                            colors={[
-                                Color(cardBackground).mix(Color(gradientAccent), dark ? 0.08 : 0.12).toString(),
-                                Color(cardBackground).mix(Color(gradientAccent), 0.03).toString(),
-                                cardBackground,
-                            ]}
+                            colors={colors.playerGradient}
                             locations={[0, 0.5, 1]}
                             style={styles.cardGradient}
                         />
@@ -219,14 +213,14 @@ export default function PlayerDock(props: IPlayerDockProps) {
                                 accessibilityLabel={t("musicBar.a11y.openDetail")}
                                 style={styles.songInfo}
                                 onPress={openExpandedPlayer}>
-                                <ThemeText numberOfLines={2} fontSize="content" color={foreground}>
+                                <ThemeText numberOfLines={2} fontSize="content" color={colors.playerText}>
                                     {musicItem.title ?? t("common.unknownName")}
                                 </ThemeText>
                                 {musicItem.artist ? (
                                     <ThemeText
                                         numberOfLines={1}
                                         fontSize="description"
-                                        color={Color(foreground).alpha(0.72).toString()}
+                                        color={colors.playerTextSecondary}
                                         style={styles.artist}>
                                         {musicItem.artist}
                                     </ThemeText>
@@ -235,7 +229,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
                                     <ThemeText
                                         numberOfLines={1}
                                         fontSize="description"
-                                        color={Color(foreground).alpha(0.64).toString()}
+                                        color={colors.playerTextTertiary}
                                         style={styles.artist}>
                                         {t("panel.musicItemOptions.album", { album })}
                                     </ThemeText>

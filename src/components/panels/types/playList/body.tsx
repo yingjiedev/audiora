@@ -36,7 +36,7 @@ export function SongRow(props: {
     const motion = useMotion();
     const { t } = useI18N();
     const current = !!isSameMediaItem(item, currentMusic);
-    const highlight = colors.success ?? colors.textHighlight ?? colors.primary;
+    const highlight = colors.active;
     const offset = useSharedValue(0);
     const moving = useSharedValue(false);
     const move = (distance: number) => onMove(item, distance);

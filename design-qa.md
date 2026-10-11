@@ -127,3 +127,32 @@ The supplied pre-change screenshots guided the fixes. No post-change native capt
 final result: blocked
 
 Blocker: post-change native visual evidence is deferred to user manual acceptance; the user requested packaging before connecting the device.
+
+---
+
+# Audiora color system verification
+
+- Accepted target: the user-approved blue primary / blue-gray surfaces / limited purple accents proposal, following the complaint that the expanded player's mint gradient differed from the app palette.
+- Source reference: the user selected the previously captured homepage with expanded PlayerDock. New analysis captures showed the system lock screen and were rejected as app evidence.
+- Implementation: `COLOR_SYSTEM.md`, the repository instructions, centralized preset palette, pure semantic derivation, shared text component, PlayerDock, seek bar, song-row favorites, queue highlighting, and PR color CI.
+- Spacing, artwork, copy, press regions, overlay lifecycle, gestures, and navigation were preserved. No post-change native appearance capture is claimed.
+
+## Findings addressed
+
+- The light player bypassed the theme primary by choosing the green branding stop. Its panel now derives a subtle 6% / 2% / 0% primary tint from the current surface.
+- Queue selection used success green; selection now uses the readable active primary role.
+- Likes shared the danger role; favorites and destructive/status colors now have separate preset values and component roles.
+- Secondary text ignored configured theme values; the hook now honors them before applying legacy fallbacks.
+- Color lint could pass imported but inappropriate brand colors. The combined check now restricts raw-palette access, decorative color imports, and success/danger usage in migrated playback components; the broad constants-directory exemption was removed.
+- Primary text and button foreground account for rendered backgrounds. Tests cover alpha compositing, custom primary opacity, both presets, representative custom accents, transparent custom surfaces, gradient interpolation, invalid primary fallback, and incompatible surface limits.
+
+## Verification and acceptance
+
+- Automated: 84 Jest suites / 619 tests passed (29 added in this change); color, runtime-reference, motion and UI checks passed. Modified source files have zero ESLint errors/warnings and zero TypeScript diagnostics. Full-repository ESLint retains its existing 61 errors / 140 warnings.
+- CI: color checks and the focused color/theme/component regression suite run for affected PR changes.
+- Documentation: the checked-in color requirements define usage, exceptions, contrast limits, theme preservation, visual acceptance and progressive legacy cleanup.
+- Native: the new colors are not yet packaged or accepted on Android/iOS. Manual acceptance should compare light/dark/custom themes, compact/expanded player, queue, search/favorites/local lists and settings.
+
+final result: blocked
+
+Blocker: post-change native visual evidence awaits a new preview and user manual acceptance; source implementation and automated checks are complete.

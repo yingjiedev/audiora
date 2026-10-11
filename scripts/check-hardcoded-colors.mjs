@@ -44,7 +44,7 @@ const ALLOWED_PATHS = [
     "src/pages/setting/settingTypes/basicSetting.tsx",
     "src/preview",
     "src/components/base/icon.tsx",
-    "src/constants",
+    "src/constants/colorPalette.ts",
 ];
 
 const ALLOWED_PATTERNS = [

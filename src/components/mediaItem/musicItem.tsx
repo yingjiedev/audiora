@@ -83,7 +83,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
         <RowAction
             icon={isFavorite ? "heart" : "heart-outline"}
             label={t(isFavorite ? "musicDetail.a11y.unfavorite" : "musicDetail.a11y.favorite")}
-            color={isFavorite ? colors.danger ?? colors.primary : undefined}
+            color={isFavorite ? colors.favorite : undefined}
             onPress={toggle}
             disabled={busy}
             selected={isFavorite}
