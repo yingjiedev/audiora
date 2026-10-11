@@ -59,8 +59,9 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const onCardInsetSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), insetBackgrounds, colorContrastMinimum.text);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
-    const activityEmpty = Color(blendOver(surface, page)).mix(Color(blendOver(card, page)), 0.3).hex();
-    const activityBackgrounds = [blendOver(card, page), activityEmpty];
+    const activityUnrecorded = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.10).hex();
+    const activityEmpty = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.18).hex();
+    const activityBackgrounds = [cardBackground, activityUnrecorded, activityEmpty];
     const activityOutline = readableAccent(Color(onCardInsetSecondary).mix(Color(cardBackground), 0.5).hex(), activityBackgrounds, colorContrastMinimum.control);
     const activityLow = readableAccent(Color(primaryOpaque).mix(Color(blendOver(card, page)), 0.5).hex(), activityBackgrounds, colorContrastMinimum.control);
     const activityStrong = readableAccent(primaryText, activityBackgrounds, colorContrastMinimum.text);
@@ -78,6 +79,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         cardInset,
         onCardInset,
         onCardInsetSecondary,
+        activityUnrecorded,
         activityEmpty,
         activityOutline,
         activityLevels,

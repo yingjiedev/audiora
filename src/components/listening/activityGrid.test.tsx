@@ -18,16 +18,16 @@ describe("ActivityGrid", () => {
     const now = new Date(2026, 9, 11, 12).getTime();
     const data = addListeningInterval({ version: 1, startedAt: now - 86400000, days: [] }, { id: "song", platform: "local", title: "Song", artist: "Artist", artwork: "cover" }, now, now + 41000, true);
 
-    it("renders unknown dates as outlines and 41 seconds as a visible activity color", () => {
+    it("renders unknown dates as smaller neutral tiles and 41 seconds as actual activity", () => {
         act(() => {
             renderer = TestRenderer.create(<ActivityGrid days={calendarDays(data, 91, now)} startedAt={data.startedAt} compact />);
         });
-        const cellStyle = (date: string) => StyleSheet.flatten(renderer.root.findByProps({ testID: `listening-day-${date}` }).props.style);
-        expect(cellStyle("2026-10-09")).toMatchObject({ borderStyle: "solid", borderWidth: 1, borderColor: mockColors.activityOutline });
-        expect(cellStyle("2026-10-09").backgroundColor).toBeUndefined();
+        const cellStyle = (date: string) => StyleSheet.flatten(renderer.root.findByProps({ testID: `listening-mark-${date}` }).props.style);
+        expect(cellStyle("2026-10-09")).toMatchObject({ backgroundColor: mockColors.activityUnrecorded, margin: 1, borderRadius: 2 });
+        expect(cellStyle("2026-10-09").borderWidth).toBeUndefined();
         expect(cellStyle("2026-10-10").backgroundColor).toBe(mockColors.activityEmpty);
-        expect(cellStyle("2026-10-10")).toMatchObject({ borderWidth: 1, borderColor: mockColors.activityOutline });
-        expect(cellStyle("2026-10-10").borderStyle).toBeUndefined();
+        expect(cellStyle("2026-10-10").margin).toBeUndefined();
+        expect(cellStyle("2026-10-10").borderWidth).toBeUndefined();
         expect(cellStyle("2026-10-11").backgroundColor).toBe(mockColors.activityLevels[0]);
         expect(cellStyle("2026-10-11").borderWidth).toBeUndefined();
         expect(renderer.root.findAll(node => node.props.accessibilityLabel === "1 active, 89 unrecorded").length).toBeGreaterThan(0);
@@ -41,16 +41,19 @@ describe("ActivityGrid", () => {
         });
         const image = renderer.root.findByProps({ accessibilityRole: "image" });
         const width = StyleSheet.flatten(image.props.style).width;
-        const cells = renderer.root.findAll(node => node.type === "View" as any && typeof node.props.testID === "string");
+        const cells = renderer.root.findAll(node => node.type === "View" as any && node.props.testID?.startsWith("listening-day-"));
+        const marks = renderer.root.findAll(node => node.type === "View" as any && node.props.testID?.startsWith("listening-mark-"));
         const grid = image.findAll(node => StyleSheet.flatten(node.props.style)?.flexDirection === "row")[0];
         const gap = StyleSheet.flatten(grid.props.style).gap;
         expect((width - (weekCount - 1) * gap) / weekCount).toBeGreaterThanOrEqual(8);
+        expect(gap).toBeGreaterThanOrEqual(3);
         expect(StyleSheet.flatten(image.props.style).flexShrink).toBe(0);
         expect(cells).toHaveLength(91);
-        for (const cell of cells) {
-            const style = StyleSheet.flatten(cell.props.style);
-            expect(style.borderStyle).not.toBe("dashed");
-            expect(style.borderRadius).toBeLessThanOrEqual(2);
+        expect(marks).toHaveLength(91);
+        for (const mark of marks) {
+            const style = StyleSheet.flatten(mark.props.style);
+            expect(style.borderWidth ?? 0).toBe(0);
+            expect(style.borderRadius).toBe(2);
         }
     });
 
@@ -60,5 +63,7 @@ describe("ActivityGrid", () => {
         });
         const text = renderer.root.findAll(node => node.type === "ThemeText" as any).map(node => node.props.children);
         expect(text).toEqual(expect.arrayContaining(["listening.monday", "listening.wednesday", "listening.friday", "listening.unrecorded", "2026-07-13", "2026-10-11"]));
+        expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "listening-legend-unrecorded" }).props.style)).toMatchObject({ backgroundColor: mockColors.activityUnrecorded, margin: 1, borderRadius: 2 });
+        expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "listening-legend-level-0" }).props.style)).toMatchObject({ backgroundColor: mockColors.activityEmpty, borderRadius: 2 });
     });
 });

@@ -9,7 +9,7 @@ import rpx from "@/utils/rpx";
 import { activityWeeks } from "./activityCalendar";
 
 const minimumCellSize = 8;
-const cellGap = Math.max(2, spacing.xxs);
+const cellGap = Math.max(3, spacing.xxs);
 
 export function activityLevel(seconds: number) {
     if (seconds <= 0) return 0;
@@ -23,7 +23,7 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
     const colors = useColors();
     const { t } = useI18N();
     const columns = activityWeeks(days, startedAt);
-    // 91 days can occupy 14 weeks. Tiny dashed RN borders become arcs on Android.
+    // Keep all 13–14 weeks readable; gaps and markers must not collapse on narrow screens.
     const compactWidth = Math.max(rpx(230), columns.length * minimumCellSize + Math.max(0, columns.length - 1) * cellGap);
     const fills = [colors.activityEmpty, ...colors.activityLevels];
     const activeDays = days.filter(day => day.seconds > 0).length;
@@ -48,11 +48,13 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
                             if (!day) return <View key={`padding-${weekday}`} style={styles.cell} />;
                             const level = activityLevel(day.seconds);
                             return (
-                                <View key={day.date} testID={`listening-day-${day.date}`} style={[
-                                    styles.cell,
-                                    day.recorded ? { backgroundColor: fills[level] } : styles.unrecorded,
-                                    (!day.recorded || level === 0) && { borderColor: colors.activityOutline, borderWidth: 1 },
-                                ]} />
+                                <View key={day.date} testID={`listening-day-${day.date}`} style={styles.cell}>
+                                    <View testID={`listening-mark-${day.date}`} style={[
+                                        styles.mark,
+                                        !day.recorded && styles.unrecorded,
+                                        { backgroundColor: day.recorded ? fills[level] : colors.activityUnrecorded },
+                                    ]} />
+                                </View>
                             );
                         })}
                     </View>
@@ -62,10 +64,10 @@ export default function ActivityGrid({ days, startedAt, compact = false }: { day
                 <>
                     {days.length > 0 && <View style={styles.range}><ThemeText fontSize="tag" fontColor="textSecondary">{days[0].date}</ThemeText><ThemeText fontSize="tag" fontColor="textSecondary">{days[days.length - 1].date}</ThemeText></View>}
                     <View style={styles.legend}>
-                        <View style={[styles.legendCell, styles.unrecorded, { borderColor: colors.activityOutline, borderWidth: 1 }]} />
+                        <View style={styles.legendCell}><View testID="listening-legend-unrecorded" style={[styles.mark, styles.unrecorded, { backgroundColor: colors.activityUnrecorded }]} /></View>
                         <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.unknownLabel}>{t("listening.unrecorded")}</ThemeText>
                         <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.less")}</ThemeText>
-                        {fills.map((fill, index) => <View key={index} style={[styles.legendCell, { backgroundColor: fill }, index === 0 && { borderColor: colors.activityOutline, borderWidth: 1 }]} />)}
+                        {fills.map((fill, index) => <View key={index} testID={`listening-legend-level-${index}`} style={[styles.legendCell, { backgroundColor: fill }]} />)}
                         <ThemeText fontSize="caption" fontColor="textSecondary">{t("listening.more")}</ThemeText>
                     </View>
                 </>
@@ -79,12 +81,13 @@ const styles = StyleSheet.create({
     compact: { flexShrink: 0 },
     grid: { flexDirection: "row", gap: cellGap },
     column: { flex: 1, minWidth: minimumCellSize, gap: cellGap },
-    cell: { width: "100%", aspectRatio: 1, borderRadius: 1 },
-    unrecorded: { borderStyle: "solid" },
+    cell: { width: "100%", aspectRatio: 1 },
+    mark: { flex: 1, borderRadius: 2 },
+    unrecorded: { margin: 1 },
     weekdays: { width: rpx(34) },
     weekday: { flex: 1, justifyContent: "center" },
     range: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },
     legend: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: spacing.xxs, marginTop: spacing.md },
     unknownLabel: { marginRight: spacing.xs },
-    legendCell: { width: Math.max(minimumCellSize, rpx(16)), height: Math.max(minimumCellSize, rpx(16)), borderRadius: 1 },
+    legendCell: { width: Math.max(minimumCellSize, rpx(16)), height: Math.max(minimumCellSize, rpx(16)), borderRadius: 2 },
 });

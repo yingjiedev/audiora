@@ -18,6 +18,8 @@ describe("Audiora semantic colors", () => {
     ] as const)("makes even brief activity distinguishable from an empty cell in the %s theme", (_name, palette, dark) => {
         const colors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
         expect(new Set(colors.activityLevels).size).toBe(4);
+        expect(colors.activityUnrecorded).not.toBe(colors.activityEmpty);
+        expect(colors.activityUnrecorded).not.toBe(colors.active);
         expect(contrastRatio(colors.activityOutline, blendOver(colors.card, colors.pageBackground))).toBeGreaterThanOrEqual(3);
         expect(contrastRatio(colors.activityOutline, colors.activityEmpty)).toBeGreaterThanOrEqual(3);
         for (const foreground of [colors.onCardInset, colors.onCardInsetSecondary]) {
@@ -25,6 +27,7 @@ describe("Audiora semantic colors", () => {
             expect(contrastRatio(foreground, blendOver(colors.card, colors.pageBackground))).toBeGreaterThanOrEqual(4.5);
         }
         for (const fill of colors.activityLevels) {
+            expect(contrastRatio(fill, colors.activityUnrecorded)).toBeGreaterThanOrEqual(3);
             expect(contrastRatio(fill, colors.activityEmpty)).toBeGreaterThanOrEqual(3);
             expect(contrastRatio(fill, colors.card)).toBeGreaterThanOrEqual(3);
         }
@@ -71,8 +74,11 @@ describe("Audiora semantic colors", () => {
             expect(contrastRatio(foreground, actualCard)).toBeGreaterThanOrEqual(4.5);
             expect(contrastRatio(foreground, colors.cardInset)).toBeGreaterThanOrEqual(4.5);
         }
-        for (const background of [actualCard, colors.activityEmpty]) {
+        for (const background of [actualCard, colors.activityUnrecorded, colors.activityEmpty]) {
             expect(contrastRatio(colors.activityOutline, background)).toBeGreaterThanOrEqual(3);
+            for (const fill of colors.activityLevels) {
+                expect(contrastRatio(fill, background)).toBeGreaterThanOrEqual(3);
+            }
         }
         expect(input).toEqual(before);
         expect(colors.card).toBe(input.card);
