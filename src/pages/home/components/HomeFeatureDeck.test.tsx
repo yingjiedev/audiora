@@ -87,6 +87,10 @@ describe("Home folded collection", () => {
         expect(spread.width).toBeLessThan(width - 40);
         expect(spread.width).toBeGreaterThan(200);
         expect(deck.props.snapToOffsets).toEqual([0, spread.width + 8]);
+        const companion = StyleSheet.flatten(deck.findByType("ShiYinCard" as any).parent!.props.style);
+        const insets = StyleSheet.flatten(deck.props.contentContainerStyle);
+        // Enough trailing space lets the last card actually reach the final snap offset.
+        expect(companion.width + insets.paddingRight + insets.paddingHorizontal).toBeGreaterThanOrEqual(width);
     });
 
     it.each([

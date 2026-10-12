@@ -35,6 +35,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
     const { reduceMotion } = useMotion();
     const cardWidth = Math.min(420, width - spacing.xxxl * 2, width * 0.76);
     const leafWidth = Math.min(rpx(132), cardWidth * 0.24);
+    const companionWidth = Math.min(360, width * 0.62);
     const offset = useSharedValue(0);
     const onScroll = useAnimatedScrollHandler(event => {
         offset.value = event.contentOffset.x;
@@ -50,7 +51,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
         <Animated.ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.deck}
+            contentContainerStyle={[styles.deck, { paddingRight: Math.max(spacing.xxxl, width - spacing.xxxl - companionWidth) }]}
             snapToOffsets={[0, cardWidth + spacing.md]}
             decelerationRate="fast"
             onScroll={onScroll}
@@ -74,7 +75,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
                 </Animated.View>
                 <HomeHero music={props.music} />
             </View>
-            <View style={[styles.companion, { width: Math.min(360, width * 0.62) }]}>
+            <View style={[styles.companion, { width: companionWidth }]}>
                 <ShiYinCard
                     topListPlugins={props.topListPlugins}
                     topListCache={props.topListCache}
