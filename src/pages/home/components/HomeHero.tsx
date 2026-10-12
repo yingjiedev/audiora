@@ -40,59 +40,53 @@ export default function HomeHero({ music }: { music?: IMusic.IMusicItem | null }
                 accessibilityLabel={featuredMusic ? `${t("home.continueListening")} · ${featuredMusic.title}` : t("home.localMusic")}
                 style={styles.main}
                 onPress={open}>
-                <View style={styles.copy}>
-                    <ThemeText fontSize="description" color={colors.onCardInsetSecondary}>
+                <View style={styles.artworkRow}>
+                    <ThemeText fontSize="tag" color={colors.onCardInsetSecondary} style={styles.eyebrow}>
                         {t("home.continueListening")}
                     </ThemeText>
-                    <ThemeText numberOfLines={2} fontSize="title" fontWeight="semibold" color={colors.onCardInset} style={styles.title}>
+                    {featuredMusic ? (
+                        <FastImage source={featuredMusic.artwork} placeholderSource={ImgAsset.albumDefault} style={styles.cover} />
+                    ) : (
+                        <View style={[styles.cover, styles.emptyCover, { backgroundColor: colors.card }]}>
+                            <Icon name="musical-note" size={rpx(56)} color={colors.onCardInsetSecondary} />
+                        </View>
+                    )}
+                </View>
+                <View style={styles.copy}>
+                    <ThemeText numberOfLines={2} fontSize="subTitle" fontWeight="semibold" color={colors.onCardInset}>
                         {featuredMusic?.title || t("home.exploreMusic")}
                     </ThemeText>
-                    <ThemeText numberOfLines={1} fontSize="description" color={colors.onCardInsetSecondary} style={styles.description}>
-                        {featuredMusic ? featuredMusic.artist || featuredMusic.album || t("common.unknownName") : t("home.localMusic")}
+                    <ThemeText numberOfLines={1} fontSize="tag" color={colors.onCardInsetSecondary} style={styles.description}>
+                        {featuredMusic ? [featuredMusic.artist || featuredMusic.album || t("common.unknownName"), getDisplayName(featuredMusic.platform)].filter(Boolean).join(" · ") : t("home.scanLocal")}
                     </ThemeText>
                 </View>
-                {featuredMusic ? (
-                    <FastImage source={featuredMusic.artwork} placeholderSource={ImgAsset.albumDefault} style={styles.cover} />
-                ) : (
-                    <View style={[styles.cover, styles.emptyCover, { backgroundColor: colors.cardInset }]}>
-                        <Icon name="musical-note" size={rpx(56)} color={colors.onCardInsetSecondary} />
-                    </View>
-                )}
             </Pressable>
-            <View style={styles.footer}>
-                <View style={styles.footerCopy}>
-                    <ThemeText numberOfLines={1} fontSize="tag" color={colors.onCardInsetSecondary}>
-                        {featuredMusic ? getDisplayName(featuredMusic.platform) : t("home.scanLocal")}
-                    </ThemeText>
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t(isPlaying ? "musicDetail.a11y.pause" : "musicDetail.a11y.play")}
+                style={styles.playAction}
+                onPress={() => {
+                    if (!featuredMusic) navigate(ROUTE_PATH.LOCAL);
+                    else if (isPlaying) TrackPlayer.pause();
+                    else TrackPlayer.play(featuredMusic);
+                }}>
+                <View style={[styles.playFill, { backgroundColor: colors.inverseSurface }]}>
+                    <Icon name={isPlaying ? "pause" : "play"} size={rpx(28)} color={colors.onInverse} />
                 </View>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t(isPlaying ? "musicDetail.a11y.pause" : "musicDetail.a11y.play")}
-                    style={styles.playAction}
-                    onPress={() => {
-                        if (!featuredMusic) navigate(ROUTE_PATH.LOCAL);
-                        else if (isPlaying) TrackPlayer.pause();
-                        else TrackPlayer.play(featuredMusic);
-                    }}>
-                    <View style={[styles.playFill, { backgroundColor: colors.inverseSurface }]}>
-                        <Icon name={isPlaying ? "pause" : "play"} size={rpx(28)} color={colors.onInverse} />
-                    </View>
-                </Pressable>
-            </View>
+            </Pressable>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    card: { flex: 1, borderRadius: radius.lg, padding: spacing.lg, justifyContent: "space-between" },
-    main: { minHeight: minimumTouch, flexDirection: "row", alignItems: "center", gap: spacing.md },
-    copy: { flex: 1, minWidth: 0 },
-    title: { marginTop: spacing.sm },
+    card: { flex: 1, borderRadius: radius.lg, padding: spacing.lg },
+    main: { flex: 1, minHeight: minimumTouch, justifyContent: "space-between", gap: spacing.md },
+    artworkRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xs },
+    eyebrow: { flex: 1, minWidth: 0, paddingTop: spacing.xs },
+    copy: { minWidth: 0, minHeight: minimumTouch, justifyContent: "center", paddingRight: minimumTouch + spacing.xs },
     description: { marginTop: spacing.xs },
     cover: { width: rpx(164), height: rpx(164), borderRadius: radius.sm },
     emptyCover: { alignItems: "center", justifyContent: "center" },
-    footer: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
-    footerCopy: { flex: 1, minWidth: 0 },
-    playAction: { width: minimumTouch, height: minimumTouch, alignItems: "center", justifyContent: "center" },
+    playAction: { position: "absolute", right: spacing.lg, bottom: spacing.lg, width: minimumTouch, height: minimumTouch, alignItems: "center", justifyContent: "center" },
     playFill: { width: rpx(60), height: rpx(60), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 });

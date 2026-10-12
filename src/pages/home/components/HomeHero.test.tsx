@@ -63,7 +63,7 @@ describe("Home listening card", () => {
         const cover = renderer.root.findByType("FastImage" as any);
         expect(cover.props.source).toBe("cover");
         const times = renderer.root.findAllByType("ThemeText" as any);
-        expect(times.some(node => node.props.children === "Source label")).toBe(true);
+        expect(times.some(node => node.props.children === "Real artist · Source label")).toBe(true);
         press("home.continueListening · Real song");
         expect(mockPlay).toHaveBeenCalledWith(song);
         expect(mockOpen).not.toHaveBeenCalled();

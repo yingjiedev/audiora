@@ -10,11 +10,11 @@ import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import TrackPlayer from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
+import useMotion from "@/hooks/useMotion";
 import rpx, { fontRpx } from "@/utils/rpx";
-import React from "react";
+import React, { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
-import HomeHero from "../HomeHero";
-import ShiYinCard from "../ShiYinCard";
+import HomeFeatureDeck from "../HomeFeatureDeck";
 import useHomeDiscovery, { IHomeDiscoveryPreview } from "./useHomeDiscovery";
 import useHomeOverview from "./useHomeOverview";
 
@@ -23,32 +23,81 @@ const minimumTouch = Math.max(44, controlSize.minimumTouch);
 export default function HomeOverview() {
     const data = useHomeOverview();
     const preview = useHomeDiscovery(data.topListPlugins);
-    const { width } = useWindowDimensions();
-    const cardWidth = Math.min(420, width - spacing.xxxl * 2, width * 0.76);
-    const cardHeight = rpx(300);
+    const navigate = useNavigate();
+    const colors = useColors();
+    const { t } = useI18N();
+    const { reduceMotion } = useMotion();
+    const scroll = useRef<ScrollView>(null);
+    const anchors = useRef({ favorites: 0, charts: 0 });
+    const navigationHeight = useRef(0);
+    const [activeSection, setActiveSection] = useState("recommend");
+    const hasCharts = data.topListPlugins.length > 0 || preview.topLists.length > 0 || preview.loading;
+    const sections = [
+        { key: "recommend", title: t("home.forYou") },
+        { key: "favorites", title: t("home.myCollection") },
+        { key: "charts", title: t("home.topList") },
+    ];
+    const jumpTo = (key: string) => {
+        if (key === "charts" && !hasCharts) {
+            navigate(ROUTE_PATH.TOP_LIST);
+            return;
+        }
+        const target = key === "recommend" ? 0 : anchors.current[key as "favorites" | "charts"] - navigationHeight.current;
+        scroll.current?.scrollTo({ y: Math.max(0, target), animated: !reduceMotion });
+    };
 
     return (
-        <ScrollView style={styles.wrapper} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.featureDeck}
-                snapToInterval={cardWidth + spacing.md}
-                decelerationRate="fast">
-                <View style={{ width: cardWidth, minHeight: cardHeight }}>
-                    <HomeHero music={data.featuredMusic} />
-                </View>
-                <View style={{ width: cardWidth, minHeight: cardHeight }}>
-                    <ShiYinCard
-                        topListPlugins={data.topListPlugins}
-                        topListCache={data.topListCache}
-                        excludeMusicItems={data.recentHistory}
-                        preferredArtists={data.tasteArtists}
-                    />
-                </View>
-            </ScrollView>
-            <FavoriteListening musics={data.favoriteMusics} sheet={data.favoriteSheet} />
-            <Discovery preview={preview} hasSource={data.topListPlugins.length > 0} />
+        <ScrollView
+            testID="home-overview-scroll"
+            ref={scroll}
+            style={styles.wrapper}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            stickyHeaderIndices={[0]}
+            scrollEventThrottle={64}
+            onScroll={event => {
+                const position = Math.max(0, event.nativeEvent.contentOffset.y) + navigationHeight.current + spacing.sm;
+                const next = hasCharts && anchors.current.charts > 0 && position >= anchors.current.charts ? "charts"
+                    : anchors.current.favorites > 0 && position >= anchors.current.favorites ? "favorites" : "recommend";
+                setActiveSection(previous => previous === next ? previous : next);
+            }}>
+            <View testID="home-section-navigation" style={[styles.channels, { backgroundColor: colors.pageBackground }]} onLayout={event => {
+                navigationHeight.current = event.nativeEvent.layout.height;
+            }}>
+                {sections.map(section => (
+                    <Pressable
+                        key={section.key}
+                        accessibilityRole="button"
+                        accessibilityLabel={section.title}
+                        accessibilityState={{ selected: activeSection === section.key }}
+                        style={styles.channelTarget}
+                        onPress={() => jumpTo(section.key)}>
+                        <View style={[styles.channelFill, activeSection === section.key ? { backgroundColor: colors.primary } : undefined]}>
+                            <ThemeText fontSize="title" fontWeight={activeSection === section.key ? "semibold" : "regular"} color={activeSection === section.key ? colors.onPrimary : colors.textSecondary}>{section.title}</ThemeText>
+                        </View>
+                    </Pressable>
+                ))}
+            </View>
+            <HomeFeatureDeck
+                music={data.featuredMusic}
+                favoriteSheet={data.favoriteSheet}
+                favoriteCount={data.favoriteMusics.length}
+                favoriteArtwork={data.favoriteMusics[0]?.artwork}
+                topListPlugins={data.topListPlugins}
+                topListCache={data.topListCache}
+                recentHistory={data.recentHistory}
+                tasteArtists={data.tasteArtists}
+            />
+            <View testID="home-favorites-section" onLayout={event => {
+                anchors.current.favorites = event.nativeEvent.layout.y;
+            }}>
+                <FavoriteListening musics={data.favoriteMusics} sheet={data.favoriteSheet} />
+            </View>
+            <View testID="home-charts-section" onLayout={event => {
+                anchors.current.charts = event.nativeEvent.layout.y;
+            }}>
+                <Discovery preview={preview} hasSource={data.topListPlugins.length > 0} />
+            </View>
             <QuickAccess
                 historyCount={data.historyCount}
                 favoriteCount={data.favoriteSheet?.worksNum ?? 0}
@@ -234,8 +283,10 @@ function RecentListening({ musics }: { musics: IMusic.IMusicItem[] }) {
 
 const styles = StyleSheet.create({
     wrapper: { flex: 1, width: "100%" },
-    content: { paddingTop: spacing.md, paddingBottom: spacing.xxxl },
-    featureDeck: { paddingHorizontal: spacing.xxxl, gap: spacing.md, alignItems: "stretch" },
+    content: { paddingBottom: spacing.xxxl },
+    channels: { paddingHorizontal: spacing.xxl, paddingVertical: spacing.xxs, flexDirection: "row", gap: spacing.sm },
+    channelTarget: { minHeight: minimumTouch, minWidth: minimumTouch, justifyContent: "center" },
+    channelFill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.pill },
     quickRow: { paddingHorizontal: spacing.xxxl, paddingTop: spacing.lg, paddingBottom: spacing.sm, flexDirection: "row", alignItems: "stretch" },
     quickItem: { flex: 1, minWidth: 0, minHeight: minimumTouch, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xxs, paddingHorizontal: spacing.xxs },
     quickTitle: { flexShrink: 1, textAlign: "center" },

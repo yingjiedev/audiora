@@ -1,7 +1,10 @@
 import React from "react";
-import { StyleSheet } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import HomeOverview from "./homeOverview";
+import { darkColors, lightColors } from "@/constants/colorPalette";
+import { resolveThemeColors } from "@/utils/themeColors";
+import { blendOver, contrastRatio } from "@/utils/colorContrast";
 
 const mockNavigate = jest.fn();
 const mockShowPanel = jest.fn();
@@ -9,6 +12,10 @@ let mockDisplayNames: Record<string, string> = {};
 let mockFeaturedMusic: IMusic.IMusicItem | null = null;
 let mockRecentMusics: IMusic.IMusicItem[] = [];
 let mockFavoriteMusics: IMusic.IMusicItem[] = [];
+let mockReducedMotion = false;
+const mockScrollTo = jest.fn();
+let mockHasSource = true;
+let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 let mockDiscovery = { hasError: false, loading: false, topLists: [] as IMusic.IMusicSheetItemBase[], topListPluginHash: "plugin-1", topListPluginName: "demo" };
 jest.mock("@/components/mediaItem/musicItem", () => "MusicItem");
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: (...args: unknown[]) => mockShowPanel(...args) }));
@@ -90,12 +97,16 @@ jest.mock("@/utils/toast", () => ({
     __esModule: true,
     default: { success: jest.fn(), warn: jest.fn() },
 }));
-jest.mock("@/hooks/useColors", () => () => ({
-    card: "#FFFFFF",
-    primary: "#3978FF",
-    primaryText: "#2451B4",
-    text: "#111827",
-    textSecondary: "#6B7280",
+jest.mock("@/hooks/useColors", () => () => mockColors);
+jest.mock("@/hooks/useMotion", () => () => ({ reduceMotion: mockReducedMotion }));
+jest.mock("react-native-reanimated", () => ({
+    __esModule: true,
+    default: { View: "AnimatedView", ScrollView: "AnimatedScrollView" },
+    Extrapolation: { CLAMP: "clamp" },
+    interpolate: () => -18,
+    useSharedValue: () => ({ value: 0 }),
+    useAnimatedStyle: (factory: () => unknown) => factory(),
+    useAnimatedScrollHandler: (handler: unknown) => handler,
 }));
 jest.mock("@/utils/rpx", () => ({
     __esModule: true,
@@ -111,7 +122,7 @@ jest.mock("./useHomeOverview", () => () => ({
     featuredMusic: mockFeaturedMusic,
     historyCount: 11,
     recentMusics: mockRecentMusics,
-    topListPlugins: [{ hash: "plugin-1", name: "demo" }],
+    topListPlugins: mockHasSource ? [{ hash: "plugin-1", name: "demo" }] : [],
     topListCache: {},
     recentHistory: [],
     tasteArtists: [],
@@ -126,8 +137,71 @@ describe("HomeOverview quick access", () => {
         mockFeaturedMusic = null;
         mockRecentMusics = [];
         mockFavoriteMusics = [];
+        mockReducedMotion = false;
+        mockHasSource = true;
+        mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+        mockScrollTo.mockReset();
         mockDiscovery = { hasError: false, loading: false, topLists: [], topListPluginHash: "plugin-1", topListPluginName: "demo" };
         mockReplacePlayList.mockReset();
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    it.each([
+        ["light", lightColors, false],
+        ["dark", darkColors, true],
+        ["custom", { ...lightColors, primary: "#7459C7" }, false],
+        ["transparent", { ...lightColors, primary: "rgba(56,103,244,0.7)", card: "rgba(255,255,255,0.72)" }, false],
+    ])("keeps the selected channel readable on the actual %s fill", (_label, colors, dark) => {
+        mockColors = resolveThemeColors({ ...colors, background: colors.pageBackground }, dark);
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        const selected = renderer.root.findByProps({ accessibilityLabel: "home.forYou" });
+        const text = selected.findByType("ThemeText" as any);
+        const fill = StyleSheet.flatten(text.parent!.props.style).backgroundColor;
+        expect(fill).toBe(mockColors.primary);
+        const actual = blendOver(fill, mockColors.pageBackground);
+        expect(contrastRatio(blendOver(text.props.color, actual), actual)).toBeGreaterThanOrEqual(4.5);
+        act(() => renderer.unmount());
+    });
+
+    it.each([false, true])("jumps below the sticky navigation and follows actual scroll position (reduced motion %s)", reduced => {
+        mockReducedMotion = reduced;
+        jest.spyOn(ScrollView.prototype, "scrollTo").mockImplementation(mockScrollTo);
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        const measure = (id: string, layout: object) => act(() => renderer.root.findAllByProps({ testID: id }).find(node => typeof node.props.onLayout === "function")!.props.onLayout({ nativeEvent: { layout } }));
+        measure("home-section-navigation", { height: 50 });
+        measure("home-favorites-section", { y: 400 });
+        measure("home-charts-section", { y: 900 });
+        act(() => renderer.root.findByProps({ accessibilityLabel: "home.myCollection" }).props.onPress());
+        expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 350, animated: !reduced });
+        const rootScroll = renderer.root.findAllByProps({ testID: "home-overview-scroll" }).find(node => typeof node.props.onScroll === "function")!;
+        act(() => rootScroll.props.onScroll({ nativeEvent: { contentOffset: { y: 350 } } }));
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.myCollection" }).props.accessibilityState.selected).toBe(true);
+        act(() => renderer.root.findAllByProps({ accessibilityLabel: "home.topList" }).find(node => node.props.accessibilityState)!.props.onPress());
+        expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 850, animated: !reduced });
+        act(() => rootScroll.props.onScroll({ nativeEvent: { contentOffset: { y: 850 } } }));
+        const charts = renderer.root.findAllByProps({ accessibilityLabel: "home.topList" }).find(node => node.props.accessibilityState)!;
+        expect(charts.props.accessibilityState.selected).toBe(true);
+        act(() => renderer.root.findByProps({ accessibilityLabel: "home.forYou" }).props.onPress());
+        expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 0, animated: !reduced });
+        act(() => renderer.unmount());
+    });
+
+    it("opens the real chart page from the navigation when no source can render a preview", () => {
+        mockHasSource = false;
+        mockDiscovery.topListPluginName = "";
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        act(() => renderer.root.findByProps({ accessibilityLabel: "home.topList" }).props.onPress());
+        expect(mockNavigate).toHaveBeenCalledWith("top-list");
+        act(() => renderer.unmount());
     });
 
     it("opens recent songs in the playback drawer and keeps other Home destinations", () => {
@@ -238,7 +312,7 @@ describe("HomeOverview quick access", () => {
         expect(renderer.root.findByType("FastImage" as any).props.source).toBe(sheet.artwork);
         act(() => renderer.root.findByProps({ accessibilityLabel: sheet.title }).props.onPress());
         expect(mockNavigate).toHaveBeenLastCalledWith("top-list-detail", { pluginHash: "plugin-1", topList: sheet });
-        act(() => renderer.root.findByProps({ accessibilityLabel: "home.topList" }).props.onPress());
+        act(() => renderer.root.findAllByProps({ accessibilityLabel: "home.topList" }).find(node => !node.props.accessibilityState)!.props.onPress());
         expect(mockNavigate).toHaveBeenLastCalledWith("top-list", { initialPluginHash: "plugin-1" });
         act(() => renderer.unmount());
     });

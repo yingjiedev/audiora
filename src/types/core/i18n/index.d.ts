@@ -139,6 +139,9 @@ export interface ILanguageData {
     "home.clickToSearch": string; // 点击搜索
     "home.continueListening": string;
     "home.favoriteReplayTitle": string;
+    "home.forYou": string;
+    "home.myCollection": string;
+    "home.savedSongs": string;
     "home.welcomeTitle": string;
     "home.welcomeSubtitle": string;
     "home.viewAll": string;

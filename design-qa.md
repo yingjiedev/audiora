@@ -419,3 +419,11 @@ Validation: 11 relevant suites / 104 tests pass after the failed new assertion w
 Native visual QA final result: blocked (pending user acceptance). The prior screenshot is not a new-build acceptance screenshot. Per AGENTS.md, device operations stop after installation/version confirmation; no automatic launch, capture or emulator for this follow-up.
 
 Home follow-up preview delivered: source 49a891018bf8c6e37f7c46a25c33a68d2a19d819, version 0.3.1-preview.i88.homerefine.20261012.203736, code 1791808656, package io.github.yingjiedev.audiora, arm64-v8a. APK SHA-256 57F6A20DFFCE2393E0326B6EA8C5302E8514A1B30E40F6F263F6D132F47D2E67; exact clean source, actual metadata, v2 single signer, fonts and vinyl resource verified. Matched the currently installed certificate and upgraded from homeui.20261012.195427 / 1791806067 with adb install -r. Exact installed name/code confirmed on the paired physical phone, then all device operations stopped. APK and verification JSON retained under D:/audiora-previews/issue-88. Appearance, gestures and real audio remain pending user; no new-version launch, capture or substitute acceptance performed.
+# 2026-10-12 首页折页顶部迭代
+
+Source: 用户当前 20:49 首页截图、展开参考和 20:52 折页参考，原文件保存在 `docs/design/evidence/home-fold/`。审查与实现见 `docs/design/home-folded-header-20261012.md`。
+
+增加真实收藏折页、吸顶页内导航，重新组织封面和歌曲信息；使用主题语义色、共享动效与真实播放路径。相关 123 项回归、180 项颜色回归及颜色/界面/动效/运行时守卫通过；仓库存量 lint/TypeScript 问题仍在。
+
+Native visual QA final result: **blocked — pending user acceptance**。本轮使用用户提供的旧版本截图作为修改依据，没有采集或声称验证新版本真机截图。AGENTS.md 要求预览安装确认版本后停止，由用户验收；当前手机连接信息待补充。
+
