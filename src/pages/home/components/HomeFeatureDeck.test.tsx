@@ -30,7 +30,7 @@ jest.mock("react-native-reanimated", () => ({
     __esModule: true,
     default: { View: "AnimatedView", ScrollView: "AnimatedScrollView" },
     Extrapolation: { CLAMP: "clamp" },
-    interpolate: (value: number, inputs: number[], outputs: number[]) => outputs[0] + (outputs[1] - outputs[0]) * Math.max(0, Math.min(1, value / inputs[1])),
+    interpolate: (value: number, inputs: number[], outputs: number[]) => outputs[0] + (outputs[1] - outputs[0]) * Math.max(0, Math.min(1, (value - inputs[0]) / (inputs[1] - inputs[0]))),
     useSharedValue: () => mockOffset,
     useAnimatedStyle: (factory: () => unknown) => factory(),
     useAnimatedScrollHandler: (handler: unknown) => handler,
@@ -82,6 +82,7 @@ describe("Home folded collection", () => {
         mockReduced = true;
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(fold()).toEqual([]);
+        expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-face" }).props.style).opacity).toBe(1);
         expect(leaf().props.renderToHardwareTextureAndroid).toBe(false);
         expect(deck.props.snapToOffsets).not.toContain(leafWidth);
         expect(renderer.root.findByProps({ accessibilityLabel: "home.favoriteSheet · 5 songs" }).props.onPress).toEqual(expect.any(Function));
@@ -96,9 +97,12 @@ describe("Home folded collection", () => {
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.5 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(angle()).toBe(-90);
+        const face = renderer.root.findByProps({ testID: "home-feature-fold-face" });
+        expect(StyleSheet.flatten(face.props.style).opacity).toBe(0);
         act(() => deck.props.onScroll({ contentOffset: { x: width } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(angle()).toBe(-180);
+        expect(StyleSheet.flatten(face.props.style).opacity).toBe(0);
         expect(deck.props.snapToOffsets).toContain(width);
         const front = renderer.root.findByProps({ testID: "home-feature-front" });
         expect(StyleSheet.flatten(front.props.style).zIndex).toBeGreaterThan(StyleSheet.flatten(leaf.props.style).zIndex);
@@ -107,6 +111,7 @@ describe("Home folded collection", () => {
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.2 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(angle()).toBe(-36);
+        expect(StyleSheet.flatten(face.props.style).opacity).toBe(1);
         expect(deck.props.removeClippedSubviews).toBe(false);
         expect(leaf.props.collapsable).toBe(false);
         expect(leaf.props.renderToHardwareTextureAndroid).toBe(true);

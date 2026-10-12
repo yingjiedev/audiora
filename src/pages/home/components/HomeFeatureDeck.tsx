@@ -52,6 +52,11 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
         borderTopLeftRadius: reduceMotion ? radius.lg : interpolate(offset.value, [0, leafWidth / 2], [0, radius.lg], Extrapolation.CLAMP),
         borderBottomLeftRadius: reduceMotion ? radius.lg : interpolate(offset.value, [0, leafWidth / 2], [0, radius.lg], Extrapolation.CLAMP),
     }), [reduceMotion, leafWidth]);
+    // Android backfaceVisibility checks the child's local rotation, not its rotating parent.
+    // Fade the printed face at the edge; the leaf's solid surface is its unprinted back.
+    const frontFaceStyle = useAnimatedStyle(() => ({
+        opacity: reduceMotion ? 1 : interpolate(offset.value, [leafWidth * 0.45, leafWidth / 2], [1, 0], Extrapolation.CLAMP),
+    }), [reduceMotion, leafWidth]);
 
     return (
         <Animated.ScrollView
@@ -67,22 +72,23 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
             onScroll={onScroll}
             scrollEventThrottle={16}>
             <View testID="home-feature-spread" style={[styles.spread, { width: cardWidth }]}>
-                <Animated.View testID="home-feature-fold" collapsable={false} renderToHardwareTextureAndroid={!reduceMotion} style={[styles.leaf, { width: leafWidth }, foldStyle]}>
-                    <View pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.leafBack, { backgroundColor: colors.featuredFoldSurface }]} />
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`${t("home.favoriteSheet")} · ${t("home.songCount", { count: props.favoriteCount })}`}
-                        style={[styles.collection, { backgroundColor: colors.featuredFoldSurface, borderColor: colors.onFeaturedSecondary }]}
-                        onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: props.favoriteSheet.id })}>
-                        <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.myCollection")}</ThemeText>
-                        <View style={styles.collectionCount}>
-                            {props.favoriteArtwork ? <FastImage source={props.favoriteArtwork} placeholderSource={ImgAsset.albumDefault} style={styles.collectionCover} />
-                                : <Icon name="musical-note" size={rpx(40)} color={colors.onFeatured} />}
-                            <ThemeText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} color={colors.onFeatured} fontWeight="semibold" style={styles.count}>{props.favoriteCount}</ThemeText>
-                            <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.savedSongs")}</ThemeText>
-                        </View>
-                        <Icon name="chevron-right" size={rpx(22)} color={colors.onFeaturedSecondary} />
-                    </Pressable>
+                <Animated.View testID="home-feature-fold" collapsable={false} renderToHardwareTextureAndroid={!reduceMotion} style={[styles.leaf, { width: leafWidth, backgroundColor: colors.featuredFoldSurface }, foldStyle]}>
+                    <Animated.View testID="home-feature-fold-face" collapsable={false} style={[styles.leafFace, frontFaceStyle]}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t("home.favoriteSheet")} · ${t("home.songCount", { count: props.favoriteCount })}`}
+                            style={[styles.collection, { backgroundColor: colors.featuredFoldSurface, borderColor: colors.onFeaturedSecondary }]}
+                            onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: props.favoriteSheet.id })}>
+                            <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.myCollection")}</ThemeText>
+                            <View style={styles.collectionCount}>
+                                {props.favoriteArtwork ? <FastImage source={props.favoriteArtwork} placeholderSource={ImgAsset.albumDefault} style={styles.collectionCover} />
+                                    : <Icon name="musical-note" size={rpx(40)} color={colors.onFeatured} />}
+                                <ThemeText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} color={colors.onFeatured} fontWeight="semibold" style={styles.count}>{props.favoriteCount}</ThemeText>
+                                <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.savedSongs")}</ThemeText>
+                            </View>
+                            <Icon name="chevron-right" size={rpx(22)} color={colors.onFeaturedSecondary} />
+                        </Pressable>
+                    </Animated.View>
                 </Animated.View>
                 <Animated.View testID="home-feature-front" collapsable={false} style={[styles.hero, heroFoldStyle]}>
                     <HomeHero music={props.music} joined />
@@ -104,10 +110,10 @@ const styles = StyleSheet.create({
     deck: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.sm, gap: spacing.md, alignItems: "stretch" },
     spread: { flexDirection: "row", minHeight: rpx(320) },
     // The front card draws above the leaf after it crosses the hinge, hiding its closed back face.
-    leaf: { zIndex: 0 },
-    leafBack: { ...StyleSheet.absoluteFill, borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, backfaceVisibility: "hidden", transform: [{ rotateY: "180deg" }] },
+    leaf: { zIndex: 0, borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, overflow: "hidden" },
+    leafFace: { flex: 1 },
     hero: { flex: 1, zIndex: 1, borderRadius: radius.lg, overflow: "hidden" },
-    collection: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), paddingHorizontal: spacing.sm, paddingVertical: spacing.lg, justifyContent: "space-between", alignItems: "flex-start", borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, backfaceVisibility: "hidden", overflow: "hidden" },
+    collection: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), paddingHorizontal: spacing.sm, paddingVertical: spacing.lg, justifyContent: "space-between", alignItems: "flex-start", borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
     collectionCount: { gap: spacing.xs, alignItems: "flex-start", width: "100%" },
     collectionCover: { width: rpx(68), height: rpx(68), borderRadius: radius.xs },
     count: { fontSize: fontRpx(40), width: "100%" },
