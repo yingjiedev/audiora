@@ -400,3 +400,10 @@ User supplied four screenshots, inspected individually in this turn. The WeChat 
 Validation: 11 focused Jest suites / 102 tests; 17 color suites / 179 tests; color/UI/runtime guards and changed-file ESLint pass. Full lint remains 14 existing errors / 100 warnings; unrelated auto-fixes restored. Explicit TypeScript has no changed-file diagnostics; existing repository diagnostics remain.
 
 Native visual QA final result: blocked (pending user acceptance). AGENTS.md requires stopping after physical installation/version confirmation; no device screenshot, launch, emulator or substitute visual acceptance is performed. Implementation and behavior checks do not establish pixel or native visual acceptance. Full input audit and functional mapping: docs/design/home-page-redesign-20261012.md.
+
+## Android preview delivery
+
+- Version: 0.3.1-preview.i88.homeui.20261012.195427; versionCode 1791806067; applicationId io.github.yingjiedev.audiora; ABI arm64-v8a; app source a28f782cfb4409eaf83be14c644afcf42995db82.
+- APK: D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.homeui.20261012.195427-arm64-v8a-release.apk; SHA-256 307C0BA43B9C826DE416B20D5957EFBDD37EC2DD4ADE9C3FDE94FF6B8A4AC3EA. Verified exact clean source commit, v2 single signer, packaged fonts by bytes/hash, and vinyl bitmap.
+- Compared installed certificate successfully; adb install -r upgraded 0.3.1-preview.i88.chartsui.20261012.003254 / 1791736375 with data preserved. Exact installed name/code confirmed on adb-136d1219-c52c06._adb-tls-connect._tcp at 2026-10-12T19:58:42.9998823+08:00; all device operations stopped afterward. No app launch, screenshot, emulator or native visual acceptance.
+- Report: D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.homeui.20261012.195427-verification.json. User acceptance pending.
