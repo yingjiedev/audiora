@@ -26,3 +26,13 @@ React Native 当前依赖中的 `ScrollViewStickyHeader` 会将直接子节点�
 - `test:colors`：17 套件 / 182 项通过；颜色/UI/动效/运行时守卫通过，改动文件 ESLint 无错误、无警告。
 - 全仓 lint 仍有既存 14 个错误、100 个警告，自动改动的无关文件已恢复。扩展 TypeScript 检查仍有其他既存问题，本次改动文件无诊断。全仓 Jest 未重跑。
 - 真机排版、透视、手势和实际音频由用户安装后验收，未声明截图验收通过。遵循 AGENTS.md，安装确认完整版本后停止设备操作。
+
+## 安装交付
+
+- 应用源码：`cb370b5154fb02913a77c18bb133b8a142dc62be`。构建成功（2m14s）；包名 `io.github.yingjiedev.audiora`，ABI `arm64-v8a`。
+- 完整安装版本：`0.3.1-preview.i88.headerfix.20261012.214800`，versionCode `1791812880`。
+- APK：`D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.headerfix.20261012.214800-arm64-v8a-release.apk`。
+- SHA-256：`6440AE0502126B5ECC76AED7FB3633AD8EB77EF70A3944B8ECB7D2F76C2CA4FA`；aapt2 元数据、v2 单签名者、三个字体字节/哈希与黑胶资源通过。
+- 新导航、主卡、折页和首页主体四个模块的 Metro source-map 原文与构建树文件逐字一致；APK 内 JavaScript 字节与生成的 Hermes bundle 哈希一致，结果写入验证 JSON。构建树的跟踪源码干净且精确对应应用提交。
+- 在 `192.168.31.232:42033` 与当前安装包证书比对一致，`adb install -r` 保留数据覆盖安装成功，从 `homefold.20261012.211446` / `1791810886` 升级至上述完整版本并确认实际安装版本后停止设备操作。
+- 校验和安装记录：`D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.headerfix.20261012.214800-verification.json`。没有自动打开应用、采集新版本截图或替代用户验收；Issue #88 继续待用户确认。

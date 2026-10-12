@@ -435,3 +435,5 @@ Native visual QA final result: **blocked — pending user acceptance**。本轮�
 Validation: 13 relevant suites / 129 tests and 17 color suites / 182 tests pass. New tests load the actual RN sticky-header implementation and exercise its child cloning, layout callback and section action boundaries. Color/UI/motion/runtime guards and changed-file ESLint pass; repository lint and other TypeScript findings remain.
 
 Native visual QA final result: **blocked — pending user acceptance**。组件边界回归不等于原生像素布局验收；本轮没有自动启动应用、截屏或运行模拟器。预览安装、版本确认及资源核验记录随后补充。
+
+吸顶修复预览已安装：`0.3.1-preview.i88.headerfix.20261012.214800` / `1791812880`，应用源码 `cb370b51`。实际 APK 版本、ABI、签名、字体和资源核验通过；四个顶部模块的 source-map 原文与构建源码一致，APK JavaScript 与生成 bundle 的字节哈希一致。当前手机安装证书比对一致，保留数据升级成功并确认完整版本后停止全部设备操作，原生视觉/手势/音频仍待用户验收。
