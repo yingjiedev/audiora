@@ -39,4 +39,11 @@
 
 此次依据已有截图修正。安装新预览并确认版本后，按 AGENTS.md 停止设备操作；不自动打开、点击或再截屏。新版本在真实屏幕上的比例、横滑、长标题、各主题及实际音频仍由用户验收，组件测试与构建不能代替视觉通过。
 
-Android 预览的版本、签名、字体、源提交及保留数据安装记录会在交付验证后补充。
+## Android 预览交付
+
+- 应用源提交：49a891018bf8c6e37f7c46a25c33a68d2a19d819；短路径独立工作树 D:/a105。构建使用 scripts/build-preview.ps1，并在构建前复制三个字体。
+- 包名 io.github.yingjiedev.audiora，versionName 0.3.1-preview.i88.homerefine.20261012.203736，versionCode 1791808656，ABI arm64-v8a。
+- APK：D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.homerefine.20261012.203736-arm64-v8a-release.apk。SHA-256：57F6A20DFFCE2393E0326B6EA8C5302E8514A1B30E40F6F263F6D132F47D2E67。
+- 校验实际 APK 的精确元数据、干净源提交、v2 单签名者、字体字节/哈希与黑胶资源；签名证书与当前安装包比对一致。
+- adb install -r 保留数据升级已配对真机，从 homeui.20261012.195427 / 1791806067 升级成功。实际安装的完整版本名及 versionCode 1791808656 确认后，停止所有设备操作。
+- 验证 JSON：D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.homerefine.20261012.203736-verification.json。新包没有自动启动、点击、截屏或模拟器验收；原生外观及实际音频仍待用户验收。
