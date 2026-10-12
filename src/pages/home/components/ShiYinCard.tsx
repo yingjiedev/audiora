@@ -26,18 +26,18 @@ export default function ShiYinCard(props: {
             accessibilityState={{ disabled: loading, busy: loading }}
             disabled={loading}
             onPress={() => start()}
-            style={[styles.card, { backgroundColor: colors.card }]}>
+            style={[styles.card, { backgroundColor: colors.featuredCompanionSurface }]}>
             <View style={styles.heading}>
-                <View style={[styles.symbol, { backgroundColor: colors.surface }]}>
-                    <Icon name="shuffle" size={rpx(36)} color={colors.text} />
+                <View style={[styles.symbol, { backgroundColor: colors.featuredSurface }]}>
+                    <Icon name="shuffle" size={rpx(36)} color={colors.onFeatured} />
                 </View>
-                <ThemeText fontSize="title" fontWeight="semibold" style={styles.title}>{t("home.shiyin")}</ThemeText>
+                <ThemeText fontSize="title" fontWeight="semibold" color={colors.onFeaturedCompanion} style={styles.title}>{t("home.shiyin")}</ThemeText>
             </View>
-            <ThemeText fontSize="description" fontColor="textSecondary" style={styles.description}>{t("home.shiyinSubtitle")}</ThemeText>
+            <ThemeText fontSize="description" color={colors.onFeaturedCompanionSecondary} style={styles.description}>{t("home.shiyinSubtitle")}</ThemeText>
             <View style={styles.footer}>
-                <ThemeText fontSize="tag" fontColor="textSecondary" style={styles.title}>{t("home.topList")}</ThemeText>
-                <View style={[styles.playFill, { backgroundColor: colors.surface }]}>
-                    {loading ? <ActivityIndicator size="small" color={colors.text} /> : <Icon name="play" size={rpx(26)} color={colors.text} />}
+                <ThemeText fontSize="tag" color={colors.onFeaturedCompanionSecondary} style={styles.title}>{t("home.topList")}</ThemeText>
+                <View style={[styles.playFill, { backgroundColor: colors.inverseSurface }]}>
+                    {loading ? <ActivityIndicator size="small" color={colors.onInverse} /> : <Icon name="play" size={rpx(26)} color={colors.onInverse} />}
                 </View>
             </View>
         </Pressable>

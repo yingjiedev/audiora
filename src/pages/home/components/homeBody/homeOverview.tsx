@@ -14,7 +14,7 @@ import useColors from "@/hooks/useColors";
 import useMotion from "@/hooks/useMotion";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent } from "react-native";
 import HomeFeatureDeck from "../HomeFeatureDeck";
 import HomeSectionNavigation from "../HomeSectionNavigation";
 import useHomeDiscovery, { IHomeDiscoveryPreview } from "./useHomeDiscovery";
@@ -25,6 +25,38 @@ const minimumTouch = Math.max(44, controlSize.minimumTouch);
 export default function HomeOverview() {
     const data = useHomeOverview();
     const preview = useHomeDiscovery(data.topListPlugins);
+    const hasCharts = data.topListPlugins.length > 0 || preview.topLists.length > 0 || preview.loading;
+    return (
+        <HomeOverviewScroll
+            hasCharts={hasCharts}
+            hero={<HomeFeatureDeck
+                music={data.featuredMusic}
+                favoriteSheet={data.favoriteSheet}
+                favoriteCount={data.favoriteMusics.length}
+                favoriteArtwork={data.favoriteSheet.coverImg || data.favoriteMusics.map(music => resolveArtwork(music)).find(Boolean)}
+                topListPlugins={data.topListPlugins}
+                topListCache={data.topListCache}
+                recentHistory={data.recentHistory}
+                tasteArtists={data.tasteArtists}
+            />}
+            favorites={<FavoriteListening musics={data.favoriteMusics} sheet={data.favoriteSheet} />}
+            charts={<Discovery preview={preview} hasSource={data.topListPlugins.length > 0} />}
+            footer={<>
+                <QuickAccess historyCount={data.historyCount} favoriteCount={data.favoriteSheet?.worksNum ?? 0} favoriteSheetId={data.favoriteSheet?.id} />
+                <RecentListening musics={data.recentMusics} />
+            </>}
+        />
+    );
+}
+
+/** Scroll selection belongs here, so it cannot rerender the supplied content or restart its hooks. */
+function HomeOverviewScroll({ hasCharts, hero, favorites, charts, footer }: {
+    hasCharts: boolean;
+    hero: React.ReactNode;
+    favorites: React.ReactNode;
+    charts: React.ReactNode;
+    footer: React.ReactNode;
+}) {
     const navigate = useNavigate();
     const { t } = useI18N();
     const { reduceMotion } = useMotion();
@@ -32,7 +64,27 @@ export default function HomeOverview() {
     const anchors = useRef({ favorites: 0, charts: 0 });
     const navigationHeight = useRef(0);
     const [activeSection, setActiveSection] = useState("recommend");
-    const hasCharts = data.topListPlugins.length > 0 || preview.topLists.length > 0 || preview.loading;
+    const activeSectionRef = useRef("recommend");
+    const pendingJump = useRef<{ key: string; y: number } | null>(null);
+    const positionY = useRef(0);
+    const viewportHeight = useRef(0);
+    const contentHeight = useRef(0);
+    const select = (key: string) => {
+        if (activeSectionRef.current === key) return;
+        activeSectionRef.current = key;
+        setActiveSection(key);
+    };
+    const followScroll = (event: NativeScrollEvent) => {
+        positionY.current = Math.max(0, event.contentOffset.y);
+        // Do not flash intermediate selections during a requested animated jump.
+        if (pendingJump.current) {
+            if (Math.abs(positionY.current - pendingJump.current.y) > 2) return;
+            pendingJump.current = null;
+        }
+        const position = positionY.current + navigationHeight.current + spacing.sm;
+        select(hasCharts && anchors.current.charts > 0 && position >= anchors.current.charts ? "charts"
+            : anchors.current.favorites > 0 && position >= anchors.current.favorites ? "favorites" : "recommend");
+    };
     const sections = [
         { key: "recommend", title: t("home.forYou") },
         { key: "favorites", title: t("home.myCollection") },
@@ -44,7 +96,11 @@ export default function HomeOverview() {
             return;
         }
         const target = key === "recommend" ? 0 : anchors.current[key as "favorites" | "charts"] - navigationHeight.current;
-        scroll.current?.scrollTo({ y: Math.max(0, target), animated: !reduceMotion });
+        const maxY = contentHeight.current > 0 && viewportHeight.current > 0 ? Math.max(0, contentHeight.current - viewportHeight.current) : Infinity;
+        const y = Math.min(maxY, Math.max(0, target));
+        select(key);
+        pendingJump.current = !reduceMotion && Math.abs(positionY.current - y) > 2 ? { key, y } : null;
+        scroll.current?.scrollTo({ y, animated: !reduceMotion });
     };
 
     return (
@@ -56,41 +112,37 @@ export default function HomeOverview() {
             showsVerticalScrollIndicator={false}
             stickyHeaderIndices={[0]}
             scrollEventThrottle={64}
+            onLayout={event => {
+                viewportHeight.current = event.nativeEvent.layout.height;
+            }}
+            onContentSizeChange={(_width, height) => {
+                contentHeight.current = height;
+            }}
+            onScrollBeginDrag={() => {
+                pendingJump.current = null;
+            }}
+            onMomentumScrollEnd={event => {
+                pendingJump.current = null;
+                followScroll(event.nativeEvent);
+            }}
             onScroll={event => {
-                const position = Math.max(0, event.nativeEvent.contentOffset.y) + navigationHeight.current + spacing.sm;
-                const next = hasCharts && anchors.current.charts > 0 && position >= anchors.current.charts ? "charts"
-                    : anchors.current.favorites > 0 && position >= anchors.current.favorites ? "favorites" : "recommend";
-                setActiveSection(previous => previous === next ? previous : next);
+                followScroll(event.nativeEvent);
             }}>
             <HomeSectionNavigation testID="home-section-navigation" sections={sections} activeSection={activeSection} onSelect={jumpTo} onLayout={event => {
                 navigationHeight.current = event.nativeEvent.layout.height;
             }} />
-            <HomeFeatureDeck
-                music={data.featuredMusic}
-                favoriteSheet={data.favoriteSheet}
-                favoriteCount={data.favoriteMusics.length}
-                favoriteArtwork={data.favoriteSheet.coverImg || data.favoriteMusics.map(music => resolveArtwork(music)).find(Boolean)}
-                topListPlugins={data.topListPlugins}
-                topListCache={data.topListCache}
-                recentHistory={data.recentHistory}
-                tasteArtists={data.tasteArtists}
-            />
+            {hero}
             <View testID="home-favorites-section" onLayout={event => {
                 anchors.current.favorites = event.nativeEvent.layout.y;
             }}>
-                <FavoriteListening musics={data.favoriteMusics} sheet={data.favoriteSheet} />
+                {favorites}
             </View>
             <View testID="home-charts-section" onLayout={event => {
                 anchors.current.charts = event.nativeEvent.layout.y;
             }}>
-                <Discovery preview={preview} hasSource={data.topListPlugins.length > 0} />
+                {charts}
             </View>
-            <QuickAccess
-                historyCount={data.historyCount}
-                favoriteCount={data.favoriteSheet?.worksNum ?? 0}
-                favoriteSheetId={data.favoriteSheet?.id}
-            />
-            <RecentListening musics={data.recentMusics} />
+            {footer}
         </ScrollView>
     );
 }

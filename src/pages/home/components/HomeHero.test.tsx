@@ -118,11 +118,11 @@ describe("Home listening card", () => {
         expect(target.height).toBeGreaterThanOrEqual(44);
         const icon = play.findByType("Icon" as any);
         expect(icon.props.color).toBe(mockColors.onInverse);
-        const actualCard = blendOver(mockColors.cardInset, mockColors.pageBackground);
+        const actualCard = blendOver(mockColors.featuredSurface, mockColors.pageBackground);
         const buttonSurface = blendOver(mockColors.inverseSurface, actualCard);
         expect(contrastRatio(blendOver(mockColors.onInverse, buttonSurface), buttonSurface)).toBeGreaterThanOrEqual(3);
-        expect(contrastRatio(blendOver(mockColors.onCardInset, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
-        expect(contrastRatio(blendOver(mockColors.onCardInsetSecondary, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
-        expect(renderer.root.findAllByType("ThemeText" as any).every(node => node.props.color === mockColors.onCardInset || node.props.color === mockColors.onCardInsetSecondary)).toBe(true);
+        expect(contrastRatio(blendOver(mockColors.onFeatured, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(blendOver(mockColors.onFeaturedSecondary, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
+        expect(renderer.root.findAllByType("ThemeText" as any).every(node => node.props.color === mockColors.onFeatured || node.props.color === mockColors.onFeaturedSecondary)).toBe(true);
     });
 });

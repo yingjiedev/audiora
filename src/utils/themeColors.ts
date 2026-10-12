@@ -57,6 +57,16 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const insetBackgrounds = [cardBackground, cardInset];
     const onCardInset = readableAccent(safeColor(colors.text, preset.text).hex(), insetBackgrounds, colorContrastMinimum.text);
     const onCardInsetSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), insetBackgrounds, colorContrastMinimum.text);
+    // Featured listening cards use the user's primary hue at full opacity.
+    // Separate surfaces keep text legible without changing persisted theme settings.
+    const featuredSurface = primaryOpaque;
+    const featuredFoldSurface = Color(primaryOpaque).mix(safeColor(colors.text, preset.text), 0.10).hex();
+    const featuredCompanionSurface = Color(cardBackground).mix(Color(primaryOpaque), 0.30).hex();
+    const featuredBackgrounds = [featuredSurface, featuredFoldSurface];
+    const onFeatured = readableAccent(bestForeground(featuredSurface, [mediaOnDark, lightColors.text, controlNeutralDark]), featuredBackgrounds, colorContrastMinimum.text);
+    const onFeaturedSecondary = readableAccent(Color(onFeatured).mix(Color(featuredSurface), 0.12).hex(), featuredBackgrounds, colorContrastMinimum.text);
+    const onFeaturedCompanion = readableAccent(bestForeground(featuredCompanionSurface, [colors.text, preset.text, mediaOnDark, lightColors.text]), [featuredCompanionSurface], colorContrastMinimum.text);
+    const onFeaturedCompanionSecondary = readableAccent(Color(onFeaturedCompanion).mix(Color(featuredCompanionSurface), 0.20).hex(), [featuredCompanionSurface], colorContrastMinimum.text);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
     const activityUnrecorded = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.10).hex();
@@ -79,6 +89,13 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         cardInset,
         onCardInset,
         onCardInsetSecondary,
+        featuredSurface,
+        featuredFoldSurface,
+        featuredCompanionSurface,
+        onFeatured,
+        onFeaturedSecondary,
+        onFeaturedCompanion,
+        onFeaturedCompanionSecondary,
         activityUnrecorded,
         activityEmpty,
         activityOutline,

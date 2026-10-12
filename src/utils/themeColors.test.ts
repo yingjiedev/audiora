@@ -4,6 +4,31 @@ import { bestForeground, blendOver, contrastRatio } from "./colorContrast";
 import { readableAccent, resolveThemeColors } from "./themeColors";
 
 describe("Audiora semantic colors", () => {
+    it.each([
+        ["light", lightColors, false],
+        ["dark", darkColors, true],
+        ["purple", { ...lightColors, primary: "#7459C7" }, false],
+        ["bright", { ...lightColors, primary: "#FFCC00" }, false],
+        ["alpha", { ...lightColors, primary: "rgba(56,103,244,0.3)" }, false],
+        ["transparent", { ...darkColors, card: "rgba(18,18,18,0.22)" }, true],
+    ] as const)("keeps saturated featured cards readable and settings intact in %s", (_name, input, dark) => {
+        const before = { ...input };
+        const colors = resolveThemeColors({ ...input, background: input.pageBackground }, dark);
+        for (const background of [colors.featuredSurface, colors.featuredFoldSurface]) {
+            expect(Color(background).alpha()).toBe(1);
+            for (const foreground of [colors.onFeatured, colors.onFeaturedSecondary]) {
+                expect(contrastRatio(foreground, background)).toBeGreaterThanOrEqual(4.5);
+            }
+        }
+        for (const foreground of [colors.onFeaturedCompanion, colors.onFeaturedCompanionSecondary]) {
+            expect(contrastRatio(foreground, colors.featuredCompanionSurface)).toBeGreaterThanOrEqual(4.5);
+        }
+        expect(colors.featuredSurface).toBe(Color(input.primary).alpha(1).hex());
+        expect(colors.featuredFoldSurface).not.toBe(colors.featuredSurface);
+        expect(colors.featuredCompanionSurface).not.toBe(colors.featuredSurface);
+        expect(input).toEqual(before);
+    });
+
     it("keeps the light corner surface distinct from the card and page", () => {
         const colors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
         expect(contrastRatio(colors.cardInset, colors.card)).toBeGreaterThanOrEqual(1.15);

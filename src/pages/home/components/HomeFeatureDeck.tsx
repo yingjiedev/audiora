@@ -34,7 +34,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
     const navigate = useNavigate();
     const { reduceMotion } = useMotion();
     const cardWidth = Math.min(420, width - spacing.xxxl * 2, width * 0.76);
-    const leafWidth = Math.min(rpx(132), cardWidth * 0.24);
+    const leafWidth = Math.min(rpx(184), cardWidth * 0.30);
     const companionWidth = Math.min(360, width * 0.62);
     const offset = useSharedValue(0);
     const onScroll = useAnimatedScrollHandler(event => {
@@ -42,10 +42,12 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
     });
     const foldStyle = useAnimatedStyle((): ViewStyle => ({
         transform: reduceMotion ? [] : [
-            { perspective: 600 },
-            { rotateY: `${interpolate(offset.value, [0, cardWidth], [-18, -38], Extrapolation.CLAMP)}deg` },
+            { perspective: leafWidth * 4 },
+            { translateX: leafWidth / 2 },
+            { rotateY: `${interpolate(offset.value, [0, leafWidth * 0.75], [0, -68], Extrapolation.CLAMP)}deg` },
+            { translateX: -leafWidth / 2 },
         ],
-    }), [reduceMotion, cardWidth]);
+    }), [reduceMotion, leafWidth]);
 
     return (
         <Animated.ScrollView
@@ -54,26 +56,30 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
             contentContainerStyle={[styles.deck, { paddingRight: Math.max(spacing.xxxl, width - spacing.xxxl - companionWidth) }]}
             snapToOffsets={[0, cardWidth + spacing.md]}
             decelerationRate="fast"
+            removeClippedSubviews={false}
+            directionalLockEnabled
+            nestedScrollEnabled
+            overScrollMode="never"
             onScroll={onScroll}
             scrollEventThrottle={16}>
             <View style={[styles.spread, { width: cardWidth }]}>
-                <Animated.View style={[styles.leaf, { width: leafWidth, backgroundColor: colors.card, borderColor: colors.border }, foldStyle]}>
+                <Animated.View collapsable={false} renderToHardwareTextureAndroid={!reduceMotion} style={[styles.leaf, { width: leafWidth, backgroundColor: colors.featuredFoldSurface, borderColor: colors.onFeaturedSecondary }, foldStyle]}>
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`${t("home.favoriteSheet")} · ${t("home.songCount", { count: props.favoriteCount })}`}
                         style={styles.collection}
                         onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: props.favoriteSheet.id })}>
-                        <ThemeText fontSize="tag" color={colors.onCardInsetSecondary}>{t("home.myCollection")}</ThemeText>
+                        <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.myCollection")}</ThemeText>
                         <View style={styles.collectionCount}>
                             {props.favoriteArtwork ? <FastImage source={props.favoriteArtwork} placeholderSource={ImgAsset.albumDefault} style={styles.collectionCover} />
-                                : <Icon name="musical-note" size={rpx(40)} color={colors.onCardInset} />}
-                            <ThemeText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} color={colors.onCardInset} fontWeight="semibold" style={styles.count}>{props.favoriteCount}</ThemeText>
-                            <ThemeText fontSize="tag" color={colors.onCardInsetSecondary}>{t("home.savedSongs")}</ThemeText>
+                                : <Icon name="musical-note" size={rpx(40)} color={colors.onFeatured} />}
+                            <ThemeText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} color={colors.onFeatured} fontWeight="semibold" style={styles.count}>{props.favoriteCount}</ThemeText>
+                            <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.savedSongs")}</ThemeText>
                         </View>
-                        <Icon name="chevron-right" size={rpx(22)} color={colors.onCardInsetSecondary} />
+                        <Icon name="chevron-right" size={rpx(22)} color={colors.onFeaturedSecondary} />
                     </Pressable>
                 </Animated.View>
-                <HomeHero music={props.music} />
+                <HomeHero music={props.music} joined />
             </View>
             <View style={[styles.companion, { width: companionWidth }]}>
                 <ShiYinCard
@@ -90,7 +96,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
 const styles = StyleSheet.create({
     deck: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.sm, gap: spacing.md, alignItems: "stretch" },
     spread: { flexDirection: "row", minHeight: rpx(300) },
-    leaf: { borderRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, transformOrigin: "right center" },
+    leaf: { borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, backfaceVisibility: "hidden" },
     collection: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), paddingHorizontal: spacing.sm, paddingVertical: spacing.lg, justifyContent: "space-between", alignItems: "flex-start" },
     collectionCount: { gap: spacing.xs, alignItems: "flex-start", width: "100%" },
     collectionCover: { width: rpx(68), height: rpx(68), borderRadius: radius.xs },

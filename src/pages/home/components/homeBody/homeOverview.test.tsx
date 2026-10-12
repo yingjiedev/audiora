@@ -17,6 +17,7 @@ const mockScrollTo = jest.fn();
 let mockHasSource = true;
 let mockSheetCover: string | undefined;
 let mockAssociatedArt: Record<string, string> = {};
+const mockDataReads = jest.fn();
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 let mockDiscovery = { hasError: false, loading: false, topLists: [] as IMusic.IMusicSheetItemBase[], topListPluginHash: "plugin-1", topListPluginName: "demo" };
 jest.mock("@/components/mediaItem/musicItem", () => "MusicItem");
@@ -118,18 +119,21 @@ jest.mock("@/utils/rpx", () => ({
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => true }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: (music: IMusic.IMusicItem) => mockAssociatedArt[String(music.id)] || music.artwork || undefined }));
 jest.mock("./useHomeDiscovery", () => () => mockDiscovery);
-jest.mock("./useHomeOverview", () => () => ({
-    currentMusic: null,
-    favoriteSheet: { id: "favorite", worksNum: 13, ...(mockSheetCover ? { coverImg: mockSheetCover } : {}) },
-    favoriteMusics: mockFavoriteMusics,
-    featuredMusic: mockFeaturedMusic,
-    historyCount: 11,
-    recentMusics: mockRecentMusics,
-    topListPlugins: mockHasSource ? [{ hash: "plugin-1", name: "demo" }] : [],
-    topListCache: {},
-    recentHistory: [],
-    tasteArtists: [],
-}));
+jest.mock("./useHomeOverview", () => () => {
+    mockDataReads();
+    return {
+        currentMusic: null,
+        favoriteSheet: { id: "favorite", worksNum: 13, ...(mockSheetCover ? { coverImg: mockSheetCover } : {}) },
+        favoriteMusics: mockFavoriteMusics,
+        featuredMusic: mockFeaturedMusic,
+        historyCount: 11,
+        recentMusics: mockRecentMusics,
+        topListPlugins: mockHasSource ? [{ hash: "plugin-1", name: "demo" }] : [],
+        topListCache: {},
+        recentHistory: [],
+        tasteArtists: [],
+    };
+});
 jest.mock("../HomeHero", () => "HomeHero");
 
 describe("HomeOverview quick access", () => {
@@ -144,6 +148,7 @@ describe("HomeOverview quick access", () => {
         mockHasSource = true;
         mockSheetCover = undefined;
         mockAssociatedArt = {};
+        mockDataReads.mockClear();
         mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
         mockScrollTo.mockReset();
         mockDiscovery = { hasError: false, loading: false, topLists: [], topListPluginHash: "plugin-1", topListPluginName: "demo" };
@@ -180,7 +185,7 @@ describe("HomeOverview quick access", () => {
         });
         const selected = renderer.root.findByProps({ accessibilityLabel: "home.forYou" });
         const text = selected.findByType("ThemeText" as any);
-        const fill = StyleSheet.flatten(text.parent!.props.style).backgroundColor;
+        const fill = StyleSheet.flatten(text.parent!.findAll(node => node.props.pointerEvents === "none" && node.props.collapsable === false)[0].props.style).backgroundColor;
         expect(fill).toBe(mockColors.primary);
         const actual = blendOver(fill, mockColors.pageBackground);
         expect(contrastRatio(blendOver(text.props.color, actual), actual)).toBeGreaterThanOrEqual(4.5);
@@ -210,6 +215,50 @@ describe("HomeOverview quick access", () => {
         expect(charts.props.accessibilityState.selected).toBe(true);
         act(() => renderer.root.findByProps({ accessibilityLabel: "home.forYou" }).props.onPress());
         expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 0, animated: !reduced });
+        act(() => renderer.unmount());
+    });
+
+    it("does not rerender content or flash intermediate selections during section jumps", () => {
+        jest.spyOn(ScrollView.prototype, "scrollTo").mockImplementation(mockScrollTo);
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        const measure = (id: string, layout: object) => act(() => renderer.root.findAllByProps({ testID: id }).find(node => typeof node.props.onLayout === "function")!.props.onLayout({ nativeEvent: { layout } }));
+        measure("home-section-navigation", { height: 50 });
+        measure("home-favorites-section", { y: 400 });
+        measure("home-charts-section", { y: 900 });
+        const rootScroll = renderer.root.findAllByProps({ testID: "home-overview-scroll" }).find(node => typeof node.props.onScroll === "function")!;
+        const chartTab = () => renderer.root.findAllByProps({ accessibilityLabel: "home.topList" }).find(node => node.props.accessibilityState)!;
+        const reads = mockDataReads.mock.calls.length;
+        act(() => chartTab().props.onPress());
+        expect(chartTab().props.accessibilityState.selected).toBe(true);
+        for (const y of [100, 300, 450, 750, 850]) {
+            act(() => rootScroll.props.onScroll({ nativeEvent: { contentOffset: { y } } }));
+            expect(chartTab().props.accessibilityState.selected).toBe(true);
+        }
+        act(() => rootScroll.props.onScrollBeginDrag());
+        act(() => rootScroll.props.onScroll({ nativeEvent: { contentOffset: { y: 400 } } }));
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.myCollection" }).props.accessibilityState.selected).toBe(true);
+        expect(mockDataReads).toHaveBeenCalledTimes(reads);
+        act(() => renderer.unmount());
+    });
+
+    it("clamps jumps to reachable content and releases selection on native scroll completion", () => {
+        jest.spyOn(ScrollView.prototype, "scrollTo").mockImplementation(mockScrollTo);
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        const rootScroll = renderer.root.findAllByProps({ testID: "home-overview-scroll" }).find(node => typeof node.props.onScroll === "function")!;
+        act(() => rootScroll.props.onLayout({ nativeEvent: { layout: { height: 600 } } }));
+        act(() => rootScroll.props.onContentSizeChange(375, 900));
+        act(() => renderer.root.findAllByProps({ testID: "home-charts-section" }).find(node => node.props.onLayout)!.props.onLayout({ nativeEvent: { layout: { y: 800 } } }));
+        const chartTab = () => renderer.root.findAllByProps({ accessibilityLabel: "home.topList" }).find(node => node.props.accessibilityState)!;
+        act(() => chartTab().props.onPress());
+        expect(mockScrollTo).toHaveBeenLastCalledWith({ y: 300, animated: true });
+        act(() => rootScroll.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { y: 0 } } }));
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.forYou" }).props.accessibilityState.selected).toBe(true);
         act(() => renderer.unmount());
     });
 

@@ -437,3 +437,13 @@ Validation: 13 relevant suites / 129 tests and 17 color suites / 182 tests pass.
 Native visual QA final result: **blocked — pending user acceptance**。组件边界回归不等于原生像素布局验收；本轮没有自动启动应用、截屏或运行模拟器。预览安装、版本确认及资源核验记录随后补充。
 
 吸顶修复预览已安装：`0.3.1-preview.i88.headerfix.20261012.214800` / `1791812880`，应用源码 `cb370b51`。实际 APK 版本、ABI、签名、字体和资源核验通过；四个顶部模块的 source-map 原文与构建源码一致，APK JavaScript 与生成 bundle 的字节哈希一致。当前手机安装证书比对一致，保留数据升级成功并确认完整版本后停止全部设备操作，原生视觉/手势/音频仍待用户验收。
+
+## 2026-10-12 连续切换、折页与顶部色彩修正
+
+本轮新证据为用户 21:53 推荐/收藏状态截图及展开、折叠参考，保存在 `docs/design/evidence/home-fold-interaction/`。审查详见 `docs/design/home-fold-interaction-20261012.md`。初始圆角正确、切换后直角的截图说明旧初次样式检查不足。RN 原生视图存在缺失背景时折叠/新增背景时升格的边界；新实现固定挂载双重圆角的裁切层和主色底片，只更新透明度，统一字重，避免切换结构与尺寸。
+
+栏目选中状态隔离到滚动组件，音乐内容节点与数据 hooks 不随选中更新重建；请求跳转锁定目标，拖动/滚动结束恢复位置判定。侧页加宽到复合卡 30%，右侧书脊显式透视，在半个侧页宽度的横滑中转过 45°；主题主色主卡、明暗折页与同色相拾音卡加强顶部层次。减少动态效果仍保留静态降级。
+
+Validation: 14 related suites / 137 tests and 19 color suites / 205 tests passed; color/UI/motion/runtime guards and changed-file ESLint passed. Repository lint retains 14 existing errors / 100 warnings; extended TypeScript has no diagnostics in changed files. No baseline or exemption widened.
+
+Native visual QA final result: **blocked — pending user acceptance**。用户截图是问题证据，不是新包效果；回归不证明原生裁切、GPU 折叠或真实帧率。按 AGENTS.md，安装确认精确版本后停止设备操作。产物及安装信息随后记录。

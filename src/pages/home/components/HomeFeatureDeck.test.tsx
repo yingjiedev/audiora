@@ -61,6 +61,7 @@ describe("Home folded collection", () => {
         act(() => collection.props.onPress());
         expect(mockNavigate).toHaveBeenCalledWith("favorite-detail", { id: props.favoriteSheet.id });
         expect(renderer.root.findByType("HomeHero" as any).props.music).toBe(props.music);
+        expect(renderer.root.findByType("HomeHero" as any).props.joined).toBe(true);
         expect(renderer.root.findByType("FastImage" as any).props.source).toBe(props.favoriteArtwork);
         expect(renderer.root.findByType("ShiYinCard" as any).props.preferredArtists).toBe(props.tasteArtists);
     });
@@ -68,15 +69,37 @@ describe("Home folded collection", () => {
     it("clamps overscroll folds and removes perspective when reduced motion is enabled", () => {
         render();
         const fold = () => StyleSheet.flatten(renderer.root.findByType("AnimatedView" as any).props.style).transform;
-        expect(fold()).toEqual([{ perspective: 600 }, { rotateY: "-18deg" }]);
+        const leafWidth = StyleSheet.flatten(renderer.root.findByType("AnimatedView" as any).props.style).width;
+        expect(fold()).toEqual([{ perspective: leafWidth * 4 }, { translateX: leafWidth / 2 }, { rotateY: "0deg" }, { translateX: -leafWidth / 2 }]);
         const deck = renderer.root.findByType("AnimatedScrollView" as any);
         act(() => deck.props.onScroll({ contentOffset: { x: 99999 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
-        expect(fold()).toEqual([{ perspective: 600 }, { rotateY: "-38deg" }]);
+        expect(fold()[2]).toEqual({ rotateY: "-68deg" });
+        act(() => deck.props.onScroll({ contentOffset: { x: -100 } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        expect(fold()[2]).toEqual({ rotateY: "0deg" });
         mockReduced = true;
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(fold()).toEqual([]);
+        expect(renderer.root.findByType("AnimatedView" as any).props.renderToHardwareTextureAndroid).toBe(false);
         expect(renderer.root.findByProps({ accessibilityLabel: "home.favoriteSheet · 5 songs" }).props.onPress).toEqual(expect.any(Function));
+    });
+
+    it("folds visibly before the leaf scrolls out, and unfolds when swiping back", () => {
+        render();
+        const deck = renderer.root.findByType("AnimatedScrollView" as any);
+        const leaf = renderer.root.findByType("AnimatedView" as any);
+        const width = StyleSheet.flatten(leaf.props.style).width;
+        const angle = () => parseFloat(StyleSheet.flatten(leaf.props.style).transform[2].rotateY);
+        act(() => deck.props.onScroll({ contentOffset: { x: width * 0.5 } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        expect(angle()).toBeLessThan(-45);
+        act(() => deck.props.onScroll({ contentOffset: { x: width * 0.2 } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        expect(angle()).toBeGreaterThan(-20);
+        expect(deck.props.removeClippedSubviews).toBe(false);
+        expect(leaf.props.collapsable).toBe(false);
+        expect(leaf.props.renderToHardwareTextureAndroid).toBe(true);
     });
 
     it.each([320, 375, 430, 768])("keeps the next card reachable with bounded widths at %s dp", width => {
@@ -101,7 +124,7 @@ describe("Home folded collection", () => {
     ])("preserves readable collection text on the actual %s leaf surface", (_label, colors, dark) => {
         mockColors = resolveThemeColors({ ...colors, background: colors.pageBackground }, dark);
         render();
-        const background = blendOver(mockColors.card, mockColors.pageBackground);
+        const background = blendOver(mockColors.featuredFoldSurface, mockColors.pageBackground);
         renderer.root.findAllByType("ThemeText" as any).forEach(node => {
             expect(contrastRatio(blendOver(node.props.color, background), background)).toBeGreaterThanOrEqual(4.5);
         });

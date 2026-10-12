@@ -31,8 +31,10 @@ export default function HomeSectionNavigation(props: HomeSectionNavigationProps)
                             accessibilityState={{ selected }}
                             style={styles.target}
                             onPress={() => props.onSelect(section.key)}>
-                            <View style={[styles.fill, selected ? { backgroundColor: colors.primary } : undefined]}>
-                                <ThemeText numberOfLines={1} fontSize="title" fontWeight={selected ? "semibold" : "regular"} color={selected ? colors.onPrimary : colors.textSecondary}>{section.title}</ThemeText>
+                            <View collapsable={false} style={styles.fill}>
+                                {/* Keep one native background mounted; selection only changes its opacity. */}
+                                <View pointerEvents="none" collapsable={false} style={[styles.selectedSurface, { backgroundColor: colors.primary, opacity: selected ? 1 : 0 }]} />
+                                <ThemeText numberOfLines={1} fontSize="title" fontWeight="semibold" color={selected ? colors.onPrimary : colors.textSecondary}>{section.title}</ThemeText>
                             </View>
                         </Pressable>
                     );
@@ -45,5 +47,6 @@ export default function HomeSectionNavigation(props: HomeSectionNavigationProps)
 const styles = StyleSheet.create({
     row: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.xxs, flexDirection: "row", alignItems: "center", gap: spacing.sm },
     target: { minHeight: Math.max(44, controlSize.minimumTouch), minWidth: Math.max(44, controlSize.minimumTouch), alignItems: "flex-start", justifyContent: "center" },
-    fill: { minHeight: rpx(60), paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.xl, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" },
+    fill: { minHeight: rpx(60), paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.xl, overflow: "hidden", alignItems: "center", justifyContent: "center", alignSelf: "flex-start" },
+    selectedSurface: { ...StyleSheet.absoluteFill, borderRadius: radius.xl },
 });

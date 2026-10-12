@@ -18,7 +18,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
 /** Resume actual listening content; detailed progress belongs to the existing player. */
-export default function HomeHero({ music }: { music?: IMusic.IMusicItem | null }) {
+export default function HomeHero({ music, joined = false }: { music?: IMusic.IMusicItem | null; joined?: boolean }) {
     const currentMusic = useCurrentMusic();
     const featuredMusic = music ?? currentMusic;
     const musicState = useMusicState();
@@ -35,14 +35,14 @@ export default function HomeHero({ music }: { music?: IMusic.IMusicItem | null }
     };
 
     return (
-        <View style={[styles.card, { backgroundColor: colors.cardInset }]}>
+        <View style={[styles.card, joined && styles.joined, { backgroundColor: colors.featuredSurface }]}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={featuredMusic ? `${t("home.continueListening")} · ${featuredMusic.title}` : t("home.localMusic")}
                 style={styles.main}
                 onPress={open}>
                 <View style={styles.artworkRow}>
-                    <ThemeText fontSize="tag" color={colors.onCardInsetSecondary} style={styles.eyebrow}>
+                    <ThemeText fontSize="tag" color={colors.onFeaturedSecondary} style={styles.eyebrow}>
                         {t("home.continueListening")}
                     </ThemeText>
                     {featuredMusic ? (
@@ -54,10 +54,10 @@ export default function HomeHero({ music }: { music?: IMusic.IMusicItem | null }
                     )}
                 </View>
                 <View style={styles.copy}>
-                    <ThemeText numberOfLines={2} fontSize="subTitle" fontWeight="semibold" color={colors.onCardInset}>
+                    <ThemeText numberOfLines={2} fontSize="subTitle" fontWeight="semibold" color={colors.onFeatured}>
                         {featuredMusic?.title || t("home.exploreMusic")}
                     </ThemeText>
-                    <ThemeText numberOfLines={1} fontSize="tag" color={colors.onCardInsetSecondary} style={styles.description}>
+                    <ThemeText numberOfLines={1} fontSize="tag" color={colors.onFeaturedSecondary} style={styles.description}>
                         {featuredMusic ? [featuredMusic.artist || featuredMusic.album || t("common.unknownName"), getDisplayName(featuredMusic.platform)].filter(Boolean).join(" · ") : t("home.scanLocal")}
                     </ThemeText>
                 </View>
@@ -81,6 +81,7 @@ export default function HomeHero({ music }: { music?: IMusic.IMusicItem | null }
 
 const styles = StyleSheet.create({
     card: { flex: 1, borderRadius: radius.lg, padding: spacing.lg },
+    joined: { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
     main: { flex: 1, minHeight: minimumTouch, justifyContent: "space-between", gap: spacing.md },
     artworkRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xs },
     eyebrow: { flex: 1, minWidth: 0, paddingTop: spacing.xs },
