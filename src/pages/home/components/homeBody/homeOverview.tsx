@@ -6,6 +6,7 @@ import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
 import { controlSize, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
+import { resolveArtwork } from "@/utils/artwork";
 import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import TrackPlayer from "@/core/trackPlayer";
@@ -15,6 +16,7 @@ import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import HomeFeatureDeck from "../HomeFeatureDeck";
+import HomeSectionNavigation from "../HomeSectionNavigation";
 import useHomeDiscovery, { IHomeDiscoveryPreview } from "./useHomeDiscovery";
 import useHomeOverview from "./useHomeOverview";
 
@@ -24,7 +26,6 @@ export default function HomeOverview() {
     const data = useHomeOverview();
     const preview = useHomeDiscovery(data.topListPlugins);
     const navigate = useNavigate();
-    const colors = useColors();
     const { t } = useI18N();
     const { reduceMotion } = useMotion();
     const scroll = useRef<ScrollView>(null);
@@ -61,28 +62,14 @@ export default function HomeOverview() {
                     : anchors.current.favorites > 0 && position >= anchors.current.favorites ? "favorites" : "recommend";
                 setActiveSection(previous => previous === next ? previous : next);
             }}>
-            <View testID="home-section-navigation" style={[styles.channels, { backgroundColor: colors.pageBackground }]} onLayout={event => {
+            <HomeSectionNavigation testID="home-section-navigation" sections={sections} activeSection={activeSection} onSelect={jumpTo} onLayout={event => {
                 navigationHeight.current = event.nativeEvent.layout.height;
-            }}>
-                {sections.map(section => (
-                    <Pressable
-                        key={section.key}
-                        accessibilityRole="button"
-                        accessibilityLabel={section.title}
-                        accessibilityState={{ selected: activeSection === section.key }}
-                        style={styles.channelTarget}
-                        onPress={() => jumpTo(section.key)}>
-                        <View style={[styles.channelFill, activeSection === section.key ? { backgroundColor: colors.primary } : undefined]}>
-                            <ThemeText fontSize="title" fontWeight={activeSection === section.key ? "semibold" : "regular"} color={activeSection === section.key ? colors.onPrimary : colors.textSecondary}>{section.title}</ThemeText>
-                        </View>
-                    </Pressable>
-                ))}
-            </View>
+            }} />
             <HomeFeatureDeck
                 music={data.featuredMusic}
                 favoriteSheet={data.favoriteSheet}
                 favoriteCount={data.favoriteMusics.length}
-                favoriteArtwork={data.favoriteMusics[0]?.artwork}
+                favoriteArtwork={data.favoriteSheet.coverImg || data.favoriteMusics.map(music => resolveArtwork(music)).find(Boolean)}
                 topListPlugins={data.topListPlugins}
                 topListCache={data.topListCache}
                 recentHistory={data.recentHistory}
@@ -284,9 +271,6 @@ function RecentListening({ musics }: { musics: IMusic.IMusicItem[] }) {
 const styles = StyleSheet.create({
     wrapper: { flex: 1, width: "100%" },
     content: { paddingBottom: spacing.xxxl },
-    channels: { paddingHorizontal: spacing.xxl, paddingVertical: spacing.xxs, flexDirection: "row", gap: spacing.sm },
-    channelTarget: { minHeight: minimumTouch, minWidth: minimumTouch, justifyContent: "center" },
-    channelFill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.pill },
     quickRow: { paddingHorizontal: spacing.xxxl, paddingTop: spacing.lg, paddingBottom: spacing.sm, flexDirection: "row", alignItems: "stretch" },
     quickItem: { flex: 1, minWidth: 0, minHeight: minimumTouch, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xxs, paddingHorizontal: spacing.xxs },
     quickTitle: { flexShrink: 1, textAlign: "center" },

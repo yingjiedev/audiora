@@ -13,6 +13,7 @@ const mockPlay = jest.fn();
 const mockPause = jest.fn();
 let mockCurrent: IMusic.IMusicItem | null = null;
 let mockPaused = true;
+let mockAssociatedArtwork: string | undefined;
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
@@ -32,6 +33,7 @@ jest.mock("@/hooks/useColors", () => () => mockColors);
 jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value, fontRpx: (value: number) => value }));
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => mockPaused }));
 jest.mock("@/utils/mediaUtils", () => ({ isSameMediaItem: (a: IMusic.IMusicItem, b?: IMusic.IMusicItem) => !!b && a.id === b.id && a.platform === b.platform }));
+jest.mock("@/utils/artwork", () => ({ resolveArtwork: (music?: IMusic.IMusicItem) => mockAssociatedArtwork || music?.artwork || undefined }));
 
 describe("Home listening card", () => {
     let renderer: TestRenderer.ReactTestRenderer;
@@ -43,6 +45,7 @@ describe("Home listening card", () => {
         jest.clearAllMocks();
         mockCurrent = null;
         mockPaused = true;
+        mockAssociatedArtwork = undefined;
         mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
     });
     afterEach(() => act(() => renderer?.unmount()));
@@ -86,6 +89,19 @@ describe("Home listening card", () => {
         press("musicDetail.a11y.play");
         expect(mockPlay).toHaveBeenCalledWith(song);
         expect(mockPause).not.toHaveBeenCalled();
+    });
+
+    it("uses the same associated artwork as the song row for local tracks", () => {
+        mockAssociatedArtwork = "file:///actual-associated-cover.jpg";
+        render({ ...song, platform: "local", artwork: "" });
+        expect(renderer.root.findByType("FastImage" as any).props.source).toBe(mockAssociatedArtwork);
+    });
+
+    it("keeps the existing image fallback when a real song has no cover", () => {
+        render({ ...song, artwork: "" });
+        const cover = renderer.root.findByType("FastImage" as any);
+        expect(cover.props.source).toBeUndefined();
+        expect(cover.props.placeholderSource).toBe(1);
     });
 
     it.each([

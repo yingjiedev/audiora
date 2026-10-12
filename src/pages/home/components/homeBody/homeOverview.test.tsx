@@ -15,6 +15,8 @@ let mockFavoriteMusics: IMusic.IMusicItem[] = [];
 let mockReducedMotion = false;
 const mockScrollTo = jest.fn();
 let mockHasSource = true;
+let mockSheetCover: string | undefined;
+let mockAssociatedArt: Record<string, string> = {};
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 let mockDiscovery = { hasError: false, loading: false, topLists: [] as IMusic.IMusicSheetItemBase[], topListPluginHash: "plugin-1", topListPluginName: "demo" };
 jest.mock("@/components/mediaItem/musicItem", () => "MusicItem");
@@ -114,10 +116,11 @@ jest.mock("@/utils/rpx", () => ({
     fontRpx: (value: number) => value,
 }));
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => true }));
+jest.mock("@/utils/artwork", () => ({ resolveArtwork: (music: IMusic.IMusicItem) => mockAssociatedArt[String(music.id)] || music.artwork || undefined }));
 jest.mock("./useHomeDiscovery", () => () => mockDiscovery);
 jest.mock("./useHomeOverview", () => () => ({
     currentMusic: null,
-    favoriteSheet: { id: "favorite", worksNum: 13 },
+    favoriteSheet: { id: "favorite", worksNum: 13, ...(mockSheetCover ? { coverImg: mockSheetCover } : {}) },
     favoriteMusics: mockFavoriteMusics,
     featuredMusic: mockFeaturedMusic,
     historyCount: 11,
@@ -139,12 +142,30 @@ describe("HomeOverview quick access", () => {
         mockFavoriteMusics = [];
         mockReducedMotion = false;
         mockHasSource = true;
+        mockSheetCover = undefined;
+        mockAssociatedArt = {};
         mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
         mockScrollTo.mockReset();
         mockDiscovery = { hasError: false, loading: false, topLists: [], topListPluginHash: "plugin-1", topListPluginName: "demo" };
         mockReplacePlayList.mockReset();
     });
     afterEach(() => jest.restoreAllMocks());
+
+    it("keeps the collection cover consistent with associated artwork and respects a custom sheet cover", () => {
+        mockFavoriteMusics = [{ ...shiyinMusic, id: "first-local", artwork: "" }, { ...shiyinMusic, id: "second", artwork: "actual-second-cover" }];
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        expect(renderer.root.findByType("FastImage" as any).props.source).toBe("actual-second-cover");
+        mockAssociatedArt = { "first-local": "actual-associated-cover" };
+        act(() => renderer.update(<HomeOverview />));
+        expect(renderer.root.findByType("FastImage" as any).props.source).toBe("actual-associated-cover");
+        mockSheetCover = "custom-sheet-cover";
+        act(() => renderer.update(<HomeOverview />));
+        expect(renderer.root.findByType("FastImage" as any).props.source).toBe(mockSheetCover);
+        act(() => renderer.unmount());
+    });
 
     it.each([
         ["light", lightColors, false],

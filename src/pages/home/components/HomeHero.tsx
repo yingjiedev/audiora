@@ -10,6 +10,7 @@ import { ROUTE_PATH, useNavigate } from "@/core/router";
 import TrackPlayer, { useCurrentMusic, useMusicState } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import { isSameMediaItem } from "@/utils/mediaUtils";
+import { resolveArtwork } from "@/utils/artwork";
 import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import React from "react";
@@ -45,7 +46,7 @@ export default function HomeHero({ music }: { music?: IMusic.IMusicItem | null }
                         {t("home.continueListening")}
                     </ThemeText>
                     {featuredMusic ? (
-                        <FastImage source={featuredMusic.artwork} placeholderSource={ImgAsset.albumDefault} style={styles.cover} />
+                        <FastImage source={resolveArtwork(featuredMusic)} placeholderSource={ImgAsset.albumDefault} style={styles.cover} />
                     ) : (
                         <View style={[styles.cover, styles.emptyCover, { backgroundColor: colors.card }]}>
                             <Icon name="musical-note" size={rpx(56)} color={colors.onCardInsetSecondary} />

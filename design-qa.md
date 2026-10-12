@@ -428,3 +428,10 @@ Source: 用户当前 20:49 首页截图、展开参考和 20:52 折页参考，�
 Native visual QA final result: **blocked — pending user acceptance**。本轮使用用户提供的旧版本截图作为修改依据，没有采集或声称验证新版本真机截图。AGENTS.md 要求预览安装确认版本后停止，由用户验收。
 
 最终 APK 为 `0.3.1-preview.i88.homefold.20261012.211446` / `1791810886`，源码 `8ac55ee3`。版本、ABI、v2 单签名、字体和资源验证通过。用户补充端口 `42033` 后，与当前手机安装包证书比对一致，保留数据覆盖安装成功，2026-10-12 21:34:22 +08:00 确认完整安装版本后停止全部设备操作；真机外观、手势与音频仍待用户验收。
+# 2026-10-12 吸顶导航失排修正
+
+用户 homefold.211446 的 21:36 截图表明旧版三个频道纵排、整行蓝底、收藏下移。审查发现 RN ScrollViewStickyHeader 会转移直接子节点的 style，原横排样式因此离开真正承载按钮的容器。新 HomeSectionNavigation 将可替换外层与内层排版分开，并统一主卡/收藏折页关联封面解析。原因、原截图及修正见 `docs/design/home-sticky-header-fix-20261012.md`。
+
+Validation: 13 relevant suites / 129 tests and 17 color suites / 182 tests pass. New tests load the actual RN sticky-header implementation and exercise its child cloning, layout callback and section action boundaries. Color/UI/motion/runtime guards and changed-file ESLint pass; repository lint and other TypeScript findings remain.
+
+Native visual QA final result: **blocked — pending user acceptance**。组件边界回归不等于原生像素布局验收；本轮没有自动启动应用、截屏或运行模拟器。预览安装、版本确认及资源核验记录随后补充。
