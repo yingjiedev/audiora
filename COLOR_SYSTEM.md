@@ -43,7 +43,7 @@ Audiora 使用蓝色主色、蓝灰表面和少量紫色装饰。参考产品用
 - 听歌活跃图使用派生的 `activityUnrecorded` / `activityEmpty` / `activityLevels`。前两者由实际合成卡片底与次级文字混合为浅、深两档中性背景，保持无描边的实心圆角块，避免大量边界形成表格噪声。四档非零时长保持主题主色，最低档也须对未记录底、零值底和卡片实际合成底达到 3:1；不能把按钮浅底当作实际活跃色。每个日期槽位至少 8dp、间隔至少 3dp、色块圆角 2dp。未记录日色块内缩 1dp，呈现略小、略浅的状态；记录后的零值日使用完整大小的稍深中性格，实际活动才使用主色色阶。报告图例同步尺寸和颜色，图表保留未记录数量的无障碍说明、记录起点及活跃天数文字，状态不只依靠色差；范围外补位无色块。禁止小尺寸原生虚线边框。`activityOutline` 保留给确需描边的表达并维持 3:1，当前活跃图不使用它。用户主题设置不改写，未知自定义壁纸仍需真机验收。
 - 成功、警告和危险状态的前景按普通文字门槛派生；危险填充文字用 `onDanger`，浅底用 `dangerSurface`。不得把透明度字符串直接拼在可能为 RGBA 的主题色末尾。
 - 图片上的白底按钮用 `inverseSurface` / `onInverse`；沉浸播放器的歌词强调用 `mediaAccent`，喜欢用 `mediaFavorite`，其余用 `onMedia*`。`mediaAmbientGradient` 跟随主色，仅用于封面氛围层。
-- 首页听歌主卡用 `featuredSurface`，收藏折页用 `featuredFoldSurface`，二者共用 `onFeatured` / `onFeaturedSecondary`。主卡保留用户主色的色相并使用不透明表面；折页用同色相的明暗变化体现厚度。拾音卡用 `featuredCompanionSurface` / `onFeaturedCompanion` / `onFeaturedCompanionSecondary`。所有前景按实际局部底色校准；不改变持久化的主色、透明度或其他页面表面，不照搬参考产品的橙红配色。
+- 首页听歌主卡用 `featuredSurface`，收藏折页用 `featuredFoldSurface`，二者共用 `onFeatured` / `onFeaturedSecondary`。主卡保留用户主色的色相并使用不透明表面；折页用同色相的明暗变化体现厚度。拾音卡用 `featuredCompanionSurface` / `onFeaturedCompanion` / `onFeaturedCompanionSecondary`，表面由用户主色与主题 `accentWarm` 混合，形成相邻的强调色。中性云朵声波位图只放在独立装饰槽，不在文字或按钮下叠加。所有前景按实际局部底色校准；不改变持久化的主色、透明度或其他页面表面，不照搬参考产品的橙红配色。
 - `panelGradient` 保留表面 RGB 并补足不透明度；`modalScrim` 提供遮罩 RGB，弹层保留各自的遮罩透明度和动画。透明面板外部不额外加遮罩。
 - 取色改变不与导航、手势、动画或触摸区域改造混在一起。
 

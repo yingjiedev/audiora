@@ -19,7 +19,7 @@ let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pa
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeListeningClouds: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => () => "Source label" }));
 jest.mock("@/core/playerOverlay", () => ({ openPlayer: () => mockOpen() }));

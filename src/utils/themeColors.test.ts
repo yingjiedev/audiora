@@ -10,6 +10,7 @@ describe("Audiora semantic colors", () => {
         ["purple", { ...lightColors, primary: "#7459C7" }, false],
         ["bright", { ...lightColors, primary: "#FFCC00" }, false],
         ["alpha", { ...lightColors, primary: "rgba(56,103,244,0.3)" }, false],
+        ["warm-alpha", { ...lightColors, primary: "#FFCC00", accentWarm: "rgba(116,89,199,0.4)" }, false],
         ["transparent", { ...darkColors, card: "rgba(18,18,18,0.22)" }, true],
     ] as const)("keeps saturated featured cards readable and settings intact in %s", (_name, input, dark) => {
         const before = { ...input };
@@ -26,6 +27,7 @@ describe("Audiora semantic colors", () => {
         expect(colors.featuredSurface).toBe(Color(input.primary).alpha(1).hex());
         expect(colors.featuredFoldSurface).not.toBe(colors.featuredSurface);
         expect(colors.featuredCompanionSurface).not.toBe(colors.featuredSurface);
+        expect(Color(colors.featuredCompanionSurface).alpha()).toBe(1);
         expect(input).toEqual(before);
     });
 

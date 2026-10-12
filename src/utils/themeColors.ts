@@ -61,7 +61,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     // Separate surfaces keep text legible without changing persisted theme settings.
     const featuredSurface = primaryOpaque;
     const featuredFoldSurface = Color(primaryOpaque).mix(safeColor(colors.text, preset.text), 0.10).hex();
-    const featuredCompanionSurface = Color(cardBackground).mix(Color(primaryOpaque), 0.30).hex();
+    const featuredCompanionSurface = Color(primaryOpaque).mix(safeColor(colors.accentWarm, preset.accentWarm).alpha(1), 0.38).hex();
     const featuredBackgrounds = [featuredSurface, featuredFoldSurface];
     const onFeatured = readableAccent(bestForeground(featuredSurface, [mediaOnDark, lightColors.text, controlNeutralDark]), featuredBackgrounds, colorContrastMinimum.text);
     const onFeaturedSecondary = readableAccent(Color(onFeatured).mix(Color(featuredSurface), 0.12).hex(), featuredBackgrounds, colorContrastMinimum.text);

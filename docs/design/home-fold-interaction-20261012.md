@@ -27,3 +27,10 @@
 - 测试不执行 Yoga 像素布局或 Android GPU，不证明真实帧率、三维呈现、圆角裁切或音频已验收。遵守 AGENTS.md：预览包在已连接物理手机保留数据覆盖安装、确认精确版本后停止，由用户验收；不自动启动应用、截屏、点击或运行模拟器。
 
 Native visual QA final result: **blocked — pending user acceptance**。
+
+## 本轮预览交付
+
+- 源码 `25b7c3f73b28bc36a3b5e21a85ce2796937a1222`；版本 `0.3.1-preview.i88.foldmotion.20261012.220843` / versionCode `1791814123`；包名 `io.github.yingjiedev.audiora`，arm64-v8a。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.foldmotion.20261012.220843-arm64-v8a-release.apk`；SHA-256 `951DA6C24164FA4AE83C227910D1C0940B5641CD04CECECF8613CE3D5B614029`。实际元数据、干净源码、v2 单签名、三份字体字节/哈希、黑胶资源、六个包内源码模块与 Hermes bundle 字节一致性均已核对。
+- 与手机现装证书一致，在 `192.168.31.232:42033` 保留数据升级自 `headerfix.20261012.214800` / `1791812880`。2026-10-12 22:12:13 +08:00 确认安装精确版本后停止设备操作，界面、手势和音频由用户验收。
+- 校验记录 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.foldmotion.20261012.220843-verification.json`。后续完整折叠迭代见 `home-full-fold-redesign-20261012.md`。

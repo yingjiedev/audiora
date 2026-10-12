@@ -44,9 +44,13 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
         transform: reduceMotion ? [] : [
             { perspective: leafWidth * 4 },
             { translateX: leafWidth / 2 },
-            { rotateY: `${interpolate(offset.value, [0, leafWidth * 0.75], [0, -68], Extrapolation.CLAMP)}deg` },
+            { rotateY: `${interpolate(offset.value, [0, leafWidth], [0, -180], Extrapolation.CLAMP)}deg` },
             { translateX: -leafWidth / 2 },
         ],
+    }), [reduceMotion, leafWidth]);
+    const heroFoldStyle = useAnimatedStyle(() => ({
+        borderTopLeftRadius: reduceMotion ? radius.lg : interpolate(offset.value, [0, leafWidth / 2], [0, radius.lg], Extrapolation.CLAMP),
+        borderBottomLeftRadius: reduceMotion ? radius.lg : interpolate(offset.value, [0, leafWidth / 2], [0, radius.lg], Extrapolation.CLAMP),
     }), [reduceMotion, leafWidth]);
 
     return (
@@ -54,7 +58,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={[styles.deck, { paddingRight: Math.max(spacing.xxxl, width - spacing.xxxl - companionWidth) }]}
-            snapToOffsets={[0, cardWidth + spacing.md]}
+            snapToOffsets={reduceMotion ? [0, cardWidth + spacing.md] : [0, leafWidth, cardWidth + spacing.md]}
             decelerationRate="fast"
             removeClippedSubviews={false}
             directionalLockEnabled
@@ -62,12 +66,13 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
             overScrollMode="never"
             onScroll={onScroll}
             scrollEventThrottle={16}>
-            <View style={[styles.spread, { width: cardWidth }]}>
-                <Animated.View collapsable={false} renderToHardwareTextureAndroid={!reduceMotion} style={[styles.leaf, { width: leafWidth, backgroundColor: colors.featuredFoldSurface, borderColor: colors.onFeaturedSecondary }, foldStyle]}>
+            <View testID="home-feature-spread" style={[styles.spread, { width: cardWidth }]}>
+                <Animated.View testID="home-feature-fold" collapsable={false} renderToHardwareTextureAndroid={!reduceMotion} style={[styles.leaf, { width: leafWidth }, foldStyle]}>
+                    <View pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.leafBack, { backgroundColor: colors.featuredFoldSurface }]} />
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`${t("home.favoriteSheet")} · ${t("home.songCount", { count: props.favoriteCount })}`}
-                        style={styles.collection}
+                        style={[styles.collection, { backgroundColor: colors.featuredFoldSurface, borderColor: colors.onFeaturedSecondary }]}
                         onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: props.favoriteSheet.id })}>
                         <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.myCollection")}</ThemeText>
                         <View style={styles.collectionCount}>
@@ -79,7 +84,9 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
                         <Icon name="chevron-right" size={rpx(22)} color={colors.onFeaturedSecondary} />
                     </Pressable>
                 </Animated.View>
-                <HomeHero music={props.music} joined />
+                <Animated.View testID="home-feature-front" collapsable={false} style={[styles.hero, heroFoldStyle]}>
+                    <HomeHero music={props.music} joined />
+                </Animated.View>
             </View>
             <View style={[styles.companion, { width: companionWidth }]}>
                 <ShiYinCard
@@ -95,11 +102,14 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
 
 const styles = StyleSheet.create({
     deck: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.sm, gap: spacing.md, alignItems: "stretch" },
-    spread: { flexDirection: "row", minHeight: rpx(300) },
-    leaf: { borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, backfaceVisibility: "hidden" },
-    collection: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), paddingHorizontal: spacing.sm, paddingVertical: spacing.lg, justifyContent: "space-between", alignItems: "flex-start" },
+    spread: { flexDirection: "row", minHeight: rpx(320) },
+    // The front card draws above the leaf after it crosses the hinge, hiding its closed back face.
+    leaf: { zIndex: 0 },
+    leafBack: { ...StyleSheet.absoluteFill, borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, backfaceVisibility: "hidden", transform: [{ rotateY: "180deg" }] },
+    hero: { flex: 1, zIndex: 1, borderRadius: radius.lg, overflow: "hidden" },
+    collection: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), paddingHorizontal: spacing.sm, paddingVertical: spacing.lg, justifyContent: "space-between", alignItems: "flex-start", borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, backfaceVisibility: "hidden", overflow: "hidden" },
     collectionCount: { gap: spacing.xs, alignItems: "flex-start", width: "100%" },
     collectionCover: { width: rpx(68), height: rpx(68), borderRadius: radius.xs },
     count: { fontSize: fontRpx(40), width: "100%" },
-    companion: { minHeight: rpx(300) },
+    companion: { minHeight: rpx(320) },
 });

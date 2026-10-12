@@ -446,4 +446,14 @@ Native visual QA final result: **blocked — pending user acceptance**。组件�
 
 Validation: 14 related suites / 137 tests and 19 color suites / 205 tests passed; color/UI/motion/runtime guards and changed-file ESLint passed. Repository lint retains 14 existing errors / 100 warnings; extended TypeScript has no diagnostics in changed files. No baseline or exemption widened.
 
-Native visual QA final result: **blocked — pending user acceptance**。用户截图是问题证据，不是新包效果；回归不证明原生裁切、GPU 折叠或真实帧率。按 AGENTS.md，安装确认精确版本后停止设备操作。产物及安装信息随后记录。
+Native visual QA final result: **blocked — pending user acceptance**。用户截图是问题证据，不是新包效果；回归不证明原生裁切、GPU 折叠或真实帧率。按 AGENTS.md，安装确认精确版本后停止设备操作。
+
+Foldmotion 预览已交付：源码 25b7c3f73b28bc36a3b5e21a85ce2796937a1222；0.3.1-preview.i88.foldmotion.20261012.220843 / 1791814123；arm64-v8a。APK SHA-256 951DA6C24164FA4AE83C227910D1C0940B5641CD04CECECF8613CE3D5B614029；真实包元数据、字体、v2 单签名、六个包内源码模块、Hermes bundle 和黑胶资源已核对。2026-10-12 22:12:13 +08:00 在 192.168.31.232:42033 保留数据升级自 headerfix.20261012.214800 / 1791812880 并确认精确安装版本，然后停止设备操作。产物与 JSON 在 D:/audiora-previews/issue-88/。后续用户反馈折页仅到半程，故继续迭代，未把此安装当作视觉验收。
+
+## 首页完整收页与静态图案（2026-10-12）
+
+上一版旋转终点确实被限制在 -68°。这轮改为一个侧页宽度内完成 -180°，新增完整收页停靠点，正反面及主卡层级保证折页收向卡背后；主卡左圆角渐显，反向手势连续展开。Reduce Motion 保持平面。主卡保留用户主色，拾音采用主题主色/暖色混合；原生图片承载内置 imagegen 生成的中性云朵/声波/闪光图案，独立留白槽避免覆盖文案和按钮。业务内容与队列保持真实。调研、原始 prompt、实际素材信息及实现细节见 docs/design/home-full-fold-redesign-20261012.md。
+
+聚焦回归 6 suites / 85 tests、颜色回归 19 suites / 206 tests 通过；颜色/UI/动画/runtime guards 与修改文件 ESLint 通过。完整仓库 lint 仍有原有 14 errors / 100 warnings；扩展 TS 无修改文件诊断。没有增加基线豁免，也没有以自动回归替代原生视觉验收。
+
+Native visual QA final result: **blocked — pending user acceptance**。本次素材可用及源码行为已校验，完整原生收页、透视遮挡、播放手感、文字布局与新图案的真机美学仍由用户验收。安装确认版本后停止设备操作。

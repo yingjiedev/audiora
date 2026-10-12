@@ -8,6 +8,7 @@ import rpx from "@/utils/rpx";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import useShiYin from "./homeBody/useShiYin";
+import HomeCardMotif from "./HomeCardMotif";
 
 /** A companion to the listening card. The whole card starts the existing real chart queue. */
 export default function ShiYinCard(props: {
@@ -28,11 +29,12 @@ export default function ShiYinCard(props: {
             onPress={() => start()}
             style={[styles.card, { backgroundColor: colors.featuredCompanionSurface }]}>
             <View style={styles.heading}>
+                <ThemeText fontSize="title" fontWeight="semibold" color={colors.onFeaturedCompanion} style={styles.title}>{t("home.shiyin")}</ThemeText>
                 <View style={[styles.symbol, { backgroundColor: colors.featuredSurface }]}>
                     <Icon name="shuffle" size={rpx(36)} color={colors.onFeatured} />
                 </View>
-                <ThemeText fontSize="title" fontWeight="semibold" color={colors.onFeaturedCompanion} style={styles.title}>{t("home.shiyin")}</ThemeText>
             </View>
+            <HomeCardMotif />
             <ThemeText fontSize="description" color={colors.onFeaturedCompanionSecondary} style={styles.description}>{t("home.shiyinSubtitle")}</ThemeText>
             <View style={styles.footer}>
                 <ThemeText fontSize="tag" color={colors.onFeaturedCompanionSecondary} style={styles.title}>{t("home.topList")}</ThemeText>
@@ -46,7 +48,7 @@ export default function ShiYinCard(props: {
 
 const styles = StyleSheet.create({
     card: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), padding: spacing.lg, borderRadius: radius.lg },
-    heading: { alignItems: "flex-start", gap: spacing.sm },
+    heading: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.xs },
     symbol: { width: rpx(64), height: rpx(64), borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
     title: { flex: 1, minWidth: 0 },
     description: { flex: 1, marginTop: spacing.sm },

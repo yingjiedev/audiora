@@ -11,6 +11,7 @@ let mockLoading = false;
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { homeListeningClouds: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/hooks/useColors", () => () => mockColors);
 jest.mock("./homeBody/useShiYin", () => () => ({ loading: mockLoading, start: mockStart }));

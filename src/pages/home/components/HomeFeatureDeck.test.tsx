@@ -68,35 +68,45 @@ describe("Home folded collection", () => {
 
     it("clamps overscroll folds and removes perspective when reduced motion is enabled", () => {
         render();
-        const fold = () => StyleSheet.flatten(renderer.root.findByType("AnimatedView" as any).props.style).transform;
-        const leafWidth = StyleSheet.flatten(renderer.root.findByType("AnimatedView" as any).props.style).width;
+        const leaf = () => renderer.root.findByProps({ testID: "home-feature-fold" });
+        const fold = () => StyleSheet.flatten(leaf().props.style).transform;
+        const leafWidth = StyleSheet.flatten(leaf().props.style).width;
         expect(fold()).toEqual([{ perspective: leafWidth * 4 }, { translateX: leafWidth / 2 }, { rotateY: "0deg" }, { translateX: -leafWidth / 2 }]);
         const deck = renderer.root.findByType("AnimatedScrollView" as any);
         act(() => deck.props.onScroll({ contentOffset: { x: 99999 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
-        expect(fold()[2]).toEqual({ rotateY: "-68deg" });
+        expect(fold()[2]).toEqual({ rotateY: "-180deg" });
         act(() => deck.props.onScroll({ contentOffset: { x: -100 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(fold()[2]).toEqual({ rotateY: "0deg" });
         mockReduced = true;
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(fold()).toEqual([]);
-        expect(renderer.root.findByType("AnimatedView" as any).props.renderToHardwareTextureAndroid).toBe(false);
+        expect(leaf().props.renderToHardwareTextureAndroid).toBe(false);
+        expect(deck.props.snapToOffsets).not.toContain(leafWidth);
         expect(renderer.root.findByProps({ accessibilityLabel: "home.favoriteSheet · 5 songs" }).props.onPress).toEqual(expect.any(Function));
     });
 
     it("folds visibly before the leaf scrolls out, and unfolds when swiping back", () => {
         render();
         const deck = renderer.root.findByType("AnimatedScrollView" as any);
-        const leaf = renderer.root.findByType("AnimatedView" as any);
+        const leaf = renderer.root.findByProps({ testID: "home-feature-fold" });
         const width = StyleSheet.flatten(leaf.props.style).width;
         const angle = () => parseFloat(StyleSheet.flatten(leaf.props.style).transform[2].rotateY);
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.5 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
-        expect(angle()).toBeLessThan(-45);
+        expect(angle()).toBe(-90);
+        act(() => deck.props.onScroll({ contentOffset: { x: width } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        expect(angle()).toBe(-180);
+        expect(deck.props.snapToOffsets).toContain(width);
+        const front = renderer.root.findByProps({ testID: "home-feature-front" });
+        expect(StyleSheet.flatten(front.props.style).zIndex).toBeGreaterThan(StyleSheet.flatten(leaf.props.style).zIndex);
+        expect(StyleSheet.flatten(front.props.style).overflow).toBe("hidden");
+        expect(StyleSheet.flatten(front.props.style).borderTopLeftRadius).toBeGreaterThan(0);
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.2 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
-        expect(angle()).toBeGreaterThan(-20);
+        expect(angle()).toBe(-36);
         expect(deck.props.removeClippedSubviews).toBe(false);
         expect(leaf.props.collapsable).toBe(false);
         expect(leaf.props.renderToHardwareTextureAndroid).toBe(true);
@@ -106,10 +116,11 @@ describe("Home folded collection", () => {
         mockWidth = width;
         render();
         const deck = renderer.root.findByType("AnimatedScrollView" as any);
-        const spread = StyleSheet.flatten(deck.findByType("HomeHero" as any).parent!.props.style);
+        const spread = StyleSheet.flatten(deck.findByProps({ testID: "home-feature-spread" }).props.style);
         expect(spread.width).toBeLessThan(width - 40);
         expect(spread.width).toBeGreaterThan(200);
-        expect(deck.props.snapToOffsets).toEqual([0, spread.width + 8]);
+        const leafWidth = StyleSheet.flatten(deck.findByProps({ testID: "home-feature-fold" }).props.style).width;
+        expect(deck.props.snapToOffsets).toEqual([0, leafWidth, spread.width + 8]);
         const companion = StyleSheet.flatten(deck.findByType("ShiYinCard" as any).parent!.props.style);
         const insets = StyleSheet.flatten(deck.props.contentContainerStyle);
         // Enough trailing space lets the last card actually reach the final snap offset.
