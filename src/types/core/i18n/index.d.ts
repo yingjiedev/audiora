@@ -138,6 +138,7 @@ export interface ILanguageData {
     "home.songCount": string; // 歌曲数量
     "home.clickToSearch": string; // 点击搜索
     "home.continueListening": string;
+    "home.favoriteReplayTitle": string;
     "home.welcomeTitle": string;
     "home.welcomeSubtitle": string;
     "home.viewAll": string;

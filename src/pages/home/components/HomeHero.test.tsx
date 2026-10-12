@@ -13,7 +13,6 @@ const mockPlay = jest.fn();
 const mockPause = jest.fn();
 let mockCurrent: IMusic.IMusicItem | null = null;
 let mockPaused = true;
-let mockProgress = { position: 0, duration: 0 };
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
@@ -27,7 +26,7 @@ jest.mock("@/core/router", () => ({ ROUTE_PATH: { LOCAL: "local" }, useNavigate:
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
     default: { play: (...args: unknown[]) => mockPlay(...args), pause: () => mockPause() },
-    useCurrentMusic: () => mockCurrent, useMusicState: () => null, useProgress: () => mockProgress,
+    useCurrentMusic: () => mockCurrent, useMusicState: () => null,
 }));
 jest.mock("@/hooks/useColors", () => () => mockColors);
 jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value, fontRpx: (value: number) => value }));
@@ -44,7 +43,6 @@ describe("Home listening card", () => {
         jest.clearAllMocks();
         mockCurrent = null;
         mockPaused = true;
-        mockProgress = { position: 0, duration: 0 };
         mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
     });
     afterEach(() => act(() => renderer?.unmount()));
@@ -59,14 +57,13 @@ describe("Home listening card", () => {
         expect(mockPlay).not.toHaveBeenCalled();
     });
 
-    it("resumes a historical song without applying the current track's progress", () => {
+    it("resumes the actual historical song with its artwork and source", () => {
         mockCurrent = { ...song, id: "different" };
-        mockProgress = { position: 90, duration: 240 };
         render(song);
         const cover = renderer.root.findByType("FastImage" as any);
         expect(cover.props.source).toBe("cover");
         const times = renderer.root.findAllByType("ThemeText" as any);
-        expect(times.some(node => node.props.children.join?.("") === "0:00 / 3:00")).toBe(true);
+        expect(times.some(node => node.props.children === "Source label")).toBe(true);
         press("home.continueListening · Real song");
         expect(mockPlay).toHaveBeenCalledWith(song);
         expect(mockOpen).not.toHaveBeenCalled();
@@ -83,14 +80,12 @@ describe("Home listening card", () => {
         expect(mockPlay).not.toHaveBeenCalled();
     });
 
-    it("resumes a paused current song and clamps progress to its duration", () => {
+    it("resumes the paused current song through its independent play control", () => {
         mockCurrent = song;
-        mockProgress = { position: 250, duration: 180 };
         render(song);
         press("musicDetail.a11y.play");
         expect(mockPlay).toHaveBeenCalledWith(song);
-        const times = renderer.root.findAllByType("ThemeText" as any);
-        expect(times.some(node => node.props.children.join?.("") === "3:00 / 3:00")).toBe(true);
+        expect(mockPause).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -98,7 +93,7 @@ describe("Home listening card", () => {
         ["dark", darkColors, true],
         ["custom", { ...lightColors, primary: "#7459C7" }, false],
         ["transparent", { ...lightColors, card: "rgba(255,255,255,0.72)", surface: "rgba(238,244,255,0.8)" }, false],
-    ])("uses neutral controls on the actual %s surface", (_mode, colors, dark) => {
+    ])("keeps the media card and play control readable in the %s theme", (_mode, colors, dark) => {
         mockColors = resolveThemeColors({ ...colors, background: colors.pageBackground }, dark);
         render(song);
         const play = renderer.root.findByProps({ accessibilityLabel: "musicDetail.a11y.play" });
@@ -106,10 +101,12 @@ describe("Home listening card", () => {
         expect(target.width).toBeGreaterThanOrEqual(44);
         expect(target.height).toBeGreaterThanOrEqual(44);
         const icon = play.findByType("Icon" as any);
-        expect(icon.props.color).toBe(mockColors.text);
-        const actualCard = blendOver(mockColors.card, mockColors.pageBackground);
-        const actualSurface = blendOver(mockColors.surface, actualCard);
-        expect(contrastRatio(blendOver(mockColors.text, actualSurface), actualSurface)).toBeGreaterThanOrEqual(3);
-        expect(contrastRatio(blendOver(mockColors.text, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
+        expect(icon.props.color).toBe(mockColors.onInverse);
+        const actualCard = blendOver(mockColors.cardInset, mockColors.pageBackground);
+        const buttonSurface = blendOver(mockColors.inverseSurface, actualCard);
+        expect(contrastRatio(blendOver(mockColors.onInverse, buttonSurface), buttonSurface)).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(blendOver(mockColors.onCardInset, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(blendOver(mockColors.onCardInsetSecondary, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
+        expect(renderer.root.findAllByType("ThemeText" as any).every(node => node.props.color === mockColors.onCardInset || node.props.color === mockColors.onCardInsetSecondary)).toBe(true);
     });
 });

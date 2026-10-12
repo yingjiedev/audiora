@@ -28,8 +28,10 @@ export default function ShiYinCard(props: {
             onPress={() => start()}
             style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={styles.heading}>
+                <View style={[styles.symbol, { backgroundColor: colors.surface }]}>
+                    <Icon name="shuffle" size={rpx(36)} color={colors.text} />
+                </View>
                 <ThemeText fontSize="title" fontWeight="semibold" style={styles.title}>{t("home.shiyin")}</ThemeText>
-                <Icon name="shuffle" size={rpx(44)} color={colors.textSecondary} />
             </View>
             <ThemeText fontSize="description" fontColor="textSecondary" style={styles.description}>{t("home.shiyinSubtitle")}</ThemeText>
             <View style={styles.footer}>
@@ -43,10 +45,11 @@ export default function ShiYinCard(props: {
 }
 
 const styles = StyleSheet.create({
-    card: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), padding: spacing.lg, borderRadius: radius.xl },
-    heading: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingTop: spacing.xs },
+    card: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), padding: spacing.lg, borderRadius: radius.lg },
+    heading: { alignItems: "flex-start", gap: spacing.sm },
+    symbol: { width: rpx(64), height: rpx(64), borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
     title: { flex: 1, minWidth: 0 },
-    description: { flex: 1, marginTop: spacing.md },
+    description: { flex: 1, marginTop: spacing.sm },
     footer: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: Math.max(44, controlSize.minimumTouch), marginTop: spacing.sm },
     playFill: { width: rpx(56), height: rpx(56), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 });

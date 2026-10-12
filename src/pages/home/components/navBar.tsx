@@ -17,10 +17,19 @@ export default function NavBar() {
 
     return (
         <View style={styles.appbar}>
-            <View style={styles.titleRow}>
-                <ThemeText fontSize="appbar" fontWeight="bolder">
-                    {t("home.home")}
-                </ThemeText>
+            <View style={styles.searchRow}>
+                <Pressable
+                    style={styles.searchTarget}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("home.clickToSearch")}
+                    onPress={() => navigation.navigate(ROUTE_PATH.SEARCH_PAGE)}>
+                    <View style={[styles.searchBar, { backgroundColor: colors.surface }]}>
+                        <Icon name="magnifying-glass" size={rpx(30)} color={colors.textSecondary} />
+                        <ThemeText fontSize="description" fontColor="textSecondary" numberOfLines={1} style={styles.searchText}>
+                            {t("home.clickToSearch")}
+                        </ThemeText>
+                    </View>
+                </Pressable>
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t("sidebar.scheduleClose")}
@@ -29,30 +38,6 @@ export default function NavBar() {
                     <Icon name="alarm-outline" size={rpx(38)} color={colors.text} />
                 </Pressable>
             </View>
-
-            <Pressable
-                style={[
-                    styles.searchBar,
-                    {
-                        backgroundColor: colors.surface,
-                    },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={t("home.clickToSearch")}
-                onPress={() => navigation.navigate(ROUTE_PATH.SEARCH_PAGE)}>
-                <Icon
-                    name="magnifying-glass"
-                    size={rpx(30)}
-                    color={colors.textSecondary}
-                />
-                <ThemeText
-                    fontSize="description"
-                    fontColor="textSecondary"
-                    numberOfLines={1}
-                    style={styles.searchText}>
-                    {t("home.clickToSearch")}
-                </ThemeText>
-            </Pressable>
         </View>
     );
 }
@@ -64,11 +49,17 @@ const styles = StyleSheet.create({
         paddingTop: spacing.xxs,
         backgroundColor: "transparent",
     },
-    titleRow: {
+    searchRow: {
         minHeight: Math.max(44, controlSize.minimumTouch),
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        gap: spacing.md,
+    },
+    searchTarget: {
+        flex: 1,
+        minWidth: 0,
+        minHeight: Math.max(44, controlSize.minimumTouch),
+        justifyContent: "center",
     },
     roundButton: {
         width: Math.max(44, controlSize.minimumTouch),
@@ -77,10 +68,9 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     searchBar: {
-        minHeight: Math.max(44, rpx(64)),
+        minHeight: rpx(60),
         paddingHorizontal: spacing.md,
         borderRadius: radius.pill,
-        marginTop: spacing.xs,
         flexDirection: "row",
         alignItems: "center",
     },

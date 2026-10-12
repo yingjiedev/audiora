@@ -179,24 +179,39 @@ describe("HomeOverview quick access", () => {
         act(() => renderer.unmount());
     });
 
-    it("shows three saved songs but plays the complete favorite sheet from either entry", async () => {
+    it("groups saved songs for discovery but plays the complete favorite sheet from either entry", async () => {
         mockFavoriteMusics = Array.from({ length: 5 }, (_, index) => ({ ...shiyinMusic, id: `favorite-${index}` }));
         let renderer!: TestRenderer.ReactTestRenderer;
         act(() => {
             renderer = TestRenderer.create(<HomeOverview />);
         });
         const rows = renderer.root.findAllByType("MusicItem" as any);
-        expect(rows).toHaveLength(3);
+        expect(rows).toHaveLength(5);
         expect(rows[2].props.musicItem).toBe(mockFavoriteMusics[2]);
         expect(rows[0].props.actions).toEqual(["favorite"]);
-        await act(async () => rows[2].props.onItemPress(mockFavoriteMusics[2]));
-        expect(mockReplacePlayList).toHaveBeenLastCalledWith(mockFavoriteMusics[2], mockFavoriteMusics, {
+        expect(rows.every(row => row.props.presentation === "discovery")).toBe(true);
+        await act(async () => rows[4].props.onItemPress(mockFavoriteMusics[4]));
+        expect(mockReplacePlayList).toHaveBeenLastCalledWith(mockFavoriteMusics[4], mockFavoriteMusics, {
             sheet: { id: "favorite", worksNum: 13, musicList: mockFavoriteMusics }, routeName: "local-sheet-detail",
         });
         await act(async () => renderer.root.findByProps({ accessibilityLabel: "musicLibrary.playAllCount" }).props.onPress());
         expect(mockReplacePlayList.mock.calls.at(-1)[0]).toBe(mockFavoriteMusics[0]);
         act(() => renderer.root.findByProps({ accessibilityLabel: "home.favoriteSheet · home.viewAll" }).props.onPress());
         expect(mockNavigate).toHaveBeenLastCalledWith("local-sheet-detail", { id: "favorite" });
+        act(() => renderer.unmount());
+    });
+
+    it("bounds the Home preview while keeping songs outside it in the full playback queue", async () => {
+        mockFavoriteMusics = Array.from({ length: 10 }, (_, index) => ({ ...shiyinMusic, id: `favorite-${index}` }));
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        const rows = renderer.root.findAllByType("MusicItem" as any);
+        expect(rows).toHaveLength(9);
+        expect(rows[8].props.musicItem).toBe(mockFavoriteMusics[8]);
+        await act(async () => rows[8].props.onItemPress(mockFavoriteMusics[8]));
+        expect(mockReplacePlayList.mock.calls.at(-1)[1]).toEqual(mockFavoriteMusics);
         act(() => renderer.unmount());
     });
 

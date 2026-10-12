@@ -25,7 +25,7 @@ export default function HomeOverview() {
     const preview = useHomeDiscovery(data.topListPlugins);
     const { width } = useWindowDimensions();
     const cardWidth = Math.min(420, width - spacing.xxxl * 2, width * 0.76);
-    const cardHeight = Math.max(180, rpx(252));
+    const cardHeight = rpx(300);
 
     return (
         <ScrollView style={styles.wrapper} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -47,13 +47,13 @@ export default function HomeOverview() {
                     />
                 </View>
             </ScrollView>
+            <FavoriteListening musics={data.favoriteMusics} sheet={data.favoriteSheet} />
+            <Discovery preview={preview} hasSource={data.topListPlugins.length > 0} />
             <QuickAccess
                 historyCount={data.historyCount}
                 favoriteCount={data.favoriteSheet?.worksNum ?? 0}
                 favoriteSheetId={data.favoriteSheet?.id}
             />
-            <FavoriteListening musics={data.favoriteMusics} sheet={data.favoriteSheet} />
-            <Discovery preview={preview} hasSource={data.topListPlugins.length > 0} />
             <RecentListening musics={data.recentMusics} />
         </ScrollView>
     );
@@ -69,10 +69,13 @@ function TextAction({ title, onPress, label }: { title: string; onPress: () => v
     );
 }
 
-function SectionHeader({ title, action }: { title: string; action?: React.ReactNode }) {
+function SectionHeader({ title, action, leadingAction }: { title: string; action?: React.ReactNode; leadingAction?: React.ReactNode }) {
     return (
         <View style={styles.sectionHeader}>
-            <ThemeText fontSize="title" fontWeight="bold" style={styles.sectionTitle}>{title}</ThemeText>
+            <View style={styles.sectionHeading}>
+                <ThemeText fontSize="title" fontWeight="bold" style={styles.sectionTitle}>{title}</ThemeText>
+                {leadingAction}
+            </View>
             {action}
         </View>
     );
@@ -97,10 +100,9 @@ function QuickAccess({ historyCount, favoriteCount, favoriteSheetId }: {
     return (
         <View style={styles.quickRow}>
             {items.map(item => (
-                <Pressable key={item.title} accessibilityRole="button" accessibilityLabel={item.title} onPress={item.onPress} style={styles.quickItem}>
-                    <View style={styles.quickIcon}><Icon name={item.icon} size={rpx(40)} color={colors.text} /></View>
-                    <ThemeText fontSize="description" style={styles.quickTitle}>{item.title}</ThemeText>
-                    <ThemeText fontSize="tag" fontColor="textSecondary" style={styles.quickCount}>{item.subtitle}</ThemeText>
+                <Pressable key={item.title} accessibilityRole="button" accessibilityLabel={item.title} accessibilityHint={item.subtitle} onPress={item.onPress} style={styles.quickItem}>
+                    <Icon name={item.icon} size={rpx(28)} color={colors.textSecondary} />
+                    <ThemeText fontSize="tag" fontColor="textSecondary" style={styles.quickTitle}>{item.title}</ThemeText>
                 </Pressable>
             ))}
         </View>
@@ -111,38 +113,50 @@ function FavoriteListening({ musics = [], sheet }: { musics?: IMusic.IMusicItem[
     const { t } = useI18N();
     const colors = useColors();
     const navigate = useNavigate();
+    const { width } = useWindowDimensions();
+    const groupWidth = Math.min(520, width * 0.86, width - spacing.xxxl * 2);
+    const groups = Array.from({ length: Math.ceil(Math.min(9, musics.length) / 3) }, (_, index) => musics.slice(index * 3, index * 3 + 3));
     const fullSheet = { ...sheet, musicList: musics };
     const play = (music: IMusic.IMusicItem) => TrackPlayer.playWithReplacePlayList(music, musics, { sheet: fullSheet, routeName: ROUTE_PATH.LOCAL_SHEET_DETAIL });
     return (
         <View style={styles.section}>
             <SectionHeader
-                title={t("home.favoriteSheet")}
-                action={
-                    <View style={styles.sectionActions}>
-                        {musics.length ? (
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("musicLibrary.playAllCount", { count: musics.length })}
-                                onPress={() => play(musics[0])}
-                                style={styles.iconAction}>
-                                <View style={[styles.smallPlay, { backgroundColor: colors.card }]}><Icon name="play" size={rpx(22)} color={colors.text} /></View>
-                            </Pressable>
-                        ) : null}
-                        <TextAction title={t("myMusic.viewAllShort")} label={`${t("home.favoriteSheet")} · ${t("home.viewAll")}`} onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: sheet.id })} />
-                    </View>
-                }
+                title={t("home.favoriteReplayTitle")}
+                leadingAction={musics.length ? (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t("musicLibrary.playAllCount", { count: musics.length })}
+                        onPress={() => play(musics[0])}
+                        style={styles.iconAction}>
+                        <View style={[styles.smallPlay, { backgroundColor: colors.card }]}><Icon name="play" size={rpx(22)} color={colors.text} /></View>
+                    </Pressable>
+                ) : null}
+                action={<TextAction title={t("myMusic.viewAllShort")} label={`${t("home.favoriteSheet")} · ${t("home.viewAll")}`} onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: sheet.id })} />}
             />
-            {musics.length ? musics.slice(0, 3).map(music => (
-                <MusicItem
-                    key={music.platform + "@" + music.id}
-                    musicItem={music}
-                    showCover
-                    density="compact"
-                    actions={["favorite"]}
-                    onItemPress={play}
-                    containerStyle={styles.songRow}
-                />
-            )) : (
+            {musics.length ? (
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.favoriteStrip}
+                    snapToInterval={groupWidth + spacing.xl}
+                    decelerationRate="fast">
+                    {groups.map((group, index) => (
+                        <View key={index} style={{ width: groupWidth }}>
+                            {group.map(music => (
+                                <MusicItem
+                                    key={music.platform + "@" + music.id}
+                                    musicItem={music}
+                                    showCover
+                                    density="compact"
+                                    presentation="discovery"
+                                    actions={["favorite"]}
+                                    onItemPress={play}
+                                />
+                            ))}
+                        </View>
+                    ))}
+                </ScrollView>
+            ) : (
                 <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
                     <ThemeText fontSize="description" fontColor="textSecondary" style={styles.flexText}>{t("home.favoritePreviewEmpty")}</ThemeText>
                     <TextAction title={t("home.exploreMusic")} onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)} />
@@ -222,19 +236,17 @@ const styles = StyleSheet.create({
     wrapper: { flex: 1, width: "100%" },
     content: { paddingTop: spacing.md, paddingBottom: spacing.xxxl },
     featureDeck: { paddingHorizontal: spacing.xxxl, gap: spacing.md, alignItems: "stretch" },
-    quickRow: { paddingHorizontal: spacing.xxxl, paddingTop: spacing.xl * 1.5, paddingBottom: spacing.sm, flexDirection: "row", alignItems: "stretch" },
-    quickItem: { flex: 1, minWidth: 0, minHeight: minimumTouch, alignItems: "center", paddingHorizontal: spacing.xxs },
-    quickIcon: { height: rpx(48), alignItems: "center", justifyContent: "center" },
-    quickTitle: { flexGrow: 1, marginTop: spacing.xs, textAlign: "center" },
-    quickCount: { marginTop: spacing.xxs, textAlign: "center" },
+    quickRow: { paddingHorizontal: spacing.xxxl, paddingTop: spacing.lg, paddingBottom: spacing.sm, flexDirection: "row", alignItems: "stretch" },
+    quickItem: { flex: 1, minWidth: 0, minHeight: minimumTouch, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xxs, paddingHorizontal: spacing.xxs },
+    quickTitle: { flexShrink: 1, textAlign: "center" },
     section: { marginTop: spacing.xl },
     sectionHeader: { paddingHorizontal: spacing.xxxl, minHeight: minimumTouch, marginBottom: spacing.sm, flexDirection: "row", alignItems: "center", gap: spacing.sm },
-    sectionTitle: { flex: 1, minWidth: 0, fontSize: fontRpx(30) },
-    sectionActions: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    sectionHeading: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    sectionTitle: { flexShrink: 1, minWidth: 0, fontSize: fontRpx(30) },
     textAction: { minWidth: minimumTouch, minHeight: minimumTouch, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: spacing.xxs },
     iconAction: { minWidth: minimumTouch, minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
     smallPlay: { width: rpx(44), height: rpx(44), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-    songRow: { marginHorizontal: spacing.xxxl },
+    favoriteStrip: { paddingHorizontal: spacing.xxxl, gap: spacing.xl, alignItems: "flex-start" },
     emptyCard: { marginHorizontal: spacing.xxxl, padding: spacing.md, borderRadius: radius.lg, flexDirection: "row", alignItems: "center", gap: spacing.sm },
     flexText: { flex: 1, minWidth: 0 },
     sourceName: { paddingHorizontal: spacing.xxxl, marginBottom: spacing.sm },

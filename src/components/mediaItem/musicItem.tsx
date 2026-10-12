@@ -41,6 +41,8 @@ interface IMusicItemProps {
     showCover?: boolean;
     /** Compact previews keep the shared content and interactions with less spacing. */
     density?: "default" | "compact";
+    /** Home previews emphasize artwork and artist; library metadata stays on other rows. */
+    presentation?: "library" | "discovery";
 }
 
 function RowAction(props: { icon: IIconName; label: string; onPress: () => void; color?: string; disabled?: boolean; selected?: boolean }) {
@@ -97,7 +99,7 @@ export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
         musicSheet, itemPaddingRight, left, containerStyle,
-        highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default",
+        highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library",
     } = props;
     const colors = useColors();
     const { t } = useI18N();
@@ -111,16 +113,17 @@ export default function MusicItem(props: IMusicItemProps) {
     const album = typeof musicItem.album === "string" ? musicItem.album.trim() : "";
     const showAlbum = album && album !== String(musicItem.title ?? "").trim();
     const compact = density === "compact";
+    const discovery = presentation === "discovery";
 
     return (
-        <View style={[styles.row, compact && styles.compactRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
+        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={[musicItem.title, musicItem.artist].filter(Boolean).join(" - ")}
                 accessibilityState={{ selected: active }}
                 onLongPress={onItemLongPress}
                 onPress={() => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem)}
-                style={({ pressed }) => [styles.main, compact && styles.compactMain, pressed && { backgroundColor: colors.listActive }]}>
+                style={({ pressed }) => [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, pressed && { backgroundColor: colors.listActive }]}>
                 {left}
                 {index !== undefined ? (
                     <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex]}>
@@ -128,7 +131,7 @@ export default function MusicItem(props: IMusicItemProps) {
                     </ThemeText>
                 ) : null}
                 {showCover ? (
-                    <FastImage style={styles.cover} source={resolveArtwork(musicItem) ?? musicItem.artwork} placeholderSource={ImgAsset.albumDefault} />
+                    <FastImage style={[styles.cover, discovery && styles.discoveryCover]} source={resolveArtwork(musicItem) ?? musicItem.artwork} placeholderSource={ImgAsset.albumDefault} />
                 ) : null}
                 <View style={styles.content}>
                     <ThemeText fontColor={active ? "primary" : "text"} fontSize={compact ? "subTitle" : "content"} numberOfLines={1}>
@@ -139,13 +142,13 @@ export default function MusicItem(props: IMusicItemProps) {
                         ))}
                     </ThemeText>
                     <View style={[styles.metadata, compact && styles.compactMetadata]}>
-                        <ThemeText numberOfLines={1} fontSize={compact ? "tag" : "description"} fontColor="textSecondary" style={styles.artist}>
-                            {musicItem.artist}{showAlbum ? ` · ${album}` : ""}
+                        <ThemeText numberOfLines={1} fontSize={compact && !discovery ? "tag" : "description"} fontColor="textSecondary" style={styles.artist}>
+                            {musicItem.artist}{showAlbum && !discovery ? ` · ${album}` : ""}
                         </ThemeText>
-                        {isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
-                        {qualityBadge ? <Badge type={qualityBadge.type}>{qualityBadge.text}</Badge> : null}
-                        {musicItem.fee === 1 ? <Badge type="vip">VIP</Badge> : null}
-                        {hasMv ? <Badge type="source">MV</Badge> : null}
+                        {!discovery && isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
+                        {!discovery && qualityBadge ? <Badge type={qualityBadge.type}>{qualityBadge.text}</Badge> : null}
+                        {!discovery && musicItem.fee === 1 ? <Badge type="vip">VIP</Badge> : null}
+                        {!discovery && hasMv ? <Badge type="source">MV</Badge> : null}
                         {titleTagSubText ? <ThemeText fontSize="description" fontColor="textSecondary" style={styles.duration}>{titleTagSubText}</ThemeText> : null}
                     </View>
                 </View>
@@ -190,4 +193,7 @@ const styles = StyleSheet.create({
     compactMain: { minHeight: Math.max(44, rpx(96)), paddingVertical: spacing.sm },
     compactIndex: { width: rpx(32), marginRight: spacing.xs },
     compactMetadata: { marginTop: spacing.xxs },
+    discoveryRow: { minHeight: Math.max(44, rpx(116)), paddingLeft: 0, paddingRight: 0 },
+    discoveryMain: { minHeight: Math.max(44, rpx(116)), paddingVertical: spacing.xs },
+    discoveryCover: { width: rpx(100), height: rpx(100), marginRight: spacing.lg },
 });

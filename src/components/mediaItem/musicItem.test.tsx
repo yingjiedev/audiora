@@ -141,6 +141,23 @@ describe("shared song row interactions", () => {
         expect(button("Song - Artist").props.accessibilityState.selected).toBe(false);
         expect(renderer.root.findAllByType(Badge)).toHaveLength(0);
     });
+    it("simplifies discovery metadata without changing library rows or favorite actions", async () => {
+        const previewSong = { ...song, fee: 1, mv: 42, qualities: { "320k": {} } };
+        render({ musicItem: previewSong, showCover: true, density: "compact", presentation: "discovery", actions: ["favorite"] });
+        expect(renderer.root.findAllByType(Badge)).toHaveLength(0);
+        const artist = renderer.root.findAllByType(ThemeText).find(node => Array.isArray(node.props.children) && node.props.children.join("") === "Artist");
+        expect(artist?.props.fontSize).toBe("description");
+        const cover = renderer.root.findByType("FastImage" as any);
+        const previewWidth = StyleSheet.flatten(cover.props.style).width;
+        await act(async () => button("musicDetail.a11y.favorite").props.onPress());
+        expect(MusicSheet.addMusic).toHaveBeenCalledWith("favorite", previewSong);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
+        act(() => renderer.update(<MusicItem musicItem={previewSong} showCover />));
+        expect(renderer.root.findAllByType(Badge).map(node => node.props.children)).toEqual(["HQ", "VIP", "MV"]);
+        expect(StyleSheet.flatten(renderer.root.findByType("FastImage" as any).props.style).width).toBeLessThan(previewWidth);
+        const texts = renderer.root.findAllByType(ThemeText);
+        expect(texts.some(node => Array.isArray(node.props.children) && node.props.children.join("") === "Artist · Album")).toBe(true);
+    });
     it("highlights matching title words without losing suffixes", () => {
         render({ musicItem: { ...song, title: "Song (Live)" }, highlightText: "Song" });
         const texts = renderer.root.findAllByType(ThemeText);
