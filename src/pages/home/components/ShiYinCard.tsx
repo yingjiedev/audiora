@@ -1,25 +1,15 @@
-import { StyleSheet, View } from "react-native";
-import Color from "color";
-import React from "react";
-
-import CardRow from "@/components/base/cardRow";
 import Icon from "@/components/base/icon";
-import RoundActionButton, {
-    TONAL_ALPHA,
-} from "@/components/base/roundActionButton";
+import ThemeText from "@/components/base/themeText";
+import { controlSize, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import type { Plugin } from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
+import React from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import useShiYin from "./homeBody/useShiYin";
 
-/**
- * 拾音入口：首页唯一的"一键开始听"。
- * 点击后直接从榜单热歌里挑一批播放，不需要先进任何二级页。
- *
- * 卡片骨架走 CardRow，尾部播放键走 RoundActionButton 的 tonal；这里只留
- * 拾音专属的图标与外边距。
- */
+/** A companion to the listening card. The whole card starts the existing real chart queue. */
 export default function ShiYinCard(props: {
     topListPlugins: Plugin[];
     topListCache?: Record<string, IMusic.IMusicSheetGroupItem[]>;
@@ -29,50 +19,34 @@ export default function ShiYinCard(props: {
     const { loading, start } = useShiYin(props);
     const colors = useColors();
     const { t } = useI18N();
-
     return (
-        <View style={styles.wrapper}>
-            <CardRow
-                accessibilityLabel={t("home.shiyin")}
-                disabled={loading}
-                onPress={() => start()}
-                title={t("home.shiyin")}
-                description={t("home.shiyinSubtitle")}
-                leading={
-                    <View
-                        style={[
-                            styles.iconFrame,
-                            {
-                                backgroundColor: Color(colors.primary)
-                                    .alpha(TONAL_ALPHA)
-                                    .toString(),
-                            },
-                        ]}>
-                        <Icon
-                            name="shuffle"
-                            size={rpx(40)}
-                            color={colors.primaryText}
-                        />
-                    </View>
-                }
-                trailing={
-                    <RoundActionButton variant="tonal" loading={loading} iconName="play" />
-                }
-            />
-        </View>
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("home.shiyin")}
+            accessibilityState={{ disabled: loading, busy: loading }}
+            disabled={loading}
+            onPress={() => start()}
+            style={[styles.card, { backgroundColor: colors.card }]}>
+            <View style={styles.heading}>
+                <ThemeText fontSize="title" fontWeight="semibold" style={styles.title}>{t("home.shiyin")}</ThemeText>
+                <Icon name="shuffle" size={rpx(44)} color={colors.textSecondary} />
+            </View>
+            <ThemeText fontSize="description" fontColor="textSecondary" style={styles.description}>{t("home.shiyinSubtitle")}</ThemeText>
+            <View style={styles.footer}>
+                <ThemeText fontSize="tag" fontColor="textSecondary" style={styles.title}>{t("home.topList")}</ThemeText>
+                <View style={[styles.playFill, { backgroundColor: colors.surface }]}>
+                    {loading ? <ActivityIndicator size="small" color={colors.text} /> : <Icon name="play" size={rpx(26)} color={colors.text} />}
+                </View>
+            </View>
+        </Pressable>
     );
 }
 
 const styles = StyleSheet.create({
-    wrapper: {
-        paddingHorizontal: rpx(24),
-        marginTop: rpx(16),
-    },
-    iconFrame: {
-        width: rpx(66),
-        height: rpx(66),
-        borderRadius: rpx(33),
-        alignItems: "center",
-        justifyContent: "center",
-    },
+    card: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), padding: spacing.lg, borderRadius: radius.xl },
+    heading: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingTop: spacing.xs },
+    title: { flex: 1, minWidth: 0 },
+    description: { flex: 1, marginTop: spacing.md },
+    footer: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: Math.max(44, controlSize.minimumTouch), marginTop: spacing.sm },
+    playFill: { width: rpx(56), height: rpx(56), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 });

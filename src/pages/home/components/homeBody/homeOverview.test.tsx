@@ -8,6 +8,9 @@ const mockShowPanel = jest.fn();
 let mockDisplayNames: Record<string, string> = {};
 let mockFeaturedMusic: IMusic.IMusicItem | null = null;
 let mockRecentMusics: IMusic.IMusicItem[] = [];
+let mockFavoriteMusics: IMusic.IMusicItem[] = [];
+let mockDiscovery = { hasError: false, loading: false, topLists: [] as IMusic.IMusicSheetItemBase[], topListPluginHash: "plugin-1", topListPluginName: "demo" };
+jest.mock("@/components/mediaItem/musicItem", () => "MusicItem");
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: (...args: unknown[]) => mockShowPanel(...args) }));
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
@@ -100,14 +103,11 @@ jest.mock("@/utils/rpx", () => ({
     fontRpx: (value: number) => value,
 }));
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => true }));
-jest.mock("./useHomeDiscovery", () => () => ({
-    hasError: false,
-    loading: false,
-    topLists: [],
-}));
+jest.mock("./useHomeDiscovery", () => () => mockDiscovery);
 jest.mock("./useHomeOverview", () => () => ({
     currentMusic: null,
     favoriteSheet: { id: "favorite", worksNum: 13 },
+    favoriteMusics: mockFavoriteMusics,
     featuredMusic: mockFeaturedMusic,
     historyCount: 11,
     recentMusics: mockRecentMusics,
@@ -125,6 +125,9 @@ describe("HomeOverview quick access", () => {
         mockDisplayNames = {};
         mockFeaturedMusic = null;
         mockRecentMusics = [];
+        mockFavoriteMusics = [];
+        mockDiscovery = { hasError: false, loading: false, topLists: [], topListPluginHash: "plugin-1", topListPluginName: "demo" };
+        mockReplacePlayList.mockReset();
     });
 
     it("opens recent songs in the playback drawer and keeps other Home destinations", () => {
@@ -163,17 +166,65 @@ describe("HomeOverview quick access", () => {
             renderer = TestRenderer.create(<HomeOverview />);
         });
         const texts = () => renderer.root.findAllByType("ThemeText" as any);
-        expect(texts().some(node => node.props.children === "My source" && node.props.color === "#2451B4")).toBe(true);
+        expect(renderer.root.findByType("HomeHero" as any).props.music).toBe(mockFeaturedMusic);
         expect(texts().some(node => node.props.children === "someone · My source")).toBe(true);
         expect(texts().some(node => node.props.children === "My charts")).toBe(true);
 
         mockDisplayNames = { test: "Updated source", demo: "Updated charts" };
         act(() => renderer.update(<HomeOverview />));
-        expect(texts().some(node => node.props.children === "Updated source")).toBe(true);
         expect(texts().some(node => node.props.children === "someone · Updated source")).toBe(true);
         expect(texts().some(node => node.props.children === "Updated charts")).toBe(true);
         expect(mockFeaturedMusic.platform).toBe("test");
         expect(mockRecentMusics[0].platform).toBe("test");
+        act(() => renderer.unmount());
+    });
+
+    it("shows three saved songs but plays the complete favorite sheet from either entry", async () => {
+        mockFavoriteMusics = Array.from({ length: 5 }, (_, index) => ({ ...shiyinMusic, id: `favorite-${index}` }));
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        const rows = renderer.root.findAllByType("MusicItem" as any);
+        expect(rows).toHaveLength(3);
+        expect(rows[2].props.musicItem).toBe(mockFavoriteMusics[2]);
+        expect(rows[0].props.actions).toEqual(["favorite"]);
+        await act(async () => rows[2].props.onItemPress(mockFavoriteMusics[2]));
+        expect(mockReplacePlayList).toHaveBeenLastCalledWith(mockFavoriteMusics[2], mockFavoriteMusics, {
+            sheet: { id: "favorite", worksNum: 13, musicList: mockFavoriteMusics }, routeName: "local-sheet-detail",
+        });
+        await act(async () => renderer.root.findByProps({ accessibilityLabel: "musicLibrary.playAllCount" }).props.onPress());
+        expect(mockReplacePlayList.mock.calls.at(-1)[0]).toBe(mockFavoriteMusics[0]);
+        act(() => renderer.root.findByProps({ accessibilityLabel: "home.favoriteSheet · home.viewAll" }).props.onPress());
+        expect(mockNavigate).toHaveBeenLastCalledWith("local-sheet-detail", { id: "favorite" });
+        act(() => renderer.unmount());
+    });
+
+    it("keeps empty Favorites useful without rendering a fake song or enabled play-all", () => {
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        expect(renderer.root.findAllByType("MusicItem" as any)).toHaveLength(0);
+        expect(renderer.root.findAllByProps({ accessibilityLabel: "musicLibrary.playAllCount" })).toHaveLength(0);
+        act(() => renderer.root.findByProps({ accessibilityLabel: "home.exploreMusic" }).props.onPress());
+        expect(mockNavigate).toHaveBeenLastCalledWith("search-page");
+        act(() => renderer.unmount());
+    });
+
+    it("opens the actual chart object and keeps plugin descriptions out of the Home preview", () => {
+        const sheet = { id: "rising", platform: "demo", title: "Rising", artwork: "real-chart-cover", description: "Plugin definition: a very long explanation" };
+        mockDiscovery.topLists = [sheet];
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === sheet.description)).toBe(false);
+        expect(renderer.root.findByType("FastImage" as any).props.source).toBe(sheet.artwork);
+        act(() => renderer.root.findByProps({ accessibilityLabel: sheet.title }).props.onPress());
+        expect(mockNavigate).toHaveBeenLastCalledWith("top-list-detail", { pluginHash: "plugin-1", topList: sheet });
+        act(() => renderer.root.findByProps({ accessibilityLabel: "home.topList" }).props.onPress());
+        expect(mockNavigate).toHaveBeenLastCalledWith("top-list", { initialPluginHash: "plugin-1" });
         act(() => renderer.unmount());
     });
 

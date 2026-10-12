@@ -830,6 +830,7 @@
     "home.downloadManagementDescription": "查看佇列、進度與失敗工作",
     "home.aboutAndUpdate": "關於與更新",
     "home.currentVersion": "目前版本 {version}",
+    "home.favoritePreviewEmpty": "喜歡的音樂會出現在這裡，發現一首就收藏一首",
     "home.continueListeningEmpty": "開始播放後，可從這裡快速繼續上次的音樂。",
     "home.exploreMusic": "去發現音樂",
     "home.recommendForYou": "發現新的歌單",

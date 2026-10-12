@@ -392,3 +392,11 @@ Source/function/color checks: pass. Native visual/function acceptance: pending u
 - Matched the installed certificate and preserved data using adb install -r on 192.168.31.232:38437; upgraded from 0.3.1-preview.i88.charts.20261012.000040 / 1791734441. Exact installed versionName/versionCode 0.3.1-preview.i88.chartsui.20261012.003254 / 1791736375 confirmed, then all device operations stopped. No app launch, device capture or emulator performed. Appearance and real-source/audio acceptance remain pending user.
 
 Source/build/install result: pass. Native visual/function acceptance: pending user.
+
+## Home consistency redesign (2026-10-12)
+
+User supplied four screenshots, inspected individually in this turn. The WeChat RWTemp originals became unavailable before repository copying; input filenames and observed findings are recorded in docs/design/home-page-redesign-20261012.md, without substituting older captures. Home now follows Library/My's 40rpx alignment, native linear icons, white content cards, neutral secondary controls, shared spacing/radius, and semantic theme colors. The promotional scenery card and duplicated lower resume card become one real listening card beside Shuffle Hits; a three-song Favorites preview plays the full actual sheet. Chart previews retain real artwork/titles without plugin definition text or nested card chrome. Existing routes, current player/pause, import, timer, history and chart discovery remain.
+
+Validation: 11 focused Jest suites / 102 tests; 17 color suites / 179 tests; color/UI/runtime guards and changed-file ESLint pass. Full lint remains 14 existing errors / 100 warnings; unrelated auto-fixes restored. Explicit TypeScript has no changed-file diagnostics; existing repository diagnostics remain.
+
+Native visual QA final result: blocked (pending user acceptance). AGENTS.md requires stopping after physical installation/version confirmation; no device screenshot, launch, emulator or substitute visual acceptance is performed. Implementation and behavior checks do not establish pixel or native visual acceptance. Full input audit and functional mapping: docs/design/home-page-redesign-20261012.md.

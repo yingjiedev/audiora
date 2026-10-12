@@ -916,6 +916,7 @@ export interface ILanguageData {
     "home.aboutAndUpdate": string;
     "home.currentVersion": string;
     "home.continueListeningEmpty": string;
+    "home.favoritePreviewEmpty": string;
     "home.exploreMusic": string;
     "home.recommendForYou": string;
     "home.recommendDescription": string;

@@ -830,6 +830,7 @@
     "home.downloadManagementDescription": "View queued, active, and failed downloads",
     "home.aboutAndUpdate": "About & updates",
     "home.currentVersion": "Current version {version}",
+    "home.favoritePreviewEmpty": "Your saved songs appear here. Find something you love and add it to Favorites.",
     "home.continueListeningEmpty": "Start playing something and it will be ready to resume here.",
     "home.exploreMusic": "Explore music",
     "home.recommendForYou": "Discover new playlists",
