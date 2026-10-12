@@ -77,7 +77,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={`${t("home.favoriteSheet")} · ${t("home.songCount", { count: props.favoriteCount })}`}
-                            style={[styles.collection, { backgroundColor: colors.featuredFoldSurface, borderColor: colors.onFeaturedSecondary }]}
+                            style={[styles.collection, { backgroundColor: colors.featuredFoldSurface, borderColor: colors.divider }]}
                             onPress={() => navigate(ROUTE_PATH.LOCAL_SHEET_DETAIL, { id: props.favoriteSheet.id })}>
                             <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>{t("home.myCollection")}</ThemeText>
                             <View style={styles.collectionCount}>
@@ -108,14 +108,14 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
 
 const styles = StyleSheet.create({
     deck: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.sm, gap: spacing.md, alignItems: "stretch" },
-    spread: { flexDirection: "row", minHeight: rpx(320) },
+    spread: { flexDirection: "row", minHeight: rpx(300) },
     // The front card draws above the leaf after it crosses the hinge, hiding its closed back face.
     leaf: { zIndex: 0, borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, overflow: "hidden" },
     leafFace: { flex: 1 },
     hero: { flex: 1, zIndex: 1, borderRadius: radius.lg, overflow: "hidden" },
-    collection: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), paddingHorizontal: spacing.sm, paddingVertical: spacing.lg, justifyContent: "space-between", alignItems: "flex-start", borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+    collection: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, justifyContent: "space-between", alignItems: "flex-start", borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderRightWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
     collectionCount: { gap: spacing.xs, alignItems: "flex-start", width: "100%" },
     collectionCover: { width: rpx(68), height: rpx(68), borderRadius: radius.xs },
     count: { fontSize: fontRpx(40), width: "100%" },
-    companion: { minHeight: rpx(320) },
+    companion: { minHeight: rpx(300) },
 });

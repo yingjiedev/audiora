@@ -459,3 +459,13 @@ Foldmotion 预览已交付：源码 25b7c3f73b28bc36a3b5e21a85ce2796937a1222；0
 Native visual QA final result: **blocked — pending user acceptance**。本次素材可用及源码行为已校验，完整原生收页、透视遮挡、播放手感、文字布局与新图案的真机美学仍由用户验收。安装确认版本后停止设备操作。
 
 Fullfold 预览已保留数据安装：应用源码 06edcca8824a8b0c54f49518e0b5b5fe89a48180；0.3.1-preview.i88.fullfold.20261012.224316 / 1791816196；包名 io.github.yingjiedev.audiora，arm64-v8a；SHA-256 DFD42E4538F40FF25673ADE2F280C0D57748D40228CD3006FE18536117178217。干净源码、实际包元数据、v2 单签名、字体、黑胶资源、八个包内源码模块、Hermes 字节及新 PNG 可见 RGBA 像素/尺寸/透明角一致性已验证。与手机现装证书一致，在 192.168.31.232:42033 升级自 foldmotion.20261012.220843 / 1791814123，精确安装版本确认成功后停止全部设备操作。APK 及 verification.json 保存在 D:/audiora-previews/issue-88/，真机视觉/手势仍 pending user；未启动应用或截屏。
+
+## 图案摆放与卡片构图迭代（2026-10-12）
+
+用户最新 22:52 截图显示 fullfold 的小图案悬空、封面与文案间空白过大，顶部静态外观未通过用户验收。截图直接打开，原件保存在 docs/design/evidence/home-composition/01-floating-motif-before.jpg。此反馈不等于用户已验收完整折叠或其它交互。
+
+本轮将云朵改为封面背后的较大、较淡衬景；按上方 164rpx 图片区/下方文字播放区统一主卡与拾音，去除把整排拉高的独立图案槽，恢复 300rpx 最小高度并让内容自然增长。标签顶端与侧页内边距统一，书脊使用 divider；拾音前景在实际对比度允许时与主卡共用。PNG 未改写，180° 折叠与真实播放动作保留。详见 docs/design/home-composition-refine-20261012.md。
+
+验证：聚焦 6 suites / 85 tests、颜色 19 suites / 206 tests、颜色/UI/动画/runtime guards 和修改文件 ESLint 通过。完整 lint 仍有既有 14 errors / 100 warnings，扩展 TS 无修改文件诊断。没有扩大基线、添加豁免或替代原生视觉验收。
+
+Native visual QA final result: **blocked — pending user acceptance**。最新包的图案与封面关系、真实文本布局、高度与滑动手感仍由用户真机验收；安装并确认版本后停止设备操作。

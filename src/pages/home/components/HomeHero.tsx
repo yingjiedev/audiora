@@ -42,20 +42,20 @@ export default function HomeHero({ music, joined = false }: { music?: IMusic.IMu
                 accessibilityLabel={featuredMusic ? `${t("home.continueListening")} · ${featuredMusic.title}` : t("home.localMusic")}
                 style={styles.main}
                 onPress={open}>
-                <View style={styles.artworkRow}>
-                    <View style={styles.artColumn}>
-                        <ThemeText fontSize="tag" color={colors.onFeaturedSecondary}>
-                            {t("home.continueListening")}
-                        </ThemeText>
-                        <HomeCardMotif />
+                <View style={styles.artworkStage}>
+                    <HomeCardMotif />
+                    <ThemeText numberOfLines={1} fontSize="tag" color={colors.onFeaturedSecondary} style={styles.eyebrow}>
+                        {t("home.continueListening")}
+                    </ThemeText>
+                    <View style={styles.coverFrame}>
+                        {featuredMusic ? (
+                            <FastImage source={resolveArtwork(featuredMusic)} placeholderSource={ImgAsset.albumDefault} style={styles.cover} />
+                        ) : (
+                            <View style={[styles.cover, styles.emptyCover, { backgroundColor: colors.card }]}>
+                                <Icon name="musical-note" size={rpx(56)} color={colors.onCardInsetSecondary} />
+                            </View>
+                        )}
                     </View>
-                    {featuredMusic ? (
-                        <FastImage source={resolveArtwork(featuredMusic)} placeholderSource={ImgAsset.albumDefault} style={styles.cover} />
-                    ) : (
-                        <View style={[styles.cover, styles.emptyCover, { backgroundColor: colors.card }]}>
-                            <Icon name="musical-note" size={rpx(56)} color={colors.onCardInsetSecondary} />
-                        </View>
-                    )}
                 </View>
                 <View style={styles.copy}>
                     <ThemeText numberOfLines={2} fontSize="subTitle" fontWeight="semibold" color={colors.onFeatured}>
@@ -87,11 +87,12 @@ const styles = StyleSheet.create({
     card: { flex: 1, borderRadius: radius.lg, padding: spacing.lg },
     joined: { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
     main: { flex: 1, minHeight: minimumTouch, justifyContent: "space-between", gap: spacing.md },
-    artworkRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
-    artColumn: { flex: 1, minWidth: 0, gap: spacing.xs, paddingTop: spacing.xs },
+    artworkStage: { height: rpx(164), width: "100%" },
+    eyebrow: { marginRight: rpx(164) + spacing.sm },
+    coverFrame: { position: "absolute", top: 0, right: 0 },
     copy: { minWidth: 0, minHeight: minimumTouch, justifyContent: "center", paddingRight: minimumTouch + spacing.xs },
     description: { marginTop: spacing.xs },
-    cover: { width: rpx(156), height: rpx(156), borderRadius: radius.sm },
+    cover: { width: rpx(164), height: rpx(164), borderRadius: radius.sm },
     emptyCover: { alignItems: "center", justifyContent: "center" },
     playAction: { position: "absolute", right: spacing.lg, bottom: spacing.lg, width: minimumTouch, height: minimumTouch, alignItems: "center", justifyContent: "center" },
     playFill: { width: rpx(60), height: rpx(60), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },

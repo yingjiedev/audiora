@@ -3,7 +3,7 @@ import rpx from "@/utils/rpx";
 import React from "react";
 import { Image, StyleSheet, View } from "react-native";
 
-/** Neutral raster decoration stays in its own slot, away from text and touch targets. */
+/** A clipped, quiet backdrop connects the cover to the card without entering text areas. */
 export default React.memo(function HomeCardMotif() {
     return (
         <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.slot}>
@@ -13,6 +13,6 @@ export default React.memo(function HomeCardMotif() {
 });
 
 const styles = StyleSheet.create({
-    slot: { width: "100%", minWidth: 0, height: rpx(104), flexShrink: 1 },
-    image: { width: "100%", height: "100%", opacity: 0.88 },
+    slot: { position: "absolute", left: -rpx(12), right: 0, top: rpx(44), bottom: 0, overflow: "hidden" },
+    image: { position: "absolute", left: 0, top: -rpx(48), width: rpx(232), height: rpx(232), opacity: 0.32 },
 });

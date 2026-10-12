@@ -24,6 +24,9 @@ describe("Audiora semantic colors", () => {
         for (const foreground of [colors.onFeaturedCompanion, colors.onFeaturedCompanionSecondary]) {
             expect(contrastRatio(foreground, colors.featuredCompanionSurface)).toBeGreaterThanOrEqual(4.5);
         }
+        if (contrastRatio(colors.onFeatured, colors.featuredCompanionSurface) >= 4.5) {
+            expect(colors.onFeaturedCompanion).toBe(colors.onFeatured);
+        }
         expect(colors.featuredSurface).toBe(Color(input.primary).alpha(1).hex());
         expect(colors.featuredFoldSurface).not.toBe(colors.featuredSurface);
         expect(colors.featuredCompanionSurface).not.toBe(colors.featuredSurface);

@@ -61,11 +61,12 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     // Separate surfaces keep text legible without changing persisted theme settings.
     const featuredSurface = primaryOpaque;
     const featuredFoldSurface = Color(primaryOpaque).mix(safeColor(colors.text, preset.text), 0.10).hex();
-    const featuredCompanionSurface = Color(primaryOpaque).mix(safeColor(colors.accentWarm, preset.accentWarm).alpha(1), 0.38).hex();
+    const featuredCompanionSurface = Color(primaryOpaque).mix(safeColor(colors.accentWarm, preset.accentWarm).alpha(1), 0.38).darken(0.08).hex();
     const featuredBackgrounds = [featuredSurface, featuredFoldSurface];
     const onFeatured = readableAccent(bestForeground(featuredSurface, [mediaOnDark, lightColors.text, controlNeutralDark]), featuredBackgrounds, colorContrastMinimum.text);
     const onFeaturedSecondary = readableAccent(Color(onFeatured).mix(Color(featuredSurface), 0.12).hex(), featuredBackgrounds, colorContrastMinimum.text);
-    const onFeaturedCompanion = readableAccent(bestForeground(featuredCompanionSurface, [colors.text, preset.text, mediaOnDark, lightColors.text]), [featuredCompanionSurface], colorContrastMinimum.text);
+    const onFeaturedCompanion = contrastRatio(onFeatured, featuredCompanionSurface) >= colorContrastMinimum.text ? onFeatured
+        : readableAccent(bestForeground(featuredCompanionSurface, [colors.text, preset.text, mediaOnDark, lightColors.text]), [featuredCompanionSurface], colorContrastMinimum.text);
     const onFeaturedCompanionSecondary = readableAccent(Color(onFeaturedCompanion).mix(Color(featuredCompanionSurface), 0.20).hex(), [featuredCompanionSurface], colorContrastMinimum.text);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
