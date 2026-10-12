@@ -457,3 +457,5 @@ Foldmotion 预览已交付：源码 25b7c3f73b28bc36a3b5e21a85ce2796937a1222；0
 聚焦回归 6 suites / 85 tests、颜色回归 19 suites / 206 tests 通过；颜色/UI/动画/runtime guards 与修改文件 ESLint 通过。完整仓库 lint 仍有原有 14 errors / 100 warnings；扩展 TS 无修改文件诊断。没有增加基线豁免，也没有以自动回归替代原生视觉验收。
 
 Native visual QA final result: **blocked — pending user acceptance**。本次素材可用及源码行为已校验，完整原生收页、透视遮挡、播放手感、文字布局与新图案的真机美学仍由用户验收。安装确认版本后停止设备操作。
+
+Fullfold 预览已保留数据安装：应用源码 06edcca8824a8b0c54f49518e0b5b5fe89a48180；0.3.1-preview.i88.fullfold.20261012.224316 / 1791816196；包名 io.github.yingjiedev.audiora，arm64-v8a；SHA-256 DFD42E4538F40FF25673ADE2F280C0D57748D40228CD3006FE18536117178217。干净源码、实际包元数据、v2 单签名、字体、黑胶资源、八个包内源码模块、Hermes 字节及新 PNG 可见 RGBA 像素/尺寸/透明角一致性已验证。与手机现装证书一致，在 192.168.31.232:42033 升级自 foldmotion.20261012.220843 / 1791814123，精确安装版本确认成功后停止全部设备操作。APK 及 verification.json 保存在 D:/audiora-previews/issue-88/，真机视觉/手势仍 pending user；未启动应用或截屏。

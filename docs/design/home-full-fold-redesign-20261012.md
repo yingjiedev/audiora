@@ -41,3 +41,11 @@ Use case: stylized-concept. Asset type: one transparent decorative illustration 
 - 素材已经直接查看，PNG 尺寸与 alpha 已读取。没有截取本包原生界面；自动回归不证明 Android GPU 遮挡、实际圆角、真实流畅度或图案的真机视觉效果。
 
 Native visual QA final result: **blocked — pending user acceptance**。按 AGENTS.md，预览包安装到已连接的物理手机并确认精确版本后停止设备操作，用户手工验收完整收页、反向展开与顶部视觉。
+
+## 实际预览交付
+
+- 应用源码 `06edcca8824a8b0c54f49518e0b5b5fe89a48180`；版本 `0.3.1-preview.i88.fullfold.20261012.224316` / versionCode `1791816196`；包名 `io.github.yingjiedev.audiora`；arm64-v8a。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.fullfold.20261012.224316-arm64-v8a-release.apk`；SHA-256 `DFD42E4538F40FF25673ADE2F280C0D57748D40228CD3006FE18536117178217`。实际元数据、干净构建源码、v2 单签名、三份字体字节/哈希和黑胶资源通过。八个 Metro 包内源码模块与构建树原文逐字一致，APK JS 字节与生成的 Hermes bundle 一致。
+- 云朵 PNG 经 aapt 处理后的可见 RGBA 像素哈希与源码素材一致，1254 × 1254，透明角 alpha=0；不仅验证文件名存在。
+- 新包与当前手机已安装包证书一致；在 `192.168.31.232:42033` 用 `adb install -r` 保留数据升级自 `foldmotion.20261012.220843` / `1791814123`，安装显示 Success，精确完整版本名及 code 已确认，然后停止全部设备操作，没有自动打开应用、截屏、点击或用模拟器替代验收。
+- 校验与安装明细 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.fullfold.20261012.224316-verification.json`。后续提交只补交付记录，应用源码与以上版本一致。真实完整翻折、返回展开、触摸与图案美学仍由用户验收。
