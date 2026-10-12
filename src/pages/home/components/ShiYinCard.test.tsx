@@ -18,7 +18,7 @@ jest.mock("./homeBody/useShiYin", () => () => ({ loading: mockLoading, start: mo
 describe("Featured discovery companion", () => {
     let renderer: TestRenderer.ReactTestRenderer;
     beforeEach(() => {
-        mockStart.mockClear(); mockLoading = false; 
+        mockStart.mockClear(); mockLoading = false;
     });
     afterEach(() => act(() => renderer?.unmount()));
 
@@ -30,7 +30,7 @@ describe("Featured discovery companion", () => {
     ])("uses readable text and actual actions on the %s companion", (_name, palette, dark) => {
         mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
         act(() => {
-            renderer = TestRenderer.create(<ShiYinCard topListPlugins={[]} />); 
+            renderer = TestRenderer.create(<ShiYinCard topListPlugins={[]} />);
         });
         const target = renderer.root.findByProps({ accessibilityLabel: "home.shiyin" });
         const surface = StyleSheet.flatten(target.props.style).backgroundColor;
