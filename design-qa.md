@@ -481,3 +481,5 @@ Composition 预览已保留数据交付：源码 de416a7f8e0112d81806509eed1307d
 验证：聚焦 6 suites / 99 tests、颜色 19 suites / 220 tests 通过，新增跨屏宽/实际卡高的连续投影行为检查。颜色/UI/动画/runtime guards 与修改文件 ESLint 通过；完整 lint/扩展 TS 仍有其它既有诊断，没有扩大基线或豁免。
 
 Native visual QA final result: **blocked — pending user acceptance**。已有截图是上一包的问题及参考证据，未以数学投影或回归冒充最新原生效果；安装并确认完整版本后停止设备操作。
+
+Hinge 预览已保留数据安装：应用源码 53208df99b5df3b343568927f950c57aefa9e37d；0.3.1-preview.i88.hinge.20261013.090400 / 1791853442；io.github.yingjiedev.audiora，arm64-v8a；SHA-256 5285F90E1CA36546DEAF3616BA82AEC2BEA80E7D654DCDB6BE41C88B98BF6DE4。实际包/签名/字体/八个包内源码模块/Hermes 字节/PNG 可见像素与构建源码一致。当前手机签名比对一致，2026-10-13 09:06:58 +08:00 在 192.168.31.232:33325 升级自 composition.20261012.230605 / 1791817566，确认精确完整版本后停止设备操作。未自动打开应用、截屏或模拟器验收，视觉与手势仍 pending user。

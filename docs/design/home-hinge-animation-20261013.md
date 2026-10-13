@@ -39,4 +39,8 @@ Native visual QA final result: **blocked — pending user acceptance**。
 
 ## 预览交付
 
-新包构建、源文件/素材校验及物理手机保留数据安装记录在完成后补充。
+- 应用源码 `53208df99b5df3b343568927f950c57aefa9e37d`；版本 `0.3.1-preview.i88.hinge.20261013.090400` / versionCode `1791853442`；包名 `io.github.yingjiedev.audiora`，ABI arm64-v8a。后续提交只补交付记录，不改变包内应用源码。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.hinge.20261013.090400-arm64-v8a-release.apk`，SHA-256 `5285F90E1CA36546DEAF3616BA82AEC2BEA80E7D654DCDB6BE41C88B98BF6DE4`。
+- 干净短路径构建树、实际包版本/ABI、v2 单签名、三份字体字节与哈希、黑胶资源核对通过。八个包内 source-map 源码模块逐字匹配构建树，APK JS 字节与生成 Hermes bundle 一致；原透明图案 PNG 的可见像素哈希、1254×1254 尺寸和 alpha=0 角落保持一致。
+- 实际安装包证书与新包一致。在物理手机 `192.168.31.232:33325` 使用 `adb install -r` 保留数据升级自 `composition.20261012.230605` / `1791817566`，返回 Success。2026-10-13 09:06:58 +08:00 确认完整版本名与 code，然后停止全部设备操作；未自动打开应用、截屏、模拟器测试或执行手势。
+- 明细 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.hinge.20261013.090400-verification.json`。用户真机视觉/手势验收仍 `pending_user`；未以构建、安装或理想数学投影证明 GPU 视觉已通过。
