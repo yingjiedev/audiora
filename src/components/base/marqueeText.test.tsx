@@ -115,4 +115,30 @@ describe("MarqueeText", () => {
         expect(cancelAnimation).toHaveBeenCalledTimes(1);
         expect(mockOffset.value).toBe(0);
     });
+
+    it("remeasures typography changes and keeps both scrolling copies consistent", () => {
+        const renderer = render();
+        measure(renderer, "marquee-text-viewport", 120);
+        measure(renderer, "marquee-text-content", 300);
+        const oldMeasure = renderer.root.findByProps({ testID: "marquee-text-content" }).props.onLayout;
+        act(() => renderer.update(<MarqueeText text={label} fontSize="tag" fontWeight="semibold" color="card-text" />));
+        expect(mockOffset.value).toBe(0);
+        expect(withRepeat).toHaveBeenCalledTimes(1);
+        act(() => oldMeasure({ nativeEvent: { layout: { width: 400 } } }));
+        expect(withRepeat).toHaveBeenCalledTimes(1);
+        measure(renderer, "marquee-text-content", 200);
+        expect(withRepeat).toHaveBeenCalledTimes(2);
+        const copies = renderer.root.findAllByType("ThemeText" as any);
+        expect(copies).toHaveLength(2);
+        copies.forEach(copy => {
+            expect(copy.props.fontSize).toBe("tag");
+            expect(copy.props.fontWeight).toBe("semibold");
+            expect(copy.props.color).toBe("card-text");
+        });
+        act(() => renderer.update(<MarqueeText text="短歌名" fontSize="tag" fontWeight="semibold" />));
+        measure(renderer, "marquee-text-content", 40);
+        expect(mockOffset.value).toBe(0);
+        expect(renderer.root.findAllByType("ThemeText" as any)).toHaveLength(1);
+        expect(withRepeat).toHaveBeenCalledTimes(2);
+    });
 });

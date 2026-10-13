@@ -22,17 +22,20 @@ interface IMarqueeTextProps {
     text: string;
     color?: string;
     active?: boolean;
+    fontSize?: React.ComponentProps<typeof ThemeText>["fontSize"];
+    fontWeight?: React.ComponentProps<typeof ThemeText>["fontWeight"];
 }
 
-export default function MarqueeText({ text, color, active = true }: IMarqueeTextProps) {
+export default function MarqueeText({ text, color, active = true, fontSize = "content", fontWeight = "regular" }: IMarqueeTextProps) {
     const [viewportWidth, setViewportWidth] = useState(0);
-    const [measurement, setMeasurement] = useState({ text: "", width: 0 });
-    const currentText = useRef(text);
-    currentText.current = text;
+    const measurementKey = `${fontSize}:${fontWeight}:${text}`;
+    const [measurement, setMeasurement] = useState({ key: "", width: 0 });
+    const currentKey = useRef(measurementKey);
+    currentKey.current = measurementKey;
     const [foreground, setForeground] = useState(AppState.currentState === "active");
     const motion = useMotion();
     const offset = useSharedValue(0);
-    const textWidth = measurement.text === text ? measurement.width : 0;
+    const textWidth = measurement.key === measurementKey ? measurement.width : 0;
     const overflow = viewportWidth > 0 && textWidth > viewportWidth;
     const distance = textWidth + GAP;
     const duration = distance / SCROLL_SPEED * 1000;
@@ -73,7 +76,7 @@ export default function MarqueeText({ text, color, active = true }: IMarqueeText
                 offset.value = 0;
             })();
         };
-    }, [text, viewportWidth, textWidth, scrolling, delay, distance, duration, offset]);
+    }, [measurementKey, viewportWidth, textWidth, scrolling, delay, distance, duration, offset]);
 
     return (
         <ScrollView
@@ -95,24 +98,26 @@ export default function MarqueeText({ text, color, active = true }: IMarqueeText
             {/* Horizontal content measures the full string, without constraining it to the viewport. */}
             <Animated.View style={[styles.track, animatedStyle]}>
                 <ThemeText
-                    key={text}
+                    key={measurementKey}
                     testID="marquee-text-content"
-                    fontSize="content"
+                    fontSize={fontSize}
+                    fontWeight={fontWeight}
                     color={color}
                     fontColor="musicBarText"
                     numberOfLines={1}
                     ellipsizeMode="clip"
                     onLayout={event => {
                         const width = event.nativeEvent.layout.width;
-                        if (currentText.current === text && Number.isFinite(width) && width >= 0) {
-                            setMeasurement({ text, width });
+                        if (currentKey.current === measurementKey && Number.isFinite(width) && width >= 0) {
+                            setMeasurement({ key: measurementKey, width });
                         }
                     }}>
                     {text}
                 </ThemeText>
                 {overflow ? (
                     <ThemeText
-                        fontSize="content"
+                        fontSize={fontSize}
+                        fontWeight={fontWeight}
                         color={color}
                         fontColor="musicBarText"
                         numberOfLines={1}

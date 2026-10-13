@@ -19,6 +19,7 @@ let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pa
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
+jest.mock("@/components/base/marqueeText", () => "MarqueeText");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeRecordHalo: 7 } }));
@@ -172,5 +173,26 @@ describe("Home listening card", () => {
             renderer.update(<HomeHero music={song} appearance="window" />);
         });
         expect(compactHeight).toBeLessThan(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-window" }).props.style).minHeight);
+    });
+
+    it("keeps a long record title in the footer marquee while resuming the complete song", () => {
+        const longSong = { ...song, title: "等待我再回来（等待我再回来完整版现场演唱）" };
+        act(() => {
+            renderer = TestRenderer.create(<HomeHero music={longSong} appearance="record" />);
+        });
+        const marquee = renderer.root.findByType("MarqueeText" as any);
+        expect(marquee.props.text).toBe(longSong.title);
+        expect(marquee.props.fontSize).toBe("tag");
+        expect(marquee.props.color).toBe(mockColors.onFeaturedRecord);
+        const heading = renderer.root.findAllByType("ThemeText" as any)
+            .find(node => node.props.children === "home.continueListening")!;
+        expect(heading.props.fontSize).toBe("section");
+        expect(heading.props.numberOfLines).toBe(1);
+        expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === longSong.title)).toBe(false);
+        expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === "Real artist")).toBe(true);
+        press(`home.continueListening · ${longSong.title}`);
+        expect(mockPlay).toHaveBeenCalledWith(longSong);
+        act(() => renderer.update(<HomeHero music={song} appearance="record" />));
+        expect(renderer.root.findByType("MarqueeText" as any).props.text).toBe(song.title);
     });
 });

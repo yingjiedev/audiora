@@ -1,5 +1,6 @@
 import FastImage from "@/components/base/fastImage";
 import Icon from "@/components/base/icon";
+import MarqueeText from "@/components/base/marqueeText";
 import ThemeText from "@/components/base/themeText";
 import { ImgAsset } from "@/constants/assetsConst";
 import { controlSize, radius, spacing } from "@/constants/designSystem";
@@ -11,7 +12,7 @@ import TrackPlayer, { useCurrentMusic, useMusicState } from "@/core/trackPlayer"
 import useColors from "@/hooks/useColors";
 import { isSameMediaItem } from "@/utils/mediaUtils";
 import { resolveArtwork } from "@/utils/artwork";
-import rpx, { fontRpx } from "@/utils/rpx";
+import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import React from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
@@ -59,14 +60,14 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
                 onPress={open}>
                 {record ? <>
                     <View style={[styles.recordHeading, { minHeight: layout.artworkHeight }]}>
-                        <ThemeText numberOfLines={1} fontSize="tag" color={secondary} style={styles.recordLabel}>{t("home.continueListening")}</ThemeText>
-                        <ThemeText numberOfLines={2} fontSize="hero" fontWeight="semibold" color={foreground} style={styles.recordTitle}>{title}</ThemeText>
+                        <ThemeText numberOfLines={1} fontSize="tag" color={secondary} style={styles.recordLabel}>{sourceName || t("home.localMusic")}</ThemeText>
+                        <ThemeText numberOfLines={1} fontSize="section" fontWeight="semibold" color={foreground} style={styles.recordTitle}>{t("home.continueListening")}</ThemeText>
                     </View>
                     <View style={[styles.footer, styles.recordFooter, { minHeight: layout.footerHeight }]}>
                         {cover(styles.recordCover)}
                         <View style={styles.recordMetadata}>
-                            <ThemeText numberOfLines={2} fontSize="tag" color={foreground}>{featuredMusic ? artist : t("home.scanLocal")}</ThemeText>
-                            {!!sourceName && <ThemeText numberOfLines={1} fontSize="tag" color={secondary} style={styles.description}>{sourceName}</ThemeText>}
+                            <MarqueeText text={title} fontSize="tag" fontWeight="semibold" color={foreground} />
+                            <ThemeText numberOfLines={1} fontSize="tag" color={secondary} style={styles.description}>{featuredMusic ? artist : t("home.scanLocal")}</ThemeText>
                         </View>
                     </View>
                 </> : <>
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
     description: { marginTop: spacing.xs },
     recordHeading: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, overflow: "hidden" },
     recordLabel: { maxWidth: "56%" },
-    recordTitle: { marginTop: spacing.xs, maxWidth: "56%", fontSize: fontRpx(48) },
+    recordTitle: { marginTop: spacing.xs, maxWidth: "56%" },
     // The bitmap includes the matte backing and its soft halo. Allow the complete
     // visible arc through; the card's outer rounded clip still owns its perimeter.
     recordArtColumn: { position: "absolute", width: "54%", right: 0, top: 0, height: rpx(186), overflow: "hidden" },
