@@ -504,3 +504,4 @@ Dual 预览已保留数据安装：应用源码 2f87d42c8bf020fdc8a14b3d3173134f
 - 自动验证：聚焦 7 suites / 122 tests、颜色 19 suites / 232 tests 通过，最终唱片层位置调整后的 HomeHero 16 tests 通过。它们不替代真实像素与手势验收。
 - Post-fix native screenshot: pending user acceptance。仓库规定安装并确认精确版本后停止设备操作；本次修复不自动启动、截屏或操作手势。
 - Final result: **blocked** — 原生视觉验收待用户，本次不将旧截图或测试渲染器结果标为修复后的通过证据。
+- Preview delivery: `0.3.1-preview.i88.record.20261013.154409` / `1791877451`，应用源码 `cb097a69c6b54f3550bf4b978fc87c96d9491878`；`2026-10-13T15:48:42.7912046+08:00` 保留数据安装并确认精确版本后停止设备操作。最新 [交付记录](docs/design/home-record-lighting-20261013.md)；真机视觉仍待用户验收。
