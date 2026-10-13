@@ -26,5 +26,6 @@
 - 包名 `io.github.yingjiedev.audiora`，版本 `0.3.1-preview.i88.copy.20261013.191710` / `1791890231`，ABI arm64-v8a。
 - APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.copy.20261013.191710-arm64-v8a-release.apk`，SHA-256 `B9424E3A8F5D00404E19699D7EC3066A0FDCC0C86636D938E6781884B1133077`。干净短路径构建源、实际 APK 元数据、v2 单签名者、三份字体字节/哈希通过。
 - 十六个 source-map 模块与构建源码逐字匹配，含本轮 HomeHero / MarqueeText、既有底栏 musicInfo 和字体 token；APK Hermes 与生成 bundle 字节一致。四个既有首页/播放器素材可见像素与五处唱片底圈/外光 alpha 采样保持一致。
-- 安装尝试时原物理手机无线调试设备已断开，`get-state` 未找到设备，未执行安装、卸载或清数据。已请求当前无线调试 IP 与连接端口，待连接恢复后核对实际安装证书并使用 `adb install -r`；不能把打包成功写成安装成功。
-- 核对报告 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.copy.20261013.191710-verification.json`；安装尚待恢复设备连接，原生视觉仍 `pending_user`。PR #105 保持 open。
+- 原无线调试连接断开后，按用户提供的连接端口恢复至 `192.168.31.232:33939`。核对手机实际安装 APK 的签名证书与新包一致，`adb install -r` 返回 Success；保留数据升级自 `0.3.1-preview.i88.activity.20261013.185425` / `1791888866`。
+- `2026-10-13T19:34:49.1430122+08:00` 确认实际安装版本为 `0.3.1-preview.i88.copy.20261013.191710` / `1791890231`，随后停止设备操作，没有自动启动、截屏或手势验收。
+- 核对报告 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.copy.20261013.191710-verification.json`；安装与精确版本确认完成，原生视觉仍 `pending_user`。PR #105 保持 open。
