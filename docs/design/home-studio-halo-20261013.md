@@ -23,3 +23,11 @@
 原生外部阴影使用现有 RN 新架构的 boxShadow，Android 9+ 支持 outset；更早版本不将光晕作为功能或可读性依赖。依据：[View Style Props](https://reactnative.dev/docs/view-style-props#boxshadow)、[BoxShadowValue](https://reactnative.dev/docs/boxshadowvalue)。本次不增加原生依赖或迁移主题设置。
 
 Native visual QA final result: **blocked — pending user acceptance**。以上真机图为改造依据，新素材预览与自动测试不能替代修复后的原生光晕、实际裁切及折页手感验收。按仓库规则安装并确认精确版本后停止设备操作。
+
+## 预览交付
+
+- 应用源码 `2fc1b0c6b8106abfc7f7b11e1e01d264ff8455ec`，版本 `0.3.1-preview.i88.studio.20261013.162020` / versionCode `1791879622`，包名 `io.github.yingjiedev.audiora`，ABI arm64-v8a。后续提交只记录交付结果。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.studio.20261013.162020-arm64-v8a-release.apk`，SHA-256 `D380123C647F3CDBEB8474D66636FF3BF4D97307B905EC5A74DCC37106509A97`。干净短路径构建树、包版本/ABI、v2 单签名者及三份字体字节/哈希通过。
+- 十一个 source-map 模块逐字匹配，包含新增原生外沿几何配置与语义颜色；APK Hermes bundle 与生成 bundle 字节一致。新蓝灰唱片与摄影棚宽图、原播放器 LP 三张图的可见像素哈希、尺寸和透明角与源码一致，既有播放器素材未改变。
+- 与物理手机实际安装证书比对一致，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.record.20261013.154409` / `1791877451`。`2026-10-13T16:25:19.4825146+08:00` 确认精确版本名和 code 后停止全部设备操作；没有自动启动、截屏、手势或模拟器验收。
+- 明细 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.studio.20261013.162020-verification.json`。PR #105 保持 open、未合并；原生外观及手感仍为 `pending_user`。
