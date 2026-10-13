@@ -46,9 +46,6 @@ describe("Audiora semantic colors", () => {
         expect(contrastRatio(colors.featuredRecordGradient[0], colors.featuredRecordGradient[2])).toBeGreaterThanOrEqual(1.2);
         expect(contrastRatio(colors.onFeaturedAction, colors.featuredActionSurface)).toBeGreaterThanOrEqual(4.5);
         expect(Color(colors.featuredRecordFoldSurface).luminosity()).toBeLessThan(0.15);
-        expect(colors.featuredRecordArtworkFade[0]).toBe(colors.featuredRecordSurface);
-        expect(Color(colors.featuredRecordArtworkFade[1]).alpha()).toBe(0);
-        expect(Color(colors.featuredRecordArtworkFade[1]).alpha(1).hex()).toBe(colors.featuredRecordSurface);
         for (const glow of [colors.featuredRecordHalo, colors.featuredRecordShadow, colors.featuredRecordRim]) {
             expect(Color(glow).alpha()).toBeGreaterThan(0);
             expect(Color(glow).alpha()).toBeLessThan(0.5);

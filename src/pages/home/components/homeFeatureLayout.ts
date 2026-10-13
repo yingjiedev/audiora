@@ -4,7 +4,7 @@ import { elevation } from "@/constants/designSystem";
 /** Match the companion to the selected listening card without stretching the record layout. */
 export const homeFeatureLayout = {
     window: { minimumHeight: rpx(344), artworkHeight: rpx(192), footerHeight: rpx(152) },
-    record: { minimumHeight: rpx(256), artworkHeight: rpx(128), footerHeight: rpx(128) },
+    record: { minimumHeight: rpx(232), artworkHeight: rpx(116), footerHeight: rpx(116) },
 } as const;
 
 /** Keep perimeter light outside the rounded material clipping layers. */

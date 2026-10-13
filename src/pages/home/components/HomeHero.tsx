@@ -11,7 +11,7 @@ import TrackPlayer, { useCurrentMusic, useMusicState } from "@/core/trackPlayer"
 import useColors from "@/hooks/useColors";
 import { isSameMediaItem } from "@/utils/mediaUtils";
 import { resolveArtwork } from "@/utils/artwork";
-import rpx from "@/utils/rpx";
+import rpx, { fontRpx } from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import React from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
@@ -49,10 +49,8 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
     return (
         <View testID={`home-hero-${appearance}`} style={[styles.card, joined && styles.joined, { minHeight: layout.minimumHeight, backgroundColor: record ? colors.featuredRecordSurface : colors.featuredWindowSurface }]}>
             {record && <LinearGradient testID="home-record-lighting" pointerEvents="none" colors={colors.featuredRecordGradient} locations={[0, 0.52, 1]} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} style={StyleSheet.absoluteFill} />}
-            {record && <View testID="home-record-art-stage" pointerEvents="none" style={[styles.recordArtStage, { height: layout.artworkHeight }]}>
-                <Image source={ImgAsset.homeDiscoveryStudio} accessible={false} resizeMode="cover" resizeMethod="resize" style={StyleSheet.absoluteFill} />
-                <View testID="home-record-copy-surface" style={[styles.recordCopySurface, { backgroundColor: colors.featuredRecordSurface }]} />
-                <LinearGradient testID="home-record-art-fade" colors={colors.featuredRecordArtworkFade} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.recordArtFade} />
+            {record && <View testID="home-record-art-column" pointerEvents="none" style={styles.recordArtColumn}>
+                <Image source={ImgAsset.homeRecordStudio} accessible={false} resizeMode="contain" resizeMethod="resize" style={[styles.recordTexture, { opacity: colors.featuredRecordTextureOpacity }]} />
             </View>}
             <Pressable
                 accessibilityRole="button"
@@ -112,14 +110,13 @@ const styles = StyleSheet.create({
     footer: { padding: spacing.lg, paddingRight: minimumTouch + spacing.lg * 2, flex: 1 },
     copy: { minWidth: 0, justifyContent: "center" },
     description: { marginTop: spacing.xs },
-    recordHeading: { padding: spacing.lg, overflow: "hidden" },
+    recordHeading: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, overflow: "hidden" },
     recordLabel: { maxWidth: "56%" },
-    recordTitle: { marginTop: spacing.sm, maxWidth: "56%" },
-    recordArtStage: { position: "absolute", width: "100%", top: 0, overflow: "hidden" },
-    recordCopySurface: { position: "absolute", width: "64%", left: 0, top: 0, bottom: 0 },
-    recordArtFade: { position: "absolute", width: "12%", left: "64%", top: 0, bottom: 0 },
+    recordTitle: { marginTop: spacing.xs, maxWidth: "56%", fontSize: fontRpx(48) },
+    recordArtColumn: { position: "absolute", width: "44%", right: 0, top: 0, height: rpx(156), overflow: "hidden" },
+    recordTexture: { position: "absolute", width: rpx(392), height: rpx(392), right: -rpx(196), top: -rpx(236) },
     recordRim: { ...StyleSheet.absoluteFill, borderRadius: radius.xl, borderWidth: StyleSheet.hairlineWidth },
-    recordFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    recordFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
     recordCover: { width: rpx(88), height: rpx(88), borderRadius: radius.sm },
     recordMetadata: { flex: 1, minWidth: 0 },
     emptyCover: { alignItems: "center", justifyContent: "center" },

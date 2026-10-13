@@ -21,7 +21,7 @@ jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeDiscoveryStudio: 7 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeRecordStudio: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => () => "Source label" }));
 jest.mock("@/core/playerOverlay", () => ({ openPlayer: () => mockOpen() }));
@@ -139,28 +139,32 @@ describe("Home listening card", () => {
         expect(mockPlay).toHaveBeenCalledWith(song);
     });
 
-    it("reuses the studio photograph with an opaque heading backing and compact layout", () => {
+    it("restores the continuous dark material and visible vinyl arc outside the title column", () => {
         act(() => {
             renderer = TestRenderer.create(<HomeHero music={song} appearance="record" />);
         });
         const lighting = renderer.root.findByProps({ testID: "home-record-lighting" });
         expect(lighting.props.colors).toEqual(mockColors.featuredRecordGradient);
         expect(lighting.props.pointerEvents).toBe("none");
-        const artwork = renderer.root.findByProps({ testID: "home-record-art-stage" });
+        const artwork = renderer.root.findByProps({ testID: "home-record-art-column" });
         expect(artwork.props.pointerEvents).toBe("none");
         const rim = renderer.root.findByProps({ testID: "home-record-rim" });
         expect(rim.props.pointerEvents).toBe("none");
         expect(StyleSheet.flatten(rim.props.style).borderColor).toBe(mockColors.featuredRecordRim);
         const title = renderer.root.findByProps({ children: song.title });
         const titleStyle = StyleSheet.flatten(title.props.style);
-        const backing = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-record-copy-surface" }).props.style);
-        expect(backing.backgroundColor).toBe(mockColors.featuredRecordSurface);
-        expect(parseFloat(backing.width)).toBeGreaterThan(parseFloat(titleStyle.maxWidth));
-        const fade = renderer.root.findByProps({ testID: "home-record-art-fade" });
-        expect(StyleSheet.flatten(fade.props.style).left).toBe(backing.width);
-        expect(fade.props.colors).toEqual(mockColors.featuredRecordArtworkFade);
-        const photo = artwork.findAll(node => node.props.source === 7)[0];
-        expect(photo.props.resizeMode).toBe("cover");
+        expect(parseFloat(StyleSheet.flatten(artwork.props.style).width) + parseFloat(titleStyle.maxWidth)).toBeLessThanOrEqual(100);
+        const vinyl = artwork.findAll(node => node.props.source === 7)[0];
+        const imageStyle = StyleSheet.flatten(vinyl.props.style);
+        // A bounded bitmap is required on native Image; offsets alone allowed the
+        // previous photograph's intrinsic dimensions to show only its empty corner.
+        expect(imageStyle.width).toBeGreaterThan(0);
+        expect(imageStyle.width).toBe(imageStyle.height);
+        expect(imageStyle.opacity).toBe(1);
+        expect(imageStyle.top + imageStyle.height).toBeGreaterThan(0);
+        expect(imageStyle.right + imageStyle.width).toBeGreaterThan(0);
+        expect(vinyl.props.resizeMode).toBe("contain");
+        expect(renderer.root.findAllByProps({ testID: "home-record-art-stage" })).toHaveLength(0);
         const compactHeight = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-record" }).props.style).minHeight;
         act(() => {
             renderer.update(<HomeHero music={song} appearance="window" />);

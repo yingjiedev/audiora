@@ -11,7 +11,7 @@ export const ImgAsset = {
     homeListeningClouds: require("@/assets/imgs/home-listening-clouds-v1.png"),
     homeDiscoveryWindow: require("@/assets/imgs/home-discovery-window-v1.png"),
     homeDiscoveryNight: require("@/assets/imgs/home-discovery-night-v1.png"),
-    homeDiscoveryStudio: require("@/assets/imgs/home-discovery-studio-v1.png"),
+    homeRecordStudio: require("@/assets/imgs/home-record-studio-v1.png"),
     quickLocal: require("@/assets/imgs/quick-local-v2.png"),
     quickHistory: require("@/assets/imgs/quick-history-v2.png"),
     quickFavorite: require("@/assets/imgs/quick-favorite-v2.png"),
