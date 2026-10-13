@@ -15,7 +15,9 @@ import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import React from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import type { HomeFeatureAppearance } from "./homeFeatureAppearance";
+import { homeFeatureLayout } from "./homeFeatureLayout";
 
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
 /** Resume actual listening content; detailed progress belongs to the existing player. */
@@ -30,6 +32,7 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
     const isCurrent = !!featuredMusic && isSameMediaItem(featuredMusic, currentMusic);
     const isPlaying = isCurrent && !musicIsPaused(musicState);
     const record = appearance === "record";
+    const layout = homeFeatureLayout[appearance];
     const foreground = record ? colors.onFeaturedRecord : colors.onFeaturedWindow;
     const secondary = record ? colors.onFeaturedRecordSecondary : colors.onFeaturedWindowSecondary;
     const artist = featuredMusic?.artist || featuredMusic?.album || t("common.unknownName");
@@ -44,19 +47,22 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
     };
 
     return (
-        <View testID={`home-hero-${appearance}`} style={[styles.card, joined && styles.joined, { backgroundColor: record ? colors.featuredRecordSurface : colors.featuredWindowSurface }]}>
+        <View testID={`home-hero-${appearance}`} style={[styles.card, joined && styles.joined, { minHeight: layout.minimumHeight, backgroundColor: record ? colors.featuredRecordSurface : colors.featuredWindowSurface }]}>
+            {record && <LinearGradient testID="home-record-lighting" pointerEvents="none" colors={colors.featuredRecordGradient} locations={[0, 0.52, 1]} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} style={StyleSheet.absoluteFill} />}
+            {record && <View testID="home-record-art-column" pointerEvents="none" style={styles.recordArtColumn}>
+                <Image source={ImgAsset.playerVinyl} accessible={false} resizeMode="contain" resizeMethod="resize" style={[styles.recordTexture, { opacity: colors.featuredRecordTextureOpacity }]} />
+            </View>}
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={featuredMusic ? `${t("home.continueListening")} · ${featuredMusic.title}` : t("home.localMusic")}
                 style={styles.main}
                 onPress={open}>
                 {record ? <>
-                    <View style={styles.recordHeading}>
-                        <Image source={ImgAsset.playerVinyl} accessible={false} resizeMode="contain" resizeMethod="resize" style={[styles.recordTexture, { opacity: colors.featuredRecordTextureOpacity }]} />
-                        <ThemeText numberOfLines={1} fontSize="tag" color={secondary}>{t("home.continueListening")}</ThemeText>
+                    <View style={[styles.recordHeading, { minHeight: layout.artworkHeight }]}>
+                        <ThemeText numberOfLines={1} fontSize="tag" color={secondary} style={styles.recordLabel}>{t("home.continueListening")}</ThemeText>
                         <ThemeText numberOfLines={2} fontSize="hero" fontWeight="semibold" color={foreground} style={styles.recordTitle}>{title}</ThemeText>
                     </View>
-                    <View style={[styles.footer, styles.recordFooter]}>
+                    <View style={[styles.footer, styles.recordFooter, { minHeight: layout.footerHeight }]}>
                         {cover(styles.recordCover)}
                         <View style={styles.recordMetadata}>
                             <ThemeText numberOfLines={2} fontSize="tag" color={foreground}>{featuredMusic ? artist : t("home.scanLocal")}</ThemeText>
@@ -64,13 +70,13 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
                         </View>
                     </View>
                 </> : <>
-                    <View style={styles.artworkStage}>
+                    <View style={[styles.artworkStage, { height: layout.artworkHeight }]}>
                         {cover(styles.windowCover)}
                         <View style={[styles.photoLabel, { backgroundColor: colors.featuredRecordSurface }]}>
                             <ThemeText numberOfLines={1} fontSize="tag" color={colors.onFeaturedRecord}>{t("home.continueListening")}</ThemeText>
                         </View>
                     </View>
-                    <View style={[styles.footer, styles.copy]}>
+                    <View style={[styles.footer, styles.copy, { minHeight: layout.footerHeight }]}>
                         <ThemeText numberOfLines={2} fontSize="title" fontWeight="semibold" color={foreground}>{title}</ThemeText>
                         <ThemeText numberOfLines={1} fontSize="tag" color={secondary} style={styles.description}>{featuredMusic ? [artist, sourceName].filter(Boolean).join(" · ") : t("home.scanLocal")}</ThemeText>
                     </View>
@@ -79,7 +85,7 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t(isPlaying ? "musicDetail.a11y.pause" : "musicDetail.a11y.play")}
-                style={styles.playAction}
+                style={[styles.playAction, { bottom: Math.max(0, (layout.footerHeight - minimumTouch) / 2) }]}
                 onPress={() => {
                     if (!featuredMusic) navigate(ROUTE_PATH.LOCAL);
                     else if (isPlaying) TrackPlayer.pause();
@@ -94,22 +100,24 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
 }
 
 const styles = StyleSheet.create({
-    card: { flex: 1, borderRadius: radius.xl, minHeight: rpx(344), overflow: "hidden" },
+    card: { flex: 1, borderRadius: radius.xl, overflow: "hidden" },
     joined: { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
     main: { flex: 1, minHeight: minimumTouch },
-    artworkStage: { height: rpx(192), width: "100%", overflow: "hidden" },
+    artworkStage: { width: "100%", overflow: "hidden" },
     windowCover: { width: "100%", height: "100%" },
     photoLabel: { position: "absolute", top: spacing.sm, left: spacing.lg, borderRadius: radius.xs, paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs, maxWidth: "90%" },
-    footer: { minHeight: rpx(152), padding: spacing.lg, paddingRight: minimumTouch + spacing.lg * 2, flex: 1 },
+    footer: { padding: spacing.lg, paddingRight: minimumTouch + spacing.lg * 2, flex: 1 },
     copy: { minWidth: 0, justifyContent: "center" },
     description: { marginTop: spacing.xs },
-    recordHeading: { minHeight: rpx(192), padding: spacing.lg, overflow: "hidden" },
-    recordTitle: { marginTop: spacing.lg },
-    recordTexture: { position: "absolute", width: rpx(400), height: rpx(400), right: -rpx(200), top: -rpx(200) },
+    recordHeading: { padding: spacing.lg, overflow: "hidden" },
+    recordLabel: { maxWidth: "56%" },
+    recordTitle: { marginTop: spacing.sm, maxWidth: "56%" },
+    recordArtColumn: { position: "absolute", width: "44%", right: 0, top: 0, height: rpx(172), overflow: "hidden" },
+    recordTexture: { position: "absolute", width: rpx(344), height: rpx(344), right: -rpx(172), top: -rpx(172), transform: [{ rotate: "-90deg" }] },
     recordFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-    recordCover: { width: rpx(112), height: rpx(112), borderRadius: radius.sm },
+    recordCover: { width: rpx(88), height: rpx(88), borderRadius: radius.sm },
     recordMetadata: { flex: 1, minWidth: 0 },
     emptyCover: { alignItems: "center", justifyContent: "center" },
-    playAction: { position: "absolute", right: spacing.lg, bottom: Math.max(0, (rpx(152) - minimumTouch) / 2), width: minimumTouch, height: minimumTouch, alignItems: "center", justifyContent: "center" },
+    playAction: { position: "absolute", right: spacing.lg, width: minimumTouch, height: minimumTouch, alignItems: "center", justifyContent: "center" },
     playFill: { width: rpx(72), height: rpx(72), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 });

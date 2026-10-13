@@ -35,10 +35,15 @@ describe("Audiora semantic colors", () => {
             expect(Color(surface).alpha()).toBe(1);
             for (const text of [colors.onFeaturedWindow, colors.onFeaturedWindowSecondary]) expect(contrastRatio(text, surface)).toBeGreaterThanOrEqual(4.5);
         }
-        const textureLightest = blendOver(Color("white").alpha(colors.featuredRecordTextureOpacity).toString(), colors.featuredRecordSurface);
-        for (const surface of [colors.featuredRecordSurface, colors.featuredRecordFoldSurface, textureLightest]) {
+        const recordSurfaces = [...colors.featuredRecordGradient, ...colors.featuredRecordFoldGradient];
+        // Check the real interpolated backgrounds, not just the gradient endpoints.
+        const recordBackgrounds = recordSurfaces.flatMap((surface, index) => index % 3 === 2 ? [surface]
+            : Array.from({ length: 21 }, (_, step) => Color(surface).mix(Color(recordSurfaces[index + 1]), step / 20).hex()));
+        for (const surface of [colors.featuredRecordSurface, colors.featuredRecordFoldSurface, ...recordBackgrounds]) {
             for (const text of [colors.onFeaturedRecord, colors.onFeaturedRecordSecondary]) expect(contrastRatio(text, surface)).toBeGreaterThanOrEqual(4.5);
         }
+        expect(new Set(colors.featuredRecordGradient).size).toBe(3);
+        expect(contrastRatio(colors.featuredRecordGradient[0], colors.featuredRecordGradient[2])).toBeGreaterThanOrEqual(1.2);
         expect(contrastRatio(colors.onFeaturedAction, colors.featuredActionSurface)).toBeGreaterThanOrEqual(4.5);
         expect(Color(colors.featuredRecordFoldSurface).luminosity()).toBeLessThan(0.15);
         expect(input).toEqual(before);

@@ -20,6 +20,7 @@ let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pa
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
+jest.mock("react-native-linear-gradient", () => "LinearGradient");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, playerVinyl: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => () => "Source label" }));
@@ -130,10 +131,33 @@ describe("Home listening card", () => {
         expect(contrastRatio(blendOver(icon.props.color, buttonSurface), buttonSurface)).toBeGreaterThanOrEqual(3);
         renderer.root.findAllByType("ThemeText" as any).forEach(node => {
             const background = node.props.children === "home.continueListening" ? mockColors.featuredRecordSurface : actualCard;
-            expect(contrastRatio(node.props.color, background)).toBeGreaterThanOrEqual(4.5);
+            const backgrounds = record ? mockColors.featuredRecordGradient : [background];
+            backgrounds.forEach(surface => expect(contrastRatio(node.props.color, surface)).toBeGreaterThanOrEqual(4.5));
         });
         press("home.continueListening · Real song");
         press("musicDetail.a11y.play");
         expect(mockPlay).toHaveBeenCalledWith(song);
+    });
+
+    it("keeps the high-contrast record art outside the text column and removes the tall empty stage", () => {
+        act(() => {
+            renderer = TestRenderer.create(<HomeHero music={song} appearance="record" />);
+        });
+        const lighting = renderer.root.findByProps({ testID: "home-record-lighting" });
+        expect(lighting.props.colors).toEqual(mockColors.featuredRecordGradient);
+        expect(lighting.props.pointerEvents).toBe("none");
+        const artwork = renderer.root.findByProps({ testID: "home-record-art-column" });
+        const artworkStyle = StyleSheet.flatten(artwork.props.style);
+        expect(artwork.props.pointerEvents).toBe("none");
+        const title = renderer.root.findByProps({ children: song.title });
+        const titleStyle = StyleSheet.flatten(title.props.style);
+        expect(parseFloat(artworkStyle.width) + parseFloat(titleStyle.maxWidth)).toBeLessThanOrEqual(100);
+        const vinyl = artwork.findAll(node => node.props.source === 7)[0];
+        expect(StyleSheet.flatten(vinyl.props.style).opacity).toBe(1);
+        const compactHeight = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-record" }).props.style).minHeight;
+        act(() => {
+            renderer.update(<HomeHero music={song} appearance="window" />);
+        });
+        expect(compactHeight).toBeLessThan(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-window" }).props.style).minHeight);
     });
 });

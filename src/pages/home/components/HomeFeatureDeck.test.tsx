@@ -20,6 +20,7 @@ jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1 } }));
 jest.mock("@/components/base/themeText", () => "ThemeText");
+jest.mock("react-native-linear-gradient", () => "LinearGradient");
 jest.mock("./HomeHero", () => "HomeHero");
 jest.mock("./ShiYinCard", () => "ShiYinCard");
 jest.mock("@/hooks/useColors", () => () => mockColors);
@@ -245,11 +246,18 @@ describe("Home folded collection", () => {
         mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark as boolean);
         render();
         expect(renderer.root.findByType("HomeHero" as any).props.appearance).toBe(appearance);
+        expect(renderer.root.findByType("ShiYinCard" as any).props.appearance).toBe(appearance);
         const paper = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-paper" }).props.style);
         expect(paper.backgroundColor).toBe(appearance === "record" ? mockColors.featuredRecordFoldSurface : mockColors.featuredWindowFoldSurface);
-        const background = blendOver(paper.backgroundColor, mockColors.pageBackground);
+        const backgrounds = appearance === "record" ? mockColors.featuredRecordFoldGradient : [blendOver(paper.backgroundColor, mockColors.pageBackground)];
+        if (appearance === "record") {
+            const gradient = renderer.root.findByProps({ testID: "home-record-fold-lighting" });
+            expect(gradient.props.colors).toEqual(mockColors.featuredRecordFoldGradient);
+            expect(gradient.props.pointerEvents).toBe("none");
+            expect(renderer.root.findByProps({ testID: "home-record-spine" }).props.pointerEvents).toBe("none");
+        }
         renderer.root.findAllByType("ThemeText" as any).forEach(node => {
-            expect(contrastRatio(blendOver(node.props.color, background), background)).toBeGreaterThanOrEqual(4.5);
+            backgrounds.forEach(background => expect(contrastRatio(blendOver(node.props.color, background), background)).toBeGreaterThanOrEqual(4.5));
         });
     });
 });

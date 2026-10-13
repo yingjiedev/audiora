@@ -1,17 +1,18 @@
 import React from "react";
-import { StyleSheet } from "react-native";
+import { Image, StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import { darkColors, lightColors } from "@/constants/colorPalette";
 import { contrastRatio } from "@/utils/colorContrast";
 import { resolveThemeColors } from "@/utils/themeColors";
 import ShiYinCard from "./ShiYinCard";
+import { homeFeatureLayout } from "./homeFeatureLayout";
 
 const mockStart = jest.fn();
 let mockLoading = false;
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { homeListeningClouds: 7 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { homeDiscoveryWindow: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/hooks/useColors", () => () => mockColors);
 jest.mock("./homeBody/useShiYin", () => () => ({ loading: mockLoading, start: mockStart }));
@@ -49,5 +50,18 @@ describe("Featured discovery companion", () => {
         expect(target.props.disabled).toBe(true);
         expect(target.props.accessibilityState).toEqual({ disabled: true, busy: true });
         expect(target.findAllByType("Icon" as any).some(icon => icon.props.name === "play")).toBe(false);
+    });
+
+    it("matches the compact record card height while retaining the real queue action", () => {
+        act(() => {
+            renderer = TestRenderer.create(<ShiYinCard topListPlugins={[]} appearance="record" />);
+        });
+        const target = renderer.root.findByProps({ accessibilityLabel: "home.shiyin" });
+        expect(StyleSheet.flatten(target.props.style).minHeight).toBe(homeFeatureLayout.record.minimumHeight);
+        const artwork = renderer.root.findByType(Image);
+        expect(artwork.props.source).toBe(7);
+        expect(StyleSheet.flatten(artwork.parent!.props.style).height).toBe(homeFeatureLayout.record.artworkHeight);
+        act(() => target.props.onPress());
+        expect(mockStart).toHaveBeenCalledTimes(1);
     });
 });

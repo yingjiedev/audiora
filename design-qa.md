@@ -495,3 +495,12 @@ Hinge 预览已保留数据安装：应用源码 53208df99b5df3b343568927f950c57
 Native visual QA final result: **blocked — pending user acceptance**。此轮确认稿是设计图，非新包截图。安装确认后由用户验收封面裁切、夜色层次、文字和折叠手感；不进行替代原生验收。
 
 Dual 预览已保留数据安装：应用源码 2f87d42c8bf020fdc8a14b3d3173134faac4d41d；0.3.1-preview.i88.dual.20261013.143326 / 1791873220，arm64-v8a；SHA-256 BF1F1A92C75B3BA619ED7FBD6EC39B598BD118A9957AF67D8D556FA9164CDF5C。真实包元数据、v2 单签名、字体、九个包内源码模块、Hermes 字节和两张素材 PNG 的可见像素/尺寸/透明角一致性已验证。当前物理手机证书匹配，2026-10-13 14:38:02 +08:00 保留数据升级自 hinge.20261013.090400 / 1791853442 并确认完整版本，随即停止设备操作。未自动打开应用、截屏或执行手势；视觉与手感仍 pending user。产物及 JSON 保存在 D:/audiora-previews/issue-88/。
+# 夜色听歌卡修正：2026-10-13 追加
+
+- Source visual truth: `docs/design/evidence/home-record-lighting/record-reference.png`，482×213。
+- Implementation evidence: `docs/design/evidence/home-record-lighting/record-before-20261013-145225.png`，1220×2656，用户明确要求采集的修复前首页夜色状态。按卡片宽度比较；Android 截图设备像素不作为 dp，不声称与参考拥有相同密度。
+- [P1] 背景与唱片光泽丢失：[对照与修正记录](docs/design/home-record-lighting-20261013.md)。改用派生蓝灰渐变和转向正确高光的现有 LP；全文 28% 透明度改为独立图片区全强度材质，保持正文避开高光。
+- [P2] 固定分区偏高、折页缺少层次：夜色与拾音共用紧凑 256rpx 基准，实际长内容仍可增高；收藏折页联动渐变与书脊明暗边，原完整折页轨迹不变。
+- 自动验证：聚焦 7 suites / 122 tests、颜色 19 suites / 232 tests 通过，最终唱片层位置调整后的 HomeHero 16 tests 通过。它们不替代真实像素与手势验收。
+- Post-fix native screenshot: pending user acceptance。仓库规定安装并确认精确版本后停止设备操作；本次修复不自动启动、截屏或操作手势。
+- Final result: **blocked** — 原生视觉验收待用户，本次不将旧截图或测试渲染器结果标为修复后的通过证据。

@@ -1,4 +1,5 @@
 import React from "react";
+jest.mock("react-native-linear-gradient", () => "LinearGradient");
 import { ScrollView, StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import HomeOverview from "./homeOverview";

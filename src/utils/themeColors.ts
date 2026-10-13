@@ -74,10 +74,22 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const windowBackgrounds = [featuredWindowSurface, featuredWindowFoldSurface];
     const onFeaturedWindow = readableAccent(safeColor(colors.text, preset.text).hex(), windowBackgrounds, colorContrastMinimum.text);
     const onFeaturedWindowSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), windowBackgrounds, colorContrastMinimum.text);
-    const featuredRecordSurface = Color(darkColors.card).mix(Color(primaryOpaque), 0.04).hex();
+    const featuredRecordSurface = Color(darkColors.card).mix(Color(primaryOpaque), 0.025).hex();
+    const featuredRecordGradient = [
+        Color(darkColors.surfaceElevated).mix(Color(primaryOpaque), 0.02).mix(Color(mediaOnDark), 0.02).hex(),
+        featuredRecordSurface,
+        Color(featuredRecordSurface).mix(Color(mediaScrim), 0.10).hex(),
+    ];
     const featuredRecordFoldSurface = Color(featuredRecordSurface).mix(Color(mediaScrim), 0.04).hex();
-    const featuredRecordTextureOpacity = 0.28;
-    const recordBackgrounds = [featuredRecordSurface, featuredRecordFoldSurface, Color(featuredRecordSurface).mix(Color(mediaOnDark), featuredRecordTextureOpacity).hex()];
+    const featuredRecordFoldGradient = featuredRecordGradient.map(recordSurface => Color(recordSurface).mix(Color(mediaScrim), 0.04).hex());
+    const featuredRecordSpineGradient = [
+        Color(featuredRecordFoldSurface).alpha(0).toString(),
+        Color(featuredRecordFoldSurface).mix(Color(mediaOnDark), 0.08).hex(),
+        Color(featuredRecordFoldSurface).mix(Color(mediaScrim), 0.45).hex(),
+    ];
+    // The full-strength grooves occupy a separate art column, never the text background.
+    const featuredRecordTextureOpacity = 1;
+    const recordBackgrounds = [featuredRecordSurface, featuredRecordFoldSurface, ...featuredRecordGradient, ...featuredRecordFoldGradient];
     const onFeaturedRecord = readableAccent(mediaOnDark, recordBackgrounds, colorContrastMinimum.text);
     const onFeaturedRecordSecondary = readableAccent(Color(onFeaturedRecord).mix(Color(featuredRecordSurface), 0.14).hex(), recordBackgrounds, colorContrastMinimum.text);
     const featuredActionSurface = primaryOpaque;
@@ -112,7 +124,8 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         onFeaturedCompanion,
         onFeaturedCompanionSecondary,
         featuredWindowSurface, featuredWindowFoldSurface, onFeaturedWindow, onFeaturedWindowSecondary,
-        featuredRecordSurface, featuredRecordFoldSurface, featuredRecordTextureOpacity, onFeaturedRecord, onFeaturedRecordSecondary,
+        featuredRecordSurface, featuredRecordGradient, featuredRecordFoldSurface, featuredRecordFoldGradient,
+        featuredRecordSpineGradient, featuredRecordTextureOpacity, onFeaturedRecord, onFeaturedRecordSecondary,
         featuredActionSurface, onFeaturedAction,
         activityUnrecorded,
         activityEmpty,
