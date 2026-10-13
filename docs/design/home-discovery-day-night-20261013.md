@@ -36,3 +36,5 @@ Native visual QA final result: **blocked — pending user acceptance**。素材�
 - 十一个 source-map 模块逐字匹配，APK Hermes 与生成 bundle 字节一致；浅色原图、月夜新图、移位摄影棚原图及播放器 LP 四张图片可见像素/尺寸/透明度与源码一致。
 - 与手机实际安装证书相同，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.studio.20261013.162020` / `1791879622`。`2026-10-13T17:06:38.0636572+08:00` 确认精确版本后停止设备操作，未自动启动、截图、手势或模拟器验收。
 - 明细 `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.night.20261013.170241-verification.json`。原生视觉与手感仍 `pending_user`；PR #105 保持 open，未合并。
+
+后续用户明确要求恢复继续聆听夜色原稿：已撤掉摄影分区及挡板，恢复透明黑胶弧面与连续材质；此文的拾音昼夜花草配图方案保留。[当前复原与交付](home-resume-restored-20261013.md)。上文移位描述为上一包的历史记录。

@@ -20,3 +20,11 @@
 聚焦 7 套件 / 124 项通过，颜色 19 套件 / 234 项通过。更新回归验证连续材质、独立唱片区与标题区分离、正方形 bitmap 明确宽高、可见弧面范围及原真实封面/播放；昼夜配图加载禁用、折页投影/圆角/外沿、随机生命周期和减少动态效果继续通过。颜色/UI/motion/runtime guards 和修改文件 ESLint 通过，扩展 TypeScript 在修改文件无诊断；全仓 lint 既有 14 错误 / 100 警告未修改，无关自动格式化已恢复。
 
 Native visual QA final result: **blocked — pending user acceptance**。当前实机输入是上轮问题证据，原稿及素材已打开检查；样式回归和图包核对不等于原生 GPU 像素、手势或音频验收。按仓库规则保留数据安装并确认精确版本后停止设备操作，待用户检查修复效果。
+
+## 预览交付
+
+- 应用源码 `1cb51f777c363d6976cbcf9c3e0e95433deee6c8`，版本 `0.3.1-preview.i88.resume.20261013.173748` / `1791884270`，包名 `io.github.yingjiedev.audiora`，ABI arm64-v8a。后续提交只补交付记录。
+- APK `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.resume.20261013.173748-arm64-v8a-release.apk`，SHA-256 `0AB3506B3A5E7B2FB3DD4396BF6A08C264325C1659D5A9DB9C0C3B7E6A403963`。干净短路径构建源、包版本/ABI、v2 单签名者及三份字体字节/哈希通过。
+- 十一个 source-map 模块逐字匹配，APK Hermes 与生成 bundle 字节一致；透明首页唱片（1254×1254，角落 alpha=0）、浅色原图（1942×809）、月夜花草图（1931×814）及播放器 LP（1254×1254，角落 alpha=0）四图片可见像素与源码一致。素材文件没有改色或替换。
+- 与实际安装证书一致，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.night.20261013.170241` / `1791882163`。`2026-10-13T17:41:27.8556315+08:00` 确认精确版本后停止设备操作，未自动启动、截屏、手势或模拟器验收。
+- 明细 `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.resume.20261013.173748-verification.json`。原生视觉仍 `pending_user`，PR #105 保持 open。
