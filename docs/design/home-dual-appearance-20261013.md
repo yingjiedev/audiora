@@ -33,3 +33,12 @@
 颜色/UI/动画/runtime guards、修改文件 ESLint 和 diff whitespace 检查通过。完整仓库 lint 仍有既有 14 errors / 100 warnings，自动格式化的两个无关文件已恢复。扩展 TypeScript 仍有仓库其它诊断，本轮修改文件没有诊断；未宣称完整类型检查或完整 Jest 通过。
 
 Native visual QA final result: **blocked — pending user acceptance**。确认图与数学投影不证明真实 Android GPU 像素、连续帧率、触摸或美学已验收。按仓库规则，安装并核对精确版本后停止设备操作，不自动启动、截屏、执行手势或使用模拟器。
+
+## 预览交付
+
+- 应用源码 `2f87d42c8bf020fdc8a14b3d3173134faac4d41d`；版本 `0.3.1-preview.i88.dual.20261013.143326` / versionCode `1791873220`；包名 `io.github.yingjiedev.audiora`，ABI arm64-v8a。后续提交仅补交付记录。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.dual.20261013.143326-arm64-v8a-release.apk`，SHA-256 `BF1F1A92C75B3BA619ED7FBD6EC39B598BD118A9957AF67D8D556FA9164CDF5C`。
+- 干净短路径构建树、实际包版本/ABI、v2 单签名及三份字体的字节和哈希核验通过。九个包内 source-map 模块逐字匹配，包括首页挂载入口、随机选择与折叠 helper；APK JS 字节与生成 Hermes bundle 一致。
+- 新浅蓝唱片 PNG 的 1942×809、角落 alpha=255，以及复用黑胶 PNG 的 1254×1254、角落 alpha=0 均与源码一致；解码后的可见像素哈希逐项匹配。素材与源码入包不等于原生显示验收。
+- 当前手机安装包证书与新包一致；使用 `adb install -r` 保留数据升级自 `0.3.1-preview.i88.hinge.20261013.090400` / `1791853442`，返回 Success。2026-10-13 14:38:02 +08:00 确认精确版本名和 code，随后停止全部设备操作。未自动启动应用、截屏、模拟器或手势测试。
+- 明细 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.dual.20261013.143326-verification.json`，原生视觉/手感仍为 `pending_user`；PR #105 保持 open，未合并。

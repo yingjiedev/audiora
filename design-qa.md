@@ -493,3 +493,5 @@ Hinge 预览已保留数据安装：应用源码 53208df99b5df3b343568927f950c57
 验证：聚焦 7 suites / 120 tests、颜色 19 suites / 230 tests，通过随机生命周期、双外观颜色/动作、连续投影、反向与减少动态效果、真实停靠及栏目行为。颜色/UI/动画/runtime guards 与修改文件 ESLint 通过，完整 lint 与扩展 TS 仍有仓库既有诊断；没有扩大基线或豁免。
 
 Native visual QA final result: **blocked — pending user acceptance**。此轮确认稿是设计图，非新包截图。安装确认后由用户验收封面裁切、夜色层次、文字和折叠手感；不进行替代原生验收。
+
+Dual 预览已保留数据安装：应用源码 2f87d42c8bf020fdc8a14b3d3173134faac4d41d；0.3.1-preview.i88.dual.20261013.143326 / 1791873220，arm64-v8a；SHA-256 BF1F1A92C75B3BA619ED7FBD6EC39B598BD118A9957AF67D8D556FA9164CDF5C。真实包元数据、v2 单签名、字体、九个包内源码模块、Hermes 字节和两张素材 PNG 的可见像素/尺寸/透明角一致性已验证。当前物理手机证书匹配，2026-10-13 14:38:02 +08:00 保留数据升级自 hinge.20261013.090400 / 1791853442 并确认完整版本，随即停止设备操作。未自动打开应用、截屏或执行手势；视觉与手感仍 pending user。产物及 JSON 保存在 D:/audiora-previews/issue-88/。
