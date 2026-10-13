@@ -525,4 +525,6 @@ Dual 预览已保留数据安装：应用源码 2f87d42c8bf020fdc8a14b3d3173134f
 
 聚焦 5 套件 / 78 项与完整颜色 19 套件 / 238 项通过，修改文件 ESLint、runtime、颜色/UI 守卫及 whitespace 通过；全仓 lint/TypeScript 保留既有诊断。没有改动图片、颜色、随机外观或折叠手势。
 
-Native visual QA final result: **blocked — pending user acceptance**。本轮预览安装信息随后补充；不将修改前截图或源码检查作为新包原生视觉通过证据。
+应用源码 `0bff44b55462f35bceaf798ffc3433497cda6f30`，预览 `0.3.1-preview.i88.copy.20261013.191710` / `1791890231`，SHA-256 `B9424E3A8F5D00404E19699D7EC3066A0FDCC0C86636D938E6781884B1133077`。实际 APK、签名、字体、16 个 bundle 模块和既有素材核对通过；安装前无线调试已断开，尚未执行覆盖安装，等待当前连接端口。
+
+Native visual QA final result: **blocked — pending user acceptance**。不将修改前截图或源码/包检查作为新包原生视觉通过证据。
