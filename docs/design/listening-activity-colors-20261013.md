@@ -19,9 +19,14 @@
 
 - 主题与活跃图聚焦 2 套件 / 43 项通过；完整颜色 19 套件 / 237 项通过。
 - 新回归覆盖浅/深预设的亮度单调性、相邻档至少 1.25:1、首末档跨度，以及浅色低档亮度/柔和度与空白格的浅度。原自定义/半透明主题、四档区分及 3:1 的测试保留。
-- `check:colors`、`check:ui`、`typecheck:runtime`、修改文件 ESLint 与 diff whitespace 通过。全仓 lint 仍有既有 14 错误 / 100 警告，无关自动格式化已恢复。未重跑全仓 Jest。
+- `check:colors`、`check:ui`、`typecheck:runtime`、修改文件 ESLint 与 diff whitespace 通过。全仓 lint 仍有既有 14 错误 / 100 警告，无关自动格式化已恢复。默认 TypeScript 配置仍有既有默认导入等诊断，扩展互操作/module/target 参数检查时本轮修改文件诊断为零；不能宣称全仓类型检查通过。未重跑全仓 Jest。
 - Native visual QA final result: **blocked — pending user acceptance**。按仓库规则，保留数据安装且确认版本后停止设备操作，原生合成与深/浅/自定义主题效果由用户验收。
 
 ## 预览交付
 
-待构建、验签与保留数据安装后补充精确版本、源码提交及 APK 校验记录。
+- 应用源码 `da600f28045346a63cb46a218686d35461a37dbe`；`npm run build-preview -- -PreviewVersion 0.3.1-preview.i88.activity.20261013.185425`。后续提交只补交付记录。
+- 包名 `io.github.yingjiedev.audiora`，版本 `0.3.1-preview.i88.activity.20261013.185425` / `1791888866`，ABI arm64-v8a。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.activity.20261013.185425-arm64-v8a-release.apk`，SHA-256 `15F5654E98F933906E1ACFECD852BD77BDC786FFBD3EE13A33C674A156964AD7`。干净短路径构建源、真实 APK 元数据、v2 单签名者、三份字体字节与哈希均通过。
+- 十三个 source-map 模块与构建源码逐字匹配（含新色阶、足迹组件和趋势页），包内 Hermes 与生成 bundle 字节一致。四个首页/播放器装饰图片像素与五处唱片底圈/外光采样保持一致，没有引入图案变化。
+- 与手机实际安装证书一致，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.ring.20261013.181654` / `1791886616`。`2026-10-13T18:58:07.8873461+08:00` 确认精确安装版本后停止设备操作，没有自动启动、截屏或视觉验收。
+- 核对报告 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.activity.20261013.185425-verification.json`；原生视觉仍 `pending_user`。PR #105 保持 open。
