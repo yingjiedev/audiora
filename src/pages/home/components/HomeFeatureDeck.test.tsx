@@ -111,7 +111,7 @@ describe("Home folded collection", () => {
         expect(deck.props.snapToOffsets).toContain(width);
         const front = renderer.root.findByProps({ testID: "home-feature-front" });
         expect(StyleSheet.flatten(front.props.style).zIndex).toBeGreaterThan(StyleSheet.flatten(leaf.parent!.props.style).zIndex);
-        expect(StyleSheet.flatten(front.props.style).overflow).toBe("hidden");
+        expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-front-clip" }).props.style).overflow).toBe("hidden");
         expect(StyleSheet.flatten(front.props.style).borderTopLeftRadius).toBeGreaterThan(0);
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.2 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
@@ -232,6 +232,29 @@ describe("Home folded collection", () => {
         render();
         expect(appearance()).toBe("window");
         expect(random).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the night-card halo outside material clipping and follows the same complete fold", () => {
+        jest.mocked(Math.random).mockReturnValue(0.75);
+        render();
+        const front = renderer.root.findByProps({ testID: "home-feature-front" });
+        const clip = renderer.root.findByProps({ testID: "home-feature-front-clip" });
+        const paper = renderer.root.findByProps({ testID: "home-feature-fold-paper" });
+        const deck = renderer.root.findByType("AnimatedScrollView" as any);
+        const frontStyle = StyleSheet.flatten(front.props.style);
+        const paperStyle = StyleSheet.flatten(paper.props.style);
+        expect(frontStyle.overflow).toBe("visible");
+        expect(paperStyle.overflow).toBe("visible");
+        expect(StyleSheet.flatten(clip.props.style).overflow).toBe("hidden");
+        expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-clip" }).props.style).overflow).toBe("hidden");
+        expect(frontStyle.boxShadow).toEqual(paperStyle.boxShadow);
+        expect(frontStyle.boxShadow[0].color).toBe(mockColors.featuredRecordHalo);
+        const insets = StyleSheet.flatten(deck.props.contentContainerStyle);
+        expect(insets.paddingTop).toBeGreaterThanOrEqual(frontStyle.boxShadow[0].blurRadius + frontStyle.boxShadow[0].spreadDistance);
+        act(() => deck.props.onScroll({ contentOffset: { x: paperStyle.width } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        expect(StyleSheet.flatten(front.props.style).borderTopLeftRadius).toBe(StyleSheet.flatten(clip.props.style).borderTopLeftRadius);
+        expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold" }).props.style).opacity).toBe(0);
     });
 
     it.each([

@@ -21,7 +21,7 @@ jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, playerVinyl: 7 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeRecordStudio: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => () => "Source label" }));
 jest.mock("@/core/playerOverlay", () => ({ openPlayer: () => mockOpen() }));
@@ -149,6 +149,9 @@ describe("Home listening card", () => {
         const artwork = renderer.root.findByProps({ testID: "home-record-art-column" });
         const artworkStyle = StyleSheet.flatten(artwork.props.style);
         expect(artwork.props.pointerEvents).toBe("none");
+        const rim = renderer.root.findByProps({ testID: "home-record-rim" });
+        expect(rim.props.pointerEvents).toBe("none");
+        expect(StyleSheet.flatten(rim.props.style).borderColor).toBe(mockColors.featuredRecordRim);
         const title = renderer.root.findByProps({ children: song.title });
         const titleStyle = StyleSheet.flatten(title.props.style);
         expect(parseFloat(artworkStyle.width) + parseFloat(titleStyle.maxWidth)).toBeLessThanOrEqual(100);

@@ -89,6 +89,9 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     ];
     // The full-strength grooves occupy a separate art column, never the text background.
     const featuredRecordTextureOpacity = 1;
+    const featuredRecordHalo = Color(darkColors.textSecondary).mix(Color(primaryOpaque), 0.12).alpha(dark ? 0.28 : 0.42).toString();
+    const featuredRecordShadow = Color(mediaScrim).alpha(dark ? 0.24 : 0.12).toString();
+    const featuredRecordRim = Color(mediaOnDark).alpha(0.16).toString();
     const recordBackgrounds = [featuredRecordSurface, featuredRecordFoldSurface, ...featuredRecordGradient, ...featuredRecordFoldGradient];
     const onFeaturedRecord = readableAccent(mediaOnDark, recordBackgrounds, colorContrastMinimum.text);
     const onFeaturedRecordSecondary = readableAccent(Color(onFeaturedRecord).mix(Color(featuredRecordSurface), 0.14).hex(), recordBackgrounds, colorContrastMinimum.text);
@@ -126,6 +129,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         featuredWindowSurface, featuredWindowFoldSurface, onFeaturedWindow, onFeaturedWindowSecondary,
         featuredRecordSurface, featuredRecordGradient, featuredRecordFoldSurface, featuredRecordFoldGradient,
         featuredRecordSpineGradient, featuredRecordTextureOpacity, onFeaturedRecord, onFeaturedRecordSecondary,
+        featuredRecordHalo, featuredRecordShadow, featuredRecordRim,
         featuredActionSurface, onFeaturedAction,
         activityUnrecorded,
         activityEmpty,

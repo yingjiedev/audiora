@@ -45,6 +45,7 @@ Audiora 使用蓝色主色、蓝灰表面和少量紫色装饰。参考产品用
 - 图片上的白底按钮用 `inverseSurface` / `onInverse`；沉浸播放器的歌词强调用 `mediaAccent`，喜欢用 `mediaFavorite`，其余用 `onMedia*`。`mediaAmbientGradient` 跟随主色，仅用于封面氛围层。
 - 首页听歌卡在每次挂载时随机选择封面视窗或夜色唱片，本次首页停留期间保持外观。视窗正文与拾音正文使用当前主题合成的不透明 `featuredWindowSurface`，收藏折页用 `featuredWindowFoldSurface`，共用 `onFeaturedWindow` / `onFeaturedWindowSecondary`。夜色主卡与收藏折页分别使用 `featuredRecordGradient` / `featuredRecordFoldGradient`，底色保留 `featuredRecordSurface` / `featuredRecordFoldSurface`，共用 `onFeaturedRecord` / `onFeaturedRecordSecondary`；蓝灰光照从集中深色表面、媒体色和少量用户主色派生，正文按两组渐变及实际插值背景同时校准至 4.5:1。真实封面不改色，图片标签提供独立不透明底；夜色唱片以完整不透明度显示在独立的右侧 44% 装饰区，标题区最大 56%，不能让高光成为文字背景。拾音使用独立的浅蓝唱片内容图。视窗/拾音播放按钮用用户主色派生的 `featuredActionSurface` / `onFeaturedAction`，夜色播放按钮用 `inverseSurface` / `onInverse`。深色书脊使用集中派生的 `featuredRecordSpineGradient`，明暗边不覆盖印字，浅色书脊仍用 `divider`；不写回持久化的主色、透明度或其他页面表面。旧 `featured*` 派生字段保留兼容，但不再作为这组卡片的消费入口。
 - `panelGradient` 保留表面 RGB 并补足不透明度；`modalScrim` 提供遮罩 RGB，弹层保留各自的遮罩透明度和动画。透明面板外部不额外加遮罩。
+- 夜色卡、收藏纸页与同行拾音的外沿使用 `featuredRecordHalo` / `featuredRecordShadow`，主卡细受光边使用 `featuredRecordRim`；几何统一来自 `elevation.featured`。外沿和圆角内容裁切分层，不能在内容裁切节点内绘制外部光晕。摄影棚配图为独立冷蓝灰内容资产，正文仍保留不透明主题底与对应前景，不把照片或外沿色作为文字背景；光晕不承担选中、成功或危险状态，也不重写用户主题。
 - 取色改变不与导航、手势、动画或触摸区域改造混在一起。
 
 ## 自定义与沉浸主题

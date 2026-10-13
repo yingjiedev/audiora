@@ -90,6 +90,11 @@ export type MotionSpring = keyof typeof motion.spring;
  * 只描述几何，颜色交给 colors.shadow，深浅主题各自取色。
  */
 export const elevation = {
+    /** Quiet media-card perimeter light; colors are supplied by useColors(). */
+    featured: {
+        halo: { offsetX: 0, offsetY: 0, blurRadius: rpx(16), spreadDistance: rpx(1) },
+        ambient: { offsetX: 0, offsetY: rpx(3), blurRadius: rpx(12), spreadDistance: 0 },
+    },
     /** 贴地：列表项、内容卡片 */
     low: {
         shadowOffset: { width: 0, height: rpx(4) },

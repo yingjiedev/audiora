@@ -12,7 +12,7 @@ let mockLoading = false;
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { homeDiscoveryWindow: 7 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { homeDiscoveryStudio: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/hooks/useColors", () => () => mockColors);
 jest.mock("./homeBody/useShiYin", () => () => ({ loading: mockLoading, start: mockStart }));
@@ -58,6 +58,9 @@ describe("Featured discovery companion", () => {
         });
         const target = renderer.root.findByProps({ accessibilityLabel: "home.shiyin" });
         expect(StyleSheet.flatten(target.props.style).minHeight).toBe(homeFeatureLayout.record.minimumHeight);
+        expect(StyleSheet.flatten(target.props.style).overflow).toBe("visible");
+        expect(StyleSheet.flatten(target.props.style).boxShadow[0].color).toBe(mockColors.featuredRecordHalo);
+        expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-discovery-clip" }).props.style).overflow).toBe("hidden");
         const artwork = renderer.root.findByType(Image);
         expect(artwork.props.source).toBe(7);
         expect(StyleSheet.flatten(artwork.parent!.props.style).height).toBe(homeFeatureLayout.record.artworkHeight);

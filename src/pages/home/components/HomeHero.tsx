@@ -50,7 +50,7 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
         <View testID={`home-hero-${appearance}`} style={[styles.card, joined && styles.joined, { minHeight: layout.minimumHeight, backgroundColor: record ? colors.featuredRecordSurface : colors.featuredWindowSurface }]}>
             {record && <LinearGradient testID="home-record-lighting" pointerEvents="none" colors={colors.featuredRecordGradient} locations={[0, 0.52, 1]} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} style={StyleSheet.absoluteFill} />}
             {record && <View testID="home-record-art-column" pointerEvents="none" style={styles.recordArtColumn}>
-                <Image source={ImgAsset.playerVinyl} accessible={false} resizeMode="contain" resizeMethod="resize" style={[styles.recordTexture, { opacity: colors.featuredRecordTextureOpacity }]} />
+                <Image source={ImgAsset.homeRecordStudio} accessible={false} resizeMode="contain" resizeMethod="resize" style={[styles.recordTexture, { opacity: colors.featuredRecordTextureOpacity }]} />
             </View>}
             <Pressable
                 accessibilityRole="button"
@@ -95,6 +95,7 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
                     <Icon name={isPlaying ? "pause" : "play"} size={rpx(28)} color={record ? colors.onInverse : colors.onFeaturedAction} />
                 </View>
             </Pressable>
+            {record && <View testID="home-record-rim" pointerEvents="none" style={[styles.recordRim, joined && styles.joined, { borderColor: colors.featuredRecordRim, borderLeftWidth: joined ? 0 : StyleSheet.hairlineWidth }]} />}
         </View>
     );
 }
@@ -112,8 +113,9 @@ const styles = StyleSheet.create({
     recordHeading: { padding: spacing.lg, overflow: "hidden" },
     recordLabel: { maxWidth: "56%" },
     recordTitle: { marginTop: spacing.sm, maxWidth: "56%" },
-    recordArtColumn: { position: "absolute", width: "44%", right: 0, top: 0, height: rpx(172), overflow: "hidden" },
-    recordTexture: { position: "absolute", width: rpx(344), height: rpx(344), right: -rpx(172), top: -rpx(172), transform: [{ rotate: "-90deg" }] },
+    recordArtColumn: { position: "absolute", width: "44%", right: 0, top: 0, height: rpx(164), overflow: "hidden" },
+    recordTexture: { position: "absolute", width: rpx(392), height: rpx(392), right: -rpx(196), top: -rpx(228) },
+    recordRim: { ...StyleSheet.absoluteFill, borderRadius: radius.xl, borderWidth: StyleSheet.hairlineWidth },
     recordFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
     recordCover: { width: rpx(88), height: rpx(88), borderRadius: radius.sm },
     recordMetadata: { flex: 1, minWidth: 0 },
