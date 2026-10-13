@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Image, StyleSheet } from "react-native";
 import { useAppConfig } from "@/core/appConfig";
@@ -13,6 +14,7 @@ import { motionDuration } from "@/utils/motion";
  * 等启动流程结束（或出错）后淡出。未设置启动图时不渲染。
  */
 export default function SplashImageOverlay() {
+    const colors = useColors();
     const splashImage = useAppConfig("theme.splashImage");
     const [bootstrapDone, setBootstrapDone] = useState(
         getDefaultStore().get(bootstrapAtom).state !== "Loading",
@@ -55,7 +57,7 @@ export default function SplashImageOverlay() {
     }
 
     return (
-        <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.overlay, { opacity: fadeAnim, backgroundColor: colors.background }]}>
             <Image
                 source={{ uri: splashImage }}
                 style={styles.image}
@@ -74,7 +76,6 @@ const styles = StyleSheet.create({
         bottom: 0,
         zIndex: 9999,
         elevation: 9999,
-        backgroundColor: "#000000",
     },
     image: {
         width: "100%",

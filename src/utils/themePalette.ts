@@ -1,4 +1,5 @@
 import Color from "color";
+import { neutralFallbackPrimary } from "@/constants/colorPalette";
 
 /**
  * 从背景图取主色的纯逻辑。
@@ -15,7 +16,7 @@ import Color from "color";
  */
 
 /** 中性白回落色，与 core/theme 的 customThemeDefaultPrimary 一致 */
-export const NEUTRAL_FALLBACK_PRIMARY = "#F2F2F2";
+export const NEUTRAL_FALLBACK_PRIMARY = neutralFallbackPrimary;
 
 /** 主导色能作为取色基准的最低饱和度 */
 const MIN_DOMINANT_SATURATION = 15;

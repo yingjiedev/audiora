@@ -64,9 +64,7 @@ export default function OverviewCard(props: IOverviewCardProps) {
         ? [
             styles.card,
             {
-                backgroundColor: colors.danger
-                    ? `${colors.danger}1F`
-                    : colors.surfaceElevated,
+                backgroundColor: colors.dangerSurface,
                 borderColor: colors.danger ?? colors.border,
             },
         ]
@@ -167,13 +165,13 @@ export default function OverviewCard(props: IOverviewCardProps) {
                     <Icon
                         name={pausedCount > 0 ? "play" : "pause"}
                         size={rpx(28)}
-                        color={lowStorage ? colors.onPrimary : colors.primary}
+                        color={lowStorage ? colors.onDanger : colors.primaryText}
                     />
                     <ThemeText
                         fontSize="description"
                         fontWeight="medium"
                         style={{
-                            color: lowStorage ? colors.onPrimary : colors.primary,
+                            color: lowStorage ? colors.onDanger : colors.primaryText,
                             marginLeft: rpx(6),
                         }}>
                         {pausedCount > 0

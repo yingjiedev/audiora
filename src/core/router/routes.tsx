@@ -16,6 +16,7 @@ import RecommendSheets from "@/pages/recommendSheets";
 import PluginSheetDetail from "@/pages/pluginSheetDetail";
 import SheetBrowser from "@/pages/sheetBrowser";
 import History from "@/pages/history";
+import ListeningReport from "@/pages/listeningReport";
 import SetCustomTheme from "@/pages/setCustomTheme";
 import Permissions from "@/pages/permissions";
 import { ROUTE_PATH } from "@/core/router/index.ts";
@@ -97,6 +98,10 @@ export const routes: Array<IRoutes> = [
     {
         path: ROUTE_PATH.HISTORY,
         component: History,
+    },
+    {
+        path: ROUTE_PATH.LISTENING_REPORT,
+        component: ListeningReport,
     },
     {
         path: ROUTE_PATH.SET_CUSTOM_THEME,

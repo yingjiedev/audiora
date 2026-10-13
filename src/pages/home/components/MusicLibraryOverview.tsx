@@ -1,325 +1,171 @@
 import Icon, { IIconName } from "@/components/base/icon";
 import PillTabBar from "@/components/base/pillTabBar";
-import { TONAL_ALPHA } from "@/components/base/roundActionButton";
 import ThemeText from "@/components/base/themeText";
-import i18n, { useI18N } from "@/core/i18n";
+import MusicItem from "@/components/mediaItem/musicItem";
+import FastImage from "@/components/base/fastImage";
+import { ImgAsset } from "@/constants/assetsConst";
+import { controlSize, radius, spacing } from "@/constants/designSystem";
+import { localMusicSheetId, localPluginPlatform } from "@/constants/commonConst";
+import { useI18N } from "@/core/i18n";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import LocalMusicSheet from "@/core/localMusicSheet";
-import PluginManager, {
-    usePluginDisplayNameResolver,
-    useSortedPlugins,
-} from "@/core/pluginManager";
+import TrackPlayer from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
-import rpx from "@/utils/rpx";
-import Color from "color";
+import { openLocalMusicScanner } from "@/pages/localMusic/scanMusic";
+import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { groupLocalMusic, LocalBrowserMode, LocalGroupMode, LocalMusicGroup } from "./libraryBrowser";
+import OnlineMusicLibrary from "./OnlineMusicLibrary";
 
 type LibraryTab = "local" | "online";
-type LocalBrowserMode = "tracks" | "artists" | "albums" | "folders";
-
-type LocalEntry = {
-    key: LocalBrowserMode;
-    icon: IIconName;
-    title: string;
-    count: number;
-    unit: string;
+type LocalEntry = { key: LocalBrowserMode; icon: IIconName; title: string; count: number; unit: string };
+type BrowserRow = { key: string } & ({ kind: "track"; music: IMusic.IMusicItem } | { kind: "group"; group: LocalMusicGroup });
+const minimumTouch = Math.max(44, controlSize.minimumTouch);
+const browserIcons: Record<LocalBrowserMode, IIconName> = {
+    tracks: "musical-note", artists: "user", albums: "album-outline", folders: "folder-outline",
 };
 
-type BrowserItem = {
-    key: string;
-    title: string;
-    description: string;
-};
-
-function getFolderName(item: IMusic.IMusicItem) {
-    const extra = item[Symbol.for("$")] as { localPath?: string } | undefined;
-    const path = item.localPath ?? extra?.localPath ?? "";
-    const parts = String(path).split(/[\\/]/).filter(Boolean);
-    return parts.length > 1
-        ? parts[parts.length - 2]
-        : i18n.t("musicLibrary.uncategorizedFolder");
-}
-
-function countBy(items: IMusic.IMusicItem[], getName: (item: IMusic.IMusicItem) => string) {
-    return items.reduce<Record<string, number>>((result, item) => {
-        const name = getName(item) || i18n.t("common.unknownName");
-        result[name] = (result[name] ?? 0) + 1;
-        return result;
-    }, {});
-}
-
-function buildBrowserItems(
-    mode: LocalBrowserMode,
-    items: IMusic.IMusicItem[],
-    locale: string,
-): BrowserItem[] {
-    if (mode === "tracks") {
-        return items.slice(0, 6).map(item => ({
-            key: `${item.platform}-${item.id}`,
-            title: item.title || i18n.t("musicLibrary.unknownTrack"),
-            description: item.artist || i18n.t("musicLibrary.unknownArtist"),
-        }));
-    }
-
-    const getName = mode === "artists"
-        ? (item: IMusic.IMusicItem) => item.artist
-        : mode === "albums"
-            ? (item: IMusic.IMusicItem) => item.album
-            : getFolderName;
-
-    return Object.entries(countBy(items, getName))
-        .sort(([left], [right]) => left.localeCompare(right, locale))
-        .slice(0, 6)
-        .map(([title, count]) => ({
-            key: title,
-            title,
-            description: i18n.t("musicLibrary.musicCount", { count }),
-        }));
-}
-
-function EmptyLocalBrowser() {
-    const { t } = useI18N();
-    const colors = useColors();
-
-    return (
-        <View style={styles.emptyState}>
-            <Icon name="folder-music-outline" size={rpx(48)} color={colors.textSecondary} />
-            <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.emptyTitle}>
-                {t("musicLibrary.emptyLocalTitle")}
-            </ThemeText>
-            <ThemeText fontSize="description" fontColor="textSecondary" style={styles.emptyDescription}>
-                {t("musicLibrary.emptyLocalDescription")}
-            </ThemeText>
-        </View>
-    );
-}
-
-function LocalMusicContent() {
+function LocalMusicContent({ musicList }: { musicList: IMusic.IMusicItem[] }) {
     const colors = useColors();
     const navigate = useNavigate();
     const { t, getLanguage } = useI18N();
+    const [mode, setMode] = useState<LocalBrowserMode>("tracks");
+    const [groupKey, setGroupKey] = useState<string | null>(null);
     const locale = getLanguage().locale;
-    const localMusics = LocalMusicSheet.useMusicList();
-    const [browserMode, setBrowserMode] = useState<LocalBrowserMode>("tracks");
-    // 同层级功能块共用中性卡片，主色只用于图标容器与选中态。
-    const iconTint =
-        colors.listActive ?? Color(colors.primary).alpha(0.12).toString();
-
-    const artistCount = useMemo(
-        () => new Set(localMusics.map(item => item.artist).filter(Boolean)).size,
-        [localMusics],
-    );
-    const albumCount = useMemo(
-        () => new Set(localMusics.map(item => item.album).filter(Boolean)).size,
-        [localMusics],
-    );
-    const folderCount = useMemo(
-        () => new Set(localMusics.map(getFolderName)).size,
-        [localMusics],
-    );
-    const browserItems = useMemo(
-        () => buildBrowserItems(browserMode, localMusics, locale),
-        [browserMode, localMusics, locale],
-    );
-    const browseTitles: Record<LocalBrowserMode, string> = {
-        tracks: t("musicLibrary.allTracks"),
-        artists: t("musicLibrary.browseArtists"),
-        albums: t("musicLibrary.browseAlbums"),
-        folders: t("musicLibrary.browseFolders"),
+    const groups = useMemo(() => ({
+        artists: groupLocalMusic(musicList, "artists", locale),
+        albums: groupLocalMusic(musicList, "albums", locale),
+        folders: groupLocalMusic(musicList, "folders", locale),
+    }), [musicList, locale]);
+    const selectedGroup = mode === "tracks" ? undefined : groups[mode].find(group => group.key === groupKey);
+    const visibleMusics = selectedGroup?.musicList ?? musicList;
+    const showTracks = mode === "tracks" || !!selectedGroup;
+    const unknownNames: Record<LocalGroupMode, string> = {
+        artists: t("musicLibrary.unknownArtist"), albums: t("musicLibrary.unknownAlbum"), folders: t("musicLibrary.uncategorizedFolder"),
     };
-
+    const groupTitle = (group: LocalMusicGroup) => group.name || unknownNames[mode as LocalGroupMode];
     const entries: LocalEntry[] = [
-        {
-            key: "tracks",
-            icon: "musical-note",
-            title: t("home.localMusic"),
-            count: localMusics.length,
-            unit: t("musicLibrary.unit.track"),
-        },
-        {
-            key: "artists",
-            icon: "user",
-            title: t("musicLibrary.artists"),
-            count: artistCount,
-            unit: t("musicLibrary.unit.artist"),
-        },
-        {
-            key: "albums",
-            icon: "album-outline",
-            title: t("common.album"),
-            count: albumCount,
-            unit: t("musicLibrary.unit.album"),
-        },
-        {
-            key: "folders",
-            icon: "folder-outline",
-            title: t("musicLibrary.folders"),
-            count: folderCount,
-            unit: t("musicLibrary.unit.folder"),
-        },
+        { key: "tracks", icon: browserIcons.tracks, title: t("musicLibrary.tracks"), count: musicList.length, unit: t("musicLibrary.unit.track") },
+        { key: "artists", icon: browserIcons.artists, title: t("musicLibrary.artists"), count: groups.artists.length, unit: t("musicLibrary.unit.artist") },
+        { key: "albums", icon: browserIcons.albums, title: t("common.album"), count: groups.albums.length, unit: t("musicLibrary.unit.album") },
+        { key: "folders", icon: browserIcons.folders, title: t("musicLibrary.folders"), count: groups.folders.length, unit: t("musicLibrary.unit.folder") },
     ];
+    const titles: Record<LocalBrowserMode, string> = {
+        tracks: t("musicLibrary.allTracks"), artists: t("musicLibrary.artists"), albums: t("common.album"), folders: t("musicLibrary.folders"),
+    };
+    const sheet: IMusic.IMusicSheetItem = { id: localMusicSheetId, platform: localPluginPlatform, title: selectedGroup ? groupTitle(selectedGroup) : t("home.localMusic"), musicList: visibleMusics };
+    const play = (music: IMusic.IMusicItem) => TrackPlayer.playWithReplacePlayList(music, visibleMusics, { sheet, routeName: ROUTE_PATH.HOME });
+    const rows: BrowserRow[] = showTracks
+        ? visibleMusics.map(music => ({ kind: "track", key: `${music.platform}@${music.id}`, music }))
+        : groups[mode as LocalGroupMode].map(group => ({ kind: "group", key: group.key, group }));
 
     return (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t("musicLibrary.viewAllLocal")}
-                style={[styles.localHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
-                onPress={() => navigate(ROUTE_PATH.LOCAL)}>
-                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
-                    <Icon name="folder-music-outline" size={rpx(48)} color={colors.primary} />
-                </View>
-                <View style={styles.heroText}>
-                    <ThemeText fontSize="subTitle" fontWeight="bold">
-                        {t("home.localMusic")}
-                    </ThemeText>
-                    <ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>
-                        {t("musicLibrary.localSummary", { count: localMusics.length })}
-                    </ThemeText>
-                </View>
-            </Pressable>
-
-            <View style={styles.localGrid}>
-                {entries.map(entry => {
-                    const selected = browserMode === entry.key;
-                    return (
-                        <Pressable
-                            key={entry.key}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("musicLibrary.browseEntry", { name: entry.title })}
-                            style={[
-                                styles.localCard,
-                                {
-                                    backgroundColor: selected ? iconTint : colors.card,
-                                    borderColor: selected ? colors.primary : colors.border,
-                                },
-                            ]}
-                            onPress={() => setBrowserMode(entry.key)}>
-                            <View style={[styles.localIcon, { backgroundColor: iconTint }]}>
-                                <Icon name={entry.icon} size={rpx(32)} color={colors.primary} />
+        <FlatList
+            key={`${mode}:${selectedGroup?.key ?? "all"}`}
+            testID="library-local-list"
+            data={rows}
+            keyExtractor={item => item.key}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={(
+                <>
+                    <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+                        <View style={styles.summaryTop}>
+                            <View style={styles.summaryText}>
+                                <View style={styles.summaryLabel}>
+                                    <Icon name="folder-music-outline" size={rpx(26)} color={colors.textSecondary} />
+                                    <ThemeText fontSize="subTitle" fontWeight="medium">{t("musicLibrary.deviceMusic")}</ThemeText>
+                                    <ThemeText fontSize="description" fontColor="textSecondary">{musicList.length} {t("musicLibrary.unit.track")}</ThemeText>
+                                </View>
                             </View>
-                            <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>
-                                {entry.title}
-                            </ThemeText>
-                            <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.cardCount}>
-                                {entry.count} {entry.unit}
-                            </ThemeText>
-                        </Pressable>
-                    );
-                })}
-            </View>
-
-            <View style={styles.sectionHeader}>
-                <ThemeText fontSize="title" fontWeight="bold">{browseTitles[browserMode]}</ThemeText>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("localMusic.scanLocalMusic")}
-                    style={[styles.scanAction, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}
-                    onPress={() => navigate(ROUTE_PATH.LOCAL)}>
-                    <Icon name="folder-plus" size={rpx(26)} color={colors.primary} />
-                    <ThemeText color={colors.primary} fontSize="caption" fontWeight="semibold" style={styles.scanText}>
-                        {t("musicLibrary.scanMusic")}
-                    </ThemeText>
-                </Pressable>
-            </View>
-
-            <View style={[styles.browserCard, { backgroundColor: colors.card }]}>
-                {browserItems.length ? browserItems.map((item, index) => (
-                    <Pressable
-                        key={item.key}
-                        accessibilityRole="button"
-                        accessibilityLabel={t("musicLibrary.viewEntry", { name: item.title })}
-                        style={[styles.browserRow, index < browserItems.length - 1 ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Color(colors.text).alpha(0.07).toString() } : null]}
-                        onPress={() => navigate(ROUTE_PATH.LOCAL)}>
-                        <View style={[styles.browserIcon, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
-                            <Icon name={browserMode === "tracks" ? "musical-note" : browserMode === "artists" ? "user" : browserMode === "albums" ? "album-outline" : "folder-outline"} size={rpx(28)} color={colors.primary} />
+                            <Pressable
+                                accessibilityRole="button" accessibilityLabel={t("localMusic.scanLocalMusic")}
+                                onPress={() => openLocalMusicScanner(navigate)}
+                                style={({ pressed }) => [styles.tonalAction, { opacity: pressed ? 0.7 : 1 }]}>
+                                <View style={[styles.tonalContent, { backgroundColor: colors.tonalSurface }]}>
+                                    <Icon name="folder-plus" size={rpx(24)} color={colors.onTonal} />
+                                    <ThemeText color={colors.onTonal} fontSize="description" fontWeight="medium" style={styles.actionLabel}>{t("musicLibrary.scanMusic")}</ThemeText>
+                                </View>
+                            </Pressable>
                         </View>
-                        <View style={styles.browserText}>
-                            <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{item.title}</ThemeText>
-                            <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.browserDescription}>{item.description}</ThemeText>
+                        <View style={[styles.summaryFooter, { borderTopColor: colors.divider }]}>
+                            <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.summaryHint}>{t("musicLibrary.localHint")}</ThemeText>
+                            <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.viewAllLocal")}
+                                style={styles.textAction} onPress={() => navigate(ROUTE_PATH.LOCAL)}>
+                                <ThemeText fontSize="caption" fontColor="textSecondary">{t("musicLibrary.manageMusic")}</ThemeText>
+                                <Icon name="chevron-right" size={rpx(18)} color={colors.textSecondary} />
+                            </Pressable>
                         </View>
-                    </Pressable>
-                )) : <EmptyLocalBrowser />}
-            </View>
-        </ScrollView>
-    );
-}
-
-function OnlineMusicContent() {
-    const colors = useColors();
-    const navigate = useNavigate();
-    const { t } = useI18N();
-    const getDisplayName = usePluginDisplayNameResolver();
-    const enabledPlugins = useSortedPlugins().filter(plugin => PluginManager.isPluginEnabled(plugin));
-
-    return (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={[styles.onlineHero, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
-                <View style={[styles.heroIcon, { backgroundColor: Color(colors.primary).alpha(TONAL_ALPHA).toString() }]}>
-                    <Icon name="circle-stack" size={rpx(48)} color={colors.primary} />
+                    </View>
+                    <View style={styles.quickRow}>
+                        {entries.map(entry => {
+                            const selected = mode === entry.key;
+                            return (
+                                <Pressable key={entry.key} testID={`library-category-${entry.key}`}
+                                    accessibilityRole="tab" accessibilityLabel={t("musicLibrary.browseEntry", { name: entry.title })}
+                                    accessibilityHint={`${entry.count} ${entry.unit}`} accessibilityState={{ selected }}
+                                    onPress={() => {
+                                        setMode(entry.key); setGroupKey(null);
+                                    }}
+                                    style={({ pressed }) => [styles.quickEntry, { opacity: pressed ? 0.7 : 1 }]}>
+                                    <View style={styles.quickIcon}><Icon name={entry.icon} size={rpx(44)} color={selected ? colors.active : colors.text} /></View>
+                                    <ThemeText fontSize="description" fontWeight={selected ? "semibold" : "medium"} color={selected ? colors.active : colors.text} style={styles.quickTitle}>{entry.title}</ThemeText>
+                                    <ThemeText fontSize="tag" fontColor="textSecondary" style={styles.quickCount}>{entry.count} {entry.unit}</ThemeText>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                    <View style={styles.sectionHeader}>
+                        {selectedGroup ? (
+                            <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.backToGroups", { name: titles[mode] })}
+                                style={styles.groupHeading} onPress={() => setGroupKey(null)}>
+                                <Icon name="arrow-left" size={rpx(22)} color={colors.textSecondary} />
+                                <ThemeText style={styles.sectionTitle} fontWeight="semibold" numberOfLines={2}>{groupTitle(selectedGroup)}</ThemeText>
+                            </Pressable>
+                        ) : <ThemeText style={styles.sectionTitle} fontWeight="semibold">{titles[mode]}</ThemeText>}
+                        {showTracks && visibleMusics.length > 0 ? (
+                            <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.playAllCount", { count: visibleMusics.length })}
+                                style={styles.textAction} onPress={() => play(visibleMusics[0])}>
+                                <Icon name="play" size={rpx(24)} color={colors.primaryText} />
+                                <ThemeText fontSize="caption" color={colors.primaryText} style={styles.actionLabel}>{t("playAllBar.title")}</ThemeText>
+                            </Pressable>
+                        ) : null}
+                    </View>
+                </>
+            )}
+            ListEmptyComponent={(
+                <View style={styles.emptyState}>
+                    <Icon name="folder-music-outline" size={rpx(44)} color={colors.textSecondary} />
+                    <ThemeText fontSize="subTitle" fontWeight="medium" style={styles.emptyTitle}>{t("musicLibrary.emptyLocalTitle")}</ThemeText>
+                    <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.emptyDescription}>{t("musicLibrary.emptyLocalDescription")}</ThemeText>
                 </View>
-                <View style={styles.heroText}>
-                    <ThemeText fontSize="subTitle" fontWeight="bold">
-                        {t("musicLibrary.onlineMusic")}
-                    </ThemeText>
-                    <ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>
-                        {t("musicLibrary.onlineSummary", { count: enabledPlugins.length })}
-                    </ThemeText>
-                </View>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("musicLibrary.searchOnline")}
-                    style={[styles.onlineSearch, { backgroundColor: colors.primary }]}
-                    onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
-                    <Icon name="magnifying-glass" size={rpx(28)} color="#FFFFFF" />
-                </Pressable>
-            </View>
-
-            <View style={styles.sectionHeader}>
-                <ThemeText fontSize="title" fontWeight="bold">
-                    {t("musicLibrary.sourcesAndPlatforms")}
-                </ThemeText>
-                <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.manageSources")} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
-                    <ThemeText fontSize="caption" color={colors.primary} fontWeight="semibold">
-                        {t("musicLibrary.manage")}
-                    </ThemeText>
-                </Pressable>
-            </View>
-
-            <View style={[styles.browserCard, { backgroundColor: colors.card }]}>
-                {enabledPlugins.length ? enabledPlugins.map((plugin, index) => (
-                    <Pressable
-                        key={plugin.hash}
-                        accessibilityRole="button"
-                        accessibilityLabel={t("musicLibrary.searchWithSource", { name: getDisplayName(plugin) })}
-                        style={[styles.browserRow, index < enabledPlugins.length - 1 ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Color(colors.text).alpha(0.07).toString() } : null]}
-                        onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
-                        <View style={[styles.browserIcon, { backgroundColor: Color(colors.primary).alpha(0.1).toString() }]}>
-                            <Icon name="circle-stack" size={rpx(28)} color={colors.primary} />
+            )}
+            renderItem={({ item, index }) => item.kind === "track" ? (
+                <MusicItem musicItem={item.music} index={index + 1} musicSheet={sheet}
+                    onItemPress={play} actions={["addNext", "more"]} containerStyle={styles.musicRow} />
+            ) : (
+                <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.viewEntry", { name: groupTitle(item.group) })}
+                    accessibilityHint={t("musicLibrary.musicCount", { count: item.group.musicList.length })}
+                    onPress={() => setGroupKey(item.group.key)}
+                    style={({ pressed }) => [styles.browserRow, { opacity: pressed ? 0.7 : 1 }]}>
+                    {mode === "artists" ? (
+                        <View style={[styles.artistAvatar, { backgroundColor: colors.surface }]}>
+                            <Icon name="user" size={rpx(30)} color={colors.textSecondary} />
                         </View>
-                        <View style={styles.browserText}>
-                            <ThemeText fontSize="description" fontWeight="semibold" numberOfLines={1}>{getDisplayName(plugin)}</ThemeText>
-                            <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.browserDescription}>
-                                {plugin.supportedMethods.has("search")
-                                    ? t("musicLibrary.searchSupported")
-                                    : t("musicLibrary.sourceConnected")}
-                            </ThemeText>
-                        </View>
-                    </Pressable>
-                )) : (
-                    <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.addSource")} style={styles.emptyState} onPress={() => navigate(ROUTE_PATH.SETTING, { type: "plugin" })}>
-                        <Icon name="javascript" size={rpx(48)} color={colors.textSecondary} />
-                        <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.emptyTitle}>
-                            {t("musicLibrary.emptyOnlineTitle")}
+                    ) : mode === "albums" ? (
+                        <FastImage style={styles.albumCover} source={item.group.musicList.find(music => music.artwork)?.artwork} placeholderSource={ImgAsset.albumDefault} />
+                    ) : <View style={styles.browserIcon}><Icon name={browserIcons[mode]} size={rpx(34)} color={colors.textSecondary} /></View>}
+                    <View style={styles.browserText}>
+                        <ThemeText fontSize="description" fontWeight="medium" numberOfLines={1}>{groupTitle(item.group)}</ThemeText>
+                        <ThemeText fontSize="caption" fontColor="textSecondary" numberOfLines={2} style={styles.description}>
+                            {t("musicLibrary.musicCount", { count: item.group.musicList.length })}{item.group.detail ? ` · ${item.group.detail}` : ""}
                         </ThemeText>
-                        <ThemeText fontSize="description" fontColor="textSecondary" style={styles.emptyDescription}>
-                            {t("musicLibrary.emptyOnlineDescription")}
-                        </ThemeText>
-                    </Pressable>
-                )}
-            </View>
-        </ScrollView>
+                    </View>
+                    <Icon name="chevron-right" size={rpx(20)} color={colors.textSecondary} />
+                </Pressable>
+            )}
+        />
     );
 }
 
@@ -327,66 +173,61 @@ export default function MusicLibraryOverview() {
     const colors = useColors();
     const navigate = useNavigate();
     const { t } = useI18N();
+    const musicList = LocalMusicSheet.useMusicList();
     const [activeTab, setActiveTab] = useState<LibraryTab>("local");
     const libraryTabs: Array<{ key: LibraryTab; title: string }> = [
-        { key: "local", title: t("home.localMusic") },
-        { key: "online", title: t("musicLibrary.onlineMusic") },
+        { key: "local", title: t("home.localMusic") }, { key: "online", title: t("musicLibrary.onlineMusic") },
     ];
-    const activeIndex = libraryTabs.findIndex(tab => tab.key === activeTab);
-
     return (
         <View style={[styles.wrapper, { backgroundColor: colors.pageBackground }]}>
             <View style={styles.header}>
-                <ThemeText fontSize="appbar" fontWeight="bolder">
-                    {t("home.musicLibrary")}
-                </ThemeText>
-                <Pressable accessibilityRole="button" accessibilityLabel={t("musicLibrary.searchMusic")} style={styles.headerAction} onPress={() => navigate(ROUTE_PATH.SEARCH_PAGE)}>
+                <ThemeText fontSize="appbar" fontWeight="bold">{t("home.musicLibrary")}</ThemeText>
+                <Pressable accessibilityRole="button" accessibilityLabel={t(activeTab === "local" ? "musicLibrary.searchLocal" : "musicLibrary.searchOnline")}
+                    style={styles.headerAction} onPress={() => activeTab === "local"
+                        ? navigate(ROUTE_PATH.SEARCH_MUSIC_LIST, { musicList, musicSheet: { id: localMusicSheetId, platform: localPluginPlatform, musicList, title: t("home.localMusic") } })
+                        : navigate(ROUTE_PATH.SEARCH_PAGE)}>
                     <Icon name="magnifying-glass" size={rpx(32)} color={colors.text} />
                 </Pressable>
             </View>
-            <PillTabBar
-                routes={libraryTabs}
-                index={activeIndex}
-                variant="underline"
-                contentContainerStyle={styles.tabContent}
-                onIndexChange={index => setActiveTab(libraryTabs[index].key)}
-            />
-            {activeTab === "local" ? <LocalMusicContent /> : null}
-            {activeTab === "online" ? <OnlineMusicContent /> : null}
+            <PillTabBar routes={libraryTabs} index={activeTab === "local" ? 0 : 1} variant="underline"
+                contentContainerStyle={styles.tabContent} onIndexChange={index => setActiveTab(libraryTabs[index].key)} />
+            {activeTab === "local" ? <LocalMusicContent musicList={musicList} /> : <OnlineMusicLibrary />}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     wrapper: { flex: 1, width: "100%" },
-    header: { height: rpx(92), paddingHorizontal: rpx(24), flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    headerAction: { width: rpx(58), height: rpx(58), alignItems: "center", justifyContent: "center" },
-    tabContent: { width: "100%", justifyContent: "space-between", paddingHorizontal: rpx(12) },
-    flexContent: { flex: 1, minHeight: 0 },
-    rankingHint: { minHeight: rpx(82), paddingHorizontal: rpx(24), flexDirection: "row", alignItems: "center" },
-    hintIcon: { width: rpx(56), height: rpx(56), borderRadius: rpx(18), alignItems: "center", justifyContent: "center" },
-    hintText: { flex: 1, minWidth: 0, marginLeft: rpx(14) },
-    hintDescription: { marginTop: rpx(4) },
-    content: { paddingHorizontal: rpx(24), paddingTop: rpx(18), paddingBottom: rpx(40) },
-    localHero: { minHeight: rpx(116), paddingHorizontal: rpx(18), borderRadius: rpx(22), flexDirection: "row", alignItems: "center" },
-    onlineHero: { minHeight: rpx(116), paddingHorizontal: rpx(18), borderRadius: rpx(22), flexDirection: "row", alignItems: "center" },
-    heroIcon: { width: rpx(76), height: rpx(76), borderRadius: rpx(22), alignItems: "center", justifyContent: "center" },
-    heroText: { flex: 1, minWidth: 0, marginLeft: rpx(16) },
-    heroDescription: { marginTop: rpx(8) },
-    localGrid: { flexDirection: "row", flexWrap: "wrap", gap: rpx(12), marginTop: rpx(18) },
-    localCard: { width: "46%", flexGrow: 1, minHeight: rpx(126), padding: rpx(16), borderRadius: rpx(20), borderWidth: StyleSheet.hairlineWidth },
-    localIcon: { width: rpx(52), height: rpx(52), borderRadius: rpx(16), alignItems: "center", justifyContent: "center", marginBottom: rpx(10) },
-    cardCount: { marginTop: rpx(5) },
-    sectionHeader: { minHeight: rpx(64), marginTop: rpx(14), flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    scanAction: { minHeight: rpx(46), paddingHorizontal: rpx(14), borderRadius: rpx(23), flexDirection: "row", alignItems: "center" },
-    scanText: { marginLeft: rpx(6) },
-    browserCard: { borderRadius: rpx(22), overflow: "hidden" },
-    browserRow: { minHeight: rpx(94), paddingHorizontal: rpx(16), flexDirection: "row", alignItems: "center" },
-    browserIcon: { width: rpx(56), height: rpx(56), borderRadius: rpx(16), alignItems: "center", justifyContent: "center" },
-    browserText: { flex: 1, minWidth: 0, marginHorizontal: rpx(14) },
-    browserDescription: { marginTop: rpx(6) },
-    emptyState: { minHeight: rpx(230), paddingHorizontal: rpx(32), alignItems: "center", justifyContent: "center" },
-    emptyTitle: { marginTop: rpx(14) },
-    emptyDescription: { marginTop: rpx(8), textAlign: "center", lineHeight: rpx(34) },
-    onlineSearch: { width: rpx(58), height: rpx(58), borderRadius: rpx(29), alignItems: "center", justifyContent: "center" },
+    header: { minHeight: rpx(92), paddingHorizontal: spacing.xxxl, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
+    headerAction: { minWidth: minimumTouch, minHeight: minimumTouch, alignItems: "center", justifyContent: "center" },
+    tabContent: { paddingHorizontal: spacing.xxl, paddingTop: 0, paddingBottom: spacing.xxs, gap: spacing.md, justifyContent: "flex-start" },
+    content: { paddingHorizontal: spacing.xxxl, paddingTop: spacing.xs, paddingBottom: spacing.xxxl },
+    summaryCard: { borderRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.xs },
+    summaryTop: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.md },
+    summaryText: { flex: 1, minWidth: rpx(180) },
+    summaryLabel: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs },
+    tonalAction: { minHeight: minimumTouch, maxWidth: "100%", justifyContent: "center" },
+    tonalContent: { minHeight: Math.max(32, rpx(64)), maxWidth: "100%", paddingHorizontal: spacing.md, paddingVertical: spacing.xxs, borderRadius: radius.pill, flexDirection: "row", alignItems: "center" },
+    actionLabel: { flexShrink: 1, marginLeft: spacing.xs },
+    summaryFooter: { borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs, paddingVertical: spacing.xxs },
+    summaryHint: { flex: 1, minWidth: rpx(180), paddingVertical: spacing.xs },
+    textAction: { minHeight: minimumTouch, minWidth: minimumTouch, flexShrink: 0, maxWidth: "100%", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: spacing.xxs },
+    quickRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "stretch", paddingTop: spacing.xl, paddingBottom: spacing.sm },
+    quickEntry: { flex: 1, minWidth: Math.max(64, rpx(100)), minHeight: minimumTouch, alignItems: "center", paddingHorizontal: spacing.xxs },
+    quickIcon: { height: rpx(48), justifyContent: "center", alignItems: "center" },
+    quickTitle: { flexGrow: 1, textAlign: "center", marginTop: spacing.xs },
+    quickCount: { marginTop: spacing.xxs, textAlign: "center" },
+    sectionHeader: { minHeight: rpx(48), marginTop: spacing.md, marginBottom: spacing.xs, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.xs },
+    sectionTitle: { flex: 1, minWidth: 0, fontSize: fontRpx(30) },
+    groupHeading: { flex: 1, minWidth: rpx(180), minHeight: minimumTouch, flexDirection: "row", alignItems: "center", gap: spacing.xxs },
+    musicRow: { paddingLeft: 0, paddingRight: 0 },
+    browserRow: { minHeight: Math.max(minimumTouch, rpx(92)), paddingVertical: spacing.sm, flexDirection: "row", alignItems: "center", gap: spacing.md },
+    browserIcon: { width: rpx(40), alignItems: "center", justifyContent: "center" },
+    artistAvatar: { width: rpx(56), height: rpx(56), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+    albumCover: { width: rpx(56), height: rpx(56), borderRadius: radius.xs },
+    browserText: { flex: 1, minWidth: 0 },
+    description: { marginTop: spacing.xxs },
+    emptyState: { paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl, alignItems: "center", justifyContent: "center" },
+    emptyTitle: { marginTop: spacing.md },
+    emptyDescription: { marginTop: spacing.xs, textAlign: "center" },
 });

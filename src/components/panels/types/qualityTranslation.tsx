@@ -22,7 +22,7 @@ interface IQualityTranslationProps {
 }
 
 export default function QualityTranslation(_props: IQualityTranslationProps) {
-    const { getLanguage } = useI18N();
+    const { getLanguage, t } = useI18N();
     const colors = useColors();
     const defaultQualityText = getQualityText(getLanguage().languageData);
 
@@ -198,7 +198,7 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                                     { borderBottomColor: colors.divider },
                                 ]}>
                                 <View style={styles.itemHeader}>
-                                    <View style={styles.keyBadge}>
+                                    <View style={[styles.keyBadge, { backgroundColor: colors.surface }]}>
                                         <ThemeText
                                             fontSize="description"
                                             fontWeight="bold"
@@ -271,7 +271,7 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                                                 },
                                             ]}
                                             placeholderTextColor={colors.textSecondary}
-                                            placeholder={`显示标签`}
+                                            placeholder={t("panel.qualityTranslation.labelPlaceholder")}
                                             maxLength={50}
                                         />
                                     </View>
@@ -318,7 +318,7 @@ export default function QualityTranslation(_props: IQualityTranslationProps) {
                                 <ListItem.ListItemIcon
                                     position="left"
                                     icon="plus"
-                                    color={colors.primary}
+                                    color={colors.primaryText}
                                 />
                                 <ListItem.Content
                                     title="添加自定义音质"
@@ -434,7 +434,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: rpx(12),
         paddingVertical: rpx(4),
         borderRadius: rpx(8),
-        backgroundColor: "rgba(100,100,100,0.15)",
     },
     keyText: {
         fontFamily: "monospace",

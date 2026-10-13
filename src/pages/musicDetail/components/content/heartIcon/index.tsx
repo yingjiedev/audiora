@@ -17,7 +17,7 @@ export default function () {
         <Icon
             name="heart"
             size={iconSizeConst.normal}
-            color="red"
+            color={colors.mediaFavorite}
             accessibilityRole="button"
             accessibilityLabel={t("musicDetail.a11y.unfavorite")}
             accessibilityState={{ selected: true }}

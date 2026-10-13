@@ -46,7 +46,7 @@ export default function SubscribePluginDialog(
             : colors.card,
         elevation: hasCustomBackground ? 0 : 2,
         shadowOpacity: hasCustomBackground ? 0 : 0.1,
-        shadowColor: hasCustomBackground ? "transparent" : "#000",
+        shadowColor: hasCustomBackground ? "transparent" : colors.shadow,
     };
 
     return (

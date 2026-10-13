@@ -282,7 +282,7 @@ export default function (props: IPanelBaseProps) {
                     onPress={closePanel}>
                     <Animated.View
                         collapsable={false}
-                        style={[style.mask, { backgroundColor: maskColor ?? "#000" }, maskAnimated]}
+                        style={[style.mask, { backgroundColor: maskColor ?? colors.modalScrim }, maskAnimated]}
                     />
                 </TouchableWithoutFeedback>
 
@@ -332,7 +332,6 @@ const style = StyleSheet.create({
         bottom: 0,
         width: "100%",
         height: "100%",
-        backgroundColor: "#000",
         zIndex: 0,
     },
     wrapper: {

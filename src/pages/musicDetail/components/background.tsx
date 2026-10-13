@@ -3,7 +3,6 @@ import { Image, StyleSheet, useWindowDimensions, View } from "react-native";
 import Color from "color";
 import { ImgAsset } from "@/constants/assetsConst";
 import useColors from "@/hooks/useColors";
-import { mediaScrim } from "@/constants/designSystem";
 import { useCurrentMusic } from "@/core/trackPlayer";
 import rpx from "@/utils/rpx";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -39,7 +38,7 @@ export default function Background(props: IBackgroundProps) {
 
     /** 顶部压暗：状态栏时间/图标与导航栏常压在封面亮部，靠这层保证任意封面都可读 */
     const topScrimColors = useMemo(() => {
-        const scrim = Color(colors.onMediaScrim ?? mediaScrim);
+        const scrim = Color(colors.onMediaScrim);
         return [
             scrim.alpha(0.62).toString(),
             scrim.alpha(0.3).toString(),
@@ -82,7 +81,7 @@ export default function Background(props: IBackgroundProps) {
 
     return (
         <>
-            <View style={style.background} />
+            <View style={[style.background, { backgroundColor: colors.onMediaScrim }]} />
             <Image
                 fadeDuration={0}
                 style={style.blur}
@@ -91,11 +90,7 @@ export default function Background(props: IBackgroundProps) {
                 source={artworkSource}
             />
             <LinearGradient
-                colors={[
-                    "rgba(0,221,181,0.16)",
-                    "rgba(59,130,246,0.18)",
-                    "rgba(99,102,241,0.34)",
-                ]}
+                colors={colors.mediaAmbientGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={style.ambientTint}
@@ -137,13 +132,13 @@ export default function Background(props: IBackgroundProps) {
                                 <View
                                     style={[
                                         style.immersiveMaskSolid,
-                                        { height: immersiveBlurSolidHeight },
+                                        { height: immersiveBlurSolidHeight, backgroundColor: colors.onMedia },
                                     ]}
                                 />
                                 <LinearGradient
                                     colors={[
-                                        "rgba(0,0,0,1)",
-                                        "rgba(0,0,0,0)",
+                                        colors.onMedia,
+                                        Color(colors.onMedia).alpha(0).toString(),
                                     ]}
                                     style={{ height: immersiveBlurFadeHeight }}
                                 />
@@ -173,13 +168,13 @@ export default function Background(props: IBackgroundProps) {
                                 <View
                                     style={[
                                         style.immersiveMaskSolid,
-                                        { height: immersiveClearHeight },
+                                        { height: immersiveClearHeight, backgroundColor: colors.onMedia },
                                     ]}
                                 />
                                 <LinearGradient
                                     colors={[
-                                        "rgba(0,0,0,1)",
-                                        "rgba(0,0,0,0)",
+                                        colors.onMedia,
+                                        Color(colors.onMedia).alpha(0).toString(),
                                     ]}
                                     style={{ height: immersiveFadeHeight }}
                                 />
@@ -203,9 +198,9 @@ export default function Background(props: IBackgroundProps) {
             <LinearGradient
                 pointerEvents="none"
                 colors={[
-                    "rgba(5,12,28,0.06)",
-                    "rgba(5,12,28,0.18)",
-                    "rgba(5,12,28,0.72)",
+                    Color(colors.onMediaScrim).alpha(0.06).toString(),
+                    Color(colors.onMediaScrim).alpha(0.18).toString(),
+                    Color(colors.onMediaScrim).alpha(0.72).toString(),
                 ]}
                 locations={[0, 0.52, 1]}
                 style={style.readabilityFade}
@@ -229,7 +224,6 @@ const style = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "#000",
     },
     blur: {
         width: "100%",
@@ -283,7 +277,6 @@ const style = StyleSheet.create({
     },
     immersiveMaskSolid: {
         width: "100%",
-        backgroundColor: "black",
     },
     immersiveArtwork: {
         width: "100%",

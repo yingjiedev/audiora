@@ -1,4 +1,3 @@
-import Color from "color";
 import React, { ReactNode } from "react";
 import {
     ActivityIndicator,
@@ -20,8 +19,7 @@ import rpx from "@/utils/rpx";
  * - `solid`：主色实底 + `onPrimary` 图标。给「这个视图里最强的那一个动作」
  *   （底部音乐栏的播放键）。同屏出现第二个 solid 会互相抢焦点。
  * - `inverse`：白底 + 深色图标 + 投影。只给压在图片 / 插画上的圆钮
- *   （首页 hero）。它刻意不跟随主题，两模式都是白底深图，所以写死并标
- *   `color-exempt`。
+ *   （首页 hero）。两模式共用公共 inverseSurface / onInverse。
  * - `tonal`：主色 16% 底 + 主色图标。卡片内的次级动作（拾音卡的播放键），
  *   比 solid 轻一档，不会跟页面主动作抢视觉重心。
  *
@@ -36,9 +34,6 @@ export const TONAL_ALPHA = 0.16;
 /** 默认直径（拾音卡的尾部播放键）。 */
 export const DEFAULT_ROUND_ACTION_SIZE = rpx(70);
 
-const INVERSE_BACKGROUND = "#FFFFFF"; // color-exempt: 压在图上，与主题无关，两模式恒为白底
-const INVERSE_FOREGROUND = "#17213E"; // color-exempt: 白底上的深色图标，同上不跟随主题
-const INVERSE_SHADOW = "#13244E"; // color-exempt: 仅 inverse 的投影，同上
 
 /**
  * 圆钮上的前景色（文字 / 图标）取法：主色被调亮后白字只剩 2.9:1，统一按
@@ -47,7 +42,7 @@ const INVERSE_SHADOW = "#13244E"; // color-exempt: 仅 inverse 的投影，同�
  */
 export function useRoundActionForeground() {
     const colors = useColors();
-    return colors.onPrimary ?? "#FFFFFF"; // color-exempt: onPrimary 缺失时的兜底白
+    return colors.onPrimary;
 }
 
 export interface IRoundActionButtonProps {
@@ -93,11 +88,11 @@ export default function RoundActionButton(props: IRoundActionButtonProps) {
         background = colors.primary;
         iconColor = foreground;
     } else if (variant === "inverse") {
-        background = INVERSE_BACKGROUND;
-        iconColor = INVERSE_FOREGROUND;
+        background = colors.inverseSurface;
+        iconColor = colors.onInverse;
     } else {
-        background = Color(colors.primary).alpha(TONAL_ALPHA).toString();
-        iconColor = colors.primary;
+        background = colors.tonalSurface;
+        iconColor = colors.onTonal;
     }
 
     // 图标也走绝对定位层：与 children 叠加层共用同一个圆心。图标如果作为
@@ -133,7 +128,7 @@ export default function RoundActionButton(props: IRoundActionButtonProps) {
         { width: size, height: size, borderRadius: size / 2 },
         { backgroundColor: background },
         variant === "inverse" ? styles.inverse : null,
-        variant === "inverse" ? { shadowColor: INVERSE_SHADOW } : null,
+        variant === "inverse" ? { shadowColor: colors.onMediaScrim } : null,
         style,
     ];
 

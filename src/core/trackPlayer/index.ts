@@ -26,6 +26,8 @@ import {
 import { mapLocalQuality, resolveLocalAudioMeta } from "@/utils/localQuality";
 import { musicIsPaused } from "@/utils/trackUtils";
 import EventEmitter from "eventemitter3";
+import { ISheetPlaybackContext, recordSheetPlayback } from "@/core/sheetPlaybackHistory";
+import { reconcileQueueOrder } from "./reorderQueue";
 import { produce } from "immer";
 import { atom, getDefaultStore, useAtomValue } from "jotai";
 import shuffle from "lodash.shuffle";
@@ -539,6 +541,7 @@ class TrackPlayer extends EventEmitter<{
     async play(
         musicItem?: IMusic.IMusicItem | null,
         forcePlay?: boolean,
+        sheetContext?: ISheetPlaybackContext,
     ): Promise<void> {
         const playStartTime = Date.now();
         void appendStartupBreadcrumb("trackplayer-play-invoked", {
@@ -661,11 +664,11 @@ class TrackPlayer extends EventEmitter<{
             // （low/standard/high/super），扩展协议插件按自己的 supportedQualities。
             // 全部选择与降级都限制在这个范围内，避免拿插件根本不认识的档位去请求。
             const pluginQualityScope = getPluginQualityScope(plugin?.instance);
-            
+
             // 5.2 智能音质选择
             const preferredQuality = this.configService.getConfig("basic.defaultPlayQuality") ?? "master";
             let selectedQuality: IMusic.IQualityKey;
-            
+
             // 本地文件不需要请求在线音质；此处音质状态仅作为播放器内部兼容值，
             // 展示层会基于文件真实元数据重新映射（见 localQuality），无法映射时回退 320k。
             if (localSource) {
@@ -687,17 +690,17 @@ class TrackPlayer extends EventEmitter<{
                         pluginQualityScope,
                     ) ?? preferredQuality;
             }
-            
+
             // 5.3 获取音质排序作为后备（同样收窄到插件档位范围内）
             const qualityOrder = getQualityOrder(
                 selectedQuality,
                 this.configService.getConfig("basic.playQualityOrder") ?? "asc",
                 pluginQualityScope,
             );
-            
+
             // 5.4 插件返回音源
             let source: IPlugin.IMediaSourceResult | null = localSource;
-            
+
             // 首先尝试智能选择的音质
             if (source) {
                 void appendStartupBreadcrumb("trackplayer-local-source-selected", {
@@ -710,7 +713,7 @@ class TrackPlayer extends EventEmitter<{
                     musicItem,
                     selectedQuality,
                 )) ?? null;
-                
+
                 if (source) {
                     // Clone before mutation — cached/plugin sources may be frozen.
                     source = { ...source };
@@ -735,7 +738,7 @@ class TrackPlayer extends EventEmitter<{
                     // 逐档发请求很慢：插件或后端异常时能把整张音质表打满、让用户干等十几秒。
                     // 给一个总时间预算，超了就按"取不到源"处理。
                     const fallbackDeadline = Date.now() + QUALITY_FALLBACK_BUDGET_MS;
-                    
+
                     for (const quality of candidateQualities) {
                         if (Date.now() > fallbackDeadline) {
                             devLog("warn", "[TrackPlayer] 音质降级探测超时，停止继续尝试", {
@@ -762,7 +765,7 @@ class TrackPlayer extends EventEmitter<{
                             return;
                         }
                     }
-                    
+
                     if (!fallbackQuality) {
                         // 一档都没取到源：写进面包屑，便于离线区分"插件/后端挂了"与"音质不支持"
                         void appendStartupBreadcrumb("trackplayer-source-not-found", {
@@ -862,6 +865,13 @@ class TrackPlayer extends EventEmitter<{
 
             // 8. 新增历史记录
             this.musicHistoryService.addMusic(musicItem);
+            if (sheetContext) {
+                try {
+                    recordSheetPlayback(sheetContext);
+                } catch {
+                    // History storage must not prevent the requested audio from playing.
+                }
+            }
 
             devLog("info", "[TrackPlayer] Media source obtained, starting playback", {
                 timestamp: Date.now(),
@@ -1122,6 +1132,7 @@ class TrackPlayer extends EventEmitter<{
     async playWithReplacePlayList(
         musicItem: IMusic.IMusicItem,
         newPlayList: IMusic.IMusicItem[],
+        sheetContext?: ISheetPlaybackContext,
     ): Promise<void> {
         if (newPlayList.length !== 0) {
             const now = Date.now();
@@ -1143,8 +1154,23 @@ class TrackPlayer extends EventEmitter<{
                     ? shuffle(newPlayList)
                     : newPlayList,
             );
-            await this.play(musicItem, true);
+            await this.play(musicItem, true, sheetContext);
         }
+    }
+
+    reorderPlayList(order: IMusic.IMusicItem[]): void {
+        const reconciled = reconcileQueueOrder(this.playList, order);
+        if (!reconciled) {
+            return;
+        }
+        const now = Date.now();
+        this.setPlayList(reconciled.map((item, index) => ({
+            ...item,
+            [timeStampSymbol]: now,
+            [sortIndexSymbol]: index,
+        })));
+        // Update the next-track placeholder without resetting the current audio.
+        ReactNativeTrackPlayer.updateMetadataForTrack(1, this.getFakeNextTrack()).catch(() => undefined);
     }
 
     async seekTo(progress: number) {
@@ -1354,7 +1380,7 @@ class TrackPlayer extends EventEmitter<{
         const customQualityTranslations = this.configService.getConfig("basic.qualityTranslations");
         const languageData = i18n.getLanguage().languageData;
         const qualityTextI18n = getQualityText(languageData, customQualityTranslations);
-        
+
         const platformPrefix = musicItem.platform ? `[${musicItem.platform}] ` : "";
 
         if (fallbackQuality) {

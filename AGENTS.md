@@ -22,6 +22,12 @@ Tests are colocated with their subjects as `*.test.ts` or `*.test.tsx`; some uti
 
 Use TypeScript for new application code and the `@/` alias for imports from `src/`. ESLint is authoritative for `src`: four-space indentation, semicolons, double quotes, spaced object braces, trailing commas in multiline structures, and 1TBS braces. Use `camelCase` for variables and hooks (`usePrimaryColor`), `PascalCase` for components and types, and descriptive lowercase filenames consistent with the surrounding directory. Run `npm run lint` before submitting changes.
 
+## Color System Requirements
+
+Follow [COLOR_SYSTEM.md](COLOR_SYSTEM.md) for every UI color change. Preset colors live in `src/constants/colorPalette.ts`; components consume semantic colors from `useColors()`. Use `active` for current/selected items, `favorite` for likes, and `success` / `danger` for their actual status meanings. Primary text uses `ThemeText` or `primaryText`; text on a primary fill uses `onPrimary`. Do not copy a reference product's palette into Audiora controls or import raw brand gradients into business components.
+
+Run `npm run check:colors` and `npm run test:colors` for color changes. Preserve user theme settings, check contrast against the actual surface (including alpha and gradients), and report any native visual acceptance still pending. Do not update baselines or widen exemptions merely to make a new violation pass.
+
 ## Testing Guidelines
 
 Jest uses the React Native preset and loads `jest.setup.js`. Add regression tests beside changed behavior, especially for parsing, storage, panels, and playback state. Mock native modules rather than requiring a device. No coverage threshold is enforced, but new logic should cover success, failure, and boundary cases.

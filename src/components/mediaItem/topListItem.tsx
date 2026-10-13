@@ -65,13 +65,13 @@ export default function TopListItem(props: ITopListResultsProps) {
                         <Icon
                             name="musical-note"
                             size={rpx(64)}
-                            color="rgba(255,255,255,0.92)"
+                            color={colors.onMedia}
                         />
                         <ThemeText
                             numberOfLines={2}
                             fontSize="subTitle"
                             fontWeight="bold"
-                            color="#FFFFFF"
+                            color={colors.onMedia}
                             style={styles.generatedTitle}>
                             {topListItem.title}
                         </ThemeText>
@@ -100,7 +100,7 @@ export default function TopListItem(props: ITopListResultsProps) {
                     <ThemeText
                         fontSize="tag"
                         fontWeight="bold"
-                        color={colors.primary}>
+                        color={colors.primaryText}>
                         {`${rank}`.padStart(2, "0")}
                     </ThemeText>
                 </View>

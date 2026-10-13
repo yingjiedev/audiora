@@ -5,7 +5,7 @@ import {
     TouchableWithoutFeedback,
     View,
 } from "react-native";
-import Color from "color";
+import { bestForeground, blendOver } from "@/utils/colorContrast";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import Animated, {
@@ -63,14 +63,9 @@ export default function ThemeSwitch(props: ISwitchProps) {
     const trackColor = value
         ? activeTrackColor ?? colors.primary
         : inactiveTrackColor ?? colors.textSecondary;
-    let thumbColor = customThumbColor ?? "#FFFFFF";
-    try {
-        if (!customThumbColor) {
-            thumbColor = Color(trackColor).isDark() ? "#FFFFFF" : "#1B1B1B";
-        }
-    } catch {
-        // 非法色值保持白点
-    }
+    const thumbColor = customThumbColor ?? bestForeground(
+        blendOver(trackColor, colors.card), [colors.onMedia, colors.onInverse],
+    );
 
     const thumbStyle = useAnimatedStyle(() => {
         return {

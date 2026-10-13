@@ -41,7 +41,7 @@ export default function LyricOperations(props: ILyricOperationsProps) {
             <Icon
                 name="font-size"
                 size={iconSizeConst.normal}
-                color="white"
+                color={colors.onMedia}
                 onPress={() => {
                     showPanel("SetFontSize", {
                         defaultSelect: detailFontSize ?? 1,
@@ -56,7 +56,7 @@ export default function LyricOperations(props: ILyricOperationsProps) {
             <Icon
                 name="arrows-left-right"
                 size={iconSizeConst.normal}
-                color="white"
+                color={colors.onMedia}
                 onPress={() => {
                     const currentMusicItem = TrackPlayer.currentMusic;
 
@@ -82,7 +82,7 @@ export default function LyricOperations(props: ILyricOperationsProps) {
             <Icon
                 name="magnifying-glass"
                 size={iconSizeConst.normal}
-                color="white"
+                color={colors.onMedia}
                 onPress={() => {
                     const currentMusic = TrackPlayer.currentMusic;
                     if (!currentMusic) {
@@ -108,7 +108,7 @@ export default function LyricOperations(props: ILyricOperationsProps) {
                     height={iconSizeConst.normal}
                     opacity={!hasTranslation ? 0.2 : showTranslation ? 1 : 0.5}
                     color={
-                        showTranslation && hasTranslation && !pureWhiteMode ? colors.primary : "white"
+                        showTranslation && hasTranslation && !pureWhiteMode ? colors.mediaAccent : colors.onMedia
                     }
                     onPress={() => {
                         if (!hasTranslation) {
@@ -130,7 +130,7 @@ export default function LyricOperations(props: ILyricOperationsProps) {
                     height={iconSizeConst.normal}
                     opacity={showRomanization ? 1 : 0.5}
                     color={
-                        showRomanization && !pureWhiteMode ? colors.primary : "white"
+                        showRomanization && !pureWhiteMode ? colors.mediaAccent : colors.onMedia
                     }
                     onPress={() => {
                         PersistStatus.set(
@@ -144,7 +144,7 @@ export default function LyricOperations(props: ILyricOperationsProps) {
             <Icon
                 name="ellipsis-vertical"
                 size={iconSizeConst.normal}
-                color={"white"}
+                color={colors.onMedia}
                 onPress={() => {
                     const currentMusic = TrackPlayer.currentMusic;
                     if (currentMusic) {

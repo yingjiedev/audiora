@@ -3,7 +3,7 @@ import { GestureResponderEvent, StyleSheet, TextProps } from "react-native";
 import { fontSizeConst, fontWeightConst } from "@/constants/uiConst";
 import openUrl from "@/utils/openUrl";
 import ThemeText from "./themeText";
-import Color from "color";
+import useColors from "@/hooks/useColors";
 
 type ILinkTextProps = TextProps & {
     fontSize?: keyof typeof fontSizeConst;
@@ -13,12 +13,14 @@ type ILinkTextProps = TextProps & {
 };
 
 export default function LinkText(props: ILinkTextProps) {
+    const colors = useColors();
     const [isPressed, setIsPressed] = useState(false);
 
     return (
         <ThemeText
             {...props}
-            style={[style.linkText, isPressed ? style.pressed : null]}
+            color={colors.primaryText}
+            style={[style.linkText, isPressed ? style.pressed : null, props.style]}
             onPressIn={() => {
                 setIsPressed(true);
             }}
@@ -39,10 +41,9 @@ export default function LinkText(props: ILinkTextProps) {
 
 const style = StyleSheet.create({
     linkText: {
-        color: "#66ccff",
         textDecorationLine: "underline",
     },
     pressed: {
-        color: Color("#66ccff").alpha(0.4).toString(),
+        opacity: 0.7,
     },
 });

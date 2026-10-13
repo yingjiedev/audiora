@@ -1,3 +1,4 @@
+import Color from "color";
 import React, { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -7,6 +8,7 @@ import { fontSizeConst } from "@/constants/uiConst";
 import TrackPlayer, { useProgress } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import { useI18N } from "@/core/i18n";
+import { spacing } from "@/constants/designSystem";
 
 interface ITimeLabelProps {
     time: number;
@@ -21,33 +23,39 @@ function TimeLabel(props: ITimeLabelProps) {
     );
 }
 
-export default function SeekBar() {
+export default function SeekBar(props: { variant?: "media" | "surface" }) {
     const progress = useProgress(1000);
     const [tmpProgress, setTmpProgress] = useState<number | null>(null);
     const slidingRef = useRef(false);
     const colors = useColors();
     const { t } = useI18N();
 
-    const foreground = colors.onMedia ?? colors.text;
-    const secondary = colors.onMediaSecondary ?? foreground;
-    const track = colors.onMediaTrack ?? secondary;
-    const position = tmpProgress ?? progress.position;
+    const surface = props.variant === "surface";
+    const foreground = surface ? colors.playerText : colors.onMedia ?? colors.text;
+    const secondary = surface ? colors.playerTextSecondary : colors.onMediaSecondary ?? foreground;
+    const progressColor = surface ? colors.active : foreground;
+    const track = surface ? Color(foreground).alpha(0.22).toString() : colors.onMediaTrack ?? secondary;
+    const duration = Number.isFinite(progress.duration) ? Math.max(0, progress.duration) : 0;
+    const currentPosition = Number.isFinite(progress.position) ? progress.position : 0;
+    const position = Math.min(duration, Math.max(0, tmpProgress ?? currentPosition));
 
     return (
-        <View style={style.wrapper}>
+        <View style={[style.wrapper, surface && style.surfaceWrapper]}>
             <Slider
-                style={style.slider}
-                minimumTrackTintColor={foreground}
+                style={[style.slider, surface && style.surfaceSlider]}
+                minimumTrackTintColor={progressColor}
                 maximumTrackTintColor={track}
-                thumbTintColor={foreground}
+                thumbTintColor={progressColor}
+                thumbSize={surface ? Math.max(8, rpx(16)) : undefined}
                 minimumValue={0}
-                maximumValue={progress.duration}
+                maximumValue={duration}
+                disabled={duration <= 0}
                 accessible
                 accessibilityRole="adjustable"
                 accessibilityLabel={t("musicDetail.a11y.seek")}
                 accessibilityValue={{
                     min: 0,
-                    max: Math.max(0, Math.round(progress.duration)),
+                    max: Math.round(duration),
                     now: Math.max(0, Math.round(position)),
                 }}
                 onSlidingStart={() => {
@@ -61,22 +69,30 @@ export default function SeekBar() {
                 onSlidingComplete={val => {
                     slidingRef.current = false;
                     setTmpProgress(null);
-                    if (val >= progress.duration - 2) {
-                        val = progress.duration - 2;
+                    if (duration > 0 && Number.isFinite(val)) {
+                        TrackPlayer.seekTo(Math.max(0, Math.min(val, duration - 2)));
                     }
-                    TrackPlayer.seekTo(val);
                 }}
-                value={progress.position}
+                value={Math.min(duration, Math.max(0, currentPosition))}
             />
-            <View style={style.timeRow}>
+            <View style={[style.timeRow, surface && style.surfaceTimeRow]} pointerEvents="none">
                 <TimeLabel time={position} color={secondary} />
-                <TimeLabel time={progress.duration} color={secondary} />
+                <TimeLabel time={duration} color={secondary} />
             </View>
         </View>
     );
 }
 
 const style = StyleSheet.create({
+    surfaceWrapper: {
+        paddingHorizontal: 0,
+    },
+    surfaceSlider: {
+        height: 48,
+    },
+    surfaceTimeRow: {
+        marginTop: -spacing.xl,
+    },
     wrapper: {
         width: "100%",
         paddingHorizontal: rpx(30),

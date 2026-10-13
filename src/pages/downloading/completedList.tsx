@@ -133,7 +133,7 @@ function CompletedRow(props: { record: IDownloadRecord }) {
                                 <ThemeText
                                     fontSize="caption"
                                     fontWeight="bold"
-                                    style={{ color: colors.onPrimary }}>
+                                    style={{ color: colors.onDanger }}>
                                     {t("downloading.status.fileMissing")}
                                 </ThemeText>
                             </View>
@@ -142,7 +142,7 @@ function CompletedRow(props: { record: IDownloadRecord }) {
                                 <ThemeText
                                     fontSize="caption"
                                     fontWeight="bold"
-                                    style={{ color: colors.primary }}>
+                                    style={{ color: colors.primaryText }}>
                                     {qualityText}
                                 </ThemeText>
                             </View>
@@ -161,7 +161,7 @@ function CompletedRow(props: { record: IDownloadRecord }) {
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => downloader.download(musicItem, record.quality)}>
-                    <ThemeText fontSize="description" fontWeight="medium" style={{ color: colors.primary }}>
+                    <ThemeText fontSize="description" fontWeight="medium" style={{ color: colors.primaryText }}>
                         {t("downloading.action.redownload")}
                     </ThemeText>
                 </TouchableOpacity>
