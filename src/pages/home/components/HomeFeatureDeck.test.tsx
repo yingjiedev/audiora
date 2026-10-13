@@ -70,15 +70,15 @@ describe("Home folded collection", () => {
         render();
         const leaf = () => renderer.root.findByProps({ testID: "home-feature-fold" });
         const fold = () => StyleSheet.flatten(leaf().props.style).transform;
-        const leafWidth = StyleSheet.flatten(leaf().props.style).width;
-        expect(fold()).toEqual([{ perspective: leafWidth * 4 }, { translateX: leafWidth / 2 }, { rotateY: "0deg" }, { translateX: -leafWidth / 2 }]);
+        const leafWidth = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-paper" }).props.style).width;
+        expect(fold()).toEqual([{ perspective: leafWidth * 2.5 }, { rotateY: "0deg" }]);
         const deck = renderer.root.findByType("AnimatedScrollView" as any);
         act(() => deck.props.onScroll({ contentOffset: { x: 99999 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
-        expect(fold()[2]).toEqual({ rotateY: "-180deg" });
+        expect(fold()[1]).toEqual({ rotateY: "-180deg" });
         act(() => deck.props.onScroll({ contentOffset: { x: -100 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
-        expect(fold()[2]).toEqual({ rotateY: "0deg" });
+        expect(fold()[1]).toEqual({ rotateY: "0deg" });
         mockReduced = true;
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(fold()).toEqual([]);
@@ -92,8 +92,8 @@ describe("Home folded collection", () => {
         render();
         const deck = renderer.root.findByType("AnimatedScrollView" as any);
         const leaf = renderer.root.findByProps({ testID: "home-feature-fold" });
-        const width = StyleSheet.flatten(leaf.props.style).width;
-        const angle = () => parseFloat(StyleSheet.flatten(leaf.props.style).transform[2].rotateY);
+        const width = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-paper" }).props.style).width;
+        const angle = () => parseFloat(StyleSheet.flatten(leaf.props.style).transform[1].rotateY);
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.5 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
         expect(angle()).toBe(-90);
@@ -105,7 +105,7 @@ describe("Home folded collection", () => {
         expect(StyleSheet.flatten(face.props.style).opacity).toBe(0);
         expect(deck.props.snapToOffsets).toContain(width);
         const front = renderer.root.findByProps({ testID: "home-feature-front" });
-        expect(StyleSheet.flatten(front.props.style).zIndex).toBeGreaterThan(StyleSheet.flatten(leaf.props.style).zIndex);
+        expect(StyleSheet.flatten(front.props.style).zIndex).toBeGreaterThan(StyleSheet.flatten(leaf.parent!.props.style).zIndex);
         expect(StyleSheet.flatten(front.props.style).overflow).toBe("hidden");
         expect(StyleSheet.flatten(front.props.style).borderTopLeftRadius).toBeGreaterThan(0);
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.2 } }));
@@ -124,12 +124,88 @@ describe("Home folded collection", () => {
         const spread = StyleSheet.flatten(deck.findByProps({ testID: "home-feature-spread" }).props.style);
         expect(spread.width).toBeLessThan(width - 40);
         expect(spread.width).toBeGreaterThan(200);
-        const leafWidth = StyleSheet.flatten(deck.findByProps({ testID: "home-feature-fold" }).props.style).width;
+        const leafWidth = StyleSheet.flatten(deck.findByProps({ testID: "home-feature-fold-paper" }).props.style).width;
         expect(deck.props.snapToOffsets).toEqual([0, leafWidth, spread.width + 8]);
         const companion = StyleSheet.flatten(deck.findByType("ShiYinCard" as any).parent!.props.style);
         const insets = StyleSheet.flatten(deck.props.contentContainerStyle);
         // Enough trailing space lets the last card actually reach the final snap offset.
         expect(companion.width + insets.paddingRight + insets.paddingHorizontal).toBeGreaterThanOrEqual(width);
+    });
+
+    it.each([320, 375, 430, 768].flatMap(width => [150, 220, 330].map(height => [width, height])))
+    ("keeps the hinge attached and the turning back visible at %s dp / %s height", (screenWidth, height) => {
+        mockWidth = screenWidth;
+        render();
+        const deck = renderer.root.findByType("AnimatedScrollView" as any);
+        const spread = renderer.root.findByProps({ testID: "home-feature-spread" });
+        act(() => spread.props.onLayout({ nativeEvent: { layout: { height } } }));
+        const paper = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-paper" }).props.style);
+        const hinge = paper.width;
+        const frame = () => StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold" }).props.style);
+        // Project the actual native-center transform independently of the scroll mapping.
+        // This catches translated pivots, wrong fold direction and symmetric vertical shrink.
+        const project = (x: number, y: number) => {
+            const style = frame();
+            const centerX = style.width / 2, centerY = style.height / 2;
+            const radians = parseFloat(style.transform[1].rotateY) * Math.PI / 180;
+            const localX = x - centerX;
+            const depth = -localX * Math.sin(radians);
+            const scale = 1 / (1 - depth / style.transform[0].perspective);
+            return { x: centerX + localX * Math.cos(radians) * scale, y: centerY + (y - centerY) * scale };
+        };
+        for (let step = 0; step <= 60; step++) {
+            act(() => deck.props.onScroll({ contentOffset: { x: hinge * step / 60 } }));
+            act(() => renderer.update(<HomeFeatureDeck {...props} />));
+            expect(project(hinge, 0).x).toBeCloseTo(hinge, 5);
+            expect(project(hinge, 0).y).toBeCloseTo(0, 5);
+            expect(project(hinge, height).y).toBeCloseTo(height, 5);
+            const freeTop = project(0, 0), freeBottom = project(0, height);
+            expect(freeTop.y).toBeGreaterThanOrEqual(-0.00001);
+            expect(freeBottom.y).toBeGreaterThanOrEqual(height - 0.00001);
+            const insets = StyleSheet.flatten(deck.props.contentContainerStyle);
+            expect(freeBottom.y).toBeLessThanOrEqual(height + insets.paddingBottom);
+            if (step < 30) expect(freeTop.x).toBeLessThan(hinge);
+            if (step > 30) expect(freeTop.x).toBeGreaterThan(hinge);
+            if (step > 30 && step < 56) expect(frame().opacity).toBe(1);
+        }
+        // Full closure must also clear material under rounded front corners.
+        expect(frame().opacity).toBe(0);
+        act(() => deck.props.onScroll({ contentOffset: { x: hinge * 0.7 } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        expect(frame().opacity).toBe(1);
+        expect(project(0, height).y).toBeGreaterThan(height);
+    });
+
+    it("keeps the joined edge square until the paper passes behind, then restores the rounded card", () => {
+        render();
+        const deck = renderer.root.findByType("AnimatedScrollView" as any);
+        const width = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-paper" }).props.style).width;
+        const radius = () => StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-front" }).props.style).borderTopLeftRadius;
+        for (const progress of [0, 0.2, 0.5]) {
+            act(() => deck.props.onScroll({ contentOffset: { x: width * progress } }));
+            act(() => renderer.update(<HomeFeatureDeck {...props} />));
+            expect(radius()).toBe(0);
+        }
+        act(() => deck.props.onScroll({ contentOffset: { x: width } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        expect(radius()).toBeGreaterThan(0);
+    });
+
+    it("ignores invalid native measurements and preserves the visible sheet with reduced motion", () => {
+        render();
+        const spread = renderer.root.findByProps({ testID: "home-feature-spread" });
+        const paper = () => StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-paper" }).props.style);
+        act(() => spread.props.onLayout({ nativeEvent: { layout: { height: 220 } } }));
+        for (const height of [0, -1, NaN, Infinity]) {
+            act(() => spread.props.onLayout({ nativeEvent: { layout: { height } } }));
+            expect(paper().height).toBe(220);
+        }
+        mockOffset.value = paper().width;
+        mockReduced = true;
+        act(() => renderer.update(<HomeFeatureDeck {...props} />));
+        const frame = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold" }).props.style);
+        expect(frame.transform).toEqual([]);
+        expect(frame.opacity).toBe(1);
     });
 
     it.each([

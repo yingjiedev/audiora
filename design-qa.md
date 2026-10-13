@@ -471,3 +471,13 @@ Fullfold 预览已保留数据安装：应用源码 06edcca8824a8b0c54f49518e0b5
 Native visual QA final result: **blocked — pending user acceptance**。最新包的图案与封面关系、真实文本布局、高度与滑动手感仍由用户真机验收；安装并确认版本后停止设备操作。
 
 Composition 预览已保留数据交付：源码 de416a7f8e0112d81806509eed1307d19134ce84；0.3.1-preview.i88.composition.20261012.230605 / 1791817566；io.github.yingjiedev.audiora，arm64-v8a；SHA-256 E1819E669A85076B9CCFCB072A9DBBDDCE300B753A481FC594709B4377DD4B5A。实际包、字体、v2 单签名、八个包内源码模块、Hermes 字节、PNG 可见像素/尺寸/透明度与干净构建源码一致。与手机现装证书一致，在 192.168.31.232:42033 升级自 fullfold.20261012.224316 / 1791816196，精确版本名/code 确认成功后停止全部设备操作。APK 与 verification.json 位于 D:/audiora-previews/issue-88/；真机视觉与手势仍 pending user，未自动启动应用或采集界面。
+
+## 2026-10-13 折页铰链与背面轨迹
+
+用户六张对照截图显示 composition 版本在侧面产生铰链空隙与左侧尖边，参考的自由边会下沉并连续绕到背面。这一反馈说明旧 0/90/180 角度断言不足以判断原生投影。原件保存于 docs/design/evidence/home-hinge/，阶段、边界测量、原因与改动见 docs/design/home-hinge-animation-20261013.md。
+
+本轮用双宽透明载体把 native center 直接置于铰链，取消带透视的平移补偿；实际测量卡高后，下移消失点。印字与纸面分开，纸面留到背面末段，闭合清除残边；圆角延后、底部留出相应投影空间。无每帧 React 更新，业务/配色与减少动态效果降级保留。
+
+验证：聚焦 6 suites / 99 tests、颜色 19 suites / 220 tests 通过，新增跨屏宽/实际卡高的连续投影行为检查。颜色/UI/动画/runtime guards 与修改文件 ESLint 通过；完整 lint/扩展 TS 仍有其它既有诊断，没有扩大基线或豁免。
+
+Native visual QA final result: **blocked — pending user acceptance**。已有截图是上一包的问题及参考证据，未以数学投影或回归冒充最新原生效果；安装并确认完整版本后停止设备操作。
