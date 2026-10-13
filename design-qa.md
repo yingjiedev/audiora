@@ -469,3 +469,5 @@ Fullfold 预览已保留数据安装：应用源码 06edcca8824a8b0c54f49518e0b5
 验证：聚焦 6 suites / 85 tests、颜色 19 suites / 206 tests、颜色/UI/动画/runtime guards 和修改文件 ESLint 通过。完整 lint 仍有既有 14 errors / 100 warnings，扩展 TS 无修改文件诊断。没有扩大基线、添加豁免或替代原生视觉验收。
 
 Native visual QA final result: **blocked — pending user acceptance**。最新包的图案与封面关系、真实文本布局、高度与滑动手感仍由用户真机验收；安装并确认版本后停止设备操作。
+
+Composition 预览已保留数据交付：源码 de416a7f8e0112d81806509eed1307d19134ce84；0.3.1-preview.i88.composition.20261012.230605 / 1791817566；io.github.yingjiedev.audiora，arm64-v8a；SHA-256 E1819E669A85076B9CCFCB072A9DBBDDCE300B753A481FC594709B4377DD4B5A。实际包、字体、v2 单签名、八个包内源码模块、Hermes 字节、PNG 可见像素/尺寸/透明度与干净构建源码一致。与手机现装证书一致，在 192.168.31.232:42033 升级自 fullfold.20261012.224316 / 1791816196，精确版本名/code 确认成功后停止全部设备操作。APK 与 verification.json 位于 D:/audiora-previews/issue-88/；真机视觉与手势仍 pending user，未自动启动应用或采集界面。

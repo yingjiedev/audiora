@@ -29,3 +29,11 @@
 - 没有把代码尺寸推算或测试渲染当作原生视觉验收。按用户 AGENTS.md，预览包在物理手机保留数据覆盖安装并确认版本后停止设备操作，由用户验收构图、实际高度、横滑与播放。
 
 Native visual QA final result: **blocked — pending user acceptance**。
+
+## 预览交付
+
+- 应用源码 `de416a7f8e0112d81806509eed1307d19134ce84`；版本 `0.3.1-preview.i88.composition.20261012.230605` / versionCode `1791817566`；包名 `io.github.yingjiedev.audiora`；arm64-v8a。后续提交只记录交付，不改应用源码。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.composition.20261012.230605-arm64-v8a-release.apk`；SHA-256 `E1819E669A85076B9CCFCB072A9DBBDDCE300B753A481FC594709B4377DD4B5A`。
+- 实际元数据、精确干净源码、v2 单签名、三份字体字节/哈希和黑胶资源通过；八个包内 Metro 源码模块逐字匹配构建树，APK JS 字节与生成的 Hermes bundle 一致，图案 PNG 的可见 RGBA 像素/1254×1254 尺寸/透明角与源码一致。
+- 与物理手机当前安装包证书一致；在 `192.168.31.232:42033` 保留数据升级自 `fullfold.20261012.224316` / `1791816196`。安装显示 Success，精确完整版本名与 code 已确认，然后停止全部设备操作；不自动打开应用、截屏、点击或启动模拟器。
+- 明细 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.composition.20261012.230605-verification.json`。实际图案构图、封面关系、文字/高度和完整横滑由用户验收；安装或回归成功不代表用户已经认可美学。
