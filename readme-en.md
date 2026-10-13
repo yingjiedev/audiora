@@ -95,7 +95,7 @@ Before submitting code, run `npm run lint` and verify your changes with `npm tes
 
 ## Acknowledgments
 
-Audiora is based on [Merilune/MusicFree](https://github.com/Merilune/MusicFree), which descends from [Toskysun/MusicFree](https://github.com/Toskysun/MusicFree) and the original project by [maotoumao](https://github.com/maotoumao/MusicFree). Thanks to the upstream authors, contributors, and users who help improve the app, and to [Claude Code](https://claude.com/claude-code) for development assistance.
+Audiora is based on [Merilune/MusicFree](https://github.com/Merilune/MusicFree), which descends from [Toskysun/MusicFree](https://github.com/Toskysun/MusicFree) and the original project by [maotoumao](https://github.com/maotoumao/MusicFree). Thanks to the upstream authors, contributors, and users who help improve the app.
 
 ## License
 

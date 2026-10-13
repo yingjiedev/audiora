@@ -97,7 +97,7 @@ iOS 开发需要 macOS、Xcode 和 CocoaPods。安装依赖后，在 `ios/` 中�
 
 ## 致谢
 
-Audiora 基于 [Merilune/MusicFree](https://github.com/Merilune/MusicFree) 持续开发，其上游为 [Toskysun/MusicFree](https://github.com/Toskysun/MusicFree)，原始项目由 [猫头猫（maotoumao）](https://github.com/maotoumao/MusicFree) 创建。感谢上游作者、贡献者，以及参与改进的用户；也感谢 [Claude Code](https://claude.com/claude-code) 提供的开发协助。
+Audiora 基于 [Merilune/MusicFree](https://github.com/Merilune/MusicFree) 持续开发，其上游为 [Toskysun/MusicFree](https://github.com/Toskysun/MusicFree)，原始项目由 [猫头猫（maotoumao）](https://github.com/maotoumao/MusicFree) 创建。感谢上游作者、贡献者，以及参与改进的用户。
 
 ## 许可证
 
