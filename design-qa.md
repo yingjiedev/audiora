@@ -533,6 +533,8 @@ Native visual QA final result: **blocked — pending user acceptance**。不将�
 
 按用户要求将白色视窗卡原两行歌名改为单行 MarqueeText；短歌名静止，超宽自动循环滚动，沿用 title 字号/半粗、主题前景和真实播放行为。作者/来源、图片、随机外观与折页手势保持。详见 `docs/design/home-window-marquee-20261013.md`。
 
-聚焦 3 套件 / 56 项、完整颜色 19 套件 / 239 项、颜色/UI 守卫、runtime、修改文件 ESLint 与 whitespace 通过；全仓 lint / TypeScript 保留既有诊断。预览交付信息完成后补充。
+聚焦 3 套件 / 56 项、完整颜色 19 套件 / 239 项、颜色/UI 守卫、runtime、修改文件 ESLint 与 whitespace 通过；全仓 lint / TypeScript 保留既有诊断。
+
+应用源码 `92b970a465ca990f06bd180be785b5b49b0cec38`，预览 `0.3.1-preview.i88.marquee.20261013.194208` / `1791891729`，SHA-256 `1F03832AE118D0FB99A1216115A9811C97BB5719940BBF5FF55BCBD241D143A6`；真实 APK、签名、字体、16 个 bundle 模块及既有素材核对通过。`2026-10-13T19:45:24.5215231+08:00` 保留数据安装 Success 并确认精确版本，随后停止设备操作，没有自动启动或截屏。
 
 Native visual QA final result: **blocked — pending user acceptance**。修改前截图、TestRenderer 与源码检查不作为新包原生视觉通过证据。

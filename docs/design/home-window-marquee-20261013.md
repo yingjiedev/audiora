@@ -15,4 +15,9 @@
 
 ## 预览交付
 
-预览包、源码与安装核对信息完成后补充。
+- 应用源码 `92b970a465ca990f06bd180be785b5b49b0cec38`；`npm run build-preview -- -PreviewVersion 0.3.1-preview.i88.marquee.20261013.194208`，后续提交仅补交付记录。
+- 包名 `io.github.yingjiedev.audiora`，版本 `0.3.1-preview.i88.marquee.20261013.194208` / `1791891729`，ABI arm64-v8a。
+- APK `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.marquee.20261013.194208-arm64-v8a-release.apk`，SHA-256 `1F03832AE118D0FB99A1216115A9811C97BB5719940BBF5FF55BCBD241D143A6`。干净短路径构建源、实际 APK 元数据、v2 单签名者与三份字体字节/哈希通过。
+- 十六个 source-map 模块与构建源码逐字匹配，APK Hermes 与生成 bundle 字节一致；四个既有首页/播放器图片像素与五处唱片底圈/外光 alpha 采样一致。
+- 核对手机实际安装证书与新包一致，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.copy.20261013.191710` / `1791890231`。`2026-10-13T19:45:24.5215231+08:00` 确认精确安装版本后停止设备操作，没有自动启动、截屏或手势验收。
+- 报告 `D:/audiora-previews/issue-88/Audiora-v0.3.1-preview.i88.marquee.20261013.194208-verification.json`。安装和版本确认完成，原生视觉仍 `pending_user`，PR #105 保持 open。
