@@ -15,6 +15,8 @@ import globalStyle from "@/constants/globalStyle";
 import Theme from "@/core/theme";
 import { BootstrapComponent } from "./bootstrap/BootstrapComponent";
 import SplashImageOverlay from "@/components/base/splashImageOverlay";
+import PlayerOverlay from "@/components/playerOverlay";
+import { playerOverlayStore } from "@/core/playerOverlay";
 import { ToastBaseComponent } from "@/components/base/toast";
 import { StatusBar, StyleSheet, View } from "react-native";
 import { ReduceMotion, ReducedMotionConfig } from "react-native-reanimated";
@@ -44,9 +46,10 @@ const Stack = createNativeStackNavigator<any>();
 export default function Pages() {
     const theme = Theme.useTheme();
     const panelInfo = panelInfoStore.useValue();
-    // Freeze the navigator while a panel overlay is open so Android Fabric +
-    // native-stack cannot receive presses through the absolute panel layer.
-    const blockBackground = panelInfo.name != null;
+    const { open: playerOpen } = playerOverlayStore.useValue();
+    // Keep the home rendering, but give input exclusively to the overlay until
+    // it unmounts, including the player's opening and closing animations.
+    const blockBackground = panelInfo.name != null || playerOpen;
     // RN Navigation 7 requires theme.fonts; custom themes may lack it.
     const navigationTheme = React.useMemo(() => {
         const fonts = theme?.fonts ?? {
@@ -84,13 +87,26 @@ export default function Pages() {
                         <ErrorBoundary>
                             <BootstrapComponent />
                             <NotificationLifecycleManager />
-                            <ReducedMotionConfig mode={ReduceMotion.Never} />
+                            {/*
+                              Follow the OS "reduce motion" setting. Never
+                              forced animations off — the app ships motion that
+                              a user with vestibular sensitivity cannot opt out
+                              of. Individual animations keep a short cross-fade
+                              instead of vanishing (see utils/motion).
+                            */}
+                            <ReducedMotionConfig mode={ReduceMotion.System} />
                             <PageBackground />
                             <View
                                 style={globalStyle.flex1}
                                 pointerEvents={
                                     blockBackground ? "none" : "auto"
                                 }
+                                importantForAccessibility={
+                                    blockBackground
+                                        ? "no-hide-descendants"
+                                        : "auto"
+                                }
+                                accessibilityElementsHidden={blockBackground}
                                 collapsable={false}>
                                 <Stack.Navigator
                                     initialRouteName={routes[0].path}
@@ -112,6 +128,7 @@ export default function Pages() {
                                     ))}
                                 </Stack.Navigator>
                             </View>
+                            <PlayerOverlay />
                             <Panels />
                             <MvPlayerHost />
                             <Dialogs />

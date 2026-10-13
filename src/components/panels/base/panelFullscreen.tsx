@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
     BackHandler,
@@ -12,25 +13,15 @@ import {
 } from "react-native";
 
 import Animated, {
-    Easing,
-    EasingFunction,
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
-    withTiming,
 } from "react-native-reanimated";
 import Theme from "@/core/theme";
 import PageBackground from "@/components/base/pageBackground";
 import { panelInfoStore } from "../usePanel";
 import { vh } from "@/utils/rpx.ts";
-
-const ANIMATION_EASING: EasingFunction = Easing.out(Easing.exp);
-const ANIMATION_DURATION = 250;
-
-const timingConfig = {
-    duration: ANIMATION_DURATION,
-    easing: ANIMATION_EASING,
-};
+import useMotion from "@/hooks/useMotion";
 
 interface IPanelFullScreenProps {
     hasMask?: boolean;
@@ -63,6 +54,7 @@ export default function (props: IPanelFullScreenProps) {
 
     // 订阅主题：换主题 / 设清壁纸后面板底色要重算
     const theme = Theme.useTheme();
+    const colors = useColors();
     const panelBackgroundColor = useMemo(
         () => Theme.getOpaquePageBackgroundColor(),
         [theme],
@@ -73,6 +65,7 @@ export default function (props: IPanelFullScreenProps) {
     const closingRef = useRef(false);
 
     const windowHeight = useMemo(() => vh(100), []);
+    const motion = useMotion();
 
     const unmountPanel = useCallback(() => {
         closingRef.current = false;
@@ -92,23 +85,39 @@ export default function (props: IPanelFullScreenProps) {
         });
     }, [onClosed]);
 
+    /** Close animation was interrupted: drop the guard so another close can run. */
+    const releaseCloseGuard = useCallback(() => {
+        closingRef.current = false;
+    }, []);
+
     const closePanel = useCallback(() => {
         if (closingRef.current) {
             return;
         }
         closingRef.current = true;
-        snapPoint.value = withTiming(0, timingConfig, finished => {
-            if (finished) {
-                runOnJS(unmountPanel)();
-            } else {
-                closingRef.current = false;
-            }
-        });
-    }, [snapPoint, unmountPanel]);
+        // The callback runs on the UI runtime (see valueSetter: it calls
+        // `animation.callback(true)` straight from the frame queue), so it has
+        // to be a worklet and touch JS state only through runOnJS.
+        snapPoint.value = motion.timing(
+            0,
+            { duration: "normal", easing: "accelerate" },
+            finished => {
+                "worklet";
+                if (finished) {
+                    runOnJS(unmountPanel)();
+                } else {
+                    runOnJS(releaseCloseGuard)();
+                }
+            },
+        );
+    }, [snapPoint, unmountPanel, motion, releaseCloseGuard]);
 
     useEffect(() => {
         closingRef.current = false;
-        snapPoint.value = withTiming(1, timingConfig);
+        snapPoint.value = motion.timing(1, {
+            duration: "normal",
+            easing: "decelerate",
+        });
 
         if (backHandlerRef.current) {
             backHandlerRef.current?.remove();
@@ -183,7 +192,7 @@ export default function (props: IPanelFullScreenProps) {
                         onPress={closePanel}>
                         <Animated.View
                             collapsable={false}
-                            style={[style.mask, maskAnimated]}
+                            style={[style.mask, { backgroundColor: colors.modalScrim }, maskAnimated]}
                         />
                     </TouchableWithoutFeedback>
                 ) : null}
@@ -246,7 +255,6 @@ const style = StyleSheet.create({
         bottom: 0,
         width: "100%",
         height: "100%",
-        backgroundColor: "#000",
         zIndex: 0,
     },
     wrapper: {

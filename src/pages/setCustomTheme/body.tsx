@@ -1,6 +1,6 @@
 import Image from "@/components/base/image";
 import ThemeText from "@/components/base/themeText";
-import SliderRow from "@/components/base/sliderRow";
+import BackgroundTuningSliders from "@/components/base/backgroundTuningSliders";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
 import globalStyle from "@/constants/globalStyle";
@@ -9,11 +9,9 @@ import Theme, {
     customBackgroundSurfaceColors,
     customThemeDefaultPrimary,
     darkTheme,
-    DEFAULT_BACKGROUND_BLUR,
-    DEFAULT_BACKGROUND_OPACITY,
 } from "@/core/theme";
 import { derivePrimaryColor } from "@/utils/themePalette";
-import { CustomizedColors } from "@/hooks/useColors";
+import useColors, { CustomizedColors } from "@/hooks/useColors";
 import {
     pickBackgroundImage,
     saveBackgroundImage,
@@ -29,6 +27,7 @@ import ImageColors from "react-native-image-colors";
 
 export default function Body() {
     const theme = Theme.useTheme();
+    const colors = useColors();
     const backgroundInfo = Theme.useBackground();
     const { t } = useI18N();
 
@@ -49,9 +48,9 @@ export default function Body() {
         let themeColors: Partial<CustomizedColors> = {};
         try {
             const colorsResult = await ImageColors.getColors(bgUrl, {
-                fallback: "#ffffff",
+                fallback: colors.inverseSurface,
             });
-            const colors = {
+            const extractedColors = {
                 primary:
                     colorsResult.platform === "android"
                         ? colorsResult.dominant
@@ -77,7 +76,7 @@ export default function Body() {
             // （蓝黑图出橙色就是它），色相偏离主导色太多的候选强降权
             // 亮度/饱和度单位都是 0~100（color@4 约定），阈值错配会静默出错
             const primaryHex = derivePrimaryColor(
-                [colors.primary, colors.vibrant, colors.average],
+                [extractedColors.primary, extractedColors.vibrant, extractedColors.average],
                 { fallbackPrimary: customThemeDefaultPrimary },
             );
 
@@ -121,33 +120,7 @@ export default function Body() {
             </TouchableOpacity>
 
             <View style={styles.sliderWrapper}>
-                <SliderRow
-                    title={t("setCustomTheme.blur")}
-                    value={backgroundInfo?.blur ?? DEFAULT_BACKGROUND_BLUR}
-                    minimumValue={0}
-                    maximumValue={50}
-                    step={1}
-                    onChange={val => {
-                        Theme.setBackground({
-                            blur: val,
-                        });
-                    }}
-                />
-                <SliderRow
-                    title={t("setCustomTheme.opacity")}
-                    value={
-                        backgroundInfo?.opacity ?? DEFAULT_BACKGROUND_OPACITY
-                    }
-                    minimumValue={0}
-                    maximumValue={1}
-                    step={0.01}
-                    format={val => `${Math.round(val * 100)}%`}
-                    onChange={val => {
-                        Theme.setBackground({
-                            opacity: val,
-                        });
-                    }}
-                />
+                <BackgroundTuningSliders />
             </View>
             <View style={styles.colorsContainer}>
                 {Theme.configableColorKey.map(key => (
@@ -166,7 +139,7 @@ export default function Body() {
                                 });
                             }}
                             style={styles.colorItemBlockContainer}>
-                            <View style={[styles.colorBlockContainer]}>
+                            <View style={[styles.colorBlockContainer, { borderColor: colors.border }]}>
                                 <Image
                                     resizeMode="repeat"
                                     emptySrc={ImgAsset.transparentBg}
@@ -233,7 +206,6 @@ const styles = StyleSheet.create({
         height: rpx(50),
         borderWidth: 1,
         borderStyle: "solid",
-        borderColor: "#ccc",
     },
     colorBlock: {
         width: "100%",

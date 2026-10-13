@@ -1,0 +1,39 @@
+name: Check theme colors
+
+on:
+    pull_request:
+        paths:
+            - "src/**"
+            - "scripts/check-hardcoded-colors.mjs"
+            - "scripts/check-color-semantics.js"
+            - "scripts/lib/**"
+            - "scripts/color-baseline.json"
+            - "COLOR_SYSTEM.md"
+            - "AGENTS.md"
+            - "package.json"
+            - ".github/workflows/check-colors.yml"
+
+permissions:
+    contents: read
+
+jobs:
+    check-colors:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+
+            - name: Install locked dependencies
+              run: npm ci
+
+            - name: Reject new hardcoded colors
+              run: npm run check:colors
+
+            - name: Verify theme contrast and component color roles
+              run: npm run test:colors

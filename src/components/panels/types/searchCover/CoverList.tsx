@@ -3,7 +3,7 @@ import ListItem from "@/components/base/listItem";
 import TitleAndTag from "@/components/mediaItem/titleAndTag";
 import { ImgAsset } from "@/constants/assetsConst";
 import { RequestStateCode } from "@/constants/commonConst";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import TrackPlayer from "@/core/trackPlayer";
 import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
@@ -67,6 +67,7 @@ async function resolveItemArtwork(
 function CoverListImpl(props: ICoverListProps) {
     const data = props.data;
     const targetMusicItem = props.targetMusicItem;
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const searchState = data?.state ?? RequestStateCode.IDLE;
     const colors = useColors();
     const cardStyle = useCardStyle({
@@ -136,7 +137,9 @@ function CoverListImpl(props: ICoverListProps) {
                             title={
                                 <TitleAndTag
                                     title={(item as IMusic.IMusicItem).title}
-                                    tag={(item as IMusic.IMusicItem).platform}
+                                    tag={getPluginDisplayName(
+                                        (item as IMusic.IMusicItem).platform,
+                                    )}
                                 />
                             }
                         />

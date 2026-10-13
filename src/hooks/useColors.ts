@@ -1,6 +1,6 @@
 import { Theme, useTheme } from "@react-navigation/native";
-import Color from "color";
 import { useMemo } from "react";
+import { resolveThemeColors } from "@/utils/themeColors";
 
 type IColors = Theme["colors"];
 
@@ -31,6 +31,8 @@ export interface CustomizedColors extends IColors {
     placeholder?: string;
     /** 弹窗、浮层、菜单背景色 */
     backdrop?: string;
+    /** 弹窗与面板背后的遮罩 */
+    mask?: string;
     /** 卡片背景色 */
     card: string;
     /** 基础表面 */
@@ -44,36 +46,53 @@ export interface CustomizedColors extends IColors {
     /** 冷色强调 */
     accentCool?: string;
     success?: string;
+    warning?: string;
     danger?: string;
     info?: string;
+    /** 喜欢状态；与危险操作分离 */
+    favorite?: string;
+    /** 主色文字，按实际表面的对比度校准 */
+    primaryText?: string;
+    /** 正在播放、当前选中项的前景色 */
+    active?: string;
     /** paneltabbar 背景色 */
     tabBar?: string;
+    /**
+     * 主色上的前景色（文字/图标）。
+     * 主色会随主题和用户的自定义配色变化，写死白字在调亮后的主色上只有
+     * 2.9:1，这里按对比度自动取白或近黑。
+     */
+    onPrimary?: string;
+    /**
+     * 沉浸层（播放页）上的主前景色。底图恒为压暗后的封面，不随深浅主题变化，
+     * 因此这里给的是一组固定的中性色，页面侧只按语义取用。
+     */
+    onMedia?: string;
+    /** 沉浸层上的次要前景色（副标题、时间标签） */
+    onMediaSecondary?: string;
+    /** 沉浸层上的轨道 / 分隔色（进度条底槽、未选中态） */
+    onMediaTrack?: string;
+    /** 沉浸层的压暗底色，用于状态栏顶部遮罩 */
+    onMediaScrim?: string;
 }
+
+// Theme updates replace the colors object. Share contrast calculations across
+// consumers, including the many lyric rows mounted under the same theme.
+const resolvedThemes = new WeakMap<CustomizedColors, {
+    dark: boolean;
+    colors: ReturnType<typeof resolveThemeColors>;
+}>();
 
 export default function useColors() {
     const { colors, dark } = useTheme();
 
-    const cColors: CustomizedColors = useMemo(() => {
-        const customColors = colors as CustomizedColors;
-        return {
-            ...customColors,
-            textSecondary: Color(colors.text).alpha(0.64).toString(),
-            surface: customColors.surface ?? colors.card,
-            surfaceElevated:
-                customColors.surfaceElevated ??
-                (dark
-                    ? Color(colors.card).lighten(0.24).toString()
-                    : Color(colors.card).lighten(0.12).toString()),
-            border: colors.border ?? Color(colors.text).alpha(0.12).toString(),
-            listActive:
-                customColors.listActive ??
-                Color(colors.primary).alpha(0.12).toString(),
-            accentWarm: customColors.accentWarm ?? colors.primary,
-            accentCool:
-                customColors.accentCool ?? customColors.info ?? colors.primary,
-            // @ts-ignore
-            background: colors.pageBackground ?? colors.background,
-        };
+    const cColors = useMemo(() => {
+        const source = colors as CustomizedColors;
+        const cached = resolvedThemes.get(source);
+        if (cached?.dark === dark) return cached.colors;
+        const resolved = resolveThemeColors(source, dark);
+        resolvedThemes.set(source, { dark, colors: resolved });
+        return resolved;
     }, [colors, dark]);
 
     return cColors;

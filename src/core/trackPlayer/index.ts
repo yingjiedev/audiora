@@ -17,10 +17,17 @@ import { getQualityText } from "@/utils/qualities";
 import i18n from "@/core/i18n";
 import Network from "@/utils/network";
 import PersistStatus from "@/utils/persistStatus";
-import { getQualityOrder, getSmartQuality } from "@/utils/qualities";
+import {
+    getPluginQualityScope,
+    getQualityOrder,
+    getSmartQuality,
+    pickSupportedQuality,
+} from "@/utils/qualities";
 import { mapLocalQuality, resolveLocalAudioMeta } from "@/utils/localQuality";
 import { musicIsPaused } from "@/utils/trackUtils";
 import EventEmitter from "eventemitter3";
+import { ISheetPlaybackContext, recordSheetPlayback } from "@/core/sheetPlaybackHistory";
+import { reconcileQueueOrder } from "./reorderQueue";
 import { produce } from "immer";
 import { atom, getDefaultStore, useAtomValue } from "jotai";
 import shuffle from "lodash.shuffle";
@@ -45,7 +52,8 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { resolveImportedAssetOrPath } from "@/utils/fileUtils";
 import { resolveArtwork } from "@/utils/artwork";
 import { getLocalPlaybackSource } from "./localPlayback";
-import { adaptMediaSourceForPlayback } from "./mediaSourceAdapter";
+import { EncryptedSourceError, QmcKeyError } from "@/service/mflac/songKey";
+import { adaptMediaSourceForPlayback, canReuseMediaSourceForPlayback } from "./mediaSourceAdapter";
 import { refreshCurrentSource } from "./refreshCurrentSource";
 import SeekCoordinator from "./seekCoordinator";
 
@@ -55,6 +63,12 @@ const currentMusicAtom = atom<IMusic.IMusicItem | null>(null);
 const repeatModeAtom = atom<MusicRepeatMode>(MusicRepeatMode.QUEUE);
 const qualityAtom = atom<IMusic.IQualityKey>("320k");
 const playListAtom = atom<IMusic.IMusicItem[]>([]);
+
+/**
+ * 首选音质拿不到源时，降级遍历其它音质的总时间预算（毫秒）。
+ * 逐档请求是串行的，插件/后端异常时会把整张音质表打满，这里兜住最坏耗时。
+ */
+const QUALITY_FALLBACK_BUDGET_MS = 5000;
 
 function isLoopbackHttpUrl(url?: string) {
     if (!url) {
@@ -184,7 +198,7 @@ class TrackPlayer extends EventEmitter<{
                       (track.qualities || track.source) as
                           | IMusic.IQuality
                           | undefined,
-                      restorePlugin?.supportedQualities,
+                      getPluginQualityScope(restorePlugin?.instance),
                 )
                 : preferredQuality;
 
@@ -254,20 +268,11 @@ class TrackPlayer extends EventEmitter<{
                 this.pluginManagerService.getByMedia(track)
                     ?.methods.getMediaSource(track, quality)
                     .then(async newSource => {
-                        try {
-                            const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                            const localUrl = await getLocalStreamUrlIfNeeded(newSource?.url, (newSource as any)?.ekey, newSource?.headers, (newSource as any)?.cek);
-                            if (localUrl) {
-                                track.url = localUrl;
-                                track.headers = undefined;
-                            } else {
-                                track.url = newSource?.url || track.url;
-                                track.headers = newSource?.headers || track.headers;
-                            }
-                        } catch {
-                            track.url = newSource?.url || track.url;
-                            track.headers = newSource?.headers || track.headers;
+                        if (!newSource?.url) {
+                            return;
                         }
+                        const adapted = await adaptMediaSourceForPlayback(newSource);
+                        track = this.mergeTrackSource(track, adapted) as IMusic.IMusicItem;
 
                         if (isSameMediaItem(this.currentMusic, track)) {
                             void appendStartupBreadcrumb("trackplayer-restore-apply-source", {
@@ -289,6 +294,11 @@ class TrackPlayer extends EventEmitter<{
                             title: track.title,
                             message: error instanceof Error ? error.message : String(error),
                         });
+                        if (error instanceof QmcKeyError) {
+                            Toast.warn(i18n.t("media.rawSongKeyRequired"));
+                        } else if (error instanceof EncryptedSourceError) {
+                            Toast.warn(i18n.t("media.encryptedSourceFailed"));
+                        }
                         errorLog("恢复播放音源失败", {
                             title: track.title,
                             platform: track.platform,
@@ -531,6 +541,7 @@ class TrackPlayer extends EventEmitter<{
     async play(
         musicItem?: IMusic.IMusicItem | null,
         forcePlay?: boolean,
+        sheetContext?: ISheetPlaybackContext,
     ): Promise<void> {
         const playStartTime = Date.now();
         void appendStartupBreadcrumb("trackplayer-play-invoked", {
@@ -573,6 +584,7 @@ class TrackPlayer extends EventEmitter<{
                 // 2.1 如果当前有源
                 if (
                     currentTrack?.url &&
+                    canReuseMediaSourceForPlayback(currentTrack as IPlugin.IMediaSourceResult) &&
                     isSameMediaItem(
                         musicItem,
                         currentTrack as IMusic.IMusicItem,
@@ -647,11 +659,16 @@ class TrackPlayer extends EventEmitter<{
 
             // 5.1 通过插件获取音源
             const plugin = this.pluginManagerService.getByName(musicItem.platform);
-            
+
+            // 5.1.1 插件音质档位范围：官方协议插件只认 MusicFree 的 4 档
+            // （low/standard/high/super），扩展协议插件按自己的 supportedQualities。
+            // 全部选择与降级都限制在这个范围内，避免拿插件根本不认识的档位去请求。
+            const pluginQualityScope = getPluginQualityScope(plugin?.instance);
+
             // 5.2 智能音质选择
             const preferredQuality = this.configService.getConfig("basic.defaultPlayQuality") ?? "master";
             let selectedQuality: IMusic.IQualityKey;
-            
+
             // 本地文件不需要请求在线音质；此处音质状态仅作为播放器内部兼容值，
             // 展示层会基于文件真实元数据重新映射（见 localQuality），无法映射时回退 320k。
             if (localSource) {
@@ -662,22 +679,28 @@ class TrackPlayer extends EventEmitter<{
                 selectedQuality = getSmartQuality(
                     preferredQuality,
                     (musicItem.qualities || musicItem.source) as IMusic.IQuality | undefined,
-                    plugin?.supportedQualities // 假设插件提供支持的音质列表
+                    pluginQualityScope,
                 );
             } else {
-                // 回退到传统的音质排序方法
-                selectedQuality = preferredQuality;
+                // 歌曲没有任何音质信息，没法智能降级。就在插件档位范围内挑一个最接近
+                // 偏好的，别拿插件根本不支持的档位去试。
+                selectedQuality =
+                    pickSupportedQuality(
+                        preferredQuality,
+                        pluginQualityScope,
+                    ) ?? preferredQuality;
             }
-            
-            // 5.3 获取音质排序作为后备
+
+            // 5.3 获取音质排序作为后备（同样收窄到插件档位范围内）
             const qualityOrder = getQualityOrder(
                 selectedQuality,
                 this.configService.getConfig("basic.playQualityOrder") ?? "asc",
+                pluginQualityScope,
             );
-            
+
             // 5.4 插件返回音源
             let source: IPlugin.IMediaSourceResult | null = localSource;
-            
+
             // 首先尝试智能选择的音质
             if (source) {
                 void appendStartupBreadcrumb("trackplayer-local-source-selected", {
@@ -690,7 +713,7 @@ class TrackPlayer extends EventEmitter<{
                     musicItem,
                     selectedQuality,
                 )) ?? null;
-                
+
                 if (source) {
                     // Clone before mutation — cached/plugin sources may be frozen.
                     source = { ...source };
@@ -699,21 +722,33 @@ class TrackPlayer extends EventEmitter<{
                         quality: selectedQuality,
                         url: source.url,
                     });
-                    try {
-                        const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                        const localUrl = await getLocalStreamUrlIfNeeded(source.url, (source as any)?.ekey, source.headers, (source as any)?.cek);
-                        if (localUrl) {
-                            source.url = localUrl;
-                            source.headers = undefined;
-                        }
-                    } catch {}
                     this.setQuality(selectedQuality);
                 } else {
-                    // 智能选择失败，回退到遍历所有音质
+                    // 智能选择失败，回退到遍历其它音质。
+                    // 只在插件档位范围内找（插件明确不支持的档位不可能拿到源），
+                    // 并跳过刚单独试过的 selectedQuality，避免把同一个请求重复打给后端。
+                    const candidateQualities = qualityOrder.filter(
+                        quality =>
+                            quality !== selectedQuality &&
+                            (!pluginQualityScope.length ||
+                                pluginQualityScope.includes(quality)),
+                    );
+                    const triedQualities: IMusic.IQualityKey[] = [selectedQuality];
                     let fallbackQuality: IMusic.IQualityKey | null = null;
-                    
-                    for (let quality of qualityOrder) {
+                    // 逐档发请求很慢：插件或后端异常时能把整张音质表打满、让用户干等十几秒。
+                    // 给一个总时间预算，超了就按"取不到源"处理。
+                    const fallbackDeadline = Date.now() + QUALITY_FALLBACK_BUDGET_MS;
+
+                    for (const quality of candidateQualities) {
+                        if (Date.now() > fallbackDeadline) {
+                            devLog("warn", "[TrackPlayer] 音质降级探测超时，停止继续尝试", {
+                                title: musicItem.title,
+                                tried: triedQualities,
+                            });
+                            break;
+                        }
                         if (this.isCurrentMusic(musicItem)) {
+                            triedQualities.push(quality);
                             source = (await plugin?.methods?.getMediaSource(
                                 musicItem,
                                 quality,
@@ -721,14 +756,6 @@ class TrackPlayer extends EventEmitter<{
                             // 5.4.1 获取到真实源
                             if (source) {
                                 source = { ...source };
-                                try {
-                                    const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                                    const localUrl = await getLocalStreamUrlIfNeeded(source.url, (source as any)?.ekey, source.headers, (source as any)?.cek);
-                                    if (localUrl) {
-                                        source.url = localUrl;
-                                        source.headers = undefined;
-                                    }
-                                } catch {}
                                 this.setQuality(quality);
                                 fallbackQuality = quality;
                                 break;
@@ -738,8 +765,18 @@ class TrackPlayer extends EventEmitter<{
                             return;
                         }
                     }
-                    
-                    // 显示音质不支持提示，包含降级结果
+
+                    if (!fallbackQuality) {
+                        // 一档都没取到源：写进面包屑，便于离线区分"插件/后端挂了"与"音质不支持"
+                        void appendStartupBreadcrumb("trackplayer-source-not-found", {
+                            title: musicItem.title,
+                            platform: musicItem.platform,
+                            requested: selectedQuality,
+                            tried: triedQualities,
+                        });
+                    }
+
+                    // 显示音质提示：能降级就报降级，全部取不到源就报取源失败
                     this.showQualityNotSupportedToast(selectedQuality, musicItem, fallbackQuality);
                 }
             }
@@ -787,24 +824,6 @@ class TrackPlayer extends EventEmitter<{
                                     // 5.4.1 获取到真实源
                                     if (source) {
                                         source = { ...source };
-                                        try {
-                                            const { getLocalStreamUrlIfNeeded } = require("@/service/mflac/proxy");
-                                            devLog("info", "🎵[trackPlayer] 尝试处理mflac", {
-                                                url: source.url,
-                                                hasEkey: !!source.ekey,
-                                                ekeyLength: source.ekey?.length,
-                                            });
-                                            const localUrl = await getLocalStreamUrlIfNeeded(source.url, source.ekey, source.headers, source.cek);
-                                            if (localUrl) {
-                                                devLog("info", "✅[trackPlayer] mflac代理URL生成成功", { localUrl });
-                                                source.url = localUrl;
-                                                source.headers = undefined;
-                                            } else {
-                                                devLog("warn", "⚠️[trackPlayer] mflac代理URL生成失败");
-                                            }
-                                        } catch (error: any) {
-                                            devLog("error", "❌[trackPlayer] mflac处理异常", error);
-                                        }
                                         this.setQuality(quality);
                                         break;
                                     }
@@ -822,13 +841,20 @@ class TrackPlayer extends EventEmitter<{
                         throw new Error(PlayFailReason.INVALID_SOURCE);
                     }
                 } else {
+                    const providedSource = musicItem as IPlugin.IMediaSourceResult;
                     source = {
                         url: musicItem.url,
+                        headers: musicItem.headers,
+                        ekey: providedSource.ekey,
+                        qmcRawKey: providedSource.qmcRawKey,
+                        cek: providedSource.cek,
                     };
                     // 使用用户设置的默认音质，而不是硬编码
                     this.setQuality(preferredQuality);
                 }
             }
+
+            source = await adaptMediaSourceForPlayback(source);
 
             // 6. 特殊类型源
             if (getUrlExt(source.url) === ".m3u8") {
@@ -839,6 +865,13 @@ class TrackPlayer extends EventEmitter<{
 
             // 8. 新增历史记录
             this.musicHistoryService.addMusic(musicItem);
+            if (sheetContext) {
+                try {
+                    recordSheetPlayback(sheetContext);
+                } catch {
+                    // History storage must not prevent the requested audio from playing.
+                }
+            }
 
             devLog("info", "[TrackPlayer] Media source obtained, starting playback", {
                 timestamp: Date.now(),
@@ -910,6 +943,10 @@ class TrackPlayer extends EventEmitter<{
                             "Current connection is not Wi-Fi. Enable cellular playback in settings to continue.",
                     });
                 }
+            } else if (e instanceof EncryptedSourceError) {
+                Toast.warn(i18n.t("media.encryptedSourceFailed"));
+            } else if (e instanceof QmcKeyError) {
+                Toast.warn(i18n.t("media.rawSongKeyRequired"));
             } else if (message === PlayFailReason.INVALID_SOURCE) {
                 trace("playback failed because source is empty");
                 await this.handlePlayFail();
@@ -1081,7 +1118,12 @@ class TrackPlayer extends EventEmitter<{
                 this.setQuality(newQuality);
             }
             return true;
-        } catch {
+        } catch (error) {
+            if (error instanceof QmcKeyError) {
+                Toast.warn(i18n.t("media.rawSongKeyRequired"));
+            } else if (error instanceof EncryptedSourceError) {
+                Toast.warn(i18n.t("media.encryptedSourceFailed"));
+            }
             // 修改失败
             return false;
         }
@@ -1090,6 +1132,7 @@ class TrackPlayer extends EventEmitter<{
     async playWithReplacePlayList(
         musicItem: IMusic.IMusicItem,
         newPlayList: IMusic.IMusicItem[],
+        sheetContext?: ISheetPlaybackContext,
     ): Promise<void> {
         if (newPlayList.length !== 0) {
             const now = Date.now();
@@ -1111,8 +1154,23 @@ class TrackPlayer extends EventEmitter<{
                     ? shuffle(newPlayList)
                     : newPlayList,
             );
-            await this.play(musicItem, true);
+            await this.play(musicItem, true, sheetContext);
         }
+    }
+
+    reorderPlayList(order: IMusic.IMusicItem[]): void {
+        const reconciled = reconcileQueueOrder(this.playList, order);
+        if (!reconciled) {
+            return;
+        }
+        const now = Date.now();
+        this.setPlayList(reconciled.map((item, index) => ({
+            ...item,
+            [timeStampSymbol]: now,
+            [sortIndexSymbol]: index,
+        })));
+        // Update the next-track placeholder without resetting the current audio.
+        ReactNativeTrackPlayer.updateMetadataForTrack(1, this.getFakeNextTrack()).catch(() => undefined);
     }
 
     async seekTo(progress: number) {
@@ -1263,6 +1321,11 @@ class TrackPlayer extends EventEmitter<{
             ? {
                 ...mediaItem,
                 ...props,
+                ...(props.url ? {
+                    ekey: props.ekey,
+                    qmcRawKey: props.qmcRawKey,
+                    cek: props.cek,
+                } : {}),
                 id: mediaItem.id,
                 platform: mediaItem.platform,
             }
@@ -1317,20 +1380,28 @@ class TrackPlayer extends EventEmitter<{
         const customQualityTranslations = this.configService.getConfig("basic.qualityTranslations");
         const languageData = i18n.getLanguage().languageData;
         const qualityTextI18n = getQualityText(languageData, customQualityTranslations);
-        
-        const requestedDisplayName = qualityTextI18n[requestedQuality];
+
         const platformPrefix = musicItem.platform ? `[${musicItem.platform}] ` : "";
-        
-        let message: string;
+
         if (fallbackQuality) {
-            const fallbackDisplayName = qualityTextI18n[fallbackQuality];
-            message = `${platformPrefix}歌曲不支持${requestedDisplayName}，已降级至${fallbackDisplayName}`;
-        } else {
-            message = `${platformPrefix}歌曲不支持${requestedDisplayName}，无法播放该音质`;
+            // 确实降级了：这首歌没有首选音质，但还有别的档位可放
+            Toast.warn(
+                `${platformPrefix}${i18n.t("toast.musicQualityDowngraded", {
+                    quality: qualityTextI18n[requestedQuality],
+                    alternative: qualityTextI18n[fallbackQuality],
+                })}`,
+            );
+            return;
         }
-        
-        // 显示Toast提示
-        Toast.warn(message);
+
+        // 一档都没取到源：通常是插件/音源服务异常（网络、后端失效、歌曲下架），
+        // 与"这首歌不支持某音质"是两回事。把责任推给音质会把排查方向带偏。
+        errorLog("获取音源失败（全部音质均无源）", {
+            platform: musicItem.platform,
+            title: musicItem.title,
+            requestedQuality,
+        });
+        Toast.warn(`${platformPrefix}${i18n.t("toast.mediaSourceUnavailable")}`);
     }
 
 

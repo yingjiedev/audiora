@@ -66,7 +66,7 @@ export default function Header() {
                                     },
                                 ]}>
                                 <ThemeText
-                                    color={colors.primary}
+                                    color={colors.primaryText}
                                     fontSize="caption"
                                     fontWeight="bold">
                                     {t("common.sheet")}

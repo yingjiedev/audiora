@@ -12,15 +12,14 @@ import {
 } from "react-native-gesture-handler";
 import Animated, {
     cancelAnimation,
-    Easing,
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
     withDelay,
-    withTiming,
 } from "react-native-reanimated";
 import Icon from "@/components/base/icon.tsx";
 import Theme from "@/core/theme";
+import useMotion from "@/hooks/useMotion";
 
 export interface IToastConfig {
     /** 类型 */
@@ -48,21 +47,22 @@ const activeToastStore = new GlobalState<IToastConfigInner | null>(null);
 const typeConfig = {
     success: {
         name: "check-circle",
-        color: "#457236",
+        color: "success",
     },
     warn: {
         name: "exclamation-circle",
-        color: "#de7622",
+        color: "warning",
     },
 } as const;
 
-/** Plain config — avoid sharing non-worklet Easing from commonConst into Reanimated. */
-const TOAST_IN = { duration: 280, easing: Easing.out(Easing.cubic) };
-const TOAST_OUT = { duration: 220, easing: Easing.in(Easing.cubic) };
+/** Token refs (not resolved values) so Reduce Motion is applied at run time. */
+const TOAST_IN = { duration: "normal", easing: "decelerate" } as const;
+const TOAST_OUT = { duration: "fast", easing: "accelerate" } as const;
 
 export function ToastBaseComponent() {
     const activeToast = activeToastStore.useValue();
     const colors = useColors();
+    const motion = useMotion();
     // Track which toast id the current animation belongs to (avoid double-fire).
     const animatingIdRef = useRef<string | null>(null);
 
@@ -92,34 +92,39 @@ export function ToastBaseComponent() {
         cancelAnimation(toastAnim);
         // Reset without animation so the next withTiming always has a clean start.
         toastAnim.value = 0;
-        toastAnim.value = withTiming(1, TOAST_IN, finishedIn => {
+        // The out-animation is built on the JS side on purpose. Reanimated runs
+        // the completion callback of the in-animation on the UI runtime, and a
+        // `motion.timing(...)` call from there used to cross the worklet
+        // boundary — "[Worklets] Tried to synchronously call a Remote Function"
+        // killed the app the moment a toast showed (e.g. picking an unavailable
+        // quality). Building the config here leaves the callback with nothing
+        // but `withDelay` and a captured plain object.
+        const outAnim = motion.timing(0, TOAST_OUT, finishedOut => {
+            "worklet";
+            if (finishedOut) {
+                runOnJS(setNextToast)();
+            }
+        });
+        toastAnim.value = motion.timing(1, TOAST_IN, finishedIn => {
             "worklet";
             if (!finishedIn) {
                 return;
             }
-            toastAnim.value = withDelay(
-                holdMs,
-                withTiming(0, TOAST_OUT, finishedOut => {
-                    "worklet";
-                    if (finishedOut) {
-                        runOnJS(setNextToast)();
-                    }
-                }),
-            );
+            toastAnim.value = withDelay(holdMs, outAnim);
         });
         // Depend only on toast id — never on toastAnim (SharedValue identity churn).
         // eslint-disable-next-line react-hooks/exhaustive-deps -- toastAnim is stable SV
-    }, [activeToast?.id, setNextToast]);
+    }, [activeToast?.id, motion, setNextToast]);
 
     const dismissCurrentToast = useCallback(() => {
         cancelAnimation(toastAnim);
-        toastAnim.value = withTiming(0, TOAST_OUT, finished => {
+        toastAnim.value = motion.timing(0, TOAST_OUT, finished => {
             "worklet";
             if (finished) {
                 runOnJS(setNextToast)();
             }
         });
-    }, [setNextToast, toastAnim]);
+    }, [motion, setNextToast, toastAnim]);
 
     const flingGesture = Gesture.Fling()
         .direction(Directions.UP)
@@ -164,7 +169,7 @@ export function ToastBaseComponent() {
                     <Icon
                         size={fontSizeConst.appbar}
                         name={typeConfig[activeToast.type].name}
-                        color={typeConfig[activeToast.type].color}
+                        color={colors[typeConfig[activeToast.type].color]}
                     />
                     <Text
                         numberOfLines={2}
@@ -178,7 +183,7 @@ export function ToastBaseComponent() {
                                 { backgroundColor: colors.primary },
                             ]}
                             onPress={activeToast.onActionClick}>
-                            <Text style={styles.actionText} numberOfLines={1}>
+                            <Text style={[styles.actionText, { color: colors.onPrimary }]} numberOfLines={1}>
                                 {activeToast.actionText}
                             </Text>
                         </Pressable>
@@ -220,7 +225,6 @@ const styles = StyleSheet.create({
     actionText: {
         fontSize: fontSizeConst.content,
         includeFontPadding: false,
-        color: "white",
     },
     actionTextContainer: {
         marginLeft: rpx(24),

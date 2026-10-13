@@ -1,9 +1,7 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import rpx from "@/utils/rpx";
-import ThemeText from "@/components/base/themeText";
 import ListItem from "@/components/base/listItem";
 import SliderRow from "@/components/base/sliderRow";
+import BackgroundTuningSliders from "@/components/base/backgroundTuningSliders";
 import Config, { useAppConfig } from "@/core/appConfig";
 import Theme, {
     DEFAULT_BACKGROUND_BLUR,
@@ -13,6 +11,7 @@ import { useI18N } from "@/core/i18n";
 import {
     removeBackgroundImage,
 } from "@/utils/backgroundImage";
+import SettingSection from "../../components/settingSection";
 
 export default function BackgroundTuning() {
     const { t } = useI18N();
@@ -45,83 +44,40 @@ export default function BackgroundTuning() {
     }
 
     return (
-        <View>
-            <ThemeText
-                fontSize="subTitle"
-                fontWeight="bold"
-                style={styles.header}>
-                {t("themeSettings.backgroundTuning")}
-            </ThemeText>
-            <View style={styles.sectionWrapper}>
-                {hasBackground ? (
-                    <ListItem withHorizontalPadding onPress={onClearPress}>
+        <SettingSection title={t("themeSettings.backgroundTuning")}>
+            {hasBackground ? (
+                <ListItem withHorizontalPadding onPress={onClearPress}>
+                    <ListItem.Content
+                        title={t("themeSettings.clearBackground")}
+                    />
+                </ListItem>
+            ) : null}
+            {isBackgroundActive ? (
+                <>
+                    <BackgroundTuningSliders />
+                    <SliderRow
+                        title={t("themeSettings.backgroundMask")}
+                        value={backgroundMask}
+                        minimumValue={0}
+                        maximumValue={0.8}
+                        step={0.01}
+                        format={val => `${Math.round(val * 100)}%`}
+                        onChange={val => {
+                            Config.setConfig("theme.backgroundMask", val);
+                        }}
+                    />
+                    <ListItem withHorizontalPadding onPress={onResetPress}>
                         <ListItem.Content
-                            title={t("themeSettings.clearBackground")}
+                            title={t(
+                                "themeSettings.resetBackgroundTuning",
+                            )}
+                            description={t(
+                                "themeSettings.resetBackgroundTuningDesc",
+                            )}
                         />
                     </ListItem>
-                ) : null}
-                {isBackgroundActive ? (
-                    <>
-                        <SliderRow
-                            title={t("setCustomTheme.blur")}
-                            value={
-                                backgroundInfo?.blur ?? DEFAULT_BACKGROUND_BLUR
-                            }
-                            minimumValue={0}
-                            maximumValue={50}
-                            step={1}
-                            onChange={val => {
-                                Theme.setBackground({ blur: val });
-                            }}
-                        />
-                        <SliderRow
-                            title={t("setCustomTheme.opacity")}
-                            value={
-                                backgroundInfo?.opacity ??
-                                DEFAULT_BACKGROUND_OPACITY
-                            }
-                            minimumValue={0}
-                            maximumValue={1}
-                            step={0.01}
-                            format={val => `${Math.round(val * 100)}%`}
-                            onChange={val => {
-                                Theme.setBackground({ opacity: val });
-                            }}
-                        />
-                        <SliderRow
-                            title={t("themeSettings.backgroundMask")}
-                            value={backgroundMask}
-                            minimumValue={0}
-                            maximumValue={0.8}
-                            step={0.01}
-                            format={val => `${Math.round(val * 100)}%`}
-                            onChange={val => {
-                                Config.setConfig("theme.backgroundMask", val);
-                            }}
-                        />
-                        <ListItem withHorizontalPadding onPress={onResetPress}>
-                            <ListItem.Content
-                                title={t(
-                                    "themeSettings.resetBackgroundTuning",
-                                )}
-                                description={t(
-                                    "themeSettings.resetBackgroundTuningDesc",
-                                )}
-                            />
-                        </ListItem>
-                    </>
-                ) : null}
-            </View>
-        </View>
+                </>
+            ) : null}
+        </SettingSection>
     );
 }
-
-const styles = StyleSheet.create({
-    header: {
-        paddingLeft: rpx(24),
-        marginTop: rpx(36),
-    },
-    sectionWrapper: {
-        marginTop: rpx(24),
-    },
-});

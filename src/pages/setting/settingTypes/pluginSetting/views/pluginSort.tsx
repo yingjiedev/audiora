@@ -4,7 +4,11 @@ import SortableFlatList from "@/components/base/SortableFlatList";
 import ThemeText from "@/components/base/themeText";
 import globalStyle from "@/constants/globalStyle";
 import { useI18N } from "@/core/i18n";
-import PluginManager, { Plugin, useSortedPlugins } from "@/core/pluginManager";
+import PluginManager, {
+    Plugin,
+    usePluginDisplayNameResolver,
+    useSortedPlugins,
+} from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
@@ -17,6 +21,7 @@ const marginTop = rpx(188) + (StatusBar.currentHeight ?? 0);
 export default function PluginSort() {
     const plugins = useSortedPlugins();
     const [sortingPlugins, setSortingPlugins] = useState([...plugins]);
+    const getDisplayName = usePluginDisplayNameResolver();
 
     const colors = useColors();
     const { t } = useI18N();
@@ -24,7 +29,7 @@ export default function PluginSort() {
     function renderSortingItem({ item }: { item: Plugin }) {
         return (
             <View style={style.sortItem}>
-                <ThemeText>{item.name}</ThemeText>
+                <ThemeText>{getDisplayName(item)}</ThemeText>
             </View>
         );
     }

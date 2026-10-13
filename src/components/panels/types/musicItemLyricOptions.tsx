@@ -15,10 +15,9 @@ import { IIconName } from "@/components/base/icon.tsx";
 import { hidePanel } from "@/components/panels/usePanel.ts";
 import { iconSizeConst } from "@/constants/uiConst";
 import Config, { useAppConfig } from "@/core/appConfig";
+import DownloadPath from "@/core/downloadPath";
 import lyricManager from "@/core/lyricManager";
 import mediaCache from "@/core/mediaCache";
-import LyricUtil from "@/native/lyricUtil";
-import { resolveLyricPresets } from "@/utils/lyricPreset";
 import { getDocumentAsync } from "expo-document-picker";
 import { readAsStringAsync } from "expo-file-system/legacy";
 import { FlatList } from "react-native-gesture-handler";
@@ -28,16 +27,11 @@ import { useI18N } from "@/core/i18n";
 import PersistStatus from "@/utils/persistStatus";
 import { useCurrentMusic } from "@/core/trackPlayer";
 import PluginManager from "@/core/pluginManager";
-import { autoDecryptLyric } from "@/utils/musicDecrypter";
+import { normalizeLyric } from "@/utils/lyricFormat";
 import { writeFile } from "react-native-fs";
 import { escapeCharacter } from "@/utils/fileUtils";
-import { getDownloadMusicPath } from "@/constants/pathConst";
 import { formatLyricsByTimestamp } from "@/utils/lrcParser";
-import {
-    isAndroidSafUri,
-    requestAndroidDirectoryAccess,
-    writeTextToAndroidDirectory,
-} from "@/utils/androidSaf";
+import { writeTextToAndroidDirectory } from "@/utils/androidSaf";
 
 interface IMusicItemLyricOptionsProps {
     /** 歌曲信息 */
@@ -175,69 +169,6 @@ export default function MusicItemLyricOptions(
             },
         },
         {
-            icon: "lyric", title: t("panel.musicItemLyricOptions.toggleDesktopLyric", {
-                status: Config.getConfig("lyric.showStatusBarLyric")
-                    ? t("panel.musicItemLyricOptions.disableDesktopLyric")
-                    : t("panel.musicItemLyricOptions.enableDesktopLyric"),
-            }),
-            show: Platform.OS !== "android",
-            async onPress() {
-                const showStatusBarLyric = Config.getConfig("lyric.showStatusBarLyric");
-                if (!showStatusBarLyric) {
-                    const hasPermission =
-                        await LyricUtil.checkSystemAlertPermission();
-
-                    if (hasPermission) {
-                        const statusBarLyricConfig = {
-                            topPercent: Config.getConfig("lyric.topPercent"),
-                            leftPercent: Config.getConfig("lyric.leftPercent"),
-                            align: Config.getConfig("lyric.align"),
-                            color: Config.getConfig("lyric.color"),
-                            sungColor: Config.getConfig("lyric.sungColor"),
-                            backgroundColor: Config.getConfig("lyric.backgroundColor"),
-                            widthPercent: Config.getConfig("lyric.widthPercent"),
-                            fontSize: Config.getConfig("lyric.fontSize"),
-                            presetIndex: Config.getConfig("lyric.presetIndex") ?? 0,
-                            presets: resolveLyricPresets(),
-                        };
-                        LyricUtil.showStatusBarLyric(
-                            "Audiora",
-                            statusBarLyricConfig ?? {}
-                        );
-                        Config.setConfig("lyric.showStatusBarLyric", true);
-                    } else {
-                        LyricUtil.requestSystemAlertPermission().finally(() => {
-                            Toast.warn(t("panel.musicItemLyricOptions.desktopLyricPermissionError"));
-                        });
-                    }
-                } else {
-                    LyricUtil.hideStatusBarLyric();
-                    Config.setConfig("lyric.showStatusBarLyric", false);
-                }
-                hidePanel();
-            },
-        },
-        {
-            icon: "shield-keyhole-outline",
-            title: Config.getConfig("lyric.isLocked")
-                ? t("basicSettings.lyric.unlock")
-                : t("basicSettings.lyric.lock"),
-            show: Platform.OS !== "android" && !!Config.getConfig("lyric.showStatusBarLyric"),
-            onPress() {
-                const isLocked = Config.getConfig("lyric.isLocked");
-                if (isLocked) {
-                    LyricUtil.unlockDesktopLyric();
-                    Config.setConfig("lyric.isLocked", false);
-                    Toast.success(t("basicSettings.lyric.unlock"));
-                } else {
-                    LyricUtil.lockDesktopLyric();
-                    Config.setConfig("lyric.isLocked", true);
-                    Toast.success(t("basicSettings.lyric.lock"));
-                }
-                hidePanel();
-            },
-        },
-        {
             icon: "font-size",
             title: t("panel.musicItemLyricOptions.toggleWordByWord", {
                 status: Config.getConfig("lyric.enableWordByWord")
@@ -245,11 +176,10 @@ export default function MusicItemLyricOptions(
                     : t("panel.musicItemLyricOptions.enableWordByWord"),
             }),
             onPress: () => {
-                const current = Config.getConfig("lyric.enableWordByWord") ?? false;
-                Config.setConfig("lyric.enableWordByWord", !current);
-                // Reload lyric to apply new setting
-                lyricManager.reloadCurrentLyric();
-                Toast.success(!current
+                // 逐字歌词的写入 + 重载当前歌词统一由 lyricManager 负责
+                const next = !(Config.getConfig("lyric.enableWordByWord") ?? false);
+                lyricManager.setWordByWordEnabled(next);
+                Toast.success(next
                     ? t("panel.musicItemLyricOptions.wordByWordEnabled")
                     : t("panel.musicItemLyricOptions.wordByWordDisabled")
                 );
@@ -291,8 +221,7 @@ export default function MusicItemLyricOptions(
                     const lyricFileFormat = Config.getConfig("basic.lyricFileFormat") ?? "lrc";
                     const lyricOrder = Config.getConfig("basic.lyricOrder") ?? ["romanization", "original", "translation"];
                     const enableWordByWord = Config.getConfig("lyric.enableWordByWord") ?? false;
-                    const configuredDownloadPath = Config.getConfig("basic.downloadPath");
-                    const downloadPath = getDownloadMusicPath(configuredDownloadPath);
+                    const downloadPath = DownloadPath.resolve();
 
                     devLog("info", "[歌词下载] 配置信息", {
                         format: lyricFileFormat,
@@ -301,10 +230,10 @@ export default function MusicItemLyricOptions(
                         downloadPath,
                     });
 
-                    // Decrypt lyrics (auto-decrypt QRC format)
-                    const rawLrc = lyricSource.rawLrc ? await autoDecryptLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
-                    const translation = lyricSource.translation ? await autoDecryptLyric(lyricSource.translation, enableWordByWord) : undefined;
-                    const romanization = lyricSource.romanization ? await autoDecryptLyric(lyricSource.romanization, enableWordByWord) : undefined;
+                    // 统一歌词格式（带逐字时间轴的 XML -> LRC）
+                    const rawLrc = lyricSource.rawLrc ? await normalizeLyric(lyricSource.rawLrc, enableWordByWord) : undefined;
+                    const translation = lyricSource.translation ? await normalizeLyric(lyricSource.translation, enableWordByWord) : undefined;
+                    const romanization = lyricSource.romanization ? await normalizeLyric(lyricSource.romanization, enableWordByWord) : undefined;
 
                     if (!rawLrc) {
                         Toast.warn(t("panel.musicItemLyricOptions.lyricNotFound"));
@@ -331,13 +260,12 @@ export default function MusicItemLyricOptions(
                     const filename = `${safeTitle} - ${safeArtist}.${lyricFileFormat}`;
                     let filePath: string;
                     if (Platform.OS === "android") {
-                        const directoryUri = isAndroidSafUri(configuredDownloadPath)
-                            ? configuredDownloadPath
-                            : await requestAndroidDirectoryAccess();
+                        // basic.downloadPath 只在 core/downloadPath 里写，
+                        // 这里按需确保有一个已授权目录即可
+                        const directoryUri = await DownloadPath.ensure();
                         if (!directoryUri) {
                             return;
                         }
-                        Config.setConfig("basic.downloadPath", directoryUri);
                         filePath = await writeTextToAndroidDirectory(
                             directoryUri,
                             filename,

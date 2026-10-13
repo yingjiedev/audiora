@@ -13,17 +13,16 @@ import PanelBase from "../base/panelBase";
 import { hidePanel } from "../usePanel";
 import PanelHeader from "../base/panelHeader";
 import { useI18N } from "@/core/i18n";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import NoPlugin from "@/components/base/noPlugin";
 import Toast from "@/utils/toast";
 import TrackPlayer from "@/core/trackPlayer";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { openPlayer } from "@/core/playerOverlay";
 import { Plugin } from "@/core/pluginManager/plugin";
 
 export default function PlayById() {
     const { t } = useI18N();
     const colors = useColors();
-    const navigate = useNavigate();
 
     const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
     const [musicId, setMusicId] = useState("");
@@ -31,6 +30,7 @@ export default function PlayById() {
 
     // Get all sorted plugins
     const allPlugins = PluginManager.getSortedPlugins();
+    const getDisplayName = usePluginDisplayNameResolver();
 
     const handlePlay = async () => {
         if (!selectedPlugin) {
@@ -120,8 +120,8 @@ export default function PlayById() {
             // Play the music
             await TrackPlayer.play(musicItem);
 
-            // Navigate to music detail page
-            navigate(ROUTE_PATH.MUSIC_DETAIL);
+            // Open the full player overlay
+            openPlayer();
 
             Toast.success(t("panel.playById.playingNow"));
         } catch {
@@ -179,10 +179,10 @@ export default function PlayById() {
                                                     numberOfLines={1}
                                                     style={{
                                                         color: isSelected
-                                                            ? "#fff"
+                                                            ? colors.onPrimary
                                                             : colors.text,
                                                     }}>
-                                                    {plugin.name}
+                                                    {getDisplayName(plugin)}
                                                 </ThemeText>
                                             </TouchableOpacity>
                                         );

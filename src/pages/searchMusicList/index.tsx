@@ -2,11 +2,10 @@ import AppBar from "@/components/base/appBar";
 import Input from "@/components/base/input";
 import StatusBar from "@/components/base/statusBar";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
-import MusicBar from "@/components/musicBar";
 import globalStyle from "@/constants/globalStyle";
-import { fontSizeConst } from "@/constants/uiConst";
 import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
+import PluginManager from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useState } from "react";
@@ -18,7 +17,9 @@ function filterMusic(query: string, musicList: IMusic.IMusicItem[]) {
         return musicList;
     }
     return musicList.filter(_ =>
-        `${_.title} ${_.artist} ${_.album} ${_.platform}`
+        `${_.title} ${_.artist} ${_.album} ${PluginManager.getPluginDisplayName(
+            _.platform,
+        )}`
             .toLowerCase()
             .includes(query.toLowerCase()),
     );
@@ -55,29 +56,16 @@ export default function SearchMusicList() {
                 />
             </AppBar>
             <SearchResult result={result} musicSheet={musicSheet} />
-            <MusicBar />
         </VerticalSafeAreaView>
     );
 }
 
 const style = StyleSheet.create({
-    appbar: {
-        shadowColor: "transparent",
-        backgroundColor: "#2b333eaa",
-    },
     searchBar: {
         minWidth: rpx(375),
         flex: 1,
         borderRadius: rpx(64),
         height: rpx(64),
         fontSize: fontRpx(32),
-    },
-    input: {
-        padding: 0,
-        color: "#666666",
-        height: rpx(64),
-        fontSize: fontSizeConst.subTitle,
-        textAlignVertical: "center",
-        includeFontPadding: false,
     },
 });

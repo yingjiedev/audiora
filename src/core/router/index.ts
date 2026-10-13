@@ -1,6 +1,7 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useCallback } from "react";
 import { LogBox } from "react-native";
+import { closePlayer, isPlayerOpen } from "@/core/playerOverlay";
 
 LogBox.ignoreLogs([
     "Non-serializable values were found in the navigation state",
@@ -44,6 +45,8 @@ export const ROUTE_PATH = {
     SHEET_BROWSER: "sheet-browser",
     /** 历史记录 */
     HISTORY: "history",
+    /** 本地听歌趋势 */
+    LISTENING_REPORT: "listening-report",
     /** 自定义主题 */
     SET_CUSTOM_THEME: "set-custom-theme",
     /** 权限管理 */
@@ -58,7 +61,7 @@ type RouterParamsBase = Record<RoutePaths, any>;
 interface RouterParams extends RouterParamsBase {
     home: undefined;
     "music-detail": undefined;
-    "search-page": undefined;
+    "search-page": { pluginHash?: string } | undefined;
     "local-sheet-detail": {
         id: string;
     };
@@ -71,10 +74,11 @@ interface RouterParams extends RouterParamsBase {
     };
     setting: {
         type: string;
-        // anchor?: string | number;
+        section?: string;
     };
     local: undefined;
     downloading: undefined;
+    "listening-report": undefined;
     "search-music-list": {
         musicList: IMusic.IMusicItem[] | null;
         musicSheet?: IMusic.IMusicSheetItem;
@@ -125,9 +129,49 @@ export function useNavigate() {
         route: T,
         params?: RouterParams[T],
     ) {
+        // The full player is a root overlay above the navigator: navigating
+        // from inside it must dismiss it first, otherwise the new screen
+        // renders underneath the still-open overlay.
+        if (isPlayerOpen()) {
+            closePlayer();
+        }
         navigation.navigate(route, params);
     },
     [navigation]);
 
     return navigate;
+}
+
+/**
+ * 压栈导航（一定新建屏幕）。
+ *
+ * `navigate` 在目标路由已经存在于栈中时会**复用**该屏幕：pop 回它并合并参数，
+ * 而不会新增屏幕；当前屏幕 name 相同、仅参数不同时同样是就地更新参数。
+ *
+ * 设置页（`ROUTE_PATH.SETTING`）这类「单个 route 靠 params 切换多级内容」的
+ * 页面用 navigate 进入下一级时，整条链路在导航栈里始终只有一个屏幕，
+ * 于是 AppBar 的 goBack 一按就直接退出到入口页。
+ * 这种多级页面进入下一级必须用 push。
+ */
+export function usePush() {
+    const navigation = useNavigation<any>();
+
+    const push = useCallback(function <T extends RoutePaths>(
+        route: T,
+        params?: RouterParams[T],
+    ) {
+        // See useNavigate: leaving the player overlay for another route
+        // dismisses the overlay first.
+        if (isPlayerOpen()) {
+            closePlayer();
+        }
+        if (typeof navigation.push === "function") {
+            navigation.push(route, params);
+        } else {
+            navigation.navigate(route, params);
+        }
+    },
+    [navigation]);
+
+    return push;
 }

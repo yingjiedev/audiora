@@ -20,7 +20,6 @@ const settingTypes: Record<
         title: "设置",
         i18nKey: "common.setting",
         component: SettingsOverview,
-        showNav: false,
     },
     basic: {
         title: "基本设置",

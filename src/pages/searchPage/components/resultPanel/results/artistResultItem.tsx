@@ -2,6 +2,7 @@ import React from "react";
 import ListItem from "@/components/base/listItem";
 import { ImgAsset } from "@/constants/assetsConst";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
+import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import TitleAndTag from "@/components/mediaItem/titleAndTag";
 import { useI18N } from "@/core/i18n";
 import { View, StyleSheet } from "react-native";
@@ -17,6 +18,7 @@ interface IArtistResultsProps {
 export default function ArtistResultItem(props: IArtistResultsProps) {
     const { item: artistItem, pluginHash } = props;
     const navigate = useNavigate();
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const { t } = useI18N();
     const colors = useColors();
     const cardStyle = useCardStyle({
@@ -60,7 +62,7 @@ export default function ArtistResultItem(props: IArtistResultsProps) {
                     title={
                         <TitleAndTag
                             title={artistItem.name}
-                            tag={artistItem.platform}
+                            tag={getPluginDisplayName(artistItem.platform)}
                         />
                     }
                 />

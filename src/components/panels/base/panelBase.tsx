@@ -1,4 +1,5 @@
 import useColors from "@/hooks/useColors";
+import { useTheme } from "@react-navigation/native";
 import useOrientation from "@/hooks/useOrientation";
 import rpx, { vh } from "@/utils/rpx";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,24 +17,15 @@ import {
     View,
 } from "react-native";
 import Animated, {
-    Easing,
-    EasingFunction,
     runOnJS,
     useAnimatedReaction,
     useAnimatedStyle,
     useSharedValue,
-    withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { panelInfoStore } from "../usePanel";
-
-const ANIMATION_EASING: EasingFunction = Easing.out(Easing.exp);
-const ANIMATION_DURATION = 250;
-
-const timingConfig = {
-    duration: ANIMATION_DURATION,
-    easing: ANIMATION_EASING,
-};
+import useMotion from "@/hooks/useMotion";
+import { KEYBOARD_TIMING } from "@/utils/motion";
 
 interface IPanelBaseProps {
     borderTopRadius?: number;
@@ -62,7 +54,7 @@ export default function (props: IPanelBaseProps) {
         renderBody,
         keyboardAvoidBehavior,
         maskColor,
-        maskOpacity = 0.5,
+        maskOpacity,
         positionMethod = "bottom",
     } = props;
     const keyboardAvoidMode =
@@ -71,6 +63,10 @@ export default function (props: IPanelBaseProps) {
     const keyboardHeight = useSharedValue(0);
 
     const colors = useColors();
+    const motion = useMotion();
+    const { dark } = useTheme();
+    // 深色下 0.5 的纯黑压不住底下的卡片，面板会显得发飘；浅色保持原观感
+    const resolvedMaskOpacity = maskOpacity ?? (dark ? 0.82 : 0.5);
     const [loading, setLoading] = useState(true);
     const timerRef = useRef<any>(null);
     const safeAreaInsets = useSafeAreaInsets();
@@ -98,24 +94,39 @@ export default function (props: IPanelBaseProps) {
         });
     }, []);
 
+    /** Close animation was interrupted: drop the guard so another close can run. */
+    const releaseCloseGuard = useCallback(() => {
+        closingRef.current = false;
+    }, []);
+
     const closePanel = useCallback(() => {
         if (closingRef.current) {
             return;
         }
         closingRef.current = true;
-        snapPoint.value = withTiming(0, timingConfig, finished => {
-            if (finished) {
-                runOnJS(unmountPanel)();
-            } else {
-                // Animation interrupted — allow another close attempt.
-                closingRef.current = false;
-            }
-        });
-    }, [snapPoint, unmountPanel]);
+        // The callback runs on the UI runtime (see valueSetter: it calls
+        // `animation.callback(true)` straight from the frame queue), so it has
+        // to be a worklet and touch JS state only through runOnJS.
+        snapPoint.value = motion.timing(
+            0,
+            { duration: "normal", easing: "accelerate" },
+            finished => {
+                "worklet";
+                if (finished) {
+                    runOnJS(unmountPanel)();
+                } else {
+                    runOnJS(releaseCloseGuard)();
+                }
+            },
+        );
+    }, [snapPoint, unmountPanel, motion, releaseCloseGuard]);
 
     useEffect(() => {
         closingRef.current = false;
-        snapPoint.value = withTiming(1, timingConfig);
+        snapPoint.value = motion.timing(1, {
+            duration: "normal",
+            easing: "decelerate",
+        });
 
         timerRef.current = setTimeout(() => {
             if (loading) {
@@ -155,9 +166,7 @@ export default function (props: IPanelBaseProps) {
             e => {
                 if (keyboardAvoidBehavior !== "none") {
                     if (keyboardAvoidMode === "off") {
-                        keyboardHeight.value = withTiming(0, {
-                            duration: Platform.OS === "ios" ? 250 : 150,
-                        });
+                        keyboardHeight.value = motion.timing(0, KEYBOARD_TIMING);
                         return;
                     }
                     const windowHeight = Dimensions.get("window").height;
@@ -176,9 +185,10 @@ export default function (props: IPanelBaseProps) {
                                 e.endCoordinates.height,
                                 effectiveKeyboardHeight,
                             );
-                    keyboardHeight.value = withTiming(targetHeight, {
-                        duration: Platform.OS === "ios" ? 250 : 150,
-                    });
+                    keyboardHeight.value = motion.timing(
+                        targetHeight,
+                        KEYBOARD_TIMING,
+                    );
                 }
             },
         );
@@ -186,9 +196,7 @@ export default function (props: IPanelBaseProps) {
         const keyboardHideListener = Keyboard.addListener(
             keyboardHideEvent,
             () => {
-                keyboardHeight.value = withTiming(0, {
-                    duration: Platform.OS === "ios" ? 250 : 150,
-                });
+                keyboardHeight.value = motion.timing(0, KEYBOARD_TIMING);
             },
         );
 
@@ -223,8 +231,8 @@ export default function (props: IPanelBaseProps) {
         // Keep the mask opaque for hit testing and animate only its opacity.
         // This is the same structure used by Dialog and avoids stacking a
         // static 0.5 opacity with an animated value.
-        opacity: snapPoint.value * maskOpacity,
-    }), [maskOpacity]);
+        opacity: snapPoint.value * resolvedMaskOpacity,
+    }), [resolvedMaskOpacity]);
 
     const mountPanel = useCallback(() => {
         setLoading(false);
@@ -274,7 +282,7 @@ export default function (props: IPanelBaseProps) {
                     onPress={closePanel}>
                     <Animated.View
                         collapsable={false}
-                        style={[style.mask, { backgroundColor: maskColor ?? "#000" }, maskAnimated]}
+                        style={[style.mask, { backgroundColor: maskColor ?? colors.modalScrim }, maskAnimated]}
                     />
                 </TouchableWithoutFeedback>
 
@@ -324,7 +332,6 @@ const style = StyleSheet.create({
         bottom: 0,
         width: "100%",
         height: "100%",
-        backgroundColor: "#000",
         zIndex: 0,
     },
     wrapper: {

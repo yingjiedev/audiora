@@ -1672,12 +1672,12 @@ RCT_EXPORT_METHOD(downloadWithHttp:(NSDictionary *)options
 
 RCT_EXPORT_METHOD(decryptMflacToFlac:(NSString *)inputPath
                   outputPath:(NSString *)outputPath
-                  ekey:(NSString *)ekey
+                  rawSongKey:(NSString *)rawSongKey
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
     NSError *error = nil;
-    BOOL success = [MFMflacSupport decryptFileAtPath:inputPath outputPath:outputPath ekey:ekey error:&error];
+    BOOL success = [MFMflacSupport decryptFileAtPath:inputPath outputPath:outputPath rawSongKey:rawSongKey error:&error];
     if (success) {
       resolve(@YES);
     } else {
@@ -1710,13 +1710,13 @@ RCT_EXPORT_METHOD(startMflacProxy:(RCTPromiseResolveBlock)resolve
 }
 
 RCT_EXPORT_METHOD(registerMflacStream:(NSString *)src
-                  ekey:(NSString *)ekey
+                  rawSongKey:(NSString *)rawSongKey
                   headers:(NSDictionary *)headers
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
     NSError *error = nil;
-    NSString *localURL = [MFMflacSupport registerStream:src ekey:ekey headers:headers error:&error];
+    NSString *localURL = [MFMflacSupport registerStream:src rawSongKey:rawSongKey headers:headers error:&error];
     if (localURL) {
       resolve(localURL);
     } else {

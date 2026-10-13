@@ -36,179 +36,24 @@ static std::string MFMflacString(NSString *value) {
   return value ? std::string([value UTF8String] ?: "") : std::string();
 }
 
-static NSString *MFMflacNormalizeEkey(NSString *ekey) {
-  NSString *trimmed = [ekey stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-  if (trimmed.length > 704) {
-    return [trimmed substringFromIndex:trimmed.length - 704];
-  }
-  return trimmed;
-}
-
 namespace {
 
-const int ROUNDS = 16;
-const uint32_t DELTA = 0x9e3779b9U;
-const size_t SALT_LEN = 2;
-const size_t ZERO_LEN = 7;
-const size_t FIXED_PADDING_LEN = 1 + SALT_LEN + ZERO_LEN;
-const char *EKEY_V2_PREFIX = "UVFNdXNpYyBFbmNWMixLZXk6";
-const uint8_t EKEY_V2_KEY1[16] = {
-    0x33, 0x38, 0x36, 0x5a, 0x4a, 0x59, 0x21, 0x40,
-    0x23, 0x2a, 0x24, 0x25, 0x5e, 0x26, 0x29, 0x28,
-};
-const uint8_t EKEY_V2_KEY2[16] = {
-    0x2a, 0x2a, 0x23, 0x21, 0x28, 0x23, 0x24, 0x25,
-    0x26, 0x5e, 0x61, 0x31, 0x63, 0x5a, 0x2c, 0x54,
-};
-
-uint32_t readU32BE(const std::vector<uint8_t> &b, size_t off) {
-  return (static_cast<uint32_t>(b[off]) << 24) |
-         (static_cast<uint32_t>(b[off + 1]) << 16) |
-         (static_cast<uint32_t>(b[off + 2]) << 8) |
-         static_cast<uint32_t>(b[off + 3]);
-}
-
-void writeU32BE(std::vector<uint8_t> &b, size_t off, uint32_t v) {
-  b[off] = static_cast<uint8_t>((v >> 24) & 0xff);
-  b[off + 1] = static_cast<uint8_t>((v >> 16) & 0xff);
-  b[off + 2] = static_cast<uint8_t>((v >> 8) & 0xff);
-  b[off + 3] = static_cast<uint8_t>(v & 0xff);
-}
-
-std::vector<uint32_t> parseKey(const std::vector<uint8_t> &key) {
-  if (key.size() != 16) {
-    throw std::runtime_error("Key must be 16 bytes");
+// Accept only explicit raw keys. EKey unpacking is not part of the host.
+std::vector<uint8_t> decodeProvidedSongKey(const std::string &value) {
+  if (value.rfind("base64:", 0) != 0 || value.size() > 5471) {
+    throw std::runtime_error("Expected a base64: raw song key");
   }
-  return {
-      readU32BE(key, 0),
-      readU32BE(key, 4),
-      readU32BE(key, 8),
-      readU32BE(key, 12),
-  };
-}
-
-uint32_t ecbSingleRound(uint32_t value, uint32_t sum, uint32_t key1, uint32_t key2) {
-  uint32_t left = static_cast<uint32_t>((value << 4) + key1);
-  uint32_t right = static_cast<uint32_t>((value >> 5) + key2);
-  uint32_t mid = static_cast<uint32_t>(sum + value);
-  return left ^ mid ^ right;
-}
-
-std::pair<uint32_t, uint32_t> decryptBlock(uint32_t blockHi, uint32_t blockLo, const std::vector<uint32_t> &keyWords) {
-  uint32_t y = blockHi;
-  uint32_t z = blockLo;
-  uint32_t sum = static_cast<uint32_t>(DELTA * ROUNDS);
-  for (int round = 0; round < ROUNDS; ++round) {
-    z = static_cast<uint32_t>(z - ecbSingleRound(y, sum, keyWords[2], keyWords[3]));
-    y = static_cast<uint32_t>(y - ecbSingleRound(z, sum, keyWords[0], keyWords[1]));
-    sum = static_cast<uint32_t>(sum - DELTA);
-  }
-  return {y, z};
-}
-
-std::vector<uint8_t> tcTeaDecrypt(const std::vector<uint8_t> &cipher, const std::vector<uint8_t> &key) {
-  if (cipher.size() % 8 != 0 || cipher.size() < FIXED_PADDING_LEN) {
-    throw std::runtime_error("Invalid cipher length");
-  }
-
-  std::vector<uint32_t> keyWords = parseKey(key);
-  std::vector<uint8_t> plain(cipher.size());
-  uint32_t iv1Hi = 0;
-  uint32_t iv1Lo = 0;
-  uint32_t iv2Hi = 0;
-  uint32_t iv2Lo = 0;
-
-  for (size_t off = 0; off < cipher.size(); off += 8) {
-    uint32_t cHi = readU32BE(cipher, off);
-    uint32_t cLo = readU32BE(cipher, off + 4);
-    uint32_t xHi = cHi ^ iv2Hi;
-    uint32_t xLo = cLo ^ iv2Lo;
-    auto d = decryptBlock(xHi, xLo, keyWords);
-    uint32_t pHi = d.first ^ iv1Hi;
-    uint32_t pLo = d.second ^ iv1Lo;
-    writeU32BE(plain, off, pHi);
-    writeU32BE(plain, off + 4, pLo);
-    iv1Hi = cHi;
-    iv1Lo = cLo;
-    iv2Hi = d.first;
-    iv2Lo = d.second;
-  }
-
-  size_t padSize = plain[0] & 0x7;
-  size_t start = 1 + padSize + SALT_LEN;
-  size_t end = cipher.size() - ZERO_LEN;
-  if (start > end || end > plain.size()) {
-    throw std::runtime_error("Invalid padding");
-  }
-  for (size_t i = end; i < plain.size(); ++i) {
-    if (plain[i] != 0) {
-      throw std::runtime_error("Invalid padding");
-    }
-  }
-  return std::vector<uint8_t>(plain.begin() + start, plain.begin() + end);
-}
-
-std::vector<uint8_t> makeSimpleKey(size_t len = 8) {
-  std::vector<uint8_t> result(len);
-  for (size_t i = 0; i < len; ++i) {
-    double value = 106.0 + static_cast<double>(i) * 0.1;
-    double scaled = std::abs(std::tan(value)) * 100.0;
-    result[i] = static_cast<uint8_t>(static_cast<int>(scaled) & 0xff);
-  }
-  return result;
-}
-
-std::vector<uint8_t> base64Decode(const std::string &text) {
-  NSString *encoded = [[NSString alloc] initWithBytes:text.data()
-                                               length:text.size()
-                                             encoding:NSUTF8StringEncoding];
-  NSData *decoded = [[NSData alloc] initWithBase64EncodedString:encoded ?: @""
-                                                        options:NSDataBase64DecodingIgnoreUnknownCharacters];
-  if (!decoded) {
-    throw std::runtime_error("Invalid base64 ekey");
+  std::string payload = value.substr(7);
+  NSString *encoded = [[NSString alloc] initWithBytes:payload.data()
+                                             length:payload.size()
+                                           encoding:NSUTF8StringEncoding];
+  NSData *decoded = [[NSData alloc] initWithBase64EncodedString:encoded ?: @"" options:0];
+  if (!decoded || decoded.length == 0 || decoded.length > 4096 ||
+      ![[decoded base64EncodedStringWithOptions:0] isEqualToString:encoded]) {
+    throw std::runtime_error("Invalid raw song key");
   }
   const uint8_t *bytes = static_cast<const uint8_t *>(decoded.bytes);
   return std::vector<uint8_t>(bytes, bytes + decoded.length);
-}
-
-std::vector<uint8_t> decryptEKeyV1(const std::string &base64) {
-  std::vector<uint8_t> decoded = base64Decode(base64);
-  if (decoded.size() < 12) {
-    throw std::runtime_error("EKey too short");
-  }
-  std::vector<uint8_t> header(decoded.begin(), decoded.begin() + 8);
-  std::vector<uint8_t> cipher(decoded.begin() + 8, decoded.end());
-  std::vector<uint8_t> simpleKey = makeSimpleKey();
-  std::vector<uint8_t> teaKey(16);
-  for (size_t i = 0; i < 8; ++i) {
-    teaKey[i * 2] = simpleKey[i];
-    teaKey[i * 2 + 1] = header[i];
-  }
-  std::vector<uint8_t> recovered = tcTeaDecrypt(cipher, teaKey);
-  header.insert(header.end(), recovered.begin(), recovered.end());
-  return header;
-}
-
-std::vector<uint8_t> decryptEKeyV2(const std::string &base64) {
-  std::string payload = base64;
-  std::string prefix(EKEY_V2_PREFIX);
-  if (payload.rfind(prefix, 0) == 0) {
-    payload = payload.substr(prefix.size());
-  }
-
-  std::vector<uint8_t> data = base64Decode(payload);
-  data = tcTeaDecrypt(data, std::vector<uint8_t>(EKEY_V2_KEY1, EKEY_V2_KEY1 + 16));
-  data = tcTeaDecrypt(data, std::vector<uint8_t>(EKEY_V2_KEY2, EKEY_V2_KEY2 + 16));
-  size_t end = data.size();
-  while (end > 0 && data[end - 1] == 0) {
-    --end;
-  }
-  return decryptEKeyV1(std::string(data.begin(), data.begin() + end));
-}
-
-std::vector<uint8_t> decryptEKey(const std::string &base64) {
-  std::string prefix(EKEY_V2_PREFIX);
-  return base64.rfind(prefix, 0) == 0 ? decryptEKeyV2(base64) : decryptEKeyV1(base64);
 }
 
 double calculateQMCHash(const std::vector<uint8_t> &key) {
@@ -688,7 +533,7 @@ static NSString *MFMflacMimeType(NSString *src) {
 + (instancetype)shared;
 - (nullable NSString *)startWithError:(NSError **)error;
 - (nullable NSString *)registerSource:(NSString *)src
-                                  ekey:(NSString *)ekey
+                                  rawSongKey:(NSString *)rawSongKey
                                headers:(NSDictionary *)headers
                                  error:(NSError **)error;
 @end
@@ -766,7 +611,7 @@ static NSString *MFMflacMimeType(NSString *src) {
 }
 
 - (nullable NSString *)registerSource:(NSString *)src
-                                  ekey:(NSString *)ekey
+                                  rawSongKey:(NSString *)rawSongKey
                                headers:(NSDictionary *)headers
                                  error:(NSError **)error {
   NSString *base = [self startWithError:error];
@@ -775,8 +620,7 @@ static NSString *MFMflacMimeType(NSString *src) {
   }
 
   try {
-    NSString *cleaned = MFMflacNormalizeEkey(ekey);
-    std::vector<uint8_t> decryptedKey = decryptEKey(MFMflacString(cleaned));
+    std::vector<uint8_t> decryptedKey = decodeProvidedSongKey(MFMflacString(rawSongKey));
     NSString *token = [[[NSUUID UUID] UUIDString] stringByReplacingOccurrencesOfString:@"-" withString:@""];
 
     MFMflacStreamSession *session = [MFMflacStreamSession new];
@@ -978,7 +822,7 @@ static NSString *MFMflacMimeType(NSString *src) {
 
 + (BOOL)decryptFileAtPath:(NSString *)inputPath
                outputPath:(NSString *)outputPath
-                     ekey:(NSString *)ekey
+                     rawSongKey:(NSString *)rawSongKey
                     error:(NSError **)error {
   if (![[NSFileManager defaultManager] fileExistsAtPath:inputPath]) {
     return MFMflacSetError(error, [NSString stringWithFormat:@"Input file not found: %@", inputPath]);
@@ -995,7 +839,7 @@ static NSString *MFMflacMimeType(NSString *src) {
   NSString *tempPath = [NSString stringWithFormat:@"%@.%@.tmp", outputPath, [[NSUUID UUID] UUIDString]];
 
   try {
-    std::vector<uint8_t> key = decryptEKey(MFMflacString(MFMflacNormalizeEkey(ekey)));
+    std::vector<uint8_t> key = decodeProvidedSongKey(MFMflacString(rawSongKey));
     QMC2Decoder decoder(key);
 
     std::ifstream input([inputPath fileSystemRepresentation], std::ios::binary);
@@ -1052,10 +896,10 @@ static NSString *MFMflacMimeType(NSString *src) {
 }
 
 + (nullable NSString *)registerStream:(NSString *)src
-                                  ekey:(NSString *)ekey
+                                  rawSongKey:(NSString *)rawSongKey
                                headers:(NSDictionary *)headers
                                  error:(NSError **)error {
-  return [[MFMflacProxy shared] registerSource:src ekey:ekey headers:headers ?: @{} error:error];
+  return [[MFMflacProxy shared] registerSource:src rawSongKey:rawSongKey headers:headers ?: @{} error:error];
 }
 
 @end

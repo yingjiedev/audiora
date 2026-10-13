@@ -5,7 +5,6 @@ import StatusBar from "@/components/base/statusBar";
 import ThemeText from "@/components/base/themeText";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { showPanel } from "@/components/panels/usePanel";
-import MusicBar from "@/components/musicBar";
 import { ImgAsset } from "@/constants/assetsConst";
 import { localPluginPlatform } from "@/constants/commonConst";
 import globalStyle from "@/constants/globalStyle";
@@ -127,8 +126,8 @@ export default function SheetBrowser() {
                                         description={
                                             isLocalSheet
                                                 ? t("home.songCount", {
-                                                      count: sheet.worksNum,
-                                                  })
+                                                    count: sheet.worksNum,
+                                                })
                                                 : `${sheet.artist ?? ""}`
                                         }
                                     />
@@ -176,7 +175,6 @@ export default function SheetBrowser() {
                     }}
                 />
             </HorizontalSafeAreaView>
-            <MusicBar />
         </VerticalSafeAreaView>
     );
 }
@@ -208,7 +206,7 @@ function TabButton(props: {
             </ThemeText>
             <ThemeText
                 fontSize="description"
-                color={selected ? colors.primary : colors.textSecondary}
+                color={selected ? colors.primaryText : colors.textSecondary}
                 style={styles.tabCount}>
                 {String(count).padStart(2, "0")}
             </ThemeText>

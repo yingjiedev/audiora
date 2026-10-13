@@ -6,6 +6,14 @@ import { devLog } from "@/utils/log";
 
 type LegacyQualityKey = "low" | "standard" | "high" | "super";
 
+/**
+ * MusicFree 官方协议的音质键。
+ * 官方类型定义就是 `IMusic.IQualityKey = "low" | "standard" | "high" | "super"`，
+ * 第三方插件基本都按这套键实现 getMediaSource —— app 自己的 96k…master 是 Audiora 扩展，
+ * 插件并不认识，所以调用插件前必须转换（见 toOfficialQuality）。
+ */
+export type OfficialQualityKey = LegacyQualityKey;
+
 /** 内置音质键列表（作为默认值） */
 export const BUILTIN_QUALITY_KEYS: string[] = [
     "96k",
@@ -51,6 +59,22 @@ const legacyQualityMap: Record<LegacyQualityKey, IMusic.IQualityKey> = {
     "super": "flac",
 };
 
+/** app 内部音质键 → MusicFree 官方协议键 */
+const internalToOfficialMap: Record<string, OfficialQualityKey> = {
+    "96k": "low",
+    "128k": "low",
+    "192k": "standard",
+    "320k": "high",
+    "flac": "super",
+    "flac24bit": "super",
+    "hires": "super",
+    "vinyl": "super",
+    "dolby": "super",
+    "atmos": "super",
+    "atmos_plus": "super",
+    "master": "super",
+};
+
 /**
  * 将原版插件的音质键值转换为新版音质键值
  */
@@ -60,6 +84,93 @@ export function convertLegacyQuality(legacyQuality: string): IMusic.IQualityKey 
     }
     // 如果不是原版音质键值，假设已经是新版键值
     return legacyQuality as IMusic.IQualityKey;
+}
+
+/** ---------- 插件音质协议：MusicFree 官方 vs Audiora 扩展 ---------- */
+
+/** 官方协议的音质键，按音质从低到高 */
+export const OFFICIAL_QUALITY_KEYS: OfficialQualityKey[] = [
+    "low",
+    "standard",
+    "high",
+    "super",
+];
+
+/** 官方协议 4 档对应的 app 内部键（低 → 高） */
+export const OFFICIAL_QUALITY_SCOPE: IMusic.IQualityKey[] =
+    OFFICIAL_QUALITY_KEYS.map(key => legacyQualityMap[key]);
+
+export function isOfficialQualityKey(key?: string): key is OfficialQualityKey {
+    return !!key && (OFFICIAL_QUALITY_KEYS as string[]).includes(key);
+}
+
+/** app 内部键 → 官方协议键（调用插件前转换） */
+export function toOfficialQuality(
+    quality: IMusic.IQualityKey,
+): OfficialQualityKey {
+    if (isOfficialQualityKey(quality)) {
+        return quality;
+    }
+    // 未知键（用户自定义）按最高档处理，具体交给插件兜底
+    return internalToOfficialMap[quality] ?? "super";
+}
+
+/** 官方协议键 → app 内部键 */
+export function fromOfficialQuality(
+    quality: IMusic.IQualityKey,
+): IMusic.IQualityKey {
+    return isOfficialQualityKey(quality) ? legacyQualityMap[quality] : quality;
+}
+
+/**
+ * 插件使用的音质协议。
+ * - extended：插件用 supportedQualities 声明了 Audiora 扩展键 → 走 app 的完整多音质方案
+ * - official：其它一律按 MusicFree 官方 4 档（low/standard/high/super）处理
+ */
+export type PluginQualityMode = "extended" | "official";
+
+export interface IPluginQualityDecl {
+    supportedQualities?: IMusic.IQualityKey[];
+    /** 插件加载/安装时探测的结果，作为缓存避免重复判定 */
+    qualityMode?: PluginQualityMode;
+}
+
+/**
+ * 探测插件使用的音质协议。
+ * 只有"声明了非官方键的 supportedQualities"才算支持 app 扩展音质；
+ * 未声明、只声明官方键、或声明私有键（如 supportedAudioQuality 里的 lossless）
+ * 一律按官方协议处理。
+ */
+export function resolvePluginQualityMode(
+    plugin?: IPluginQualityDecl | null,
+): PluginQualityMode {
+    if (plugin?.qualityMode) {
+        return plugin.qualityMode;
+    }
+    const declared = plugin?.supportedQualities;
+    if (declared?.length && declared.some(key => !isOfficialQualityKey(key))) {
+        return "extended";
+    }
+    return "official";
+}
+
+/**
+ * 该插件可用的音质档位（app 内部键，按音质从低到高）。
+ * 官方协议插件只留 4 档，避免把 master/hires 这类插件根本不认的档位放到界面上、
+ * 也避免播放时拿它们去请求。
+ */
+export function getPluginQualityScope(
+    plugin?: IPluginQualityDecl | null,
+): IMusic.IQualityKey[] {
+    if (resolvePluginQualityMode(plugin) === "official") {
+        return OFFICIAL_QUALITY_SCOPE;
+    }
+    const declared = plugin?.supportedQualities;
+    if (declared?.length) {
+        const internal = declared.map(fromOfficialQuality);
+        return getQualityKeys().filter(key => internal.includes(key));
+    }
+    return getQualityKeys();
 }
 
 /**
@@ -169,13 +280,25 @@ export function getSmartQuality(
     availableQualities: IMusic.IQuality | undefined,
     platformSupportedQualities?: IMusic.IQualityKey[]
 ): IMusic.IQualityKey {
-    // 如果没有音质信息，返回偏好音质
-    if (!availableQualities) return preferredQuality;
+    // 没有音质信息时无从"智能降级"，但仍不能越过插件档位范围
+    // （官方协议插件拿到 master 这种它不认识的键会直接落回最低档）。
+    if (!availableQualities) {
+        return (
+            pickSupportedQuality(preferredQuality, platformSupportedQualities) ??
+            preferredQuality
+        );
+    }
 
     const tryList = getTryQualityList();
     // 从偏好音质开始，向下搜索可用音质
     const preferredIndex = tryList.indexOf(preferredQuality);
-    if (preferredIndex === -1) return "master"; // 如果偏好音质不在列表中，返回master
+    if (preferredIndex === -1) {
+        // 偏好音质不在标准列表里（用户自定义键）：退到允许范围内的最高档，
+        // 与原来直接返回 master 的语义保持一致，但不会越过插件支持范围。
+        return platformSupportedQualities?.length
+            ? platformSupportedQualities[platformSupportedQualities.length - 1]
+            : "master";
+    }
 
     // 从偏好音质开始向下搜索
     for (let i = preferredIndex; i < tryList.length; i++) {
@@ -208,16 +331,54 @@ export function getSmartQuality(
         }
     }
 
-    // 最后回退到128k
-    return "128k";
+    // 最后回退到允许范围内的最低档（官方协议插件即 128k）
+    return platformSupportedQualities?.[0] ?? "128k";
 }
 
-/** 获取音质顺序 */
+/**
+ * 在插件声明支持的音质里挑一个最接近用户偏好的档位。
+ * 用于歌曲自身没有 qualities/source 信息时：这类歌曲没法智能降级，
+ * 若直接拿默认音质去请求，可能正是插件声明里没有的档位（白跑一次请求）。
+ */
+export function pickSupportedQuality(
+    preferredQuality: IMusic.IQualityKey,
+    supported?: IMusic.IQualityKey[],
+): IMusic.IQualityKey | undefined {
+    if (!supported?.length) {
+        return undefined;
+    }
+    if (supported.includes(preferredQuality)) {
+        return preferredQuality;
+    }
+    const order = getTryQualityList(); // 从高到低
+    const preferredIndex = order.indexOf(preferredQuality);
+    if (preferredIndex === -1) {
+        return supported[0];
+    }
+    // 先按"不高于偏好档位"的方向找，再退到更高的档位
+    for (let i = preferredIndex; i < order.length; i++) {
+        if (supported.includes(order[i])) {
+            return order[i];
+        }
+    }
+    for (let i = preferredIndex - 1; i >= 0; i--) {
+        if (supported.includes(order[i])) {
+            return order[i];
+        }
+    }
+    return supported[0];
+}
+
+/**
+ * 获取音质顺序。
+ * scope 用于把顺序限制在当前插件支持的档位内（官方协议插件只有 4 档）。
+ */
 export function getQualityOrder(
     qualityKey: IMusic.IQualityKey,
     sort: "asc" | "desc",
+    scope?: IMusic.IQualityKey[],
 ) {
-    const keys = getQualityKeys();
+    const keys = scope?.length ? scope : getQualityKeys();
     const idx = keys.indexOf(qualityKey);
     if (idx === -1) {
         // 目标音质不在当前列表中（如自定义列表移除了该键）：先尝试目标音质，
@@ -362,58 +523,45 @@ export function buildQualitiesFromArray(qualityArray: Array<{
 }
 
 /**
- * 获取可用音质列表 - 增强版本
- * 支持从插件supportedQualities、qualities和source字段获取音质信息
- * 精确到歌曲级别，只显示该歌曲实际支持的音质
+ * 获取可用音质列表。
+ * 从歌曲的 qualities/source 字段取实际支持的音质，再按插件协议收窄档位，
+ * 精确到歌曲级别。
  */
 export function getAvailableQualities(
-    musicItem: IMusic.IMusicItem, 
-    plugin?: { supportedQualities?: IMusic.IQualityKey[] }
+    musicItem: IMusic.IMusicItem,
+    plugin?: IPluginQualityDecl | null,
 ): IMusic.IQualityKey[] {
+    // 档位范围由插件协议探测决定：官方协议插件只显示官方 4 档对应的内部键
+    const scope = getPluginQualityScope(plugin);
     const availableQualities: IMusic.IQualityKey[] = [];
-    
-    // 第一优先级：从歌曲的qualities字段获取实际支持的音质
-    if (musicItem.qualities) {
-        // 按照插件声明的音质顺序检查，保证显示顺序一致
-        if (plugin?.supportedQualities) {
-            for (const quality of plugin.supportedQualities) {
-                if (musicItem.qualities[quality] !== undefined) {
-                    availableQualities.push(quality);
-                }
-            }
-        } else {
-            // 如果没有插件信息，按照标准顺序检查
-            const keys = getQualityKeys();
-            for (const quality of keys) {
-                if (musicItem.qualities[quality] !== undefined) {
-                    availableQualities.push(quality);
-                }
-            }
-        }
-    }
 
-    // 第二优先级：从歌曲的source字段获取
-    if (availableQualities.length === 0 && musicItem.source) {
-        const keys = getQualityKeys();
-        for (const quality of keys) {
-            if (musicItem.source[quality] && 
-                (musicItem.source[quality]!.url || 
-                 musicItem.source[quality]!.size !== undefined)) {
+    // 第一优先级：从歌曲的 qualities 字段获取实际支持的音质（按档位从低到高）
+    if (musicItem.qualities) {
+        for (const quality of scope) {
+            if (musicItem.qualities[quality] !== undefined) {
                 availableQualities.push(quality);
             }
         }
     }
-    
-    // 最后手段：如果歌曲没有任何音质信息，显示插件支持的全部音质
-    if (availableQualities.length === 0) {
-        // 优先返回插件声明的支持音质
-        if (plugin?.supportedQualities && plugin.supportedQualities.length > 0) {
-            return plugin.supportedQualities;
+
+    // 第二优先级：从歌曲的 source 字段获取
+    if (availableQualities.length === 0 && musicItem.source) {
+        for (const quality of scope) {
+            if (
+                musicItem.source[quality] &&
+                (musicItem.source[quality]!.url ||
+                    musicItem.source[quality]!.size !== undefined)
+            ) {
+                availableQualities.push(quality);
+            }
         }
-        // 如果没有插件信息，提供基础默认音质
-        return ["128k", "320k", "flac"];
     }
-    
+
+    // 最后手段：歌曲没有任何音质信息，就显示插件支持的全部档位
+    if (availableQualities.length === 0) {
+        return scope;
+    }
+
     return availableQualities;
 }
 

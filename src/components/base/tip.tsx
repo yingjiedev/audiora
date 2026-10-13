@@ -4,13 +4,12 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    withTiming,
     runOnJS,
 } from "react-native-reanimated";
 import Portal from "./portal";
 import rpx, { fontRpx } from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
-import { timingConfig } from "@/constants/commonConst";
+import useMotion from "@/hooks/useMotion";
 
 type TipPosition = "top" | "bottom" | "left" | "right";
 
@@ -121,38 +120,61 @@ const TipPortal = ({
     const scale = useSharedValue(0.8);
     const [tipDimensions, setTipDimensions] = useState({ width: 0, height: 0 });
     const [shouldRender, setShouldRender] = useState(visible);
+    const motion = useMotion();
 
     useEffect(() => {
         if (visible) {
             setShouldRender(true);
             // 显示动画
-            opacity.value = withTiming(1, timingConfig.animationNormal);
-            scale.value = withTiming(1, timingConfig.animationNormal);
+            opacity.value = motion.timing(1, {
+                duration: "fast",
+                easing: "decelerate",
+            });
+            scale.value = motion.timing(1, {
+                duration: "fast",
+                easing: "decelerate",
+            });
 
             // 自动隐藏
             if (autoHideDuration > 0) {
                 const hideTimer = setTimeout(() => {
                     // 开始隐藏动画
-                    opacity.value = withTiming(0, timingConfig.animationNormal, (finished) => {
-                        if (finished) {
-                            runOnJS(onHide)();
-                        }
+                    opacity.value = motion.timing(
+                        0,
+                        { duration: "fast", easing: "accelerate" },
+                        finished => {
+                            "worklet";
+                            if (finished) {
+                                runOnJS(onHide)();
+                            }
+                        },
+                    );
+                    scale.value = motion.timing(0.8, {
+                        duration: "fast",
+                        easing: "accelerate",
                     });
-                    scale.value = withTiming(0.8, timingConfig.animationNormal);
                 }, autoHideDuration);
 
                 return () => clearTimeout(hideTimer);
             }
         } else {
             // 隐藏动画
-            opacity.value = withTiming(0, timingConfig.animationNormal, (finished) => {
-                if (finished) {
-                    runOnJS(setShouldRender)(false);
-                }
+            opacity.value = motion.timing(
+                0,
+                { duration: "fast", easing: "accelerate" },
+                finished => {
+                    "worklet";
+                    if (finished) {
+                        runOnJS(setShouldRender)(false);
+                    }
+                },
+            );
+            scale.value = motion.timing(0.8, {
+                duration: "fast",
+                easing: "accelerate",
             });
-            scale.value = withTiming(0.8, timingConfig.animationNormal);
         }
-    }, [visible, autoHideDuration, onHide, opacity, scale]);
+    }, [autoHideDuration, motion, onHide, opacity, scale, visible]);
 
     const animatedStyle = useAnimatedStyle(() => {
         return {
@@ -284,7 +306,6 @@ export default function Tip({
 const styles = StyleSheet.create({
     tipContainer: {
         position: "absolute",
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
         paddingHorizontal: rpx(16),
         paddingVertical: rpx(8),
         borderRadius: rpx(8),

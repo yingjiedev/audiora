@@ -18,14 +18,14 @@ import globalStyle from "@/constants/globalStyle";
 import ThemeText from "./themeText";
 import { useNavigation } from "@react-navigation/native";
 import Animated, {
-    Easing,
     useAnimatedStyle,
     useSharedValue,
-    withTiming,
 } from "react-native-reanimated";
 import Portal from "./portal";
 import ListItem from "./listItem";
 import { IIconName } from "@/components/base/icon.tsx";
+import useMotion from "@/hooks/useMotion";
+import Theme from "@/core/theme";
 
 interface IAppBarProps {
     titleTextOpacity?: number;
@@ -48,14 +48,6 @@ interface IAppBarProps {
     actionComponent?: ReactNode;
     onBackPress?: () => void;
 }
-
-const ANIMATION_EASING: Animated.EasingFunction = Easing.out(Easing.exp);
-const ANIMATION_DURATION = 220;
-
-const timingConfig = {
-    duration: ANIMATION_DURATION,
-    easing: ANIMATION_EASING,
-};
 
 export default function AppBar(props: IAppBarProps) {
     const {
@@ -83,14 +75,21 @@ export default function AppBar(props: IAppBarProps) {
     const [menuIconLayout, setMenuIconLayout] =
         useState<LayoutRectangle | null>(null);
     const scaleRate = useSharedValue(0);
+    const motion = useMotion();
 
     useEffect(() => {
         if (showMenu) {
-            scaleRate.value = withTiming(1, timingConfig);
+            scaleRate.value = motion.timing(1, {
+                duration: "fast",
+                easing: "decelerate",
+            });
         } else {
-            scaleRate.value = withTiming(0, timingConfig);
+            scaleRate.value = motion.timing(0, {
+                duration: "fast",
+                easing: "accelerate",
+            });
         }
-    }, [showMenu, scaleRate]);
+    }, [showMenu, scaleRate, motion]);
 
     const transformStyle = useAnimatedStyle(() => {
         return {
@@ -181,7 +180,7 @@ export default function AppBar(props: IAppBarProps) {
                         pointerEvents={showMenu ? "auto" : "none"}
                         style={[
                             {
-                                borderBottomColor: colors.surfaceElevated,
+                                borderBottomColor: hasCustomBackground ? Theme.getDialogSurfaceColor() : colors.surfaceElevated,
                                 left:
                                     (menuIconLayout?.x ?? 0) +
                                     (menuIconLayout?.width ?? 0) / 2 -
@@ -203,7 +202,7 @@ export default function AppBar(props: IAppBarProps) {
                             {
                                 // 有壁纸时菜单用更实的暗底，避免透出壁纸看不清
                                 backgroundColor: hasCustomBackground
-                                    ? "rgba(0,0,0,0.82)"
+                                    ? Theme.getDialogSurfaceColor()
                                     : colors.surfaceElevated,
                                 borderColor: hasCustomBackground
                                     ? "transparent"

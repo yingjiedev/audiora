@@ -6,7 +6,7 @@ import { fontSizeConst } from "@/constants/uiConst";
 import useColors from "@/hooks/useColors";
 import PanelBase from "../../base/panelBase";
 import useSearchLrc from "./useSearchLrc";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { SceneMap, TabView } from "react-native-tab-view";
 import PillTabBar from "@/components/base/pillTabBar";
 import LyricList from "./LyricList";
@@ -83,7 +83,7 @@ export default function SearchLrc(props: INewMusicSheetProps) {
                                     },
                                 ]}>
                                 <ThemeText
-                                    color={colors.primary}
+                                    color={colors.primaryText}
                                     fontWeight="bold">
                                     {t("common.search")}
                                 </ThemeText>
@@ -198,12 +198,13 @@ function LyricResultBodyWrapper() {
         elevation: 3,
     });
 
+    const getDisplayName = usePluginDisplayNameResolver();
     const routes = useMemo(() => PluginManager.getSortedSearchablePlugins("lyric")?.map?.(
         _ => ({
             key: _.hash,
-            title: _.name,
+            title: getDisplayName(_),
         }),
-    ) ?? [], []);
+    ) ?? [], [getDisplayName]);
 
     const sceneMap = useMemo(() => {
         const scene: Record<string, any> = {};

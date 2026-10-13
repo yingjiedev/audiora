@@ -21,6 +21,12 @@ declare namespace IMusic {
         url?: string;
         /** UA */
         userAgent?: string;
+        /** 外部提供的已解包 QMC 歌曲密钥 */
+        qmcRawKey?: string;
+        /** 旧包装密钥，仅用于识别不再支持的来源 */
+        ekey?: string;
+        /** 外部提供的 CENC 内容密钥 */
+        cek?: string;
         /** 音质 */
         quality?: IMusic.IQualityKey;
         /** 大小 */

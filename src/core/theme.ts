@@ -9,6 +9,7 @@ import { GlobalState } from "@/utils/stateMapper";
 import { CustomizedColors } from "@/hooks/useColors";
 import Color from "color";
 import { Appearance, Image as RNImage } from "react-native";
+import { darkColors, lightColors, neutralFallbackPrimary } from "@/constants/colorPalette";
 
 /** RN Navigation 7+ reads theme.fonts.regular in native-stack headers. */
 const navigationFonts: NavigationTheme["fonts"] =
@@ -30,34 +31,18 @@ export const lightTheme = {
     colors: {
         ..._DefaultTheme.colors,
         background: "transparent",
-        text: "#10172D",
-        textSecondary: Color("#485574").alpha(0.78).toString(),
-        primary: "#3867F4",
-        pageBackground: "#F6F9FF",
-        shadow: "#2D4A78",
-        appBar: "#F6F9FF",
-        appBarText: "#10172D",
-        musicBar: "#FFFFFF",
-        musicBarText: "#10172D",
-        divider: "rgba(45,67,105,0.10)",
-        border: "rgba(75,103,148,0.12)",
-        listActive: "rgba(56,103,244,0.10)",
-        mask: "rgba(16,23,45,0.22)",
-        backdrop: "#EEF4FF",
-        surface: "#EEF4FF",
-        surfaceElevated: "#FFFFFF",
-        accentWarm: "#B26EF3",
-        accentCool: "#00AEEA",
-        tabBar: "#F1F6FF",
-        placeholder: "#E9F0FC",
-        success: "#08B99B",
-        danger: "#FF4F7B",
-        info: "#3B82F6",
-        card: "#FFFFFF",
-        notification: "#EEF4FF",
+        ...lightColors,
     },
 };
 
+/**
+ * 深色预设的表面色阶。
+ *
+ * 深色模式下投影几乎不可见（shadowColor 恒为黑），层级只能靠表面色自身的
+ * 明度差撑起来，所以相邻层之间必须拉开足够距离：
+ * pageBackground < appBar < surface < card < surfaceElevated，逐层 ≥1.03:1。
+ * 改这里的任何一项都要同步更新 `src/core/darkContrast.test.ts` 的断言。
+ */
 export const darkTheme = {
     id: "p-dark",
     ..._DarkTheme,
@@ -65,32 +50,29 @@ export const darkTheme = {
     colors: {
         ..._DarkTheme.colors,
         background: "transparent",
-        text: "#F7FAFF",
-        textSecondary: Color("#C1CCE0").alpha(0.72).toString(),
-        primary: "#6D8DFF",
-        pageBackground: "#090F1F",
-        shadow: "#000000",
-        appBar: "#090F1F",
-        appBarText: "#F7FAFF",
-        musicBar: "#131D34",
-        musicBarText: "#F7FAFF",
-        divider: "rgba(204,220,255,0.10)",
-        border: "rgba(204,220,255,0.12)",
-        listActive: "rgba(109,141,255,0.15)",
-        mask: "rgba(10,8,14,0.82)",
-        backdrop: "#111A2E",
-        surface: "#111A2E",
-        surfaceElevated: "#192541",
-        accentWarm: "#B878FF",
-        accentCool: "#25C7F4",
-        tabBar: "#111A2E",
-        placeholder: "#17233D",
-        success: "#20D2B0",
-        danger: "#FF648B",
-        info: "#58A6FF",
-        card: "#121D33",
-        notification: "#111A2E",
+        ...darkColors,
     },
+};
+
+/**
+ * 深色色板校准（issue #36）之前的旧表面色。
+ *
+ * 老配置里存的就是这些值，只说明"从没单独调过"，不代表用户的个性化选择。
+ * 迁移判定必须把它们一并当成"未调过"，否则改色板后旧值会被误判为用户
+ * 自定义色，自定义主题里就会残留校准前的紫灰。
+ */
+const legacyDarkSurfaceColors: Partial<
+    Record<keyof CustomizedColors, string>
+> = {
+    appBar: "#090F1F",
+    tabBar: "#111A2E",
+    musicBar: "#131D34",
+    card: "#121D33",
+    backdrop: "#111A2E",
+    surface: "#111A2E",
+    surfaceElevated: "#192541",
+    notification: "#111A2E",
+    placeholder: "#17233D",
 };
 
 interface IBackgroundInfo {
@@ -110,7 +92,7 @@ interface IBackgroundInput {
  * 自定义主题的初始主色：中性白，配深色底就是黑底白字；
  * 不再继承深色主题的橙色
  */
-export const customThemeDefaultPrimary = "#F2F2F2";
+export const customThemeDefaultPrimary = neutralFallbackPrimary;
 
 /** 深色主题的旧默认主色（橙），用于旧配置迁移判定 */
 const LEGACY_DARK_PRIMARY = "#FF7650";
@@ -334,6 +316,7 @@ function syncCardSurfaceColors(
         force ||
         !isDefaultLikeColor(colors.card, [
             darkTheme.colors.card,
+            legacyDarkSurfaceColors.card,
             lightTheme.colors.card,
             customBackgroundSurfaceColors.card,
         ]);
@@ -351,6 +334,7 @@ function syncCardSurfaceColors(
         force ||
         isDefaultLikeColor(nextColors.surface, [
             darkTheme.colors.surface,
+            legacyDarkSurfaceColors.surface,
             lightTheme.colors.surface,
             customBackgroundSurfaceColors.surface,
         ])
@@ -363,6 +347,7 @@ function syncCardSurfaceColors(
         force ||
         isDefaultLikeColor(nextColors.surfaceElevated, [
             darkTheme.colors.surfaceElevated,
+            legacyDarkSurfaceColors.surfaceElevated,
             lightTheme.colors.surfaceElevated,
             customBackgroundSurfaceColors.surfaceElevated,
         ])
@@ -441,6 +426,7 @@ function setup() {
         const surfaceUntouched = (key: keyof CustomizedColors, val: any) =>
             !val ||
             sameColor(val, darkTheme.colors[key]) ||
+            sameColor(val, legacyDarkSurfaceColors[key]) ||
             (customBackgroundSurfaceColors[key] !== undefined &&
                 sameColor(val, customBackgroundSurfaceColors[key]));
 
@@ -744,6 +730,26 @@ function getOpaquePageBackgroundColor() {
     }
 }
 
+/**
+ * `theme.followSystem` 的唯一写入口（issue #96）。
+ *
+ * 之前这个键在「显示风格」页写一次、在「选择主题」页手动置 false 三次，
+ * 且两处的联动逻辑（跟随系统打开时要把当前主题换成系统深色/浅色）
+ * 只有一处写了。现在统一到这里：
+ *
+ *  - 打开跟随：立刻把当前主题换成系统深色/浅色；
+ *  - 关闭跟随：只改标记，当前已经在用的主题保持不变——用户是「选了具体主题」
+ *    才走到这一步的，不该再被打回去。
+ */
+function setFollowSystem(follow: boolean) {
+    Config.setConfig("theme.followSystem", follow);
+
+    if (follow) {
+        const systemTheme = Appearance.getColorScheme();
+        setTheme(systemTheme === "dark" ? "p-dark" : "p-light");
+    }
+}
+
 function setBackground(backgroundInfo: IBackgroundInput) {
     const currentBackgroundInfo = backgroundStore.getValue();
     let newBgInfo: IBackgroundInfo = {
@@ -789,6 +795,7 @@ const configableColorKey: Array<keyof CustomizedColors> = [
 const Theme = {
     setup,
     setTheme,
+    setFollowSystem,
     setBackground,
     setColors,
     setSurfaceOpacity,

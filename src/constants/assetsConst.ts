@@ -1,5 +1,6 @@
 export const ImgAsset = {
     albumDefault: require("@/assets/imgs/album-default.png"),
+    playerVinyl: require("@/assets/imgs/player-vinyl.png"),
     addBackground: require("@/assets/imgs/add-image.png"),
     add: require("@/assets/imgs/add.png"),
     logo: require("@/assets/imgs/logo.png"),
@@ -7,6 +8,10 @@ export const ImgAsset = {
     logoTransparent: require("@/assets/imgs/logo-transparent.png"),
     settingsRibbonBackground: require("@/assets/imgs/settings-ribbon-background.png"),
     homeHero: require("@/assets/imgs/home-hero-mountain.png"),
+    homeListeningClouds: require("@/assets/imgs/home-listening-clouds-v1.png"),
+    homeDiscoveryWindow: require("@/assets/imgs/home-discovery-window-v1.png"),
+    homeDiscoveryNight: require("@/assets/imgs/home-discovery-night-v1.png"),
+    homeRecordHalo: require("@/assets/imgs/home-record-halo-v2.png"),
     quickLocal: require("@/assets/imgs/quick-local-v2.png"),
     quickHistory: require("@/assets/imgs/quick-history-v2.png"),
     quickFavorite: require("@/assets/imgs/quick-favorite-v2.png"),

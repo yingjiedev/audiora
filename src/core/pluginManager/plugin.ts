@@ -11,6 +11,10 @@ import delay from "@/utils/delay";
 import { addFileScheme, getFileName, removeFileScheme } from "@/utils/fileUtils";
 import { getMediaExtraProperty, patchMediaExtra } from "@/utils/mediaExtra";
 import {
+    resolvePluginQualityMode,
+    toOfficialQuality,
+} from "@/utils/qualities";
+import {
     buildFallbackMusicDetailUrl,
     getLocalPath,
     isSameMediaItem,
@@ -18,7 +22,7 @@ import {
 } from "@/utils/mediaUtils";
 import notImplementedFunction from "@/utils/notImplementedFunction.ts";
 import type { IPluginManager } from "@/types/core/pluginManager";
-import axios from "axios";
+import axios from "./httpClient";
 import bigInt from "big-integer";
 import * as cheerio from "cheerio";
 import { satisfies } from "compare-versions";
@@ -43,32 +47,10 @@ import MediaCache from "../mediaCache";
 import _internalPluginMeta from "./meta";
 import { normalizePluginMusicItem } from "@/utils/qualities";
 import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
+import { readCompanionText } from "@/utils/mediaCompanion";
+import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
+import { readCachedMediaSource } from "./mediaSourceCache";
 
-
-axios.defaults.timeout = 2000;
-axios.interceptors.response.use((response) => {
-    // 统一 set-cookie 格式。AxiosHeaders 在部分环境下不可扩展，必须 try/catch。
-    try {
-        const headers: any = response.headers;
-        const setCookie =
-            headers?.["set-cookie"] ??
-            (typeof headers?.get === "function" ? headers.get("set-cookie") : undefined);
-        if (setCookie && Array.isArray(setCookie) && setCookie.length === 1) {
-            const splitedCookie = String(setCookie[0]).split(",");
-            if (typeof headers?.set === "function") {
-                headers.set("set-cookie", splitedCookie);
-                headers.set("x-set-cookie", setCookie);
-            } else {
-                headers["set-cookie"] = splitedCookie;
-                headers["x-set-cookie"] = setCookie;
-            }
-        }
-    } catch {
-        // ignore header normalization failures
-    }
-
-    return response;
-});
 
 const sha256 = CryptoJs.SHA256;
 
@@ -426,12 +408,7 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
         ) {
             trace("播放", "缓存播放");
             const qualityInfo = mediaCache.source[quality];
-            return {
-                url: qualityInfo!.url,
-                headers: mediaCache.headers,
-                userAgent:
-                    mediaCache.userAgent ?? mediaCache.headers?.["user-agent"],
-            };
+            return readCachedMediaSource(qualityInfo!, mediaCache);
         }
         // 3. 替代插件
         const alternativePlugin = Plugin.pluginManager?.getAlternativePlugin(this.plugin) as Plugin | null;
@@ -456,11 +433,17 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
             };
         }
         try {
+            // 插件协议边界：官方协议的插件只认 low/standard/high/super，
+            // app 的内部音质键（128k…master）必须先转换，否则插件认不出会退回默认档。
+            const pluginQuality =
+                resolvePluginQualityMode(parserPlugin.instance) === "official"
+                    ? toOfficialQuality(quality)
+                    : quality;
             const mediaSourceResult = (await parserPlugin.instance.getMediaSource(
                 musicItem,
-                quality,
+                pluginQuality,
             )) ?? { url: musicItem?.qualities?.[quality]?.url };
-            const { url, headers, ekey, cek } = mediaSourceResult as any;
+            const { url, headers, ekey, cek, qmcRawKey } = mediaSourceResult as any;
             if (!url) {
                 throw new Error("NOT RETRY");
             }
@@ -469,7 +452,8 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
                 url,
                 headers,
                 userAgent: headers?.["user-agent"],
-                ekey, // 传递 ekey 用于 mflac 解密
+                ekey, // 仅识别旧来源以提示迁移，宿主不再解包
+                qmcRawKey,
                 cek, // 传递 cek 用于 CENC 流式解密
             } as IPlugin.IMediaSourceResult;
             const authFormattedResult = formatAuthUrl(result.url!);
@@ -486,11 +470,7 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
                 !notUpdateCache
             ) {
                 // 更新缓存
-                const cacheSource = {
-                    headers: result.headers,
-                    userAgent: result.userAgent,
-                    url,
-                };
+                const cacheSource = { ...result };
                 let realMusicItem = {
                     ...musicItem,
                     ...(mediaCache || {}),
@@ -1561,6 +1541,9 @@ export class Plugin {
             };
         }
 
+        // 挂载后实例会被真实插件定义整体替换，缓存里的 qualityMode 会丢，必须重新探测一次。
+        // 判定规则：声明了非官方音质键（96k/flac/master…）→ extended；否则一律按 MusicFree 官方 4 档处理。
+        _instance.qualityMode = resolvePluginQualityMode(_instance);
         this.instance = _instance;
         this.path = pluginPath;
         this.name = _instance.platform;
@@ -1612,12 +1595,23 @@ const localFilePluginDefine: IPlugin.IPluginDefine = {
     async getMusicInfo(musicBase) {
         const localPath = getLocalPath(musicBase);
         if (localPath) {
-            const coverImg = await Mp3Util.getMediaCoverImg(
-                removeFileScheme(localPath),
+            const normalizedLocalPath = removeFileScheme(localPath);
+            // 同目录封面文件优先于内嵌 tag：用户可以自己丢一张图进去替换封面，不必重写音频 tag
+            const companionArtwork = await resolveCompanionArtwork(
+                normalizedLocalPath,
+                musicBase,
             );
-            return {
-                artwork: coverImg,
-            };
+            if (companionArtwork) {
+                return {
+                    artwork: companionArtwork,
+                };
+            }
+            const coverImg = await Mp3Util.getMediaCoverImg(normalizedLocalPath);
+            if (coverImg) {
+                return {
+                    artwork: coverImg,
+                };
+            }
         }
         return null;
     },
@@ -1628,11 +1622,38 @@ const localFilePluginDefine: IPlugin.IPluginDefine = {
         let romanization: string | null = null;
         if (localPath) {
             const normalizedLocalPath = removeFileScheme(localPath);
+            // 记录的歌词文件优先于内嵌 tag：
+            // 1. 用户可以自己改 .lrc 而不必重写音频；
+            // 2. SAF 授权目录下无法靠给音频 uri 拼 ".lrc" 找到兄弟文件，
+            //    只能依赖下载或导入时写入 localLyricPath 的那条记录
+            const recordedLyricPath = getMediaExtraProperty(
+                musicBase,
+                "localLyricPath",
+            );
+            if (typeof recordedLyricPath === "string" && recordedLyricPath) {
+                try {
+                    const recordedLyric = normalizeLyricText(
+                        await readCompanionText(recordedLyricPath),
+                    );
+                    if (recordedLyric.trim()) {
+                        rawLrc = recordedLyric;
+                    }
+                } catch (e) {
+                    devLog("warn", "读取歌词文件失败", {
+                        path: recordedLyricPath,
+                        error: e,
+                    });
+                }
+            }
             // 读取内嵌歌词
-            try {
-                rawLrc = normalizeLyricText(await Mp3Util.getLyric(normalizedLocalPath));
-            } catch (e) {
-                devLog("warn", "读取内嵌歌词失败", e);
+            if (!rawLrc) {
+                try {
+                    rawLrc = normalizeLyricText(
+                        await Mp3Util.getLyric(normalizedLocalPath),
+                    );
+                } catch (e) {
+                    devLog("warn", "读取内嵌歌词失败", e);
+                }
             }
 
             const lastDot = normalizedLocalPath.lastIndexOf(".");

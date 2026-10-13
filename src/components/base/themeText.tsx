@@ -26,7 +26,7 @@ export default function ThemeText(props: IThemeTextProps) {
     } = props;
 
     const themeStyle = {
-        color: color ?? colors[fontColor],
+        color: color ?? (fontColor === "primary" ? colors.primaryText : colors[fontColor]),
         fontSize: fontSizeConst[fontSize],
         fontWeight: fontWeightConst[fontWeight],
         fontFamily: appFontFamily ?? undefined,

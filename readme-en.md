@@ -4,172 +4,99 @@
 
   <img src="./src/assets/imgs/audiora-wordmark.png" alt="Audiora" width="520" />
 
-  **An open-source music app focused on visual refinement, reduced permissions, and stronger compliance**
+  **An open-source music player for your local library and the sources you choose.**
 
-  [中文](./readme.md) | English
+  [简体中文](./readme.md) | English
 
-  [![License](https://img.shields.io/badge/license-AGPL%203.0-blue)](LICENSE)
-  [![Version](https://img.shields.io/github/v/release/yingjiedev/audiora?color=green)](https://github.com/yingjiedev/audiora/releases)
-  [![Platform](https://img.shields.io/badge/platform-Android-orange)]()
+  [![License](https://img.shields.io/badge/license-AGPL%203.0-blue)](./LICENSE)
+  [![Release](https://img.shields.io/github/v/release/yingjiedev/audiora)](https://github.com/yingjiedev/audiora/releases)
+  [![Android](https://img.shields.io/badge/platform-Android-green)](#download)
+
+  [Download](https://github.com/yingjiedev/audiora/releases) · [Quick start](#quick-start) · [Report an issue](https://github.com/yingjiedev/audiora/issues/new/choose)
 
 </div>
 
----
+Audiora plays music stored on your phone, manages playlists, and connects to online sources through plugins. It includes lyrics, downloads, listening statistics, and customizable themes. No additional plugin is needed to play local music.
 
-## About Audiora
+## Features
 
-Audiora is an open-source music app built on MusicFree. It retains the upstream project's general plugin system, user-configured music sources, playback, and download capabilities while focusing maintenance on three areas:
+- **Music library**: Scan local music and browse by song, artist, album, or folder.
+- **Playlists and favorites**: Create, import, and save playlists; revisit recent plays and playback history.
+- **Plugin support**: Install compatible plugins from a file or URL to access their search, playlist, and chart features.
+- **Playback and lyrics**: Playback queues, word-synced and translated lyrics, and notification and lock-screen controls.
+- **Downloads**: Manage tasks and history, customize filenames, and save music tags, lyrics, and covers.
+- **Personalization**: Light and dark modes, custom wallpapers, playlist backgrounds, launch images, and bundled fonts.
+- **Listening history and backups**: View listening duration and activity calendars; back up and restore data with local files or WebDAV.
 
-- **Visual refinement**: Build an independent Audiora identity and design system while improving the home screen, player, settings, themes, and interactions.
-- **Reduced permissions**: Follow least-privilege principles, remove unnecessary high-risk Android permissions, and prefer the system file picker, scoped storage, and app-private directories.
-- **Stronger compliance**: Clearly separate the responsibilities of the app, plugins, music sources, and content. Official builds do not bundle unauthorized music sources, commercial-platform credentials, or access-control bypasses.
+Online search, audio quality, charts, and downloads depend on the capabilities of the installed plugin and its source.
 
-Audiora is directly based on [Merilune/MusicFree](https://github.com/Merilune/MusicFree), which descends from [Toskysun/MusicFree](https://github.com/Toskysun/MusicFree) and the original [maotoumao/MusicFree](https://github.com/maotoumao/MusicFree). Audiora improves the client; it is not a music content provider or music service operator.
+## Download
 
-## Project Scope and Responsibilities
+Open [GitHub Releases](https://github.com/yingjiedev/audiora/releases), choose a version, and download its APK from **Assets**.
 
-Audiora is a general-purpose client for managing, playing, and syncing music that users own, are authorized to use, or may otherwise access lawfully. The project does not provide music content or operate a music service.
+Official Android builds currently target **`arm64-v8a` (64-bit)** devices. To build for another architecture, see [BUILDING.md](./BUILDING.md) (Chinese).
 
-- Audiora does not provide, bundle, or recommend unauthorized music sources, service-specific keys or credentials for commercial platforms, or implementations that bypass DRM or other access controls.
-- Plugins and user-configured music sources are selected by the user and may be developed or operated by independent third parties. Providing a general plugin runtime does not mean that the project has reviewed or endorses their content, availability, security, or legality.
-- Users must ensure that they have the right to access, play, download, or sync content and must comply with applicable laws, copyright rules, and service terms. Third-party providers and users remain responsible for their respective services and actions as required by law.
+The repository also includes iOS source code and a build workflow. Check the attachments of each release for available packages.
 
-If a plugin, example, or project document may infringe your rights, please open an [issue](../../issues) with the source, the basis of your claim, and relevant links so maintainers can review it and take appropriate action, such as removing a link or recommendation.
+## Quick start
 
-## ✨ Core Features
+### Play local music
 
-<table>
-<tr>
-<td width="50%">
+1. Open **Library → Local Music** from the bottom navigation.
+2. Tap **Scan music** and select or grant access to your music folder when prompted.
+3. Select a song to play, or add songs to your own playlists.
 
-### 🎯 Plugin System
-- 🔌 **Fully Pluggable**: Music sources, search, playback all based on plugins
-- 🎵 **User-Configured Sources**: Connect compatible sources you control or are authorized to use
-- 📦 **Flexible Management**: Support local and network plugin installation
+### Connect an online source
 
-</td>
-<td width="50%">
+1. Open **Mine → Plugin Management**.
+2. In the installation menu, choose **Install Plugin from Local** or **Install Plugin from Network**, then select a plugin file or enter its URL.
+3. Use the installed plugin from **Library → Online music** or the search page.
 
-### 🎨 Personalization
-- 🎭 **Theme Customization**: Dark/light modes, custom backgrounds
-- 🌈 **Audiora Branding**: Unified in-app, Android, and iOS visual identity
-- 🏷️ **Quality Labels**: Customize quality display to your preference
-- 🚀 **Launch Optimization**: Open playback details on app startup
+Audiora does not bundle online music sources. Use trusted plugins and content you are authorized to access. Plugin authors maintain their plugins' specific features. See [Music sources and plugins](./docs/plugins-and-sources.md#music-sources-and-plugins).
 
-</td>
-</tr>
-<tr>
-<td width="50%">
+## Documentation
 
-### 📥 Enhanced Downloads
-- 🔔 **Download Notifications**: Real-time download progress display
-- 📝 **File Naming**: Support for multiple naming formats
-- 🏷️ **Music Tags**: Automatically write metadata when downloading
+| Goal | Resource |
+| --- | --- |
+| Read about changes | [Changelog](./changelog.md) · [0.3.0 release notes](./release/0.3.0.md) |
+| Build an Android package | [Build and verification guide](./BUILDING.md) |
+| Understand plugins and sources | [Music sources and plugins](./docs/plugins-and-sources.md#music-sources-and-plugins) |
+| Develop a compatible plugin | [MusicFree plugin documentation](https://musicfree.catcat.work/plugin/introduction.html) |
+| Browse upstream help | [Plugin installation](https://musicfree.catcat.work/usage/mobile/install-plugin.html) · [FAQ](https://musicfree.catcat.work/qa/common.html) |
 
-</td>
-<td width="50%">
+Most linked guides are in Chinese. Upstream documentation explains the plugin system; Audiora's navigation and some features differ, so follow the current app interface.
 
-### 🔒 Privacy & Security
-- 🔐 **Least Privilege**: Unnecessary broad storage and special-access permissions are removed
-- 📁 **Scoped File Access**: Local files and download locations use user-authorized system access where possible
-- 🧩 **No Bundled Sources**: Official builds do not include unauthorized sources or commercial-platform credentials
+## Development
 
-</td>
-</tr>
-</table>
+Audiora uses React Native and TypeScript. Android development requires **Node.js 22.13.0 or later, JDK 17, and the Android SDK**. See [BUILDING.md](./BUILDING.md) for build prerequisites and signing configuration.
 
-## 🚀 Quick Start
+```sh
+git clone https://github.com/yingjiedev/audiora.git
+cd audiora
+npm install
+npm start
+```
 
-### 📲 Install App
-1. Go to [Releases](https://github.com/yingjiedev/audiora/releases) to download the latest version
-2. Install the APK file on your Android device
+Keep Metro running, connect an Android device, and run this in another terminal:
 
-### 🔌 Install Plugins
+```sh
+npm run android
+```
 
-Audiora does not provide an official music source. Install only plugins or self-hosted sources that you trust and have the right to use. Before installation, review the provider, requested permissions, network access, and applicable service terms.
+iOS development requires macOS, Xcode, and CocoaPods. After installing dependencies, run `pod install` inside `ios/`, then run `npm run ios` from the repository root.
 
-#### Plugin Installation Steps
-1. Open app → Sidebar → Settings → Plugin Settings
-2. Select "Install plugin from network"
-3. Enter plugin address and confirm
+Application code lives in `src/`, with native projects in `android/` and `ios/`. See [AGENTS.md](./AGENTS.md) for coding and verification guidelines and [COLOR_SYSTEM.md](./COLOR_SYSTEM.md) for UI color changes.
 
-## 📖 Documentation
+## Contributing
 
-- 📚 **Plugin Development**: [Development Docs](https://musicfree.catcat.work/plugin/introduction.html)
-- ❓ **FAQ**: [Q&A Docs](https://musicfree.catcat.work/qa/common.html)
-- 🔧 **Usage Guide**: [Detailed Tutorial](https://musicfree.catcat.work/usage/mobile/install-plugin.html)
+Bug reports, suggestions, and pull requests are welcome. Use [Issues](https://github.com/yingjiedev/audiora/issues/new/choose) and include the app version, device and OS, reproduction steps, and relevant screenshots. Contact the plugin author for source-specific search results, unavailable streams, or plugin-specific features.
 
-## 🔧 Plugin Development Guide
+Before submitting code, run `npm run lint` and verify your changes with `npm test -- --runInBand` or the relevant tests. Include screenshots or a recording for UI changes, along with a description of their effect.
 
-### Quality Keys (IQualityKey)
+## Acknowledgments
 
-This version supports the following **12 quality levels**:
+Audiora is based on [Merilune/MusicFree](https://github.com/Merilune/MusicFree), which descends from [Toskysun/MusicFree](https://github.com/Toskysun/MusicFree) and the original project by [maotoumao](https://github.com/maotoumao/MusicFree). Thanks to the upstream authors, contributors, and users who help improve the app.
 
-| Quality Key | Description | Bitrate/Format |
-|------------|-------------|----------------|
-| `mgg` | Low Quality | 96 kbps |
-| `128k` | Standard Quality | 128 kbps |
-| `192k` | Medium Quality | 192 kbps |
-| `320k` | High Quality | 320 kbps |
-| `flac` | Lossless Quality | FLAC |
-| `flac24bit` | Hi-Res Lossless | FLAC 24-bit |
-| `hires` | Hi-Res Quality | Hi-Res |
-| `vinyl` | Vinyl Quality | Vinyl |
-| `dolby` | Dolby Atmos | Dolby Atmos |
-| `atmos` | Premium Quality | Atmos 2.0 |
-| `atmos_plus` | Premium Spatial | Atmos+ 2.0 |
-| `master` | Premium Master | Master 3.0 |
+## License
 
-### Legacy Plugin Compatibility
-
-This version is **fully compatible with legacy plugins**. Legacy quality keys are automatically converted:
-
-| Legacy Key | Converts To | Description |
-|-----------|-------------|-------------|
-| `low` | `128k` | Low → Standard Quality |
-| `standard` | `192k` | Standard → Medium Quality |
-| `high` | `320k` | High → High Quality |
-| `super` | `flac` | Super → Lossless Quality |
-
-**Development Tips**:
-- ✅ New plugins should use the current quality keys
-- ✅ Legacy plugins work without modification
-- ✅ UI displays unified quality names
-
-## 🤝 About
-
-### Acknowledgments
-
-Audiora builds on the work of:
-
-- **Direct foundation**: [Merilune/MusicFree](https://github.com/Merilune/MusicFree)
-- **Upstream fork**: [Toskysun/MusicFree](https://github.com/Toskysun/MusicFree)
-- **Original author and project**: [maotoumao/MusicFree](https://github.com/maotoumao/MusicFree)
-
-### Modifications
-
-Based on original v0.6.1, main improvements include:
-- Retained general plugin and user-configured source support
-- Enhanced download features (notifications, naming, tags)
-- Optimized personalization settings
-- Fixed multiple known issues
-
-## 📄 License
-
-This project is licensed under the [AGPL-3.0](LICENSE).
-
-**Important**:
-- Use, modification, and redistribution must comply with the AGPL-3.0 and applicable copyright notices
-- When distributing or providing a modified version over a network, provide the corresponding source and license information as required by the license
-- The open-source license grants no additional rights to music content, third-party services, trademarks, or interfaces
-- Only access content, plugins, and music sources that you are authorized to use
-
-## 💬 Feedback
-
-Have issues or suggestions? Feel free to [submit an issue](../../issues)
-
----
-
-<div align="center">
-  Made with ❤️ by the community
-</div>
+Audiora is licensed under [AGPL-3.0](./LICENSE). Follow the license and retained copyright notices when using, modifying, or redistributing it. The software license does not grant rights to music content or third-party services.

@@ -1,7 +1,7 @@
-import React, { memo, useMemo } from "react";
+import React, { memo } from "react";
 import { StyleSheet, Text, View, StyleProp, ViewStyle } from "react-native";
 import rpx, { fontRpx } from "@/utils/rpx";
-import Color from "color";
+import useColors from "@/hooks/useColors";
 
 export type BadgeType = "quality" | "vip" | "source" | "hires" | "master" | "atmos" | "flac24bit";
 
@@ -13,45 +13,22 @@ interface IBadgeProps {
 
 function Badge(props: IBadgeProps) {
     const { type = "quality", children, style } = props;
-
-    const badgeColors = useMemo(() => {
-        let baseColor: string;
-        switch (type) {
-            case "vip":
-                baseColor = "#d64541"; // 红色 VIP
-                break;
-            case "hires":
-            case "master":
-            case "atmos":
-                baseColor = "#e6a23c"; // 金色高品质
-                break;
-            case "flac24bit":
-                baseColor = "#409eff"; // 蓝色 CD/CD+
-                break;
-            case "quality":
-                baseColor = "#67c23a"; // 绿色音质
-                break;
-            default:
-                baseColor = "#909399";
-        }
-        return {
-            textColor: baseColor,
-            borderColor: baseColor,
-            backgroundColor: Color(baseColor).alpha(0.15).toString(),
-        };
-    }, [type]);
+    const colors = useColors();
+    // The label carries the factual quality/VIP meaning; its treatment follows the app theme.
+    const foreground = type === "source" ? colors.textSecondary : colors.onTonal;
+    const background = type === "source" ? colors.surface : colors.tonalSurface;
 
     return (
         <View
             style={[
                 styles.badge,
                 {
-                    borderColor: badgeColors.borderColor,
-                    backgroundColor: badgeColors.backgroundColor,
+                    borderColor: colors.border,
+                    backgroundColor: background,
                 },
                 style,
             ]}>
-            <Text style={[styles.text, { color: badgeColors.textColor }]}>
+            <Text style={[styles.text, { color: foreground }]}>
                 {children}
             </Text>
         </View>

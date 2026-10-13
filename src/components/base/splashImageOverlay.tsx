@@ -1,8 +1,10 @@
+import useColors from "@/hooks/useColors";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Image, StyleSheet } from "react-native";
 import { useAppConfig } from "@/core/appConfig";
 import { getDefaultStore } from "jotai";
 import bootstrapAtom from "@/entry/bootstrap/bootstrap.atom";
+import { motionDuration } from "@/utils/motion";
 
 /**
  * 自定义启动图覆盖层。
@@ -12,6 +14,7 @@ import bootstrapAtom from "@/entry/bootstrap/bootstrap.atom";
  * 等启动流程结束（或出错）后淡出。未设置启动图时不渲染。
  */
 export default function SplashImageOverlay() {
+    const colors = useColors();
     const splashImage = useAppConfig("theme.splashImage");
     const [bootstrapDone, setBootstrapDone] = useState(
         getDefaultStore().get(bootstrapAtom).state !== "Loading",
@@ -42,7 +45,7 @@ export default function SplashImageOverlay() {
         // 启动结束后淡出并卸载覆盖层
         Animated.timing(fadeAnim, {
             toValue: 0,
-            duration: 320,
+            duration: motionDuration("screen"),
             useNativeDriver: true,
         }).start(() => {
             setVisible(false);
@@ -54,7 +57,7 @@ export default function SplashImageOverlay() {
     }
 
     return (
-        <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.overlay, { opacity: fadeAnim, backgroundColor: colors.background }]}>
             <Image
                 source={{ uri: splashImage }}
                 style={styles.image}
@@ -66,10 +69,13 @@ export default function SplashImageOverlay() {
 
 const styles = StyleSheet.create({
     overlay: {
-        ...StyleSheet.absoluteFillObject,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         zIndex: 9999,
         elevation: 9999,
-        backgroundColor: "#000000",
     },
     image: {
         width: "100%",

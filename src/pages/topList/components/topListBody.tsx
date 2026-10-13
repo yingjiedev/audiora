@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import rpx from "@/utils/rpx";
-import PluginManager from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { TabView } from "react-native-tab-view";
 import BoardPanelWrapper from "./boardPanelWrapper";
 import NoPlugin from "@/components/base/noPlugin";
@@ -8,10 +8,11 @@ import i18n from "@/core/i18n";
 import PillTabBar from "@/components/base/pillTabBar";
 
 export default function TopListBody() {
+    const getPluginDisplayName = usePluginDisplayNameResolver();
     const routes = PluginManager.getSortedPluginsWithAbility("getTopLists").map(
         _ => ({
             key: _.hash,
-            title: _.name,
+            title: getPluginDisplayName(_),
         }),
     );
     const [index, setIndex] = useState(0);

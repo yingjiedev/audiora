@@ -1,3 +1,4 @@
+import Color from "color";
 import React, { memo, useEffect, useMemo, useState } from "react";
 import {
     Platform,
@@ -10,14 +11,13 @@ import {
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    withTiming,
     useDerivedValue,
     interpolateColor,
-    Easing,
     type SharedValue,
 } from "react-native-reanimated";
 import rpx from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
+import useMotion from "@/hooks/useMotion";
 import { fontSizeConst } from "@/constants/uiConst";
 import { getCurrentPositionMsShared } from "@/core/lyricManager";
 import { useAppConfig } from "@/core/appConfig";
@@ -286,11 +286,10 @@ interface ILyricItemComponentProps {
     wordFloatEm?: number;
 }
 
-// Animation timing configs
-const SCALE_TIMING_CONFIG = {
-    duration: 350,
-    easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-};
+// Animation timing configs — token refs, resolved through useMotion() so
+// Reduce Motion shortens them like everywhere else.
+const SCALE_TIMING = { duration: "slow", easing: "standard" } as const;
+const OPACITY_TIMING = { duration: "normal", easing: "standard" } as const;
 
 // Scale factor for highlighted line (1 = no scale)
 const HIGHLIGHT_SCALE = 1;
@@ -789,6 +788,7 @@ const AmllAnimatedGlowText = memo(({
 }: AmllGlowTextProps) => {
     const currentPositionMsShared = useCurrentPositionShared();
     const fontStyle = useLyricFontStyle();
+    const glowColors = useMemo(() => [Color(color).alpha(0).toString(), Color(color).alpha(0.8).toString()], [color]);
     const emphasisGlowStyle = useAnimatedStyle(() => {
         "worklet";
         const progress = Math.max(0, Math.min(
@@ -800,11 +800,11 @@ const AmllAnimatedGlowText = memo(({
             textShadowColor: interpolateColor(
                 glowLevel,
                 [0, 0.8],
-                ["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 0.8)"],
+                glowColors,
             ),
             textShadowRadius: fontSize * Math.min(0.3, timing.blur * 0.3),
         };
-    }, [timing, fontSize]);
+    }, [timing, fontSize, glowColors]);
 
     return (
         <Animated.Text
@@ -995,6 +995,7 @@ const TranslationTextLine = memo(({
     inactiveOpacity?: number;
     align?: LyricAlign;
 }) => {
+    const colors = useColors();
     const fontStyle = useLyricFontStyle();
     return (
         <View style={[
@@ -1008,7 +1009,7 @@ const TranslationTextLine = memo(({
                     {
                         fontSize,
                         textAlign: align,
-                        color: highlight ? highlightColor : "white",
+                        color: highlight ? highlightColor : colors.onMedia,
                         opacity: highlight ? TRANSLATION_HIGHLIGHT_OPACITY : inactiveOpacity,
                     },
                 ]}
@@ -1045,6 +1046,7 @@ function StaticWordByWordLine({
     align?: LyricAlign;
     containerStyle?: StyleProp<ViewStyle>;
 }) {
+    const colors = useColors();
     const fontStyle = useLyricFontStyle();
     const getLineFontSize = (isFirst: boolean) => isFirst ? fontSize : fontSize * SECONDARY_FONT_RATIO;
     const justifyContent = getLyricFlexAlignment(align);
@@ -1064,7 +1066,7 @@ function StaticWordByWordLine({
                         const trailing = !noSpace && sw.space ? " " : "";
                         return (
                             <View style={styles.wordWrapper} key={i}>
-                                <Text style={[styles.wordText, fontStyle, { fontSize: lineFontSize, color: "white" }]}>
+                                <Text style={[styles.wordText, fontStyle, { fontSize: lineFontSize, color: colors.onMedia }]}>
                                     {sw.text}{trailing}
                                 </Text>
                             </View>
@@ -1076,7 +1078,7 @@ function StaticWordByWordLine({
                         <View style={lyricStyles.charGroupRow} key={i}>
                             {subWords.map((sw, ci) => (
                                 <View style={styles.wordWrapper} key={ci}>
-                                    <Text style={[styles.wordText, fontStyle, { fontSize: lineFontSize, color: "white" }]}>
+                                    <Text style={[styles.wordText, fontStyle, { fontSize: lineFontSize, color: colors.onMedia }]}>
                                         {sw.text}
                                     </Text>
                                 </View>
@@ -1115,7 +1117,7 @@ function StaticWordByWordLine({
                     <TranslationTextLine
                         text={translation}
                         fontSize={getLineFontSize(isFirst)}
-                        highlightColor="white"
+                        highlightColor={colors.onMedia}
                         inactiveOpacity={1}
                         align={align}
                     />
@@ -1183,6 +1185,7 @@ function WordByWordLyricLine({
     isCurrentLine = true,
     containerStyle,
 }: IWordByWordLyricProps) {
+    const colors = useColors();
     // Normalize space flags to prevent double spaces in all word lists
     const normalizedWords = useMemo(() => normalizeWordSpaces(words), [words]);
     const normalizedRomanizationWords = useMemo(
@@ -1244,7 +1247,7 @@ function WordByWordLyricLine({
                 <KaraokeWordSplit
                     key={wordIndex}
                     word={word}
-                    primaryColor="white"
+                    primaryColor={colors.onMedia}
                     highlightColor={highlightColor}
                     fontSize={getLineFontSize(isFirst)}
                     isCurrentLine={isCurrentLine}
@@ -1266,7 +1269,7 @@ function WordByWordLyricLine({
                 <KaraokeWordSplit
                     key={wordIndex}
                     word={word}
-                    primaryColor="white"
+                    primaryColor={colors.onMedia}
                     highlightColor={highlightColor}
                     fontSize={getLineFontSize(isFirst)}
                     isCurrentLine={isCurrentLine}
@@ -1362,18 +1365,20 @@ function RegularLyricLine({
     align?: LyricAlign;
     containerStyle?: StyleProp<ViewStyle>;
 }) {
+    const colors = useColors();
     const textOpacity = useSharedValue(highlight ? 1 : 0.5);
     const textScale = useSharedValue(highlight ? HIGHLIGHT_SCALE : 1);
+    const motion = useMotion();
 
     useEffect(() => {
         if (highlight) {
-            textOpacity.value = withTiming(1, { duration: 280 });
-            textScale.value = withTiming(HIGHLIGHT_SCALE, SCALE_TIMING_CONFIG);
+            textOpacity.value = motion.timing(1, OPACITY_TIMING);
+            textScale.value = motion.timing(HIGHLIGHT_SCALE, SCALE_TIMING);
         } else {
-            textOpacity.value = withTiming(0.5, { duration: 280 });
-            textScale.value = withTiming(1, SCALE_TIMING_CONFIG);
+            textOpacity.value = motion.timing(0.5, OPACITY_TIMING);
+            textScale.value = motion.timing(1, SCALE_TIMING);
         }
-    }, [highlight, textOpacity, textScale]);
+    }, [highlight, motion, textOpacity, textScale]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         opacity: textOpacity.value,
@@ -1399,12 +1404,13 @@ function RegularLyricLine({
             <Animated.Text
                 style={[
                     lyricStyles.item,
+                    { color: colors.onMedia },
                     fontStyle,
                     { fontSize, textAlign: align },
                     transformOriginStyle,
                     animatedStyle,
                     highlight ? [lyricStyles.highlightItem, { color: primaryColor }] : null,
-                    light ? lyricStyles.draggingItem : null,
+                    light ? [lyricStyles.draggingItem, { color: colors.onMedia }] : null,
                 ]}
             >
                 {text}
@@ -1443,19 +1449,21 @@ function MultiLineRegularLyric({
     align?: LyricAlign;
     containerStyle?: StyleProp<ViewStyle>;
 }) {
+    const colors = useColors();
     // Scale animation for highlight effect
     const containerScale = useSharedValue(highlight ? HIGHLIGHT_SCALE : 1);
     const containerOpacity = useSharedValue(highlight ? 1 : 0.5);
+    const motion = useMotion();
 
     useEffect(() => {
         if (highlight) {
-            containerScale.value = withTiming(HIGHLIGHT_SCALE, SCALE_TIMING_CONFIG);
-            containerOpacity.value = withTiming(1, { duration: 280 });
+            containerScale.value = motion.timing(HIGHLIGHT_SCALE, SCALE_TIMING);
+            containerOpacity.value = motion.timing(1, OPACITY_TIMING);
         } else {
-            containerScale.value = withTiming(1, SCALE_TIMING_CONFIG);
-            containerOpacity.value = withTiming(0.5, { duration: 280 });
+            containerScale.value = motion.timing(1, SCALE_TIMING);
+            containerOpacity.value = motion.timing(0.5, OPACITY_TIMING);
         }
-    }, [containerOpacity, containerScale, highlight]);
+    }, [containerOpacity, containerScale, highlight, motion]);
 
     const animatedContainerStyle = useAnimatedStyle(() => ({
         transform: [{ scale: containerScale.value }],
@@ -1474,11 +1482,12 @@ function MultiLineRegularLyric({
     // Get style based on highlight state
     const getLineStyle = (isFirst: boolean) => [
         lyricStyles.compactItem,
+        { color: colors.onMedia },
         fontStyle,
         { fontSize: getLineFontSize(isFirst), textAlign },
         !isFirst && lyricStyles.secondaryLine,
         highlight && [lyricStyles.highlightItem, { color: primaryColor }],
-        light && lyricStyles.draggingItem,
+        light && [lyricStyles.draggingItem, { color: colors.onMedia }],
     ];
 
     // Original line component (use compactItem for tight spacing within group)
@@ -1512,11 +1521,11 @@ function MultiLineRegularLyric({
                                 fontStyle,
                                 {
                                     fontSize: getLineFontSize(isFirst),
-                                    color: highlight ? primaryColor : "white",
+                                    color: highlight ? primaryColor : colors.onMedia,
                                     opacity: highlight ? 1 : 0.5,
                                 },
                                 highlight && lyricStyles.highlightItem,
-                                light && lyricStyles.draggingItem,
+                                light && [lyricStyles.draggingItem, { color: colors.onMedia }],
                             ]}
                         >
                             {word.text}
@@ -1625,7 +1634,7 @@ function LyricItemViewInner(props: ILyricItemComponentProps) {
     const pureWhiteMode = useAppConfig("lyric.pureWhiteMode") ?? true;
     const enableBreathingDots = useAppConfig("lyric.enableBreathingDots") ?? true;
 
-    const effectiveHighlightColor = pureWhiteMode ? "white" : colors.primary;
+    const effectiveHighlightColor = pureWhiteMode ? colors.onMedia : colors.mediaAccent;
 
     // Render word-by-word layout for ALL lines with word data (both playing and non-playing)
     // This ensures identical flex-wrap line-breaking behavior
@@ -1837,7 +1846,6 @@ const lyricStyles = StyleSheet.create({
         textShadowRadius: 6,
     },
     item: {
-        color: "white",
         opacity: 0.5,
         paddingHorizontal: rpx(64),
         paddingVertical: rpx(24),
@@ -1847,7 +1855,6 @@ const lyricStyles = StyleSheet.create({
     },
     // Compact item for multi-line groups (no padding, container handles it)
     compactItem: {
-        color: "white",
         opacity: 0.5,
         width: "100%",
         textAlign: "center",
@@ -1878,7 +1885,6 @@ const lyricStyles = StyleSheet.create({
     },
     draggingItem: {
         opacity: 0.9,
-        color: "white",
     },
 });
 

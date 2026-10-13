@@ -20,13 +20,19 @@ import { nanoid } from "@/utils/nanoid";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { exists, unlink } from "react-native-fs";
-import { scanLocalMusicPaths } from "./localMusicScanner";
+import { scanLocalMediaPaths } from "./localMusicScanner";
 import { shouldRetainUnavailableLocalPath } from "./localMusicPathPolicy";
 import {
     androidSafUriExists,
     deleteAndroidSafUri,
     isAndroidSafUri,
 } from "@/utils/androidSaf";
+import {
+    deleteCompanionFiles,
+    linkCompanionFiles,
+    resolveCompanionArtwork,
+} from "@/utils/mediaCompanion";
+import { getMediaExtraProperty } from "@/utils/mediaExtra";
 
 let localSheet: IMusic.IMusicItem[] = [];
 const localSheetStateMapper = new StateMapper(() => localSheet);
@@ -101,9 +107,14 @@ async function hydrateLocalArtwork(musicItems: IMusic.IMusicItem[] = localSheet)
                 }
 
                 try {
-                    const artwork = await mp3Util.getMediaCoverImg(
-                        removeFileScheme(localPath),
+                    // 与 localFilePlugin.getMusicInfo 同一优先级：同目录封面文件 > 记录路径 > 内嵌 tag
+                    const companionArtwork = await resolveCompanionArtwork(
+                        localPath,
+                        musicItem,
                     );
+                    const artwork =
+                        companionArtwork ??
+                        (await mp3Util.getMediaCoverImg(removeFileScheme(localPath)));
                     return typeof artwork === "string" && artwork.trim()
                         ? { musicItem, artwork }
                         : null;
@@ -233,6 +244,31 @@ async function saveLocalSheet() {
     await setStorage(StorageKeys.LocalMusicSheet, localSheet);
 }
 
+/**
+ * 封面路径是否被除 exclude 之外的本地曲目引用。
+ * 固定名封面天然是多首歌共享的，删除其中一首时不能连文件一起删（issue #63 review）。
+ */
+function isCoverPathUsedByOtherTrack(
+    coverPath: string,
+    exclude: ICommon.IMediaBase,
+) {
+    if (!coverPath) {
+        return false;
+    }
+    const target = removeFileScheme(coverPath);
+    return localSheet.some(item => {
+        if (isSameMediaItem(item, exclude)) {
+            return false;
+        }
+        const itemCover = getMediaExtraProperty(item, "localCoverPath");
+        return (
+            typeof itemCover === "string" &&
+            !!itemCover &&
+            removeFileScheme(itemCover) === target
+        );
+    });
+}
+
 export async function removeMusic(
     musicItem: IMusic.IMusicItem,
     deleteOriginalFile = false,
@@ -260,6 +296,11 @@ export async function removeMusic(
                     throw e;
                 }
             }
+            // 音频删除成功后一并清理随下载生成的歌词 / 封面
+            await deleteCompanionFiles(localMusicItem, {
+                isCoverReferencedByOther: coverPath =>
+                    isCoverPathUsedByOtherTrack(coverPath, localMusicItem),
+            });
         }
     }
     localSheet = newSheet;
@@ -282,16 +323,16 @@ function parseFilename(fn: string): Partial<IMusic.IMusicItem> | null {
 }
 
 let importToken: string | null = null;
-// 获取本地的文件列表
+// 获取本地的文件列表（音频 + 同目录的歌词 / 封面）
 async function getMusicStats(folderPaths: string[]) {
     const _importToken = nanoid();
     importToken = _importToken;
-    const musicFiles = await scanLocalMusicPaths(
+    const scannedFiles = await scanLocalMediaPaths(
         folderPaths,
         () => importToken === _importToken,
     );
 
-    return { musicFiles, token: _importToken };
+    return { ...scannedFiles, token: _importToken };
 }
 
 function cancelImportLocal() {
@@ -302,17 +343,17 @@ function cancelImportLocal() {
 const groupNum = 25;
 async function importLocal(_folderPaths: string[]) {
     const folderPaths = [..._folderPaths.map(it => removeFileScheme(it))];
-    const { musicFiles, token } = await getMusicStats(folderPaths);
+    const { audioFiles, companionFiles, token } = await getMusicStats(folderPaths);
     if (token !== importToken) {
         throw new Error("Import Broken");
     }
     // 分组请求，不然序列化可能出问题
     let metas: any[] = [];
-    const groups = Math.ceil(musicFiles.length / groupNum);
+    const groups = Math.ceil(audioFiles.length / groupNum);
     for (let i = 0; i < groups; ++i) {
         metas = metas.concat(
             await mp3Util.getMediaMeta(
-                musicFiles
+                audioFiles
                     .slice(i * groupNum, (i + 1) * groupNum)
                     .map(file => file.path),
             ),
@@ -322,7 +363,7 @@ async function importLocal(_folderPaths: string[]) {
         throw new Error("Import Broken");
     }
     const musicItems: IMusic.IMusicItem[] = await Promise.all(
-        musicFiles.map(async (musicFile, index) => {
+        audioFiles.map(async (musicFile, index) => {
             const musicPath = musicFile.path;
             let { platform, id, title, artist } =
                 parseFilename(getFileName(musicFile.name, true)) ?? {};
@@ -351,6 +392,9 @@ async function importLocal(_folderPaths: string[]) {
     if (token !== importToken) {
         throw new Error("Import Broken");
     }
+    // 导入是一次完整重建：扫描到的歌词 / 封面要写回 mediaExtra，
+    // 否则重装后这些文件会变成无人认领的孤儿（删除曲目时也不会被清理）
+    linkCompanionFiles(audioFiles, musicItems, companionFiles);
     await addMusic(musicItems);
 }
 
@@ -402,6 +446,7 @@ const LocalMusicSheet = {
     isLocalMusic,
     useIsLocal,
     getMusicList,
+    isCoverPathUsedByOtherTrack,
     hydrateArtwork: hydrateLocalArtwork,
     useMusicList: localSheetStateMapper.useMappedState,
     updateMusicList,

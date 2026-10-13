@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Issue #89 原型 · 音乐标签设置面板收敛</title>
+<style>
+/* ============================================================
+   Audiora · Issue #89 交互原型
+   所有尺寸由 rpx / fontRpx 按 base=390dp 换算（k = 390/750）
+   颜色取自 src/core/theme.ts 的 lightTheme / darkTheme
+   ============================================================ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: #eef1f6;
+  color: #1c2436;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 页面工具条 ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+  padding: 12px 22px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #dde3ee;
+}
+.topbar h1 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .2px; }
+.topbar .sub { font-size: 12px; color: #6b7891; margin-left: 2px; }
+.ctrl { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.seg {
+  display: inline-flex; border: 1px solid #d3dae6; border-radius: 8px;
+  overflow: hidden; background: #fff;
+}
+.seg button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 6px 13px; font-size: 12.5px; color: #46536b;
+  font-family: inherit; border-right: 1px solid #e6ebf3;
+}
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: #3867F4; color: #fff; font-weight: 600; }
+.seg-label { font-size: 12px; color: #6b7891; margin-right: 2px; }
+
+/* ---------- 舞台 ---------- */
+.stage {
+  display: flex; gap: 34px; justify-content: center; align-items: flex-start;
+  padding: 28px 22px 8px; flex-wrap: wrap;
+}
+.phone-wrap { margin: 0; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.phone-wrap figcaption {
+  font-size: 12.5px; font-weight: 600; color: #37455e;
+  background: #fff; border: 1px solid #dde3ee; border-radius: 999px;
+  padding: 4px 13px;
+}
+.phone-wrap[hidden] { display: none; }
+
+/* ---------- 手机框 ---------- */
+.phone {
+  --rpx: 0.52px;
+  --group-margin: 12.5px;
+  --card-radius: 8.3px;
+  --title-gap: 6.2px;
+  --row-padding: 12.5px;
+  --row-min-height: 47.8px;
+  --value-gap: 12.5px;
+  --fs-content: 14.6px;
+  --fs-caption: 9.4px;
+  --fs-description: 11.4px;
+  --fs-subtitle: 13.5px;
+  --fs-title: 16.6px;
+  --fs-appbar: 18.7px;
+  --icon-size: 21.8px;
+
+  position: relative;
+  width: 390px; height: 844px;
+  border-radius: 42px;
+  overflow: hidden;
+  border: 10px solid #10131a;
+  box-shadow: 0 22px 50px rgba(24,36,60,.22);
+  background: #F6F9FF;
+  flex: none;
+}
+.phone[data-theme="light"] {
+  --text: #10172D;
+  --text-secondary: rgba(16,23,45,.64);
+  --primary: #3867F4;
+  --on-primary: #FFFFFF;
+  --page-bg: #F6F9FF;
+  --appbar: #F6F9FF;
+  --card: #FFFFFF;
+  --backdrop: #EEF4FF;
+  --surface: #EEF4FF;
+  --surface-elevated: #FFFFFF;
+  --divider: rgba(45,67,105,.10);
+  --border: rgba(75,103,148,.12);
+  --list-active: rgba(56,103,244,.10);
+  --mask: rgba(16,23,45,.5);
+  --placeholder: #E9F0FC;
+  --switch-off: rgba(16,23,45,.64);
+  /* switch.tsx: 圆点色按轨道底色取对比色 —— 主色偏暗则用白点 */
+  --thumb-off: #FFFFFF;
+  --thumb-on: #FFFFFF;
+  --primary-12: rgba(56,103,244,.125);
+  background: var(--page-bg);
+}
+.phone[data-theme="dark"] {
+  --text: #F7FAFF;
+  --text-secondary: rgba(247,250,255,.64);
+  --primary: #6D8DFF;
+  --on-primary: #10172D;
+  --page-bg: #090F1F;
+  --appbar: #0C1424;
+  --card: #18233C;
+  --backdrop: #131C31;
+  --surface: #131C31;
+  --surface-elevated: #212E4E;
+  --divider: rgba(198,214,255,.16);
+  --border: rgba(198,214,255,.20);
+  --list-active: rgba(109,141,255,.15);
+  --mask: rgba(10,8,14,.82);
+  --placeholder: #1C2843;
+  --switch-off: rgba(247,250,255,.64);
+  /* 深色下未选中的轨道是浅色 → 用深圆点；开启后主色 #6D8DFF 够暗 → 白圆点 */
+  --thumb-off: #1B1B1B;
+  --thumb-on: #FFFFFF;
+  --primary-12: rgba(109,141,255,.125);
+  background: var(--page-bg);
+}
+
+/* 状态栏 */
+.statusbar {
+  height: 42px; display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 22px 6px; font-size: 12px; font-weight: 600;
+  color: var(--text); position: relative; z-index: 3;
+}
+.statusbar .icons { display: flex; gap: 4px; align-items: center; }
+.statusbar .bar { width: 15px; height: 9px; border: 1px solid currentColor; border-radius: 2px; position: relative; }
+.statusbar .bar::after { content: ""; position: absolute; inset: 1px; right: 4px; background: currentColor; }
+
+/* 底下的设置页（被蒙层压住） */
+.page-under {
+  position: absolute; inset: 0; z-index: 1;
+  background: var(--page-bg);
+  padding-top: 42px;
+}
+.appbar {
+  height: 52px; display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-appbar); font-weight: 600; color: var(--text);
+  background: var(--appbar); position: relative;
+}
+.appbar .back { position: absolute; left: 18px; font-size: 19px; color: var(--primary); }
+.under-group { margin: var(--group-margin) var(--group-margin) 0; }
+.under-group-title {
+  font-size: var(--fs-description); color: var(--text-secondary);
+  margin: 0 7px var(--title-gap);
+}
+.under-card { background: var(--card); border-radius: var(--card-radius); overflow: hidden; }
+.under-row {
+  display: flex; align-items: center; min-height: var(--row-min-height);
+  padding: 0 var(--row-padding); font-size: var(--fs-content); color: var(--text);
+  gap: var(--value-gap);
+}
+.under-row .val { margin-left: auto; font-size: var(--fs-content); color: var(--text-secondary); }
+.under-row.hl { background: var(--list-active); }
+.mask {
+  position: absolute; inset: 0; z-index: 2; background: var(--mask);
+  transition: background .18s;
+}
+
+/* ---------- 面板 ---------- */
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+  height: 70%;
+  background: var(--backdrop);
+  border-top-left-radius: 14.6px; border-top-right-radius: 14.6px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -8px 30px rgba(10,18,40,.18);
+}
+.sheet-header {
+  height: 52px; display: flex; align-items: center; flex: none;
+  padding: 0 var(--row-padding);
+}
+.sheet-header .btn {
+  min-width: 62px; font-size: var(--fs-content); color: var(--text);
+  font-weight: 500; cursor: pointer; background: none; border: 0; font-family: inherit;
+  padding: 0;
+}
+.sheet-header .btn.ok { text-align: right; color: var(--primary); }
+.sheet-header .btn:active { opacity: .6; }
+.sheet-title {
+  flex: 1; text-align: center; font-size: var(--fs-title);
+  font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr-divider { height: 1px; background: var(--divider); flex: none; }
+.sheet-body { flex: 1; overflow-y: auto; padding-bottom: 30px; }
+.sheet-body::-webkit-scrollbar { width: 0; }
+
+/* ---------- 改造前样式 ---------- */
+.b-intro {
+  padding: 10.4px 12.5px 8.3px;
+  font-size: var(--fs-subtitle); color: var(--text-secondary); line-height: 20.8px;
+}
+.b-card {
+  margin: 0 8.3px 8.3px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8.3px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.b-item { padding: 8.3px 10.4px; }
+.b-item.sub { padding-left: 16.6px; }
+.b-row { display: flex; align-items: center; gap: 8.3px; }
+.b-texts { flex: 1; min-width: 0; }
+.b-title { font-size: var(--fs-content); color: var(--text); font-weight: 600; }
+.b-item.sub .b-title { font-weight: 400; opacity: .9; }
+.b-desc {
+  font-size: var(--fs-description); color: var(--text-secondary);
+  line-height: 17.1px; margin-top: 3.1px;
+}
+.b-icon { font-size: 20.8px; line-height: 1; flex: none; }
+.b-divider { height: 1px; margin: 0 10.4px; background: var(--border); opacity: .3; }
+.b-label {
+  font-size: var(--fs-description); color: var(--text-secondary); margin-bottom: 4.2px;
+}
+.b-seg { display: flex; gap: 8.3px; }
+.b-seg-item {
+  padding: 6.2px 12.5px; border-radius: 4.2px; border: 1px solid #ccc;
+  font-size: var(--fs-content); color: var(--text); cursor: pointer;
+  background: transparent; font-family: inherit;
+}
+.b-seg-item.on { border-color: var(--primary); background: rgba(56,103,244,.125); color: var(--primary); }
+.b-order-row { display: flex; align-items: center; gap: 6.2px; padding: 5.2px 0; }
+.b-order-texts { flex: 1; min-width: 0; }
+.b-arrows { display: flex; gap: 4.2px; }
+.b-arrow {
+  width: 25px; height: 25px; border-radius: 4.2px; border: 0; cursor: pointer;
+  background: rgba(128,128,128,.1); color: var(--text); font-size: 9px;
+  display: flex; align-items: center; justify-content: center; font-family: inherit;
+}
+.b-arrow:disabled { opacity: .3; cursor: default; }
+.b-hint { font-size: var(--fs-description); color: var(--text-secondary); font-style: italic; margin-top: 6.2px; }
+.b-reset {
+  margin: 4.2px 8.3px 8.3px;
+  border-top: 1px solid #e0e0e0; padding: 8.3px 0 var(--row-padding);
+}
+.b-reset-inner { display: flex; align-items: center; gap: 10.4px; padding: 0 10.4px; cursor: pointer; }
+
+/* ---------- 改造后样式（SettingSection + SettingRow） ---------- */
+.section { margin: var(--group-margin) var(--group-margin) 0; }
+.section-title {
+  font-size: var(--fs-description); color: var(--text-secondary);
+  margin: 0 7px var(--title-gap); font-weight: 400;
+}
+.section-card { background: var(--card); border-radius: var(--card-radius); overflow: hidden; }
+/* 行间分隔线：base/divider.tsx + marginLeft: settingsLayout.rowPadding */
+.divider { height: 1px; background: var(--divider); margin-left: var(--row-padding); }
+/* 分组标题的说明行：SettingSection.description —— 长句不再塞进标题 */
+.section-desc {
+  font-size: var(--fs-caption); color: var(--text-secondary);
+  margin: -7px 7px var(--title-gap); line-height: 1.35;
+}
+.row {
+  display: flex; align-items: center; min-height: var(--row-min-height);
+  padding: 0 var(--row-padding); gap: var(--value-gap);
+  cursor: default; background: none; border: 0; width: 100%;
+  font-family: inherit; text-align: left;
+}
+.row.pressable { cursor: pointer; }
+.row.pressable:active { opacity: .68; }
+.row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9.4px; }
+.row-texts { flex: 1; min-width: 0; }
+.row-title {
+  font-size: var(--fs-content); color: var(--text);
+  display: flex; align-items: center; gap: 4.2px;
+}
+.row-desc {
+  font-size: var(--fs-description); color: var(--text-secondary);
+  margin-top: 2px; line-height: 17.1px;
+}
+.row-value {
+  flex: 0 1 auto; max-width: 48%; font-size: var(--fs-content);
+  color: var(--text-secondary); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; text-align: right;
+}
+.row-right { flex: none; display: flex; align-items: center; gap: 6.2px; }
+.row-hint {
+  font-size: var(--fs-description); color: var(--text-secondary);
+  line-height: 17.1px; padding: 0 var(--row-padding) 10.4px;
+  margin-top: -2px;
+}
+.ico { width: var(--icon-size); height: var(--icon-size); flex: none; color: var(--text-secondary); display: block; }
+.ico.accent { color: var(--primary); }
+
+/* 开关 */
+.sw {
+  width: 41.6px; height: 20.8px; border-radius: 10.4px;
+  background: var(--switch-off); position: relative; flex: none;
+  transition: background .18s; cursor: pointer; border: 0; padding: 0;
+}
+.sw.on { background: var(--primary); }
+.sw i {
+  position: absolute; top: 1.56px; left: 1.56px;
+  width: 17.7px; height: 17.7px; border-radius: 50%;
+  background: var(--thumb); transition: transform .18s;
+}
+.sw.on i { transform: translateX(20.8px); }
+
+/* 复选框 */
+.cb {
+  width: 18.7px; height: 18.7px; border-radius: 1px; flex: none;
+  border: 0.5px solid var(--text); background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0;
+}
+.cb.on { background: var(--primary); border-color: var(--primary); }
+.cb svg { width: 13.5px; height: 13.5px; color: var(--on-primary); display: none; }
+.cb.on svg { display: block; }
+
+/* 排序按钮 */
+.iconbtn {
+  width: 21.8px; height: 21.8px; border: 0; background: transparent;
+  padding: 0; cursor: pointer; color: var(--text); display: block;
+}
+.iconbtn:disabled { opacity: .3; cursor: default; }
+.iconbtn svg { width: 100%; height: 100%; display: block; }
+
+/* 浮动状态面板 */
+.statebar {
+  display: flex; align-items: center; gap: 10px; padding: 6px 22px 0;
+  justify-content: center; flex-wrap: wrap;
+}
+.statebar .chip {
+  font-size: 12px; padding: 4px 11px; border-radius: 999px;
+  background: #fff; border: 1px solid #dde3ee; color: #46536b;
+}
+.statebar .chip b { color: #3867F4; }
+.toast-host {
+  position: absolute; left: 0; right: 0; bottom: 92px; z-index: 9;
+  display: flex; justify-content: center; pointer-events: none;
+}
+.toast {
+  background: rgba(20,28,48,.92); color: #fff; font-size: 12.5px;
+  padding: 8px 16px; border-radius: 8px; max-width: 84%;
+  opacity: 0; transform: translateY(6px); transition: all .22s;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* ---------- 下方说明区 ---------- */
+.docs { max-width: 1180px; margin: 30px auto 70px; padding: 0 22px; }
+.docs h2 {
+  font-size: 15px; margin: 30px 0 12px; padding-bottom: 7px;
+  border-bottom: 1px solid #dde3ee;
+}
+.docs h2:first-child { margin-top: 0; }
+.docs p { font-size: 13px; line-height: 1.75; color: #46536b; margin: 8px 0; }
+.docs code {
+  background: #eaeff7; padding: 1.5px 5px; border-radius: 4px;
+  font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #2b3a52;
+}
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+.cardbox {
+  background: #fff; border: 1px solid #dde3ee; border-radius: 12px; padding: 16px 18px;
+}
+.cardbox h3 { margin: 0 0 10px; font-size: 13px; color: #26334a; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #eaeff5; vertical-align: top; }
+th { color: #6b7891; font-weight: 600; background: #f7fafd; }
+td code { font-size: 11.5px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+
+/* 流程图 */
+.flow { display: flex; flex-direction: column; gap: 8px; }
+.flow-node {
+  border: 1px solid #cfd9e8; border-radius: 8px; padding: 8px 12px;
+  font-size: 12.5px; background: #f9fbff; color: #2b3a52;
+}
+.flow-node .k { font-weight: 600; color: #1c2436; }
+.flow-node .m { color: #6b7891; font-size: 11.5px; }
+.flow-node.alt { background: #fff; border-style: dashed; }
+.flow-node.decision { background: #fff7ec; border-color: #f0cfa0; }
+.flow-arrow { text-align: center; color: #9aa8bd; font-size: 13px; line-height: 1; }
+.flow-indent { margin-left: 22px; }
+
+/* 数据流 */
+.pipe { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+.pipe-stage {
+  flex: 1; min-width: 150px; border: 1px solid #cfd9e8; border-radius: 10px;
+  padding: 10px 12px; background: #f9fbff;
+}
+.pipe-stage h4 { margin: 0 0 6px; font-size: 12px; color: #1c2436; }
+.pipe-stage ul { margin: 0; padding-left: 16px; font-size: 11.5px; color: #46536b; line-height: 1.65; }
+.pipe-arrow {
+  align-self: center; padding: 0 8px; color: #9aa8bd; font-size: 16px;
+}
+.log {
+  background: #10182b; color: #cfe0ff; border-radius: 10px; padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+  line-height: 1.75; max-height: 240px; overflow-y: auto;
+}
+.log .t { color: #7d8dab; }
+.log .ok { color: #6ee7b7; }
+.log .w { color: #fbbf24; }
+.statejson {
+  background: #10182b; color: #cfe0ff; border-radius: 10px; padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+  line-height: 1.7; white-space: pre; overflow-x: auto;
+}
+.tagline { font-size: 11.5px; color: #8494ac; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Issue #89 · 音乐标签设置面板收敛</h1>
+  <span class="sub">原型可交互 · 尺寸按 base=390dp 由 rpx 换算，配色取自 theme.ts</span>
+  <div class="ctrl">
+    <span class="seg-label">视图</span>
+    <div class="seg" id="seg-view">
+      <button data-v="both" class="on">并排</button>
+      <button data-v="before">改造前</button>
+      <button data-v="after">改造后</button>
+    </div>
+    <span class="seg-label" style="margin-left:8px">主题</span>
+    <div class="seg" id="seg-theme">
+      <button data-v="light" class="on">浅色</button>
+      <button data-v="dark">深色</button>
+    </div>
+    <span class="seg-label" style="margin-left:8px">语言</span>
+    <div class="seg" id="seg-lang">
+      <button data-v="zh-cn" class="on">简</button>
+      <button data-v="zh-tw">繁</button>
+      <button data-v="en-us">EN</button>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <figure class="phone-wrap" id="wrap-before">
+    <figcaption>改造前 · release/0.3.0（自造卡片 / emoji / 硬编码中文）</figcaption>
+    <div class="phone" id="phone-before" data-theme="light"></div>
+  </figure>
+  <figure class="phone-wrap" id="wrap-after">
+    <figcaption>改造后 · 统一框架（SettingSection + SettingRow + Divider + Checkbox，无行内图标）</figcaption>
+    <div class="phone" id="phone-after" data-theme="light"></div>
+  </figure>
+</div>
+
+<div class="statebar">
+  <span class="chip">草稿 state：<b id="chip-dirty">无变更</b></span>
+  <span class="chip">Config 写入次数：<b id="chip-writes">0</b></span>
+  <span class="chip">面板内 emoji：<b id="chip-emoji">右侧 0 / 左侧 6</b></span>
+  <span class="chip">面板内 <code>rpx()</code> 字面量：<b>右侧 8 / 左侧 12</b><span style="opacity:.7">（右侧只剩排序按钮命中区与间距，卡片/行/分隔线全部走 settingsLayout 令牌）</span></span>
+</div>
+
+<section class="docs">
+
+  <h2>1 · 交互流程</h2>
+  <div class="grid2">
+    <div class="cardbox">
+      <h3>主流程</h3>
+      <div class="flow">
+        <div class="flow-node"><span class="k">基础设置 → 下载</span> <span class="m">SettingRow</span><br>「音乐标签设置」<span class="m">onPress</span></div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-node"><span class="k">showPanel("MusicMetadataSettingsPanel")</span><br><span class="m">usePanel.ts · 已有面板注册名，不改</span></div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-node"><span class="k">PanelBase</span> + <span class="k">PanelHeader</span><br><span class="m">取消 / 标题 / 确定 · 高度 vmax(70)</span></div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-node alt">SettingSection「音乐标签」<div class="flow-indent"><span class="m">SettingRow 下载时写入音乐标签 [Switch]</span></div><div class="flow-indent"><span class="m">└ writeMetadata=true 时显示 3 个子项</span></div></div>
+        <div class="flow-node alt">SettingSection「附属文件」<div class="flow-indent"><span class="m">SettingRow 下载歌词文件 [Switch]</span></div><div class="flow-indent"><span class="m">SettingRow 下载封面文件 [Switch] → 命名行 [RadioDialog]</span></div></div>
+        <div class="flow-node alt">SettingSection「歌词内容」<div class="m">条件：写歌词 或 下载歌词文件 任一为真</div><div class="flow-indent"><span class="m">Checkbox 多选 + 序号 + IconButton 上下移</span></div><div class="flow-indent"><span class="m">逐字歌词 [Switch] · 歌词文件格式 [RadioDialog]</span></div></div>
+        <div class="flow-node alt">SettingSection<div class="flow-indent"><span class="m">重置为默认值（只改草稿）</span></div></div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-node decision"><span class="k">PanelHeader 分支</span><br>取消 → <span class="m">hidePanel()，丢弃草稿</span><br>确定 → <span class="m">Config.setConfig ×10 → Toast → hidePanel()</span></div>
+      </div>
+    </div>
+
+    <div class="cardbox">
+      <h3>条件显隐矩阵</h3>
+      <table>
+        <tr><th>触发条件</th><th>显示</th></tr>
+        <tr><td class="mono">writeMetadata = false</td><td>隐藏「写入封面 / 获取扩展信息 / 写入歌词」三行</td></tr>
+        <tr><td class="mono">writeMetadata = true</td><td>上述三行可见</td></tr>
+        <tr><td class="mono">writeMetadata &amp;&amp; writeMetadataLyric<br>‖ downloadLyricFile</td><td>「歌词内容」整组可见</td></tr>
+        <tr><td class="mono">downloadLyricFile = true</td><td>组内「歌词文件格式」行可见</td></tr>
+        <tr><td class="mono">downloadCoverFile = true</td><td>「封面文件命名」行 + 命名说明可见</td></tr>
+      </table>
+      <p class="tagline">判定表达式 <code>lyricFeaturesEnabled</code> 保持现状不变，只改渲染层。</p>
+      <h3 style="margin-top:18px">歌词顺序交互</h3>
+      <table>
+        <tr><th>动作</th><th>结果</th></tr>
+        <tr><td>点行 / 点 Checkbox</td><td>切换包含状态；勾选后追加到 <code>lyricOrder</code> 末尾；允许全不选</td></tr>
+        <tr><td>点 ⬆ / ⬇</td><td>与相邻项交换；首位 / 末位时 <code>disabled</code>（防误操作）</td></tr>
+        <tr><td>未勾选行</td><td>不显示序号与上下移按钮</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h2>2 · 数据流转</h2>
+  <div class="pipe">
+    <div class="pipe-stage">
+      <h4>① 读取 · 配置 → 界面</h4>
+      <ul>
+        <li><code>Config</code>（MMKV）</li>
+        <li><code>useAppConfig(key)</code> ×10<br><span class="mono" style="color:#8494ac">core/appConfig.ts 订阅式</span></li>
+        <li><code>useState(initializer)</code> 快照成草稿</li>
+        <li>草稿驱动 Switch / 条件显隐 / 顺序列表</li>
+      </ul>
+    </div>
+    <div class="pipe-arrow">⇄</div>
+    <div class="pipe-stage">
+      <h4>② 草稿 · 面板内的唯一真值</h4>
+      <ul>
+        <li><code>settings</code>：10 个字段</li>
+        <li>开关 / 勾选 / 排序 / 重置 <b>只改这里</b></li>
+        <li>关闭面板 = 丢弃</li>
+      </ul>
+    </div>
+    <div class="pipe-arrow">⇄</div>
+    <div class="pipe-stage">
+      <h4>③ 写入 · 界面 → 配置</h4>
+      <ul>
+        <li>「确定」→ <code>handleSave()</code></li>
+        <li><code>Config.setConfig</code> ×10 串行</li>
+        <li><code>Toast.success</code> → <code>hidePanel()</code></li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="cardbox">
+      <h3>操作右侧面板时，草稿与写入的实时变化</h3>
+      <div class="statejson" id="state-json">（加载中）</div>
+    </div>
+    <div class="cardbox">
+      <h3>Config 写入日志</h3>
+      <div class="log" id="write-log"><span class="t">等待操作…</span></div>
+      <p class="tagline">点「确定」前，草稿变更<b>不会</b>落到 Config —— 这是面板的既有语义，本次不改。</p>
+    </div>
+  </div>
+
+  <h2>3 · 布局规格（全部来自 settingsLayout / uiConst，无字面量）</h2>
+  <div class="grid2">
+    <div class="cardbox">
+      <h3>几何</h3>
+      <table>
+        <tr><th>元素</th><th>token</th><th>rpx</th><th>改造前</th></tr>
+        <tr><td>卡片左右边距</td><td class="mono">groupMargin</td><td>24</td><td class="mono">16 ✗</td></tr>
+        <tr><td>卡片圆角</td><td class="mono">cardRadius</td><td>16</td><td class="mono">16 ✓</td></tr>
+        <tr><td>卡片间垂直间距</td><td class="mono">groupMargin</td><td>24</td><td class="mono">16 ✗</td></tr>
+        <tr><td>行内左右呼吸区</td><td class="mono">rowPadding</td><td>24</td><td class="mono">20 ✗</td></tr>
+        <tr><td>行最小高度</td><td class="mono">rowMinHeight</td><td>92</td><td class="mono">内容撑开 ✗</td></tr>
+        <tr><td>值 / 控件间距</td><td class="mono">valueGap</td><td>24</td><td class="mono">16 ✗</td></tr>
+        <tr><td>值最大宽度</td><td class="mono">valueMaxWidth</td><td>48%</td><td class="mono">无约束 ✗</td></tr>
+        <tr><td>分组标题下间距</td><td class="mono">titleGap</td><td>12</td><td class="mono">—</td></tr>
+      </table>
+    </div>
+    <div class="cardbox">
+      <h3>字号 / 图标（fontSizeConst · iconSizeConst）</h3>
+      <table>
+        <tr><th>用途</th><th>token</th><th>fontRpx</th></tr>
+        <tr><td>行标题</td><td class="mono">content</td><td>28</td></tr>
+        <tr><td>行描述</td><td class="mono">description</td><td>22</td></tr>
+        <tr><td>分组标题</td><td class="mono">description</td><td>22</td></tr>
+        <tr><td>分组标题的说明行</td><td class="mono">caption</td><td>18</td></tr>
+        <tr><td>面板标题</td><td class="mono">title</td><td>32</td></tr>
+        <tr><td>开关</td><td class="mono">rpx(80/40/34)</td><td>80 / 40 / 34</td></tr>
+        <tr><td>复选框</td><td class="mono">rpx(36)</td><td>36</td></tr>
+      </table>
+      <p class="tagline">改造前：行标题用 <code>semibold</code> + <code>rpx(40)</code> emoji；改造后统一 <code>regular</code>，<b>行内不放图标</b>（<code>SettingRow</code> 本来就没有图标槽位），排序按钮复用现有的 <code>chevron-right</code> 旋转 ±90°。</p>
+    </div>
+  </div>
+
+  <h2>4 · 需要确认的决策点</h2>
+  <div class="cardbox">
+    <table>
+      <tr><th>#</th><th>决策</th><th>结论（已按评审意见定稿）</th><th>被否掉的方案</th></tr>
+      <tr><td>D1</td><td>格式 / 命名选择控件</td><td><b>SettingRow + RadioDialog</b>（0 新组件，与 basicSetting 的 createRadio 同源）</td><td>新建 <code>SettingSegmented</code> 行内分段控件</td></tr>
+      <tr><td>D2</td><td>emoji 替代方式</td><td><b>直接删除，不新增任何图标</b></td><td>新增 4 个 Heroicons SVG（tag / photo / chevron-up / chevron-down）</td></tr>
+      <tr><td>D2b</td><td>行内图标是否保留</td><td><b>不保留</b>：与 themeSetting / settingsOverview 的无图标行一致</td><td>图标 + 文字塞进 <code>SettingRow</code> 的 <code>title</code> 插槽</td></tr>
+      <tr><td>D3</td><td>保存语义</td><td><b>保留草稿 + 确认</b>（与同类面板 qualityTranslation 一致）</td><td>改即改即存（与 basicSetting 的 createSwitch 一致）</td></tr>
+      <tr><td>D4</td><td>层级缩进</td><td><b>扁平化为独立分组</b>（与 basicSetting 的子项铺平范式一致）</td><td>给 SettingRow 加 <code>indent</code></td></tr>
+      <tr><td>D5</td><td>歌词顺序排序</td><td><b>Checkbox + IconButton 上下移</b>（+ 序号）</td><td><code>SortableFlatList</code> 拖拽</td></tr>
+      <tr><td>D6</td><td>硬编码颜色清零范围</td><td><b>只清本面板 4 处 + qualityTranslation 1 处</b>；timingClose / setScheduleCloseTimeDialog / markdownDialog / badge 的 30+ 处移交 #36 PR4（需真机校准）</td><td>一次性全清</td></tr>
+      <tr><td>D7</td><td>文案收敛范围</td><td><b>中间档</b>：面板 + basicSetting（含 LyricSetting）+ qualityTranslation + setUserVariables</td><td>只做 issue 点名的两个文件</td></tr>
+      <tr><td>D8</td><td>分组标题的长句怎么放<br><span class="mono">评审后新增</span></td><td><b>给 SettingSection 加可选 <code>description</code></b>（不传 = 现有 15 个调用点的样式一字不改）</td><td>把 27 字长句直接当标题用（会折成两行，与各级设置页的短标题不一致）</td></tr>
+      <tr><td>D9</td><td>长行描述被裁怎么办<br><span class="mono">评审后新增</span></td><td><b>给 SettingRow 加可选 <code>descriptionLines</code></b>（默认 1 = 现状），面板里传 2，封面命名那行传 3</td><td>缩短文案（会丢掉「已存在同名图片时不覆盖」这类关键信息）</td></tr>
+    </table>
+    <p class="tagline">完整论证与权衡见 <code>docs/issue-89-design-plan.md</code> §6。</p>
+  </div>
+
+</section>
+
+<script>
+/* ============================================================
+   1. 语言包（三份，与 src/core/i18n/languages/*.json 的 key 对齐）
+   ============================================================ */
+const I18N = {
+  'zh-cn': {
+    cancel:'取消', confirm:'确定', title:'音乐标签设置',
+    intro:'为下载的音乐自动写入标签信息，让音乐文件更加完整和专业',
+    secMetadata:'音乐标签',
+    writeMetadata:'下载时写入音乐标签', writeMetadataDesc:'启用后将自动为下载的音乐文件写入元数据',
+    writeCover:'写入封面', writeCoverDesc:'自动下载并嵌入高质量专辑封面图片',
+    writeExtended:'获取扩展信息', writeExtendedDesc:'写入更多详细标签（作曲者、发行年份、流派等）',
+    writeLyric:'写入歌词', writeLyricDesc:'自动获取并嵌入歌词到音乐文件',
+    secCompanion:'附属文件',
+    downloadLyricFile:'下载歌词文件', downloadLyricFileDesc:'下载音乐时同时保存独立的歌词文件',
+    downloadCoverFile:'下载封面文件', downloadCoverFileDesc:'下载音乐时同时保存独立的封面图片，与音频文件同目录',
+    coverFileNaming:'封面文件命名', coverNamingSame:'与音频同名', coverNamingFixed:'固定名 cover',
+    coverNamingHintSame:'如 歌曲名-歌手.jpg；同目录多首歌不互相覆盖',
+    coverNamingHintFixed:'格式由封面原图决定（jpg/png/webp）；已存在同名图片不覆盖',
+    secLyric:'歌词内容', secLyricDesc:'选择要包含的歌词类型，可调整顺序',
+    lyricOriginal:'原文歌词', lyricOriginalDesc:'歌曲原始语言的歌词',
+    lyricTranslation:'翻译歌词', lyricTranslationDesc:'歌词的中文翻译',
+    lyricRomanization:'音译歌词', lyricRomanizationDesc:'罗马音/拼音注音',
+    lyricOrderHint:'当前顺序：{order}',
+    wordByWord:'逐字歌词', wordByWordDesc:'保留QRC格式的逐字时间戳（如有）',
+    lyricFileFormat:'歌词文件格式',
+    reset:'重置为默认值', resetDesc:'恢复所有设置为系统推荐配置',
+    moveUp:'上移', moveDown:'下移',
+    saveSuccess:'音乐标签设置已保存', resetSuccess:'已重置为默认值',
+    appbarTitle:'基础设置', entryMusicMetadata:'音乐标签设置', entryCustom:'自定义',
+    orderNames:{original:'原文歌词',translation:'翻译歌词',romanization:'音译歌词'}
+  },
+  'zh-tw': {
+    cancel:'取消', confirm:'確定', title:'音樂標籤設定',
+    intro:'為下載的音樂自動寫入標籤資訊，讓音樂檔案更加完整和專業',
+    secMetadata:'音樂標籤',
+    writeMetadata:'下載時寫入音樂標籤', writeMetadataDesc:'啟用後將自動為下載的音樂檔案寫入中繼資料',
+    writeCover:'寫入封面', writeCoverDesc:'自動下載並嵌入高品質專輯封面圖片',
+    writeExtended:'取得擴充資訊', writeExtendedDesc:'寫入更多詳細標籤（作曲者、發行年份、曲風等）',
+    writeLyric:'寫入歌詞', writeLyricDesc:'自動取得並嵌入歌詞到音樂檔案',
+    secCompanion:'附屬檔案',
+    downloadLyricFile:'下載歌詞檔案', downloadLyricFileDesc:'下載音樂時同時儲存獨立的歌詞檔案',
+    downloadCoverFile:'下載封面檔案', downloadCoverFileDesc:'下載音樂時同時儲存獨立的封面圖片，與音訊檔案同目錄',
+    coverFileNaming:'封面檔案命名', coverNamingSame:'與音訊同名', coverNamingFixed:'固定名 cover',
+    coverNamingHintSame:'如 歌曲名-歌手.jpg；同目錄多首歌不互相覆蓋',
+    coverNamingHintFixed:'格式由封面原圖決定（jpg/png/webp）；已存在同名圖片不覆蓋',
+    secLyric:'歌詞內容', secLyricDesc:'選擇要包含的歌詞類型，可調整順序',
+    lyricOriginal:'原文歌詞', lyricOriginalDesc:'歌曲原始語言的歌詞',
+    lyricTranslation:'翻譯歌詞', lyricTranslationDesc:'歌詞的中文翻譯',
+    lyricRomanization:'音譯歌詞', lyricRomanizationDesc:'羅馬音/拼音注音',
+    lyricOrderHint:'目前順序：{order}',
+    wordByWord:'逐字歌詞', wordByWordDesc:'保留QRC格式的逐字時間戳（如有）',
+    lyricFileFormat:'歌詞檔案格式',
+    reset:'重設為預設值', resetDesc:'還原所有設定為系統推薦設定',
+    moveUp:'上移', moveDown:'下移',
+    saveSuccess:'已儲存音樂標籤設定', resetSuccess:'已重設為預設值',
+    appbarTitle:'基本設定', entryMusicMetadata:'音樂標籤設定', entryCustom:'自訂',
+    orderNames:{original:'原文歌詞',translation:'翻譯歌詞',romanization:'音譯歌詞'}
+  },
+  'en-us': {
+    cancel:'Cancel', confirm:'Done', title:'Music Metadata',
+    intro:'Automatically write tag information for downloaded music to keep files complete and professional',
+    secMetadata:'Music tags',
+    writeMetadata:'Write tags on download', writeMetadataDesc:'Metadata will be written automatically for downloaded music files',
+    writeCover:'Write cover art', writeCoverDesc:'Download and embed high-quality album cover art',
+    writeExtended:'Fetch extended info', writeExtendedDesc:'Write more detailed tags (composer, release year, genre, etc.)',
+    writeLyric:'Write lyrics', writeLyricDesc:'Fetch and embed lyrics into music files',
+    secCompanion:'Companion files',
+    downloadLyricFile:'Download lyric file', downloadLyricFileDesc:'Also save a standalone lyric file when downloading',
+    downloadCoverFile:'Download cover file', downloadCoverFileDesc:'Also save a standalone cover image next to the audio file',
+    coverFileNaming:'Cover file naming', coverNamingSame:'Same as audio file', coverNamingFixed:'Fixed name "cover"',
+    coverNamingHintSame:'e.g. Title-Artist.jpg; songs in one folder never clash',
+    coverNamingHintFixed:'Format follows the source image; an existing image is kept as-is',
+    secLyric:'Lyrics content', secLyricDesc:'Choose which lyric types to include and adjust their order',
+    lyricOriginal:'Original', lyricOriginalDesc:"Lyrics in the song's original language",
+    lyricTranslation:'Translation', lyricTranslationDesc:'Translated lyrics',
+    lyricRomanization:'Romanization', lyricRomanizationDesc:'Romanized or phonetic lyrics',
+    lyricOrderHint:'Current order: {order}',
+    wordByWord:'Word-by-word', wordByWordDesc:'Keep QRC word-by-word timestamps (if available)',
+    lyricFileFormat:'Lyric file format',
+    reset:'Reset to defaults', resetDesc:'Restore all settings to the recommended values',
+    moveUp:'Move up', moveDown:'Move down',
+    saveSuccess:'Music metadata settings saved', resetSuccess:'Reset to defaults',
+    appbarTitle:'Basic settings', entryMusicMetadata:'Music metadata', entryCustom:'Custom', downloadGroup:'Download',
+    orderNames:{original:'Original',translation:'Translation',romanization:'Romanization'}
+  }
+};
+
+/* ============================================================
+   2. 图标
+   —— 改造后**不新增任何图标**：SettingRow 没有行图标槽位，原 emoji 直接删除。
+   —— 这里只剩仓库现有的两个真实 SVG：check（Checkbox）与 chevron-right（排序按钮旋转使用）。
+   ============================================================ */
+const ICON = {
+  // 已有：src/assets/icons/check.svg
+  check:'<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>',
+  // 已有：src/assets/icons/chevron-right.svg，排序按钮把同一路径旋转 ±90°
+  chevronUp:'<g transform="rotate(-90 12 12)"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></g>',
+  chevronDown:'<g transform="rotate(90 12 12)"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></g>'
+};
+function svgIcon(name, cls) {
+  const inner = ICON[name] || '';
+  return '<svg class="' + (cls || 'ico') + '" viewBox="0 0 24 24" fill="none"'
+    + ' stroke="currentColor" stroke-width="1.5">' + inner + '</svg>';
+}
+
+/* ============================================================
+   3. 状态
+   ============================================================ */
+const DEFAULTS = {
+  writeMetadata: false,
+  writeMetadataCover: true,
+  writeMetadataLyric: true,
+  writeMetadataExtended: false,
+  downloadLyricFile: false,
+  lyricFileFormat: 'lrc',
+  downloadCoverFile: false,
+  coverFileNaming: 'sameAsAudio',
+  lyricOrder: ['romanization', 'original', 'translation'],
+  enableWordByWord: false
+};
+const ORDER_ITEMS = ['original', 'translation', 'romanization'];
+
+let draft = JSON.parse(JSON.stringify(DEFAULTS));
+let baseline = JSON.parse(JSON.stringify(DEFAULTS)); // 面板打开时的 Config 快照
+let writes = 0;
+let ui = { view: 'both', theme: 'light', lang: 'zh-cn' };
+
+function t(key) { return I18N[ui.lang][key]; }
+function fmt(str, args) {
+  return String(str).replace(/\{(\w+)\}/g, (m, k) => (args && args[k] !== undefined ? args[k] : ''));
+}
+
+/* ============================================================
+   4. 改造前渲染（还原 release/0.3.0 的结构与样式）
+   ============================================================ */
+function renderBefore() {
+  // 改造前无 i18n —— 固定中文，切换语言不变
+  const B = {
+    intro:'为下载的音乐自动写入标签信息，让音乐文件更加完整和专业',
+    writeMetadata:'下载时写入音乐标签', writeMetadataDesc:'启用后将自动为下载的音乐文件写入元数据',
+    writeCover:'写入封面', writeCoverDesc:'自动下载并嵌入高质量专辑封面图片',
+    writeExtended:'获取扩展信息', writeExtendedDesc:'写入更多详细标签（作曲者、发行年份、流派等）',
+    writeLyric:'写入歌词', writeLyricDesc:'自动获取并嵌入歌词到音乐文件',
+    downloadLyricFile:'下载歌词文件', downloadLyricFileDesc:'下载音乐时同时保存独立的歌词文件',
+    downloadCoverFile:'下载封面文件', downloadCoverFileDesc:'下载音乐时同时保存独立的封面图片，与音频文件同目录',
+    coverFileNaming:'封面文件命名',
+    lyricTitle:'歌词内容设置', lyricSub:'选择要包含的歌词类型，可调整顺序',
+    wordByWord:'逐字歌词', wordByWordDesc:'保留QRC格式的逐字时间戳（如有）',
+    formatLabel:'歌词文件格式', reset:'重置为默认值', resetDesc:'恢复所有设置为系统推荐配置'
+  };
+  const NAMES = { original:'原文歌词', translation:'翻译歌词', romanization:'音译歌词' };
+  const DESC  = { original:'歌曲原始语言的歌词', translation:'歌词的中文翻译', romanization:'罗马音/拼音注音' };
+  const ICONS = { writeMetadata:'🏷️', writeCover:'🖼️', writeExtended:'📝', writeLyric:'🎵',
+                  downloadLyricFile:'📄', downloadCoverFile:'🖼️' };
+
+  const bItem = (icon, title, desc, val, level, key) => `
+    <div class="b-item${level ? ' sub' : ''}">
+      <div class="b-row">
+        <div class="b-texts">
+          <div class="b-title" style="display:flex;align-items:center;gap:6.2px">
+            ${icon ? `<span class="b-icon">${icon}</span>` : ''}<span>${title}</span>
+          </div>
+          <div class="b-desc">${desc}</div>
+        </div>
+        <button class="sw${val ? ' on' : ''}"${key ? ` data-b-toggle="${key}"` : ''} aria-label="${title}"><i></i></button>
+      </div>
+    </div>`;
+
+  let html = '';
+
+  // 顶部说明
+  html += `<div class="b-intro">${B.intro}</div>`;
+
+  // 主开关卡
+  html += `<div class="b-card">${bItem(ICONS.writeMetadata, B.writeMetadata, B.writeMetadataDesc, draft.writeMetadata, 0)}</div>`;
+
+  // 子项卡
+  if (draft.writeMetadata) {
+    html += `<div class="b-card">
+      ${bItem(ICONS.writeCover, B.writeCover, B.writeCoverDesc, draft.writeMetadataCover, 1)}
+      <div class="b-divider"></div>
+      ${bItem(ICONS.writeExtended, B.writeExtended, B.writeExtendedDesc, draft.writeMetadataExtended, 1)}
+      <div class="b-divider"></div>
+      ${bItem(ICONS.writeLyric, B.writeLyric, B.writeLyricDesc, draft.writeMetadataLyric, 1)}
+    </div>`;
+  }
+
+  // 下载歌词文件
+  html += `<div class="b-card">${bItem(ICONS.downloadLyricFile, B.downloadLyricFile, B.downloadLyricFileDesc, draft.downloadLyricFile, 0)}</div>`;
+
+  // 下载封面文件 + 命名
+  html += `<div class="b-card">
+    ${bItem(ICONS.downloadCoverFile, B.downloadCoverFile, B.downloadCoverFileDesc, draft.downloadCoverFile, 0)}`;
+  if (draft.downloadCoverFile) {
+    const opts = [{ v:'sameAsAudio', l:'与音频同名' }, { v:'fixedName', l:'固定名 cover' }];
+    html += `<div class="b-divider"></div>
+      <div class="b-item" style="padding-top:8.3px">
+        <div class="b-label">${B.coverFileNaming}</div>
+        <div class="b-seg">
+          ${opts.map(o => `<button class="b-seg-item${draft.coverFileNaming === o.v ? ' on' : ''}" data-b-naming="${o.v}">${o.l}</button>`).join('')}
+        </div>
+        <div class="b-desc" style="margin-top:5.2px">${draft.coverFileNaming === 'sameAsAudio'
+          ? '与音频同名（如 歌曲名-歌手.jpg），多首歌放同一目录不会互相覆盖'
+          : '固定为 cover.原图格式（jpg / png / webp 由封面原图决定），同一目录多首歌共用；已存在同名图片时不覆盖，删歌也不会连带删除'}</div>
+      </div>`;
+  }
+  html += `</div>`;
+
+  // 歌词内容
+  const enabled = (draft.writeMetadata && draft.writeMetadataLyric) || draft.downloadLyricFile;
+  if (enabled) {
+    html += `<div class="b-card"><div class="b-item">`;
+    html += `<div class="b-title" style="font-size:var(--fs-content);font-weight:600">${B.lyricTitle}</div>`;
+    html += `<div class="b-desc" style="margin-bottom:4.2px">${B.lyricSub}</div>`;
+    ORDER_ITEMS.forEach(item => {
+      const checked = draft.lyricOrder.indexOf(item) >= 0;
+      const idx = draft.lyricOrder.indexOf(item);
+      html += `<div class="b-order-row">
+        <button class="cb${checked ? ' on' : ''}" data-b-check="${item}" aria-label="${NAMES[item]}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="display:${checked ? 'block' : 'none'}">${ICON.check}</svg>
+        </button>
+        <div class="b-order-texts">
+          <div class="b-title" style="font-size:var(--fs-content);font-weight:400;display:block;line-height:1.25">${NAMES[item]}</div>
+          <div class="b-desc">${DESC[item]}</div>
+        </div>
+        ${checked ? `<div class="b-arrows">
+          <button class="b-arrow" data-b-move="${item}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>▲</button>
+          <button class="b-arrow" data-b-move="${item}" data-dir="1" ${idx === draft.lyricOrder.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>` : ''}
+      </div>`;
+    });
+    if (draft.lyricOrder.length) {
+      html += `<div class="b-hint">当前顺序：${draft.lyricOrder.map(i => NAMES[i]).join(' → ')}</div>`;
+    }
+    html += `<div class="b-divider"></div>`;
+    html += `<div style="padding-top:4.2px">${bItem(null, B.wordByWord, B.wordByWordDesc, draft.enableWordByWord, 1)}</div>`;
+    if (draft.downloadLyricFile) {
+      html += `<div class="b-divider"></div>
+        <div style="padding-top:8.3px">
+          <div class="b-label">${B.formatLabel}</div>
+          <div class="b-seg">
+            <button class="b-seg-item${draft.lyricFileFormat === 'lrc' ? ' on' : ''}" data-b-format="lrc">.lrc</button>
+            <button class="b-seg-item${draft.lyricFileFormat === 'txt' ? ' on' : ''}" data-b-format="txt">.txt</button>
+          </div>
+        </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  // 重置
+  html += `<div class="b-reset" data-b-reset>
+    <div class="b-reset-inner">
+      <div class="b-texts">
+        <div class="b-title" style="font-size:var(--fs-content);font-weight:400">${B.reset}</div>
+        <div class="b-desc">${B.resetDesc}</div>
+      </div>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+/* ============================================================
+   5. 改造后渲染（SettingSection + SettingRow + Icon + i18n）
+   ============================================================ */
+function sw(v, key) {
+  return `<button class="sw${v ? ' on' : ''}" data-a-toggle="${key}" aria-label="${key}"><i></i></button>`;
+}
+function orderLabel(item) {
+  return t(item === 'original' ? 'lyricOriginal' : item === 'translation' ? 'lyricTranslation' : 'lyricRomanization');
+}
+function orderDesc(item) {
+  return t(item === 'original' ? 'lyricOriginalDesc' : item === 'translation' ? 'lyricTranslationDesc' : 'lyricRomanizationDesc');
+}
+/**
+ * 行主区：SettingRow 的结构是「标题 + 说明 + 右侧控件」——**没有行图标槽位**。
+ * 所以原设计里的 emoji 是直接删掉，而不是换成 SVG（也不新增任何图标）。
+ */
+function rowMain(text) {
+  return `<div class="row-main">
+    <div class="row-texts">
+      <div class="row-title">${text}</div>
+      <div class="row-desc" data-slot="desc"></div>
+    </div>
+  </div>`;
+}
+/** 渲染一行：title / desc / value / right 插槽 */
+function row(o) {
+  const right = o.right || '';
+  const value = o.value !== undefined ? `<div class="row-value">${o.value}</div>` : '';
+  return `<div class="row${o.onPress ? ' pressable' : ''}"${o.onPress ? ` data-a-row="${o.onPress}"` : ''}>
+    ${rowMain(o.title)}
+    ${value}
+    ${right ? `<div class="row-right">${right}</div>` : ''}
+  </div>`;
+}
+/** 带描述的完整行（描述最多 2 行，对应 SettingRow.descriptionLines={2}） */
+function rowFull(o) {
+  return row(o).replace('<div class="row-desc" data-slot="desc"></div>',
+    `<div class="row-desc">${o.desc || ''}</div>`);
+}
+
+function renderAfter() {
+  let html = '';
+
+  // 分组一：音乐标签（短标题 + 长说明走 SettingSection.description）
+  html += `<div class="section">
+    <div class="section-title">${t('secMetadata')}</div>
+    <div class="section-desc">${t('intro')}</div>
+    <div class="section-card">
+      ${rowFull({ title:t('writeMetadata'), desc:t('writeMetadataDesc'), right:sw(draft.writeMetadata,'writeMetadata') })}`;
+  if (draft.writeMetadata) {
+    html += rowFull({ title:t('writeCover'), desc:t('writeCoverDesc'), right:sw(draft.writeMetadataCover,'writeMetadataCover') });
+    html += `<div class="divider"></div>`;
+    html += rowFull({ title:t('writeExtended'), desc:t('writeExtendedDesc'), right:sw(draft.writeMetadataExtended,'writeMetadataExtended') });
+    html += `<div class="divider"></div>`;
+    html += rowFull({ title:t('writeLyric'), desc:t('writeLyricDesc'), right:sw(draft.writeMetadataLyric,'writeMetadataLyric') });
+  }
+  html += `</div></div>`;
+
+  // 分组二：附属文件
+  html += `<div class="section">
+    <div class="section-title">${t('secCompanion')}</div>
+    <div class="section-card">
+      ${rowFull({ title:t('downloadLyricFile'), desc:t('downloadLyricFileDesc'), right:sw(draft.downloadLyricFile,'downloadLyricFile') })}`;
+  html += `<div class="divider"></div>`;
+  html += rowFull({ title:t('downloadCoverFile'), desc:t('downloadCoverFileDesc'), right:sw(draft.downloadCoverFile,'downloadCoverFile') });
+  if (draft.downloadCoverFile) {
+    const label = draft.coverFileNaming === 'sameAsAudio' ? t('coverNamingSame') : t('coverNamingFixed');
+    const hint = draft.coverFileNaming === 'sameAsAudio' ? t('coverNamingHintSame') : t('coverNamingHintFixed');
+    html += `<div class="divider"></div>`;
+    html += rowFull({ title:t('coverFileNaming'), desc:hint, value:label, onPress:'coverNaming' });
+  }
+  html += `</div></div>`;
+
+  // 分组三：歌词内容
+  const enabled = (draft.writeMetadata && draft.writeMetadataLyric) || draft.downloadLyricFile;
+  if (enabled) {
+    html += `<div class="section">
+      <div class="section-title">${t('secLyric')}</div>
+      <div class="section-desc">${t('secLyricDesc')}</div>
+      <div class="section-card">`;
+    ORDER_ITEMS.forEach(item => {
+      const checked = draft.lyricOrder.indexOf(item) >= 0;
+      const idx = draft.lyricOrder.indexOf(item);
+      const arrows = checked
+        ? `<div class="row-right">
+             <button class="iconbtn" data-a-move="${item}" data-dir="-1" ${idx === 0 ? 'disabled' : ''} aria-label="${t('moveUp')}">${svgIcon('chevronUp','')}</button>
+             <button class="iconbtn" data-a-move="${item}" data-dir="1" ${idx === draft.lyricOrder.length - 1 ? 'disabled' : ''} aria-label="${t('moveDown')}">${svgIcon('chevronDown','')}</button>
+           </div>` : '';
+      html += `<div class="row pressable" data-a-check="${item}">
+        <div class="row-main">
+          <button class="cb${checked ? ' on' : ''}" aria-label="${t(item === 'original' ? 'lyricOriginal' : item === 'translation' ? 'lyricTranslation' : 'lyricRomanization')}" style="pointer-events:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">${ICON.check}</svg>
+          </button>
+          <div class="row-texts">
+            <div class="row-title">${t(item === 'original' ? 'lyricOriginal' : item === 'translation' ? 'lyricTranslation' : 'lyricRomanization')}</div>
+            <div class="row-desc">${t(item === 'original' ? 'lyricOriginalDesc' : item === 'translation' ? 'lyricTranslationDesc' : 'lyricRomanizationDesc')}</div>
+          </div>
+        </div>
+        ${arrows}
+      </div>`;
+    });
+    if (draft.lyricOrder.length) {
+      html += `<div class="row-hint">${fmt(t('lyricOrderHint'), { order: draft.lyricOrder.map(orderLabel).join(' → ') })}</div>`;
+    }
+    html += `<div class="divider"></div>`;
+    html += rowFull({ title:t('wordByWord'), desc:t('wordByWordDesc'), right:sw(draft.enableWordByWord,'enableWordByWord') });
+    if (draft.downloadLyricFile) {
+      html += `<div class="divider"></div>`;
+      html += row({ title:t('lyricFileFormat'), value:'.' + draft.lyricFileFormat, onPress:'lyricFormat' });
+    }
+    html += `</div></div>`;
+  }
+
+  // 分组四：重置
+  html += `<div class="section">
+    <div class="section-card">
+      ${rowFull({ title:t('reset'), desc:t('resetDesc'), onPress:'reset' })}
+    </div>
+  </div>
+  <div style="height:48px"></div>`;
+
+  return html;
+}
+
+/* ============================================================
+   6. 手机壳组装
+   ============================================================ */
+function pageUnder() {
+  const rows = [
+    [t('entryMusicMetadata'), t('entryCustom'), true],
+  ];
+  return `<div class="page-under">
+    <div class="statusbar"><span>9:41</span><span class="icons">▮▮▮ <span class="bar"></span></span></div>
+    <div class="appbar"><span class="back">‹</span>${t('appbarTitle')}</div>
+    <div class="under-group">
+      <div class="under-group-title">${t('secMetadata') === '音乐标签' ? '下载' : t('secCompanion') === '附属文件' ? '下載' : 'Download'}</div>
+      <div class="under-card">
+        ${rows.map(r => `<div class="under-row${r[2] ? ' hl' : ''}"><span>${r[0]}</span><span class="val">${r[1]}</span><span style="color:var(--text-secondary)">›</span></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function toastHost() {
+  return `<div class="toast-host"><div class="toast" id="toast"></div></div>`;
+}
+function renderPhone(el, mode) {
+  const header = `<div class="sheet-header">
+      <button class="btn" data-act="cancel">${t('cancel')}</button>
+      <div class="sheet-title">${t('title')}</div>
+      <button class="btn ok" data-act="ok" data-mode="${mode}">${t('confirm')}</button>
+    </div>
+    <div class="hdr-divider"></div>`;
+  const body = mode === 'before' ? renderBefore() : renderAfter();
+  el.innerHTML = pageUnder()
+    + `<div class="mask"></div>`
+    + `<div class="sheet">${header}<div class="sheet-body">${body}</div></div>`
+    + toastHost();
+  bindPhone(el, mode);
+}
+
+/* ============================================================
+   7. 交互绑定
+   ============================================================ */
+function showToast(msg) {
+  ['phone-after','phone-before'].forEach(id => {
+    const host = document.getElementById(id);
+    const el = host && host.querySelector('.toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._tm);
+    el._tm = setTimeout(() => el.classList.remove('show'), 1500);
+  });
+}
+function markDirty() {
+  const changed = JSON.stringify(draft) !== JSON.stringify(baseline);
+  document.getElementById('chip-dirty').textContent = changed ? '有未保存变更' : '无变更';
+}
+function renderStateJson() {
+  document.getElementById('state-json').textContent = JSON.stringify(draft, null, 2);
+}
+function pushLog(line, cls) {
+  const el = document.getElementById('write-log');
+  if (el.querySelector('.t') && writes === 0) el.innerHTML = '';
+  const time = new Date().toTimeString().slice(0, 8);
+  el.innerHTML += `<div><span class="t">${time}</span> <span class="${cls || ''}">${line}</span></div>`;
+  el.scrollTop = el.scrollHeight;
+}
+function rerender() {
+  const pb = document.getElementById('phone-before');
+  const pa = document.getElementById('phone-after');
+  pb.dataset.theme = ui.theme;
+  pa.dataset.theme = ui.theme;
+  renderPhone(pb, 'before');
+  renderPhone(pa, 'after');
+  markDirty();
+  renderStateJson();
+}
+
+function bindPhone(root, mode) {
+  const key = mode === 'before' ? 'data-b-' : 'data-a-';
+
+  root.querySelectorAll('[' + key + 'toggle]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const k = btn.getAttribute(key + 'toggle');
+      draft[k] = !draft[k];
+      pushLog('草稿 ' + k + ' = ' + draft[k] + '（未落盘）', 'w');
+      rerender();
+    });
+  });
+
+  root.querySelectorAll('[' + key + 'check]').forEach(el => {
+    el.addEventListener('click', () => {
+      const item = el.getAttribute(key + 'check');
+      const i = draft.lyricOrder.indexOf(item);
+      if (i >= 0) draft.lyricOrder.splice(i, 1);
+      else draft.lyricOrder.push(item);
+      pushLog('草稿 lyricOrder = [' + draft.lyricOrder.join(', ') + ']', 'w');
+      rerender();
+    });
+  });
+
+  root.querySelectorAll('[' + key + 'move]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const item = btn.getAttribute(key + 'move');
+      const dir = parseInt(btn.getAttribute('data-dir'), 10);
+      const arr = draft.lyricOrder;
+      const i = arr.indexOf(item);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= arr.length) return;
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      pushLog('草稿 lyricOrder = [' + arr.join(', ') + ']', 'w');
+      rerender();
+    });
+  });
+
+  // 改造前专用：格式 / 命名分段选择
+  if (mode === 'before') {
+    root.querySelectorAll('[data-b-format]').forEach(b => b.addEventListener('click', () => {
+      draft.lyricFileFormat = b.getAttribute('data-b-format'); rerender();
+    }));
+    root.querySelectorAll('[data-b-naming]').forEach(b => b.addEventListener('click', () => {
+      draft.coverFileNaming = b.getAttribute('data-b-naming'); rerender();
+    }));
+    root.querySelectorAll('[data-b-reset]').forEach(el => el.addEventListener('click', () => {
+      draft = JSON.parse(JSON.stringify(DEFAULTS));
+      pushLog('草稿已重置为默认值（未落盘）', 'w');
+      showToast('已重置为默认值'); rerender();
+    }));
+  }
+
+  // 改造后专用：可点击行（RadioDialog / 重置）
+  root.querySelectorAll('[data-a-row]').forEach(el => el.addEventListener('click', () => {
+    const action = el.getAttribute('data-a-row');
+    if (action === 'reset') {
+      draft = JSON.parse(JSON.stringify(DEFAULTS));
+      pushLog('草稿已重置为默认值（未落盘）', 'w');
+      showToast(t('resetSuccess')); rerender();
+    } else if (action === 'lyricFormat') {
+      draft.lyricFileFormat = draft.lyricFileFormat === 'lrc' ? 'txt' : 'lrc';
+      pushLog('RadioDialog → 草稿 lyricFileFormat = ' + draft.lyricFileFormat, 'w'); rerender();
+    } else if (action === 'coverNaming') {
+      draft.coverFileNaming = draft.coverFileNaming === 'sameAsAudio' ? 'fixedName' : 'sameAsAudio';
+      pushLog('RadioDialog → 草稿 coverFileNaming = ' + draft.coverFileNaming, 'w'); rerender();
+    }
+  }));
+
+  root.querySelectorAll('[data-act]').forEach(btn => btn.addEventListener('click', () => {
+    const act = btn.getAttribute('data-act');
+    const m = btn.getAttribute('data-mode');
+    if (act === 'cancel') {
+      draft = JSON.parse(JSON.stringify(baseline));
+      pushLog('hidePanel() · 丢弃草稿，回到 Config 快照', 't');
+      showToast(t('cancel')); rerender();
+    } else {
+      // handleSave()
+      Object.keys(draft).forEach(k => { writes++; });
+      baseline = JSON.parse(JSON.stringify(draft));
+      document.getElementById('chip-writes').textContent = writes;
+      pushLog('Config.setConfig ×' + Object.keys(draft).length + ' ✔', 'ok');
+      pushLog('Toast.success("' + t('saveSuccess') + '") → hidePanel()', 'ok');
+      showToast(t('saveSuccess')); rerender();
+    }
+  }));
+}
+
+/* ============================================================
+   8. 工具条
+   ============================================================ */
+function bindSeg(id, field) {
+  document.getElementById(id).addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    document.getElementById(id).querySelectorAll('button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    ui[field] = b.getAttribute('data-v');
+    if (field === 'view') {
+      document.getElementById('wrap-before').hidden = (ui.view === 'after');
+      document.getElementById('wrap-after').hidden = (ui.view === 'before');
+    }
+    rerender();
+  });
+}
+bindSeg('seg-view', 'view');
+bindSeg('seg-theme', 'theme');
+bindSeg('seg-lang', 'lang');
+
+rerender();
+pushLog('原型就绪 · 语言 ' + ui.lang + ' · 主题 ' + ui.theme, 't');
+</script>
+</body>
+</html>

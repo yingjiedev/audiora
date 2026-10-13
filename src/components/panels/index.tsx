@@ -31,7 +31,11 @@ export default React.memo(Panels, () => true);
 
 const styles = StyleSheet.create({
     host: {
-        ...StyleSheet.absoluteFillObject,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         zIndex: 15000,
         elevation: 15000,
     },

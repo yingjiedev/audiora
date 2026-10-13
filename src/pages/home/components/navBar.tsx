@@ -6,7 +6,7 @@ import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import { useNavigation } from "@react-navigation/native";
 import { showPanel } from "@/components/panels/usePanel";
-import Color from "color";
+import { controlSize, radius, spacing } from "@/constants/designSystem";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -17,68 +17,27 @@ export default function NavBar() {
 
     return (
         <View style={styles.appbar}>
-            <View style={styles.titleRow}>
-                <View style={styles.tabs}>
-                    <View style={styles.activeTab}>
-                        <ThemeText fontSize="appbar" fontWeight="bolder">
-                            {t("home.recommend")}
-                        </ThemeText>
-                        <View
-                            style={[
-                                styles.activeLine,
-                                { backgroundColor: colors.accentCool },
-                            ]}
-                        />
-                    </View>
-                    <Pressable
-                        style={styles.tabButton}
-                        onPress={() => navigation.navigate(ROUTE_PATH.TOP_LIST)}>
-                        <ThemeText
-                            fontSize="title"
-                            fontWeight="semibold"
-                            fontColor="textSecondary">
-                            {t("home.discovery")}
-                        </ThemeText>
-                    </Pressable>
-                </View>
+            <View style={styles.searchRow}>
                 <Pressable
+                    style={styles.searchTarget}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("home.clickToSearch")}
+                    onPress={() => navigation.navigate(ROUTE_PATH.SEARCH_PAGE)}>
+                    <View style={[styles.searchBar, { backgroundColor: colors.surface }]}>
+                        <Icon name="magnifying-glass" size={rpx(30)} color={colors.textSecondary} />
+                        <ThemeText fontSize="description" fontColor="textSecondary" numberOfLines={1} style={styles.searchText}>
+                            {t("home.clickToSearch")}
+                        </ThemeText>
+                    </View>
+                </Pressable>
+                <Pressable
+                    accessibilityRole="button"
                     accessibilityLabel={t("sidebar.scheduleClose")}
                     style={styles.roundButton}
                     onPress={() => showPanel("TimingClose")}>
                     <Icon name="alarm-outline" size={rpx(38)} color={colors.text} />
                 </Pressable>
             </View>
-
-            <Pressable
-                style={[
-                    styles.searchBar,
-                    {
-                        backgroundColor: Color(colors.primary)
-                            .alpha(0.07)
-                            .toString(),
-                    },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={t("home.clickToSearch")}
-                onPress={() => navigation.navigate(ROUTE_PATH.SEARCH_PAGE)}>
-                <Icon
-                    name="magnifying-glass"
-                    size={rpx(30)}
-                    color={colors.textSecondary}
-                />
-                <ThemeText
-                    fontSize="description"
-                    fontColor="textSecondary"
-                    numberOfLines={1}
-                    style={styles.searchText}>
-                    {t("home.clickToSearch")}
-                </ThemeText>
-                <Icon
-                    name="crosshair"
-                    size={rpx(31)}
-                    color={colors.textSecondary}
-                />
-            </Pressable>
         </View>
     );
 }
@@ -86,53 +45,38 @@ export default function NavBar() {
 const styles = StyleSheet.create({
     appbar: {
         width: "100%",
-        height: rpx(170),
-        paddingHorizontal: rpx(24),
-        paddingTop: rpx(4),
+        paddingHorizontal: spacing.xxxl,
+        paddingTop: spacing.xxs,
         backgroundColor: "transparent",
     },
-    titleRow: {
-        height: rpx(84),
+    searchRow: {
+        minHeight: Math.max(44, controlSize.minimumTouch),
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        gap: spacing.md,
     },
-    tabs: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    activeTab: {
-        alignItems: "flex-start",
+    searchTarget: {
+        flex: 1,
+        minWidth: 0,
+        minHeight: Math.max(44, controlSize.minimumTouch),
         justifyContent: "center",
-    },
-    tabButton: {
-        minHeight: rpx(64),
-        marginLeft: rpx(28),
-        justifyContent: "center",
-    },
-    activeLine: {
-        width: rpx(54),
-        height: rpx(6),
-        marginTop: rpx(2),
-        borderRadius: rpx(3),
     },
     roundButton: {
-        width: rpx(64),
-        height: rpx(64),
-        borderRadius: rpx(32),
+        width: Math.max(44, controlSize.minimumTouch),
+        height: Math.max(44, controlSize.minimumTouch),
         alignItems: "center",
         justifyContent: "center",
     },
     searchBar: {
-        height: rpx(64),
-        paddingHorizontal: rpx(20),
-        borderRadius: rpx(32),
+        minHeight: rpx(60),
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.pill,
         flexDirection: "row",
         alignItems: "center",
     },
     searchText: {
         flex: 1,
         minWidth: 0,
-        marginHorizontal: rpx(12),
+        marginLeft: spacing.sm,
     },
 });

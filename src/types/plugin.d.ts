@@ -7,8 +7,10 @@ declare namespace IPlugin {
         userAgent?: string;
         /** 音质 */
         quality?: IMusic.IQualityKey;
-        /** 加密音频源所需的密钥，由播放器代理消费 */
+        /** @deprecated Wrapped EKey is no longer unpacked by the host. */
         ekey?: string;
+        /** Raw song key: canonical base64, base64: prefix, or explicit hex: prefix. */
+        qmcRawKey?: string;
         /** CENC 音频源所需的内容密钥，由播放器代理消费 */
         cek?: string;
     }
@@ -126,8 +128,18 @@ declare namespace IPlugin {
         author?: string;
         /** 插件描述，支持markdown */
         description?: string;
-        /** 支持的音质列表 */
+        /**
+         * 插件支持的音质列表（Audiora 扩展协议）。
+         * MusicFree 官方协议里没有这个字段，官方插件只会用到 4 档：
+         * low / standard / high / super（旧版写法 supportedAudioQuality，本 app 不解析）。
+         */
         supportedQualities?: IMusic.IQualityKey[];
+        /**
+         * 音质协议模式（内部字段，由 app 探测后写入，插件无需声明）。
+         * - extended：插件声明了 Audiora 扩展音质键（96k/320k/flac/master…），按声明档位展示
+         * - official：MusicFree 官方插件，只按官方 4 档处理
+         */
+        qualityMode?: "extended" | "official";
         /** 插件可请求的 MV/视频质量档位（兼容字符串键与结构化描述） */
         supportedVideoQualities?: (string | IVideoQualityOption)[];
         /** 用户自定义输入 */

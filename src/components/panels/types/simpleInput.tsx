@@ -35,7 +35,7 @@ export default function SimpleInput(props: ISimpleInputProps) {
         autoFocus = true,
     } = props;
 
-    const [input, setInput] = useState("");
+    const [input, setInput] = useState(props.defaultValue ?? "");
     const colors = useColors();
 
     return (

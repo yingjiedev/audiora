@@ -2,64 +2,61 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 
 import NavBar from "./components/navBar";
-import MusicBar from "@/components/musicBar";
+import PlayerDock from "@/components/musicBar/playerDock";
 import { SafeAreaView } from "react-native-safe-area-context";
 import StatusBar from "@/components/base/statusBar";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
 import globalStyle from "@/constants/globalStyle";
 import Theme from "@/core/theme";
 import HomeBody from "./components/homeBody";
-import HomeBodyHorizontal from "./components/homeBodyHorizontal";
-import useOrientation from "@/hooks/useOrientation";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
 import Config from "@/core/appConfig";
 import HomeBottomNavigation from "./components/HomeBottomNavigation";
 import MyMusicOverview from "./components/MyMusicOverview";
 import MusicLibraryOverview from "./components/MusicLibraryOverview";
+import { openPlayer } from "@/core/playerOverlay";
 
 function Home() {
-    const orientation = useOrientation();
-    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<"home" | "library" | "mine">("home");
+    const [dockHeight, setDockHeight] = useState(0);
     
     useEffect(() => {
         // 检查是否需要在启动后打开播放详情页
         if (Config.getConfig("basic.openPlayDetailOnLaunch")) {
-            // 延迟一下导航，确保页面已经渲染完成
+            // 延迟一下，确保页面已经渲染完成
             setTimeout(() => {
-                navigate(ROUTE_PATH.MUSIC_DETAIL);
+                openPlayer();
             }, 100);
         }
-    }, [navigate]);
+    }, []);
 
     return (
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
-            <HorizontalSafeAreaView style={globalStyle.flex1}>
-                {orientation === "vertical" && activeTab === "mine" ? (
+            <HorizontalSafeAreaView style={[globalStyle.flex1, { marginBottom: dockHeight }]}>
+                {activeTab === "mine" ? (
                     <MyMusicOverview />
-                ) : orientation === "vertical" && activeTab === "library" ? (
+                ) : activeTab === "library" ? (
                     <MusicLibraryOverview />
                 ) : (
                     <>
                         <NavBar />
-                        {orientation === "vertical" ? (
-                            <HomeBody />
-                        ) : (
-                            <HomeBodyHorizontal />
-                        )}
+                        <HomeBody />
                     </>
                 )}
             </HorizontalSafeAreaView>
-            <MusicBar />
-            {orientation === "vertical" && (
-                <HomeBottomNavigation
-                    activeTab={activeTab}
-                    onSelectHome={() => setActiveTab("home")}
-                    onSelectLibrary={() => setActiveTab("library")}
-                    onSelectMine={() => setActiveTab("mine")}
-                />
-            )}
+            <PlayerDock
+                collapseKey={activeTab}
+                onDockHeightChange={setDockHeight}
+                bottomNavigation={(
+                    <HomeBottomNavigation
+                        integrated
+                        activeTab={activeTab}
+                        onSelectHome={() => setActiveTab("home")}
+                        onSelectLibrary={() => setActiveTab("library")}
+                        onSelectMine={() => setActiveTab("mine")}
+                    />
+                )}
+            />
         </SafeAreaView>
     );
 }
