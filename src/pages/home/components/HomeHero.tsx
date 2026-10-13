@@ -78,7 +78,7 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
                         </View>
                     </View>
                     <View style={[styles.footer, styles.copy, { minHeight: layout.footerHeight }]}>
-                        <ThemeText numberOfLines={2} fontSize="title" fontWeight="semibold" color={foreground}>{title}</ThemeText>
+                        <MarqueeText text={title} fontSize="title" fontWeight="semibold" color={foreground} />
                         <ThemeText numberOfLines={1} fontSize="tag" color={secondary} style={styles.description}>{featuredMusic ? [artist, sourceName].filter(Boolean).join(" · ") : t("home.scanLocal")}</ThemeText>
                     </View>
                 </>}

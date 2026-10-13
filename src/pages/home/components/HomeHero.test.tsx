@@ -135,6 +135,9 @@ describe("Home listening card", () => {
             const backgrounds = record ? mockColors.featuredRecordGradient : [background];
             backgrounds.forEach(surface => expect(contrastRatio(node.props.color, surface)).toBeGreaterThanOrEqual(4.5));
         });
+        const title = renderer.root.findByType("MarqueeText" as any);
+        const titleBackgrounds = record ? mockColors.featuredRecordGradient : [actualCard];
+        titleBackgrounds.forEach(surface => expect(contrastRatio(title.props.color, surface)).toBeGreaterThanOrEqual(4.5));
         press("home.continueListening · Real song");
         press("musicDetail.a11y.play");
         expect(mockPlay).toHaveBeenCalledWith(song);
@@ -175,24 +178,26 @@ describe("Home listening card", () => {
         expect(compactHeight).toBeLessThan(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-window" }).props.style).minHeight);
     });
 
-    it("keeps a long record title in the footer marquee while resuming the complete song", () => {
+    it.each(["window", "record"] as const)("keeps a long %s title in the footer marquee while resuming the complete song", appearance => {
         const longSong = { ...song, title: "等待我再回来（等待我再回来完整版现场演唱）" };
         act(() => {
-            renderer = TestRenderer.create(<HomeHero music={longSong} appearance="record" />);
+            renderer = TestRenderer.create(<HomeHero music={longSong} appearance={appearance} />);
         });
         const marquee = renderer.root.findByType("MarqueeText" as any);
         expect(marquee.props.text).toBe(longSong.title);
-        expect(marquee.props.fontSize).toBe("tag");
-        expect(marquee.props.color).toBe(mockColors.onFeaturedRecord);
-        const heading = renderer.root.findAllByType("ThemeText" as any)
-            .find(node => node.props.children === "home.continueListening")!;
-        expect(heading.props.fontSize).toBe("section");
-        expect(heading.props.numberOfLines).toBe(1);
+        expect(marquee.props.fontSize).toBe(appearance === "record" ? "tag" : "title");
+        expect(marquee.props.color).toBe(appearance === "record" ? mockColors.onFeaturedRecord : mockColors.onFeaturedWindow);
+        if (appearance === "record") {
+            const heading = renderer.root.findAllByType("ThemeText" as any)
+                .find(node => node.props.children === "home.continueListening")!;
+            expect(heading.props.fontSize).toBe("section");
+            expect(heading.props.numberOfLines).toBe(1);
+        }
         expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === longSong.title)).toBe(false);
-        expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === "Real artist")).toBe(true);
+        expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === (appearance === "record" ? "Real artist" : "Real artist · Source label"))).toBe(true);
         press(`home.continueListening · ${longSong.title}`);
         expect(mockPlay).toHaveBeenCalledWith(longSong);
-        act(() => renderer.update(<HomeHero music={song} appearance="record" />));
+        act(() => renderer.update(<HomeHero music={song} appearance={appearance} />));
         expect(renderer.root.findByType("MarqueeText" as any).props.text).toBe(song.title);
     });
 });

@@ -528,3 +528,11 @@ Dual 预览已保留数据安装：应用源码 2f87d42c8bf020fdc8a14b3d3173134f
 应用源码 `0bff44b55462f35bceaf798ffc3433497cda6f30`，预览 `0.3.1-preview.i88.copy.20261013.191710` / `1791890231`，SHA-256 `B9424E3A8F5D00404E19699D7EC3066A0FDCC0C86636D938E6781884B1133077`。实际 APK、签名、字体、16 个 bundle 模块和既有素材核对通过；恢复用户提供的无线调试连接后，与实际安装证书一致，保留数据覆盖安装 Success。`2026-10-13T19:34:49.1430122+08:00` 确认精确版本后停止设备操作，没有自动启动或截屏。
 
 Native visual QA final result: **blocked — pending user acceptance**。不将修改前截图或源码/包检查作为新包原生视觉通过证据。
+
+# 2026-10-13 白色听歌卡长歌名单行滚动
+
+按用户要求将白色视窗卡原两行歌名改为单行 MarqueeText；短歌名静止，超宽自动循环滚动，沿用 title 字号/半粗、主题前景和真实播放行为。作者/来源、图片、随机外观与折页手势保持。详见 `docs/design/home-window-marquee-20261013.md`。
+
+聚焦 3 套件 / 56 项、完整颜色 19 套件 / 239 项、颜色/UI 守卫、runtime、修改文件 ESLint 与 whitespace 通过；全仓 lint / TypeScript 保留既有诊断。预览交付信息完成后补充。
+
+Native visual QA final result: **blocked — pending user acceptance**。修改前截图、TestRenderer 与源码检查不作为新包原生视觉通过证据。
