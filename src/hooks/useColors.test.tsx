@@ -27,7 +27,7 @@ describe("shared theme resolution", () => {
         const capture = (value: ReturnType<typeof useColors>) => values.push(value);
         let renderer: TestRenderer.ReactTestRenderer;
         act(() => {
-            renderer = TestRenderer.create(<Probe capture={capture} />); 
+            renderer = TestRenderer.create(<Probe capture={capture} />);
         });
         const original = values.at(-1)!;
         mockTheme = { dark: false, colors: { ...mockTheme.colors, primary: "#FFCC00" } };
