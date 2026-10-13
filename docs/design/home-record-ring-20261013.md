@@ -31,3 +31,11 @@ Use case: precise-object-edit. Image 1 is the sole edit target, a transparent is
 聚焦 7 套件 / 124 项、颜色 19 套件 / 234 项通过。回归确认图片有明确正方形尺寸、底部 alpha 画布在裁切范围内、绘制区没有不透明底，原真实播放、收藏、昼夜联动及完整折页继续通过。颜色/UI/motion/runtime guards、修改文件 ESLint 和 diff whitespace 通过；扩展 TypeScript 在修改文件无诊断，全仓 lint 既有 14 错误 / 100 警告未修改，无关自动格式化已恢复。
 
 Native visual QA final result: **blocked — pending user acceptance**。指定原稿与生成素材已打开检查，alpha 数据不能替代原生合成像素、手势或自定义主题验收。按仓库规则保留数据安装并确认版本后停止设备操作。
+
+## 预览交付
+
+- 应用源码 `0c1d6438eaf57bc6c6b25f0e44be4a7034b2c1b3`，版本 `0.3.1-preview.i88.ring.20261013.181654` / `1791886616`，包名 `io.github.yingjiedev.audiora`，ABI arm64-v8a。后续提交只补交付记录。
+- APK `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.ring.20261013.181654-arm64-v8a-release.apk`，SHA-256 `F5379F670D833BCA173DAEA4F3DBDD3243BFAAB5F40AE1C3854F54F19D409ADB`。干净短路径构建源、实际包版本/ABI、v2 单签名者和三份字体字节/哈希通过。
+- 十一个 source-map 模块逐字匹配，APK Hermes 与生成 bundle 字节一致；完整三层唱片、浅色原图、月夜花草图与播放器 LP 四图片可见像素、尺寸、透明度均与源码一致。包内唱片中心孔 alpha=0，哑黑底圈 RGBA=29,29,28,251，外光 alpha=75/39/9/1 五处采样与源图完全一致。
+- 与实际安装证书相同，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.resume.20261013.173748` / `1791884270`。`2026-10-13T18:21:24.5828430+08:00` 确认精确版本后停止设备操作，未自动启动、截屏、手势或模拟器验收。
+- 明细 `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.ring.20261013.181654-verification.json`。原生合成视觉仍 `pending_user`，PR #105 保持 open。

@@ -28,3 +28,5 @@ Native visual QA final result: **blocked — pending user acceptance**。当前�
 - 十一个 source-map 模块逐字匹配，APK Hermes 与生成 bundle 字节一致；透明首页唱片（1254×1254，角落 alpha=0）、浅色原图（1942×809）、月夜花草图（1931×814）及播放器 LP（1254×1254，角落 alpha=0）四图片可见像素与源码一致。素材文件没有改色或替换。
 - 与实际安装证书一致，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.night.20261013.170241` / `1791882163`。`2026-10-13T17:41:27.8556315+08:00` 确认精确版本后停止设备操作，未自动启动、截屏、手势或模拟器验收。
 - 明细 `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.resume.20261013.173748-verification.json`。原生视觉仍 `pending_user`，PR #105 保持 open。
+
+后续按用户指出的两层材质追加哑黑底圈与底圈外半透明光晕，保留本轮布局及拾音联动。[当前素材、透明度与交付](home-record-ring-20261013.md)。
