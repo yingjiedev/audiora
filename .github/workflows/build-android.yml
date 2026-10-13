@@ -4,9 +4,9 @@ on:
     workflow_dispatch:
         inputs:
             version:
-                description: 'Version to build (e.g., v0.6.48)'
+                description: 'Version to build (e.g., v0.3.0)'
                 required: true
-                default: 'v0.2.0'
+                default: 'v0.3.0'
                 type: string
     push:
         tags:
