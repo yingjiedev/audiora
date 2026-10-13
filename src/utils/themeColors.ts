@@ -99,12 +99,14 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const onFeaturedAction = bestForeground(featuredActionSurface, [mediaOnDark, lightColors.text, controlNeutralDark]);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
-    const activityUnrecorded = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.10).hex();
-    const activityEmpty = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.18).hex();
+    const activityUnrecorded = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.04).hex();
+    const activityEmpty = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.09).hex();
     const activityBackgrounds = [cardBackground, activityUnrecorded, activityEmpty];
     const activityOutline = readableAccent(Color(onCardInsetSecondary).mix(Color(cardBackground), 0.5).hex(), activityBackgrounds, colorContrastMinimum.control);
-    const activityLow = readableAccent(Color(primaryOpaque).mix(Color(blendOver(card, page)), 0.5).hex(), activityBackgrounds, colorContrastMinimum.control);
-    const activityStrong = readableAccent(primaryText, activityBackgrounds, colorContrastMinimum.text);
+    // A data scale needs a wider lightness range than the selected-control color.
+    // Soften brief activity without losing its contrast against zero/unknown days.
+    const activityLow = readableAccent(Color(primaryOpaque).mix(Color(cardBackground), 0.65).saturate(-0.25).hex(), activityBackgrounds, colorContrastMinimum.control);
+    const activityStrong = readableAccent(Color(primaryOpaque).lightness(dark ? 86 : 32).hex(), activityBackgrounds, colorContrastMinimum.text);
     const activityLevels = [0, 0.33, 0.66, 1].map(weight => readableAccent(Color(activityLow).mix(Color(activityStrong), weight).hex(), activityBackgrounds, colorContrastMinimum.control));
     const danger = readableAccent(safeColor(colors.danger, preset.danger).hex(), backgrounds, colorContrastMinimum.text);
     return {

@@ -80,7 +80,28 @@ describe("Audiora semantic colors", () => {
             expect(contrastRatio(fill, colors.activityEmpty)).toBeGreaterThanOrEqual(3);
             expect(contrastRatio(fill, colors.card)).toBeGreaterThanOrEqual(3);
         }
-        expect(colors.activityLevels[3]).toBe(colors.active);
+        expect(contrastRatio(colors.activityLevels[3], colors.activityEmpty)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it.each([false, true])("gives adjacent activity levels a visible lightness step (dark=%s)", dark => {
+        const palette = dark ? darkColors : lightColors;
+        const colors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
+        const luminances = colors.activityLevels.map(fill => Color(fill).luminosity());
+        for (let index = 1; index < luminances.length; index += 1) {
+            expect(dark ? luminances[index] - luminances[index - 1] : luminances[index - 1] - luminances[index]).toBeGreaterThan(0);
+            // Product visual hierarchy, in addition to the unchanged 3:1 cell contrast.
+            expect(contrastRatio(colors.activityLevels[index - 1], colors.activityLevels[index])).toBeGreaterThanOrEqual(1.25);
+        }
+        expect(contrastRatio(colors.activityLevels[0], colors.activityLevels[3])).toBeGreaterThanOrEqual(dark ? 2 : 3);
+    });
+
+    it("softens the light calendar's neutral tiles and brief activity", () => {
+        const colors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+        expect(Color(colors.activityLevels[0]).luminosity()).toBeGreaterThanOrEqual(0.25);
+        expect(Color(colors.activityLevels[0]).saturationl()).toBeLessThan(80);
+        expect(contrastRatio(colors.activityUnrecorded, lightColors.card)).toBeLessThan(1.1);
+        expect(contrastRatio(colors.activityEmpty, lightColors.card)).toBeLessThan(1.2);
+        expect(Color(colors.activityUnrecorded).luminosity()).toBeGreaterThan(Color(colors.activityEmpty).luminosity());
     });
 
     it.each([false, true])("keeps actual text, controls and state colors readable (dark=%s)", dark => {
