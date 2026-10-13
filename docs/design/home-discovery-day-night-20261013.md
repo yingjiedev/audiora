@@ -28,3 +28,11 @@ Use case: lighting-weather edit. Asset type: standalone opaque artwork for a mus
 聚焦 7 套件 / 124 项通过，颜色 19 套件 / 234 项通过。新增回归覆盖默认浅图、深图、切回浅图与加载禁用保持；深卡文字独立底、同色接缝、真实播放与紧凑高度继续通过。颜色、UI、motion、runtime guards 通过；修改文件 ESLint 无错误/警告，扩展 TypeScript 在修改文件无诊断。全仓 lint 仍有既有 14 错误 / 100 警告，无关自动格式化已恢复，未扩大基线。
 
 Native visual QA final result: **blocked — pending user acceptance**。素材已检查，原生像素与折叠手感仍待用户验收。按仓库规则安装并确认版本后停止设备操作，不自动截屏、启动或执行手势。
+
+## 预览交付
+
+- 应用源码 `911c442e2b63da764eea190b8f72d07587f4b64d`，版本 `0.3.1-preview.i88.night.20261013.170241` / `1791882163`，包名 `io.github.yingjiedev.audiora`，ABI arm64-v8a。后续提交只补交付记录。
+- APK `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.night.20261013.170241-arm64-v8a-release.apk`，SHA-256 `6366ACF17FA6E2DE35A46625EB12C9FB94EBC12CDD4DA8FE7AE8FB7385E786C7`。干净短路径构建源、实际版本/ABI、v2 单签名者和三份字体字节/哈希通过。
+- 十一个 source-map 模块逐字匹配，APK Hermes 与生成 bundle 字节一致；浅色原图、月夜新图、移位摄影棚原图及播放器 LP 四张图片可见像素/尺寸/透明度与源码一致。
+- 与手机实际安装证书相同，`adb install -r` 返回 Success，保留数据升级自 `0.3.1-preview.i88.studio.20261013.162020` / `1791879622`。`2026-10-13T17:06:38.0636572+08:00` 确认精确版本后停止设备操作，未自动启动、截图、手势或模拟器验收。
+- 明细 `D:\audiora-previews\issue-88\Audiora-v0.3.1-preview.i88.night.20261013.170241-verification.json`。原生视觉与手感仍 `pending_user`；PR #105 保持 open，未合并。
