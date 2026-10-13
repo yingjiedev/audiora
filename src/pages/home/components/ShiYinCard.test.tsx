@@ -12,7 +12,7 @@ let mockLoading = false;
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { homeDiscoveryStudio: 7 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { homeDiscoveryWindow: 7, homeDiscoveryNight: 8 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/hooks/useColors", () => () => mockColors);
 jest.mock("./homeBody/useShiYin", () => () => ({ loading: mockLoading, start: mockStart }));
@@ -62,9 +62,24 @@ describe("Featured discovery companion", () => {
         expect(StyleSheet.flatten(target.props.style).boxShadow[0].color).toBe(mockColors.featuredRecordHalo);
         expect(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-discovery-clip" }).props.style).overflow).toBe("hidden");
         const artwork = renderer.root.findByType(Image);
-        expect(artwork.props.source).toBe(7);
+        expect(artwork.props.source).toBe(8);
         expect(StyleSheet.flatten(artwork.parent!.props.style).height).toBe(homeFeatureLayout.record.artworkHeight);
         act(() => target.props.onPress());
         expect(mockStart).toHaveBeenCalledTimes(1);
+    });
+
+    it("follows the deck appearance through updates while retaining busy queue state", () => {
+        act(() => {
+            renderer = TestRenderer.create(<ShiYinCard topListPlugins={[]} />);
+        });
+        expect(renderer.root.findByType(Image).props.source).toBe(7);
+        mockLoading = true;
+        act(() => renderer.update(<ShiYinCard topListPlugins={[]} appearance="record" />));
+        expect(renderer.root.findByType(Image).props.source).toBe(8);
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.shiyin" }).props.disabled).toBe(true);
+        act(() => renderer.update(<ShiYinCard topListPlugins={[]} appearance="window" />));
+        expect(renderer.root.findByType(Image).props.source).toBe(7);
+        expect(renderer.root.findByProps({ accessibilityLabel: "home.shiyin" }).props.accessibilityState).toEqual({ disabled: true, busy: true });
+        expect(mockStart).not.toHaveBeenCalled();
     });
 });

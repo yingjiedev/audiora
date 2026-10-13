@@ -81,13 +81,15 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         Color(featuredRecordSurface).mix(Color(mediaScrim), 0.10).hex(),
     ];
     const featuredRecordFoldSurface = Color(featuredRecordSurface).mix(Color(mediaScrim), 0.04).hex();
+    // Only the artwork seam fades; an opaque backing protects all heading text.
+    const featuredRecordArtworkFade = [featuredRecordSurface, Color(featuredRecordSurface).alpha(0).toString()];
     const featuredRecordFoldGradient = featuredRecordGradient.map(recordSurface => Color(recordSurface).mix(Color(mediaScrim), 0.04).hex());
     const featuredRecordSpineGradient = [
         Color(featuredRecordFoldSurface).alpha(0).toString(),
         Color(featuredRecordFoldSurface).mix(Color(mediaOnDark), 0.08).hex(),
         Color(featuredRecordFoldSurface).mix(Color(mediaScrim), 0.45).hex(),
     ];
-    // The full-strength grooves occupy a separate art column, never the text background.
+    // Retained for existing consumers; Home's studio photograph is fully opaque.
     const featuredRecordTextureOpacity = 1;
     const featuredRecordHalo = Color(darkColors.textSecondary).mix(Color(primaryOpaque), 0.12).alpha(dark ? 0.28 : 0.42).toString();
     const featuredRecordShadow = Color(mediaScrim).alpha(dark ? 0.24 : 0.12).toString();
@@ -127,7 +129,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         onFeaturedCompanion,
         onFeaturedCompanionSecondary,
         featuredWindowSurface, featuredWindowFoldSurface, onFeaturedWindow, onFeaturedWindowSecondary,
-        featuredRecordSurface, featuredRecordGradient, featuredRecordFoldSurface, featuredRecordFoldGradient,
+        featuredRecordSurface, featuredRecordGradient, featuredRecordFoldSurface, featuredRecordFoldGradient, featuredRecordArtworkFade,
         featuredRecordSpineGradient, featuredRecordTextureOpacity, onFeaturedRecord, onFeaturedRecordSecondary,
         featuredRecordHalo, featuredRecordShadow, featuredRecordRim,
         featuredActionSurface, onFeaturedAction,

@@ -23,6 +23,7 @@ export default function ShiYinCard(props: {
     const { loading, start } = useShiYin(props);
     const colors = useColors();
     const { t } = useI18N();
+    const artwork = props.appearance === "record" ? ImgAsset.homeDiscoveryNight : ImgAsset.homeDiscoveryWindow;
     const layout = homeFeatureLayout[props.appearance ?? "window"];
     const shadow = props.appearance === "record" ? homeRecordShadow(colors.featuredRecordHalo, colors.featuredRecordShadow) : undefined;
     return (
@@ -35,7 +36,7 @@ export default function ShiYinCard(props: {
             style={[styles.card, { minHeight: layout.minimumHeight, backgroundColor: colors.featuredWindowSurface, boxShadow: shadow }]}>
             <View testID="home-discovery-clip" style={styles.cardClip}>
                 <View style={[styles.artworkStage, { height: layout.artworkHeight }]}>
-                    <Image accessible={false} source={ImgAsset.homeDiscoveryStudio} resizeMode="cover" resizeMethod="resize" style={styles.artwork} />
+                    <Image accessible={false} source={artwork} resizeMode="cover" resizeMethod="resize" style={styles.artwork} />
                 </View>
                 <View style={[styles.footer, { minHeight: Math.max(44, controlSize.minimumTouch, layout.footerHeight) }]}>
                     <View style={styles.copy}>
