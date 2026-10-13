@@ -21,7 +21,7 @@ jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeRecordStudio: 7 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeRecordHalo: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => () => "Source label" }));
 jest.mock("@/core/playerOverlay", () => ({ openPlayer: () => mockOpen() }));
@@ -151,9 +151,8 @@ describe("Home listening card", () => {
         const rim = renderer.root.findByProps({ testID: "home-record-rim" });
         expect(rim.props.pointerEvents).toBe("none");
         expect(StyleSheet.flatten(rim.props.style).borderColor).toBe(mockColors.featuredRecordRim);
-        const title = renderer.root.findByProps({ children: song.title });
-        const titleStyle = StyleSheet.flatten(title.props.style);
-        expect(parseFloat(StyleSheet.flatten(artwork.props.style).width) + parseFloat(titleStyle.maxWidth)).toBeLessThanOrEqual(100);
+        const artworkStyle = StyleSheet.flatten(artwork.props.style);
+        expect(artworkStyle.backgroundColor).toBeUndefined();
         const vinyl = artwork.findAll(node => node.props.source === 7)[0];
         const imageStyle = StyleSheet.flatten(vinyl.props.style);
         // A bounded bitmap is required on native Image; offsets alone allowed the
@@ -163,6 +162,9 @@ describe("Home listening card", () => {
         expect(imageStyle.opacity).toBe(1);
         expect(imageStyle.top + imageStyle.height).toBeGreaterThan(0);
         expect(imageStyle.right + imageStyle.width).toBeGreaterThan(0);
+        // The expanded alpha canvas must reach the bottom of the art viewport;
+        // cropping it to the old LP height cut off the matte ring and outer glow.
+        expect(imageStyle.top + imageStyle.height).toBeLessThanOrEqual(artworkStyle.height);
         expect(vinyl.props.resizeMode).toBe("contain");
         expect(renderer.root.findAllByProps({ testID: "home-record-art-stage" })).toHaveLength(0);
         const compactHeight = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-record" }).props.style).minHeight;

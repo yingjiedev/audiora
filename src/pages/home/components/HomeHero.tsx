@@ -50,7 +50,7 @@ export default function HomeHero({ music, joined = false, appearance = "window" 
         <View testID={`home-hero-${appearance}`} style={[styles.card, joined && styles.joined, { minHeight: layout.minimumHeight, backgroundColor: record ? colors.featuredRecordSurface : colors.featuredWindowSurface }]}>
             {record && <LinearGradient testID="home-record-lighting" pointerEvents="none" colors={colors.featuredRecordGradient} locations={[0, 0.52, 1]} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} style={StyleSheet.absoluteFill} />}
             {record && <View testID="home-record-art-column" pointerEvents="none" style={styles.recordArtColumn}>
-                <Image source={ImgAsset.homeRecordStudio} accessible={false} resizeMode="contain" resizeMethod="resize" style={[styles.recordTexture, { opacity: colors.featuredRecordTextureOpacity }]} />
+                <Image source={ImgAsset.homeRecordHalo} accessible={false} resizeMode="contain" resizeMethod="resize" style={[styles.recordTexture, { opacity: colors.featuredRecordTextureOpacity }]} />
             </View>}
             <Pressable
                 accessibilityRole="button"
@@ -113,8 +113,10 @@ const styles = StyleSheet.create({
     recordHeading: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, overflow: "hidden" },
     recordLabel: { maxWidth: "56%" },
     recordTitle: { marginTop: spacing.xs, maxWidth: "56%", fontSize: fontRpx(48) },
-    recordArtColumn: { position: "absolute", width: "44%", right: 0, top: 0, height: rpx(156), overflow: "hidden" },
-    recordTexture: { position: "absolute", width: rpx(392), height: rpx(392), right: -rpx(196), top: -rpx(236) },
+    // The bitmap includes the matte backing and its soft halo. Allow the complete
+    // visible arc through; the card's outer rounded clip still owns its perimeter.
+    recordArtColumn: { position: "absolute", width: "54%", right: 0, top: 0, height: rpx(186), overflow: "hidden" },
+    recordTexture: { position: "absolute", width: rpx(488), height: rpx(488), right: -rpx(244), top: -rpx(314) },
     recordRim: { ...StyleSheet.absoluteFill, borderRadius: radius.xl, borderWidth: StyleSheet.hairlineWidth },
     recordFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
     recordCover: { width: rpx(88), height: rpx(88), borderRadius: radius.sm },
