@@ -5,6 +5,7 @@ import { darkColors, lightColors } from "@/constants/colorPalette";
 import { resolveThemeColors } from "@/utils/themeColors";
 import { blendOver, contrastRatio } from "@/utils/colorContrast";
 import HomeHero from "./HomeHero";
+import type { HomeFeatureAppearance } from "./homeFeatureAppearance";
 
 const song: IMusic.IMusicItem = { id: "one", platform: "remote", title: "Real song", artist: "Real artist", album: "Album", duration: 180, artwork: "cover" };
 const mockNavigate = jest.fn();
@@ -19,7 +20,7 @@ let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pa
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeListeningClouds: 7 } }));
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, playerVinyl: 7 } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => () => "Source label" }));
 jest.mock("@/core/playerOverlay", () => ({ openPlayer: () => mockOpen() }));
@@ -91,9 +92,11 @@ describe("Home listening card", () => {
         expect(mockPause).not.toHaveBeenCalled();
     });
 
-    it("uses the same associated artwork as the song row for local tracks", () => {
+    it.each(["window", "record"] as const)("uses the same associated artwork as the song row for local tracks in %s", appearance => {
         mockAssociatedArtwork = "file:///actual-associated-cover.jpg";
-        render({ ...song, platform: "local", artwork: "" });
+        act(() => {
+            renderer = TestRenderer.create(<HomeHero music={{ ...song, platform: "local", artwork: "" }} appearance={appearance} />);
+        });
         expect(renderer.root.findByType("FastImage" as any).props.source).toBe(mockAssociatedArtwork);
     });
 
@@ -109,20 +112,28 @@ describe("Home listening card", () => {
         ["dark", darkColors, true],
         ["custom", { ...lightColors, primary: "#7459C7" }, false],
         ["transparent", { ...lightColors, card: "rgba(255,255,255,0.72)", surface: "rgba(238,244,255,0.8)" }, false],
-    ])("keeps the media card and play control readable in the %s theme", (_mode, colors, dark) => {
-        mockColors = resolveThemeColors({ ...colors, background: colors.pageBackground }, dark);
-        render(song);
+    ].flatMap(row => ["window", "record"].map(appearance => [...row, appearance])))
+    ("keeps the media card and play control readable in the %s theme / %s", (_mode, colors, dark, appearance) => {
+        const palette = colors as typeof lightColors;
+        mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark as boolean);
+        act(() => {
+            renderer = TestRenderer.create(<HomeHero music={song} appearance={appearance as HomeFeatureAppearance} />);
+        });
         const play = renderer.root.findByProps({ accessibilityLabel: "musicDetail.a11y.play" });
         const target = StyleSheet.flatten(play.props.style);
         expect(target.width).toBeGreaterThanOrEqual(44);
         expect(target.height).toBeGreaterThanOrEqual(44);
         const icon = play.findByType("Icon" as any);
-        expect(icon.props.color).toBe(mockColors.onInverse);
-        const actualCard = blendOver(mockColors.featuredSurface, mockColors.pageBackground);
-        const buttonSurface = blendOver(mockColors.inverseSurface, actualCard);
-        expect(contrastRatio(blendOver(mockColors.onInverse, buttonSurface), buttonSurface)).toBeGreaterThanOrEqual(3);
-        expect(contrastRatio(blendOver(mockColors.onFeatured, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
-        expect(contrastRatio(blendOver(mockColors.onFeaturedSecondary, actualCard), actualCard)).toBeGreaterThanOrEqual(4.5);
-        expect(renderer.root.findAllByType("ThemeText" as any).every(node => node.props.color === mockColors.onFeatured || node.props.color === mockColors.onFeaturedSecondary)).toBe(true);
+        const record = appearance === "record";
+        const actualCard = record ? mockColors.featuredRecordSurface : mockColors.featuredWindowSurface;
+        const buttonSurface = record ? mockColors.inverseSurface : mockColors.featuredActionSurface;
+        expect(contrastRatio(blendOver(icon.props.color, buttonSurface), buttonSurface)).toBeGreaterThanOrEqual(3);
+        renderer.root.findAllByType("ThemeText" as any).forEach(node => {
+            const background = node.props.children === "home.continueListening" ? mockColors.featuredRecordSurface : actualCard;
+            expect(contrastRatio(node.props.color, background)).toBeGreaterThanOrEqual(4.5);
+        });
+        press("home.continueListening · Real song");
+        press("musicDetail.a11y.play");
+        expect(mockPlay).toHaveBeenCalledWith(song);
     });
 });

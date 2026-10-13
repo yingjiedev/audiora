@@ -31,6 +31,16 @@ describe("Audiora semantic colors", () => {
         expect(colors.featuredFoldSurface).not.toBe(colors.featuredSurface);
         expect(colors.featuredCompanionSurface).not.toBe(colors.featuredSurface);
         expect(Color(colors.featuredCompanionSurface).alpha()).toBe(1);
+        for (const surface of [colors.featuredWindowSurface, colors.featuredWindowFoldSurface]) {
+            expect(Color(surface).alpha()).toBe(1);
+            for (const text of [colors.onFeaturedWindow, colors.onFeaturedWindowSecondary]) expect(contrastRatio(text, surface)).toBeGreaterThanOrEqual(4.5);
+        }
+        const textureLightest = blendOver(Color("white").alpha(colors.featuredRecordTextureOpacity).toString(), colors.featuredRecordSurface);
+        for (const surface of [colors.featuredRecordSurface, colors.featuredRecordFoldSurface, textureLightest]) {
+            for (const text of [colors.onFeaturedRecord, colors.onFeaturedRecordSecondary]) expect(contrastRatio(text, surface)).toBeGreaterThanOrEqual(4.5);
+        }
+        expect(contrastRatio(colors.onFeaturedAction, colors.featuredActionSurface)).toBeGreaterThanOrEqual(4.5);
+        expect(Color(colors.featuredRecordFoldSurface).luminosity()).toBeLessThan(0.15);
         expect(input).toEqual(before);
     });
 

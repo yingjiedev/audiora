@@ -5,6 +5,7 @@ import { darkColors, lightColors } from "@/constants/colorPalette";
 import { blendOver, contrastRatio } from "@/utils/colorContrast";
 import { resolveThemeColors } from "@/utils/themeColors";
 import HomeFeatureDeck from "./HomeFeatureDeck";
+import { spacing } from "@/constants/designSystem";
 
 const mockNavigate = jest.fn();
 let mockReduced = false;
@@ -48,8 +49,11 @@ describe("Home folded collection", () => {
     let renderer: TestRenderer.ReactTestRenderer;
     beforeEach(() => {
         mockNavigate.mockClear(); mockReduced = false; mockWidth = 375; mockOffset.value = 0; mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+        jest.spyOn(Math, "random").mockReturnValue(0.25);
     });
-    afterEach(() => act(() => renderer?.unmount()));
+    afterEach(() => {
+        act(() => renderer?.unmount()); jest.restoreAllMocks();
+    });
     const render = (count = 5) => act(() => {
         renderer = TestRenderer.create(<HomeFeatureDeck {...props} favoriteCount={count} />);
     });
@@ -110,7 +114,7 @@ describe("Home folded collection", () => {
         expect(StyleSheet.flatten(front.props.style).borderTopLeftRadius).toBeGreaterThan(0);
         act(() => deck.props.onScroll({ contentOffset: { x: width * 0.2 } }));
         act(() => renderer.update(<HomeFeatureDeck {...props} />));
-        expect(angle()).toBe(-36);
+        expect(angle()).toBeCloseTo(-18.72);
         expect(StyleSheet.flatten(face.props.style).opacity).toBe(1);
         expect(deck.props.removeClippedSubviews).toBe(false);
         expect(leaf.props.collapsable).toBe(false);
@@ -125,11 +129,15 @@ describe("Home folded collection", () => {
         expect(spread.width).toBeLessThan(width - 40);
         expect(spread.width).toBeGreaterThan(200);
         const leafWidth = StyleSheet.flatten(deck.findByProps({ testID: "home-feature-fold-paper" }).props.style).width;
-        expect(deck.props.snapToOffsets).toEqual([0, leafWidth, spread.width + 8]);
         const companion = StyleSheet.flatten(deck.findByType("ShiYinCard" as any).parent!.props.style);
         const insets = StyleSheet.flatten(deck.props.contentContainerStyle);
-        // Enough trailing space lets the last card actually reach the final snap offset.
-        expect(companion.width + insets.paddingRight + insets.paddingHorizontal).toBeGreaterThanOrEqual(width);
+        const contentWidth = spread.width + spacing.md + companion.width + insets.paddingHorizontal * 2;
+        const lastSnap = Math.max(0, contentWidth - width);
+        expect(deck.props.snapToOffsets).toEqual([0, leafWidth, lastSnap]);
+        // The last stop is the actual scroll limit; the next card docks at the page inset.
+        // No artificial trailing padding or empty third of the screen.
+        expect(insets.paddingRight).toBeUndefined();
+        expect(contentWidth - lastSnap - insets.paddingHorizontal).toBeCloseTo(width - insets.paddingHorizontal);
     });
 
     it.each([320, 375, 430, 768].flatMap(width => [150, 220, 330].map(height => [width, height])))
@@ -166,7 +174,8 @@ describe("Home folded collection", () => {
             expect(freeBottom.y).toBeLessThanOrEqual(height + insets.paddingBottom);
             if (step < 30) expect(freeTop.x).toBeLessThan(hinge);
             if (step > 30) expect(freeTop.x).toBeGreaterThan(hinge);
-            if (step > 30 && step < 56) expect(frame().opacity).toBe(1);
+            if (step > 30 && step < 44) expect(frame().opacity).toBe(1);
+            if (step > 30 && step < 60) expect(frame().opacity).toBeGreaterThan(0);
         }
         // Full closure must also clear material under rounded front corners.
         expect(frame().opacity).toBe(0);
@@ -208,15 +217,37 @@ describe("Home folded collection", () => {
         expect(frame.opacity).toBe(1);
     });
 
+    it("draws one appearance per visit, preserves it across music, layout and scroll updates, then draws again on remount", () => {
+        const random = jest.mocked(Math.random).mockReturnValueOnce(0.75).mockReturnValueOnce(0.25);
+        render();
+        const appearance = () => renderer.root.findByType("HomeHero" as any).props.appearance;
+        expect(appearance()).toBe("record");
+        act(() => renderer.root.findByProps({ testID: "home-feature-spread" }).props.onLayout({ nativeEvent: { layout: { height: 250 } } }));
+        act(() => renderer.root.findByType("AnimatedScrollView" as any).props.onScroll({ contentOffset: { x: 100 } }));
+        act(() => renderer.update(<HomeFeatureDeck {...props} music={{ ...props.music, id: "next-track" }} favoriteCount={6} />));
+        expect(appearance()).toBe("record");
+        expect(random).toHaveBeenCalledTimes(1);
+        act(() => renderer.unmount());
+        render();
+        expect(appearance()).toBe("window");
+        expect(random).toHaveBeenCalledTimes(2);
+    });
+
     it.each([
         ["light", lightColors, false],
         ["dark", darkColors, true],
         ["custom", { ...lightColors, primary: "#7459C7" }, false],
         ["transparent", { ...lightColors, card: "rgba(255,255,255,0.72)", surface: "rgba(238,244,255,0.8)" }, false],
-    ])("preserves readable collection text on the actual %s leaf surface", (_label, colors, dark) => {
-        mockColors = resolveThemeColors({ ...colors, background: colors.pageBackground }, dark);
+    ].flatMap(row => ["window", "record"].map(appearance => [...row, appearance])))
+    ("preserves readable collection text and couples the leaf to the main card appearance in the %s theme", (_label, colors, dark, appearance) => {
+        jest.mocked(Math.random).mockReturnValue(appearance === "record" ? 0.75 : 0.25);
+        const palette = colors as typeof lightColors;
+        mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark as boolean);
         render();
-        const background = blendOver(mockColors.featuredFoldSurface, mockColors.pageBackground);
+        expect(renderer.root.findByType("HomeHero" as any).props.appearance).toBe(appearance);
+        const paper = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-feature-fold-paper" }).props.style);
+        expect(paper.backgroundColor).toBe(appearance === "record" ? mockColors.featuredRecordFoldSurface : mockColors.featuredWindowFoldSurface);
+        const background = blendOver(paper.backgroundColor, mockColors.pageBackground);
         renderer.root.findAllByType("ThemeText" as any).forEach(node => {
             expect(contrastRatio(blendOver(node.props.color, background), background)).toBeGreaterThanOrEqual(4.5);
         });

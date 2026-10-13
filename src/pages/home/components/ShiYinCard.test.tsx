@@ -35,7 +35,7 @@ describe("Featured discovery companion", () => {
         });
         const target = renderer.root.findByProps({ accessibilityLabel: "home.shiyin" });
         const surface = StyleSheet.flatten(target.props.style).backgroundColor;
-        expect(surface).toBe(mockColors.featuredCompanionSurface);
+        expect(surface).toBe(mockColors.featuredWindowSurface);
         target.findAllByType("ThemeText" as any).forEach(text => {
             expect(contrastRatio(text.props.color, surface)).toBeGreaterThanOrEqual(4.5);
         });

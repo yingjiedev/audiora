@@ -483,3 +483,13 @@ Composition 预览已保留数据交付：源码 de416a7f8e0112d81806509eed1307d
 Native visual QA final result: **blocked — pending user acceptance**。已有截图是上一包的问题及参考证据，未以数学投影或回归冒充最新原生效果；安装并确认完整版本后停止设备操作。
 
 Hinge 预览已保留数据安装：应用源码 53208df99b5df3b343568927f950c57aefa9e37d；0.3.1-preview.i88.hinge.20261013.090400 / 1791853442；io.github.yingjiedev.audiora，arm64-v8a；SHA-256 5285F90E1CA36546DEAF3616BA82AEC2BEA80E7D654DCDB6BE41C88B98BF6DE4。实际包/签名/字体/八个包内源码模块/Hermes 字节/PNG 可见像素与构建源码一致。当前手机签名比对一致，2026-10-13 09:06:58 +08:00 在 192.168.31.232:33325 升级自 composition.20261012.230605 / 1791817566，确认精确完整版本后停止设备操作。未自动打开应用、截屏或模拟器验收，视觉与手势仍 pending user。
+
+## 2026-10-13 已确认的双外观与联动折页
+
+用户选择封面视窗与夜色唱片，随后纠正深色主卡左侧收藏页也须深色，并批准最终确认稿。图与实现说明在 docs/design/home-dual-appearance-20261013.md。每次首页挂载随机选择一次，本次停留保持；两套尺寸和动作一致，深色纸面与文字联动。拾音采用新的浅蓝唱片图片区，播放/收藏/队列继续使用真实业务数据。
+
+折叠保留 native-center 铰链和完整 180° 收页，进度改为连续 smoothstep，降低底角下沉并校准余量；末停靠使用真实滚动上限，让最后卡片靠页面右边距，去掉人为尾部空白。
+
+验证：聚焦 7 suites / 120 tests、颜色 19 suites / 230 tests，通过随机生命周期、双外观颜色/动作、连续投影、反向与减少动态效果、真实停靠及栏目行为。颜色/UI/动画/runtime guards 与修改文件 ESLint 通过，完整 lint 与扩展 TS 仍有仓库既有诊断；没有扩大基线或豁免。
+
+Native visual QA final result: **blocked — pending user acceptance**。此轮确认稿是设计图，非新包截图。安装确认后由用户验收封面裁切、夜色层次、文字和折叠手感；不进行替代原生验收。

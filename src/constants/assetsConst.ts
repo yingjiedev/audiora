@@ -9,6 +9,7 @@ export const ImgAsset = {
     settingsRibbonBackground: require("@/assets/imgs/settings-ribbon-background.png"),
     homeHero: require("@/assets/imgs/home-hero-mountain.png"),
     homeListeningClouds: require("@/assets/imgs/home-listening-clouds-v1.png"),
+    homeDiscoveryWindow: require("@/assets/imgs/home-discovery-window-v1.png"),
     quickLocal: require("@/assets/imgs/quick-local-v2.png"),
     quickHistory: require("@/assets/imgs/quick-history-v2.png"),
     quickFavorite: require("@/assets/imgs/quick-favorite-v2.png"),

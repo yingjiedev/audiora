@@ -68,6 +68,20 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const onFeaturedCompanion = contrastRatio(onFeatured, featuredCompanionSurface) >= colorContrastMinimum.text ? onFeatured
         : readableAccent(bestForeground(featuredCompanionSurface, [colors.text, preset.text, mediaOnDark, lightColors.text]), [featuredCompanionSurface], colorContrastMinimum.text);
     const onFeaturedCompanionSecondary = readableAccent(Color(onFeaturedCompanion).mix(Color(featuredCompanionSurface), 0.20).hex(), [featuredCompanionSurface], colorContrastMinimum.text);
+    // Two media appearances share opaque, local surfaces; neither rewrites the app theme.
+    const featuredWindowSurface = cardBackground;
+    const featuredWindowFoldSurface = Color(cardBackground).mix(Color(primaryOpaque), 0.035).hex();
+    const windowBackgrounds = [featuredWindowSurface, featuredWindowFoldSurface];
+    const onFeaturedWindow = readableAccent(safeColor(colors.text, preset.text).hex(), windowBackgrounds, colorContrastMinimum.text);
+    const onFeaturedWindowSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), windowBackgrounds, colorContrastMinimum.text);
+    const featuredRecordSurface = Color(darkColors.card).mix(Color(primaryOpaque), 0.04).hex();
+    const featuredRecordFoldSurface = Color(featuredRecordSurface).mix(Color(mediaScrim), 0.04).hex();
+    const featuredRecordTextureOpacity = 0.28;
+    const recordBackgrounds = [featuredRecordSurface, featuredRecordFoldSurface, Color(featuredRecordSurface).mix(Color(mediaOnDark), featuredRecordTextureOpacity).hex()];
+    const onFeaturedRecord = readableAccent(mediaOnDark, recordBackgrounds, colorContrastMinimum.text);
+    const onFeaturedRecordSecondary = readableAccent(Color(onFeaturedRecord).mix(Color(featuredRecordSurface), 0.14).hex(), recordBackgrounds, colorContrastMinimum.text);
+    const featuredActionSurface = primaryOpaque;
+    const onFeaturedAction = bestForeground(featuredActionSurface, [mediaOnDark, lightColors.text, controlNeutralDark]);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
     const activityUnrecorded = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.10).hex();
@@ -97,6 +111,9 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         onFeaturedSecondary,
         onFeaturedCompanion,
         onFeaturedCompanionSecondary,
+        featuredWindowSurface, featuredWindowFoldSurface, onFeaturedWindow, onFeaturedWindowSecondary,
+        featuredRecordSurface, featuredRecordFoldSurface, featuredRecordTextureOpacity, onFeaturedRecord, onFeaturedRecordSecondary,
+        featuredActionSurface, onFeaturedAction,
         activityUnrecorded,
         activityEmpty,
         activityOutline,

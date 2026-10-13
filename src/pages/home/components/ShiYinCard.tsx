@@ -1,14 +1,14 @@
 import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
+import { ImgAsset } from "@/constants/assetsConst";
 import { controlSize, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import type { Plugin } from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from "react-native";
 import useShiYin from "./homeBody/useShiYin";
-import HomeCardMotif from "./HomeCardMotif";
 
 /** A companion to the listening card. The whole card starts the existing real chart queue. */
 export default function ShiYinCard(props: {
@@ -27,21 +27,17 @@ export default function ShiYinCard(props: {
             accessibilityState={{ disabled: loading, busy: loading }}
             disabled={loading}
             onPress={() => start()}
-            style={[styles.card, { backgroundColor: colors.featuredCompanionSurface }]}>
+            style={[styles.card, { backgroundColor: colors.featuredWindowSurface }]}>
             <View style={styles.artworkStage}>
-                <HomeCardMotif />
-                <ThemeText fontSize="tag" color={colors.onFeaturedCompanionSecondary}>{t("home.topList")}</ThemeText>
-                <View style={[styles.symbol, { backgroundColor: colors.featuredSurface }]}>
-                    <Icon name="shuffle" size={rpx(36)} color={colors.onFeatured} />
-                </View>
+                <Image accessible={false} source={ImgAsset.homeDiscoveryWindow} resizeMode="cover" resizeMethod="resize" style={styles.artwork} />
             </View>
             <View style={styles.footer}>
                 <View style={styles.copy}>
-                    <ThemeText numberOfLines={1} fontSize="subTitle" fontWeight="semibold" color={colors.onFeaturedCompanion}>{t("home.shiyin")}</ThemeText>
-                    <ThemeText numberOfLines={2} fontSize="tag" color={colors.onFeaturedCompanionSecondary} style={styles.description}>{t("home.shiyinSubtitle")}</ThemeText>
+                    <ThemeText numberOfLines={1} fontSize="title" fontWeight="semibold" color={colors.onFeaturedWindow}>{t("home.shiyin")}</ThemeText>
+                    <ThemeText numberOfLines={2} fontSize="tag" color={colors.onFeaturedWindowSecondary} style={styles.description}>{t("home.shiyinSubtitle")}</ThemeText>
                 </View>
-                <View style={[styles.playFill, { backgroundColor: colors.inverseSurface }]}>
-                    {loading ? <ActivityIndicator size="small" color={colors.onInverse} /> : <Icon name="play" size={rpx(26)} color={colors.onInverse} />}
+                <View style={[styles.playFill, { backgroundColor: colors.featuredActionSurface }]}>
+                    {loading ? <ActivityIndicator size="small" color={colors.onFeaturedAction} /> : <Icon name="play" size={rpx(26)} color={colors.onFeaturedAction} />}
                 </View>
             </View>
         </Pressable>
@@ -49,11 +45,11 @@ export default function ShiYinCard(props: {
 }
 
 const styles = StyleSheet.create({
-    card: { flex: 1, minHeight: Math.max(44, controlSize.minimumTouch), padding: spacing.lg, borderRadius: radius.lg, justifyContent: "space-between", gap: spacing.md },
-    artworkStage: { height: rpx(164), width: "100%" },
-    symbol: { position: "absolute", right: 0, bottom: spacing.sm, width: rpx(88), height: rpx(88), borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+    card: { flex: 1, minHeight: rpx(344), borderRadius: radius.xl, overflow: "hidden" },
+    artworkStage: { height: rpx(192), width: "100%", overflow: "hidden" },
+    artwork: { width: "100%", height: "100%" },
     copy: { flex: 1, minWidth: 0 },
     description: { marginTop: spacing.xs },
-    footer: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: Math.max(44, controlSize.minimumTouch) },
-    playFill: { width: rpx(56), height: rpx(56), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+    footer: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: Math.max(44, controlSize.minimumTouch, rpx(152)), padding: spacing.lg },
+    playFill: { width: rpx(72), height: rpx(72), borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 });
