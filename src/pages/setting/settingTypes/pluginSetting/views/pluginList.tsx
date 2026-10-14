@@ -12,6 +12,7 @@ import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import Config from "@/core/appConfig";
 import Empty from "@/components/base/empty";
+import { PageSummary } from "@/components/base/pageSection";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { showPanel } from "@/components/panels/usePanel";
@@ -273,6 +274,7 @@ export default function PluginList() {
                         <Loading />
                     ) : (
                         <FlatList
+                            ListHeaderComponent={<PageSummary title={t("subpage.pluginCount", { count: plugins.length })} description={t("settingsOverview.sourceDescription")} />}
                             ListEmptyComponent={Empty}
                             ListFooterComponent={<View style={style.blank} />}
                             data={plugins ?? []}

@@ -1,6 +1,7 @@
 import React, { ReactNode, useEffect, useState } from "react";
 import {
     LayoutRectangle,
+    Pressable,
     StatusBar as OriginalStatusBar,
     StyleProp,
     StyleSheet,
@@ -9,12 +10,15 @@ import {
     ViewStyle,
 } from "react-native";
 import rpx from "@/utils/rpx";
+import { controlSize, spacing } from "@/constants/designSystem";
+import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
 import useHasCustomBackground from "@/hooks/useHasCustomBackground";
 import StatusBar from "./statusBar";
 import color from "color";
 import IconButton from "./iconButton";
 import globalStyle from "@/constants/globalStyle";
+import { iconSizeConst } from "@/constants/uiConst";
 import ThemeText from "./themeText";
 import { useNavigation } from "@react-navigation/native";
 import Animated, {
@@ -33,6 +37,7 @@ interface IAppBarProps {
     color?: string;
     actions?: Array<{
         icon: IIconName;
+        accessibilityLabel?: string;
         onPress?: () => void;
     }>;
     menu?: Array<{
@@ -65,6 +70,7 @@ export default function AppBar(props: IAppBarProps) {
     } = props;
 
     const colors = useColors();
+    const { t } = useI18N();
     const hasCustomBackground = useHasCustomBackground();
     const navigation = useNavigation();
 
@@ -109,18 +115,10 @@ export default function AppBar(props: IAppBarProps) {
                         borderBottomColor: colors.border,
                     },
                 ]}>
-                <IconButton
-                    name="arrow-left"
-                    sizeType="normal"
-                    color={contentColor}
-                    style={globalStyle.notShrink}
-                    onPress={
-                        onBackPress ||
-                        (() => {
-                            navigation.goBack();
-                        })
-                    }
-                />
+                <Pressable accessibilityRole="button" accessibilityLabel={t("subpage.back")} style={styles.navButton}
+                    onPress={onBackPress || (() => navigation.goBack())}>
+                    <IconButton name="arrow-left" sizeType="normal" color={contentColor} style={styles.navIcon} />
+                </Pressable>
                 <View style={[globalStyle.grow, styles.content, contentStyle]}>
                     {typeof children === "string" ? (
                         <ThemeText
@@ -141,29 +139,17 @@ export default function AppBar(props: IAppBarProps) {
                     )}
                 </View>
                 {actions.map((action, index) => (
-                    <IconButton
-                        key={index}
-                        name={action.icon}
-                        sizeType="normal"
-                        color={contentColor}
-                        style={[globalStyle.notShrink, styles.rightButton]}
-                        onPress={action.onPress}
-                    />
+                    <Pressable key={index} accessibilityRole="button" accessibilityLabel={action.accessibilityLabel ?? (action.icon === "magnifying-glass" ? t("common.search") : undefined)}
+                        style={[styles.navButton, styles.rightButton]} onPress={action.onPress}>
+                        <IconButton name={action.icon} sizeType="normal" color={contentColor} style={styles.navIcon} />
+                    </Pressable>
                 ))}
                 {actionComponent ?? null}
                 {menu?.length ? (
-                    <IconButton
-                        name="ellipsis-vertical"
-                        sizeType="normal"
-                        onLayout={evt => {
-                            setMenuIconLayout(evt.nativeEvent.layout);
-                        }}
-                        color={contentColor}
-                        style={[globalStyle.notShrink, styles.rightButton]}
-                        onPress={() => {
-                            setShowMenu(true);
-                        }}
-                    />
+                    <Pressable accessibilityRole="button" accessibilityLabel={t("subpage.more")} style={[styles.navButton, styles.rightButton]}
+                        onLayout={event => setMenuIconLayout(event.nativeEvent.layout)} onPress={() => setShowMenu(true)}>
+                        <IconButton name="ellipsis-vertical" sizeType="normal" color={contentColor} style={styles.navIcon} />
+                    </Pressable>
                 ) : null}
             </View>
             <Portal>
@@ -253,23 +239,29 @@ export default function AppBar(props: IAppBarProps) {
 }
 
 const styles = StyleSheet.create({
+    navButton: { minWidth: Math.max(44, controlSize.minimumTouch), minHeight: Math.max(44, controlSize.minimumTouch), flexShrink: 0, alignItems: "center", justifyContent: "center" },
+    navIcon: { minWidth: iconSizeConst.normal, height: iconSizeConst.normal },
     container: {
         width: "100%",
         zIndex: 10000,
-        height: rpx(96),
+        minHeight: Math.max(48, controlSize.standard),
+        paddingVertical: spacing.xxs,
         flexDirection: "row",
         alignItems: "center",
         paddingHorizontal: rpx(24),
-        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: 0,
     },
     content: {
         flexDirection: "row",
         flexBasis: 0,
+        minWidth: 0,
         alignItems: "center",
         paddingHorizontal: rpx(24),
     },
     rightButton: {
-        marginLeft: rpx(28),
+        marginLeft: spacing.xs,
+        minWidth: Math.max(44, controlSize.minimumTouch),
+        minHeight: Math.max(44, controlSize.minimumTouch),
     },
     blocker: {
         position: "absolute",

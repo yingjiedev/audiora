@@ -1,5 +1,26 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "subpage.copy": string;
+    "subpage.addSubscription": string;
+    "subpage.back": string;
+    "subpage.more": string;
+    "subpage.expandDescription": string;
+    "subpage.collapseDescription": string;
+    "subpage.searchEmpty": string;
+    "subpage.searchHint": string;
+    "subpage.sortHint": string;
+    "subpage.manageLocal": string;
+    "subpage.pluginCount": string;
+    "subpage.subscribeCount": string;
+    "subpage.subscriptionHint": string;
+    "subpage.noBackground": string;
+    "subpage.chooseBackground": string;
+    "subpage.backgroundPreview": string;
+    "subpage.themeColors": string;
+    "subpage.permissionEnabled": string;
+    "subpage.permissionDisabled": string;
+    "subpage.systemPicker": string;
+    "subpage.selectedFiles": string;
     "listening.collection": string;
     "listening.today": string;
     "listening.todayEntry": string;
@@ -253,6 +274,7 @@ export interface ILanguageData {
     "searchPage.searchPlaceHolder": string; // 搜索
     "searchPage.searchLabel.a11y": string; // 搜索标签
     "searchPage.history": string; // 历史记录
+    "searchPage.sourceLabel": string;
     "searchPage.artistResultWorksNum": string; // 艺术家作品数量
     "searchPage.comingSoon": string; // 敬请期待
 
@@ -510,19 +532,19 @@ export interface ILanguageData {
     "basicSettings.clickMusicInAlbum": string; // 点击专辑内单曲时
     "basicSettings.clickMusicInAlbum.playMusic": string; // 播放歌曲
     "basicSettings.clickMusicInAlbum.playAlbum": string; // 播放专辑
-    
+
     "basicSettings.musicOrderInLocalSheet": string; // 新建歌单时默认歌曲排序
     "basicSettings.musicOrderInLocalSheet.title": string; // 按歌曲名排序
     "basicSettings.musicOrderInLocalSheet.artist": string; // 按作者名排序
     "basicSettings.musicOrderInLocalSheet.album": string; // 按专辑名排序
     "basicSettings.musicOrderInLocalSheet.newest": string; // 按收藏时间从新到旧排序
     "basicSettings.musicOrderInLocalSheet.oldest": string; // 按收藏时间从旧到新排序
-    
+
     "basicSettings.plugin": string; // 插件
     "basicSettings.autoUpdatePlugin": string; // 软件启动时自动更新插件
     "basicSettings.notCheckPluginVersion": string; // 安装插件时不校验版本
     "basicSettings.lazyLoadPlugin": string; // 启用插件懒加载（默认开启）
-    
+
     "basicSettings.playback": string; // 播放
     "basicSettings.notInterrupt": string; // 允许与其他应用同时播放
     "basicSettings.autoPlayWhenAppStart": string; // 软件启动时自动播放歌曲
@@ -536,7 +558,7 @@ export interface ILanguageData {
     "basicSettings.playQualityOrder": string; // 默认播放音质缺失时
     "basicSettings.playQualityOrder.asc": string; // 播放更高音质
     "basicSettings.playQualityOrder.desc": string; // 播放更低音质
-    
+
     "basicSettings.download": string; // 下载
     "basicSettings.downloadPath": string; // 下载路径
     "basicSettings.fileSelector.selectFolder": string; // 选择文件夹
@@ -559,11 +581,11 @@ export interface ILanguageData {
     "basicSettings.fileNamingVariables": string; // 可用变量：{variables}
     "basicSettings.fileNamingTemplateInvalid": string; // 模板格式错误
     "basicSettings.fileNamingTemplateSaved": string; // 模板设置成功
-    
+
     "basicSettings.network": string; // 网络
     "basicSettings.useCelluarNetworkPlay": string; // 使用移动网络播放
     "basicSettings.useCelluarNetworkDownload": string; // 使用移动网络下载
-    
+
     "basicSettings.lyric": string; // 歌词
     "basicSettings.lyric.autoSearchLyric": string; // 歌词缺失时自动搜索歌词
     "basicSettings.lyric.align.left": string; // 左对齐
@@ -573,13 +595,13 @@ export interface ILanguageData {
     "basicSettings.lyric.wordByWordFloat": string;
     "basicSettings.lyric.pureWhiteMode": string;
     "basicSettings.lyric.breathingDots": string;
-    
+
     "basicSettings.cache": string; // 缓存
     "basicSettings.cache.musicCacheLimit": string; // 音乐缓存上限
     "basicSettings.cache.clearMusicCache": string; // 清除音乐缓存
     "basicSettings.cache.clearLyricCache": string; // 清除歌词缓存
     "basicSettings.cache.clearImageCache": string; // 清除图片缓存
-    
+
     "basicSettings.developer": string; // 开发选项
     "basicSettings.developer.errorLog": string; // 记录错误日志
     "basicSettings.developer.traceLog": string; // 记录详细日志
@@ -588,7 +610,7 @@ export interface ILanguageData {
     "basicSettings.developer.clearLog": string; // 清空日志
     "basicSettings.developer.checkAnnouncements": string; // 检查公告
     "basicSettings.developer.clearAnnouncements": string; // 清除公告
-    
+
     // 对话框相关 - 缓存设置
     "dialog.setCacheTitle": string; // 设置缓存
     "dialog.setCachePlaceholder": string; // 输入缓存占用上限提示
@@ -607,7 +629,7 @@ export interface ILanguageData {
     "dialog.setScheduleCloseTime.unit": string; // 分钟
     "dialog.setScheduleCloseTime.hint": string; // 最长支持设置24小时（1440分钟）
     "dialog.dontShowAgain": string; // 不再显示
-    
+
     // 提示消息相关 - 缓存和日志
     "toast.cacheSetSuccess": string; // 设置成功
     "toast.musicCacheCleared": string; // 已清除音乐缓存
@@ -615,9 +637,13 @@ export interface ILanguageData {
     "toast.imageCacheCleared": string; // 已清除图片缓存
     "toast.logCleared": string; // 日志已清空
     "toast.folderNotExistOrNoPermission": string; // 文件夹不存在或无权限
-    
+
     // 播放全部栏相关
     "playAllBar.title": string; // 播放全部
+    "playAllBar.star": string;
+    "playAllBar.unstar": string;
+    "playAllBar.saveAction": string;
+    "playAllBar.savedAction": string;
 
     // 无插件相关
     "noPlugin.title": string; // 还没有安装插件
@@ -772,7 +798,7 @@ export interface ILanguageData {
     "panel.musicItemOptions.deleteLocalDownloadConfirm": string; // 删除本地下载确认
     "panel.musicItemOptions.associatedLyric": string; // 已关联歌词
     "panel.musicItemOptions.associateLyric": string; // 关联歌词
-    "panel.musicItemOptions.unassociateLyric": string; // 解除关联歌词    
+    "panel.musicItemOptions.unassociateLyric": string; // 解除关联歌词
     "panel.musicItemOptions.unassociateLyricSuccess": string; // 已解除关联歌词
     "panel.musicItemOptions.manageCover": string; // 管理封面
     "panel.musicItemOptions.associatedCover": string; // 已关联自定义封面
@@ -851,7 +877,7 @@ export interface ILanguageData {
     "repeatMode.SHUFFLE": string; // 随机播放
     "repeatMode.QUEUE": string; // 列表循环
     "repeatMode.SINGLE": string; // 单曲循环
-    
+
     // 音质翻译
     "quality.96k": string; // 低清音质 96K
     "quality.128k": string; // 普通音质 128K

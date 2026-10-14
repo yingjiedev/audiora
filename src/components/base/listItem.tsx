@@ -10,6 +10,7 @@ import {
     ViewStyle,
 } from "react-native";
 import rpx from "@/utils/rpx";
+import { spacing } from "@/constants/designSystem";
 import useColors, { CustomizedColors } from "@/hooks/useColors";
 import ThemeText from "./themeText";
 import {
@@ -65,7 +66,8 @@ function ListItem(props: IListItemProps) {
     const defaultStyle: StyleProp<ViewStyle> = {
         paddingLeft: withHorizontalPadding ? leftPadding : 0,
         paddingRight: withHorizontalPadding ? rightPadding : 0,
-        height: Size[heightType],
+        minHeight: Size[heightType],
+        paddingVertical: spacing.xs,
     };
 
     const colors = useColors();
@@ -320,10 +322,9 @@ const styles = StyleSheet.create({
     },
     /** left */
     actionBase: {
-        height: "100%",
+        alignSelf: "stretch",
         flexShrink: 0,
         flexGrow: 0,
-        flexBasis: 0,
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
@@ -344,7 +345,8 @@ const styles = StyleSheet.create({
     },
     itemContentContainer: {
         flex: 1,
-        height: "100%",
+        minWidth: 0,
+        alignSelf: "stretch",
         justifyContent: "center",
     },
     contentDesc: {

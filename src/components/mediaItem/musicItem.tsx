@@ -32,6 +32,7 @@ interface IMusicItemProps {
     onItemPress?: (musicItem: IMusic.IMusicItem) => void;
     onItemLongPress?: () => void;
     itemPaddingRight?: number;
+    itemPaddingLeft?: number;
     left?: React.ReactNode;
     containerStyle?: StyleProp<ViewStyle>;
     highlight?: boolean;
@@ -98,7 +99,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
 export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
-        musicSheet, itemPaddingRight, left, containerStyle,
+        musicSheet, itemPaddingRight, itemPaddingLeft, left, containerStyle,
         highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library",
     } = props;
     const colors = useColors();
@@ -116,7 +117,7 @@ export default function MusicItem(props: IMusicItemProps) {
     const discovery = presentation === "discovery";
 
     return (
-        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
+        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }, itemPaddingLeft !== undefined && { paddingLeft: itemPaddingLeft }]}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={[musicItem.title, musicItem.artist].filter(Boolean).join(" - ")}

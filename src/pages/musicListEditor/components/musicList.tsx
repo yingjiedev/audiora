@@ -1,14 +1,10 @@
 import React, { memo, useCallback } from "react";
-import { StatusBar, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import MusicItem, { MUSIC_ITEM_HEIGHT } from "@/components/mediaItem/musicItem";
 import { produce } from "immer";
 import { useAtom, useSetAtom } from "jotai";
-import {
-    IEditorMusicItem,
-    editingMusicListAtom,
-    musicListChangedAtom,
-} from "../store/atom";
+import { IEditorMusicItem, editingMusicListAtom, musicListChangedAtom } from "../store/atom";
 import SortableFlatList from "@/components/base/SortableFlatList";
 
 import CheckBox from "@/components/base/checkbox";
@@ -54,7 +50,6 @@ const MusicEditorItem = memo(
 );
 
 /** 音乐列表 */
-const marginTop = rpx(88) * 2 + (StatusBar.currentHeight ?? 0);
 export default function MusicList() {
     const [editingMusicList, setEditingMusicList] =
         useAtom(editingMusicListAtom);
@@ -71,7 +66,6 @@ export default function MusicList() {
     return editingMusicList?.length ? (
         <SortableFlatList
             activeBackgroundColor={colors.placeholder}
-            marginTop={marginTop}
             data={editingMusicList}
             renderItem={renderItem}
             itemHeight={MUSIC_ITEM_HEIGHT}

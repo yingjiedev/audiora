@@ -1,31 +1,19 @@
-import useColors from "@/hooks/useColors";
+import { spacing } from "@/constants/designSystem";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import Loading from "@/components/base/loading";
 import Chip from "@/components/base/chip";
 import useSearch from "../hooks/useSearch";
-import {
-    addHistory,
-    getHistory,
-    removeAllHistory,
-    removeHistory,
-} from "../common/historySearch";
+import { addHistory, getHistory, removeAllHistory, removeHistory } from "../common/historySearch";
 import { useSetAtom } from "jotai";
-import {
-    PageStatus,
-    initSearchResults,
-    pageStatusAtom,
-    queryAtom,
-    searchResultsAtom,
-} from "../store/atoms";
+import { PageStatus, initSearchResults, pageStatusAtom, queryAtom, searchResultsAtom } from "../store/atoms";
 import ThemeText from "@/components/base/themeText";
 import Button from "@/components/base/textButton.tsx";
 import Empty from "@/components/base/empty";
 import { useI18N } from "@/core/i18n";
 
 export default function () {
-    const colors = useColors();
     const [history, setHistory] = useState<string[] | null>(null);
     const search = useSearch();
 
@@ -44,22 +32,22 @@ export default function () {
                 <Loading />
             ) : (
                 <>
-                    <View style={[style.header, { borderBottomColor: colors.divider }]}>
+                    <View style={style.header}>
                         <ThemeText fontSize="title" fontWeight="semibold">
                             {t("searchPage.history")}
                         </ThemeText>
-                        <Button
+                        {history.length ? <Button
                             fontColor="textSecondary"
                             onPress={async () => {
                                 await removeAllHistory();
                                 getHistory().then(setHistory);
                             }}>
                             {t("common.clear")}
-                        </Button>
+                        </Button> : null}
                     </View>
                     <ScrollView
                         style={style.historyContent}
-                        contentContainerStyle={style.historyContentConainer}>
+                        contentContainerStyle={history.length ? style.historyContentContainer : style.emptyHistory}>
                         {history.length ? (
                             history.map(_ => (
                                 <Chip
@@ -96,26 +84,31 @@ const style = StyleSheet.create({
         width: "100%",
         maxWidth: "100%",
         flexDirection: "column",
-        padding: rpx(24),
+        padding: spacing.xxxl,
         flex: 1,
     },
     header: {
         width: "100%",
         flexDirection: "row",
-        paddingVertical: rpx(20),
+        paddingVertical: spacing.sm,
         paddingBottom: rpx(16),
         justifyContent: "space-between",
         alignItems: "center",
-        borderBottomWidth: rpx(1),
+        borderBottomWidth: 0,
     },
     historyContent: {
         width: "100%",
         flex: 1,
         paddingTop: rpx(24),
     },
-    historyContentConainer: {
+    historyContentContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
+    },
+    emptyHistory: {
+        flexGrow: 1,
+        alignItems: "center",
+        justifyContent: "center",
     },
     chip: {
         flexGrow: 0,

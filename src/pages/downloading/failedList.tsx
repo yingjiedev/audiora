@@ -1,3 +1,4 @@
+import { radius, spacing } from "@/constants/designSystem";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
@@ -13,11 +14,7 @@ import type { IDownloadRecord } from "@/core/downloadHistory";
 import downloadHistory, { useDownloadHistory } from "@/core/downloadHistory";
 import downloader from "@/core/downloader";
 import { iconSizeConst } from "@/constants/uiConst";
-import {
-    formatRecordTime,
-    getFailReasonIcon,
-    getFailReasonLabel,
-} from "./utils";
+import { formatRecordTime, getFailReasonIcon, getFailReasonLabel } from "./utils";
 
 function FailedRow(props: { record: IDownloadRecord }) {
     const { record } = props;
@@ -167,7 +164,7 @@ const styles = StyleSheet.create({
     batchBar: {
         flexDirection: "row",
         gap: rpx(16),
-        paddingHorizontal: rpx(24),
+        paddingHorizontal: spacing.xxxl,
         paddingVertical: rpx(12),
         borderTopWidth: StyleSheet.hairlineWidth,
     },
@@ -175,8 +172,8 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        paddingVertical: rpx(16),
-        borderRadius: rpx(20),
+        paddingVertical: spacing.md,
+        borderRadius: radius.pill,
     },
     descRow: {
         flexDirection: "row",
@@ -201,7 +198,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     headerRow: {
-        paddingHorizontal: rpx(24),
+        paddingHorizontal: spacing.xxxl,
         paddingVertical: rpx(8),
     },
 });

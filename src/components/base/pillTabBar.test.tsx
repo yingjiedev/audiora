@@ -35,8 +35,11 @@ describe("PillTabBar theme and navigation", () => {
                 expect(indicator).toBeDefined();
             }
             expect(StyleSheet.flatten(tabs[1].findByType(Text).props.style).color).toBe(mockColors.textSecondary);
-            const page = blendOver(mockColors.pageBackground, dark ? darkColors.pageBackground : lightColors.pageBackground);
-            const background = blendOver(StyleSheet.flatten(tabs[0].props.style).backgroundColor ?? page, page);
+            const defaultPage = dark ? darkColors.pageBackground : lightColors.pageBackground;
+            const page = blendOver(mockColors.pageBackground ?? defaultPage, defaultPage);
+            const surface = variant === "pill" ? tabs[0].findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.backgroundColor) : undefined;
+            const surfaceColor = StyleSheet.flatten(surface?.props.style)?.backgroundColor;
+            const background = blendOver(typeof surfaceColor === "string" ? surfaceColor : page, page);
             expect(contrastRatio(blendOver(mockColors.active, background), background)).toBeGreaterThanOrEqual(4.5);
             act(() => renderer!.unmount());
         }
@@ -63,5 +66,33 @@ describe("PillTabBar theme and navigation", () => {
             expect(change).toHaveBeenLastCalledWith(1);
             act(() => renderer!.unmount());
         }
+    });
+
+    it("keeps pill backgrounds compact inside centered touch targets", () => {
+        mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+        const title = "A very long source name";
+        const change = jest.fn();
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<PillTabBar routes={[{ key: "source", title, count: 12 }]} index={0} onIndexChange={change} getBadge={route => route.count ?? null} />);
+        });
+        const tab = renderer!.root.findAllByProps({ accessibilityLabel: title }).find(node => typeof node.props.onPress === "function")!;
+        const target = StyleSheet.flatten(tab.props.style);
+        expect(target.minHeight).toBeGreaterThanOrEqual(44);
+        expect(target.backgroundColor).toBeUndefined();
+        expect(target.justifyContent).toBe("center");
+        const surface = tab.findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.backgroundColor)!;
+        const surfaceStyle = StyleSheet.flatten(surface.props.style);
+        expect(surfaceStyle.minHeight).toBe(32);
+        expect(surfaceStyle.minHeight).toBeLessThan(target.minHeight);
+        expect(surfaceStyle.justifyContent).toBe("center");
+        const texts = tab.findAllByType(Text);
+        expect(texts[0].props.children).toBe(title);
+        expect(texts[0].props.numberOfLines).toBe(1);
+        expect(StyleSheet.flatten(texts[0].props.style).flexShrink).toBe(1);
+        expect(texts[1].props.children).toBe(12);
+        act(() => tab.props.onPress());
+        expect(change).toHaveBeenCalledWith(0);
+        act(() => renderer!.unmount());
     });
 });

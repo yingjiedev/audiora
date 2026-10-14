@@ -1,25 +1,26 @@
+
 import React from "react";
+import { spacing } from "@/constants/designSystem";
 import MusicItem from "@/components/mediaItem/musicItem";
-import Empty from "@/components/base/empty";
+import { PageState } from "@/components/base/pageSection";
+import { useI18N } from "@/core/i18n";
 import { FlashList } from "@shopify/flash-list";
-import rpx from "@/utils/rpx.ts";
 
 interface ISearchResultProps {
     result: IMusic.IMusicItem[];
     musicSheet?: IMusic.IMusicSheetItem;
 }
 
-const ITEM_HEIGHT = rpx(120);
 
 export default function SearchResult(props: ISearchResultProps) {
     const { result, musicSheet } = props;
+    const { t } = useI18N();
     return (
         <FlashList
-            estimatedItemSize={ITEM_HEIGHT}
-            ListEmptyComponent={<Empty />}
+            ListEmptyComponent={<PageState icon="magnifying-glass" title={t("subpage.searchEmpty")} description={t("subpage.searchHint")} />}
             data={result}
             renderItem={({ item }) => (
-                <MusicItem musicItem={item} musicSheet={musicSheet} />
+                <MusicItem itemPaddingLeft={spacing.xxxl} itemPaddingRight={spacing.xxxl} musicItem={item} musicSheet={musicSheet} />
             )}
         />
     );

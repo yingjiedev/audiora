@@ -1,6 +1,7 @@
 import { RequestStateCode } from "@/constants/commonConst";
 import TrackPlayer from "@/core/trackPlayer";
 import rpx from "@/utils/rpx";
+import { spacing } from "@/constants/designSystem";
 import timeformat from "@/utils/timeformat";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import React, { useRef, useCallback, useState, useEffect } from "react";
@@ -132,6 +133,8 @@ export default function MusicList(props: IMusicListProps) {
                     return (
                         <MusicItem
                             musicItem={musicItem}
+                            itemPaddingLeft={spacing.xxxl}
+                            itemPaddingRight={spacing.xxxl}
                             index={showIndex ? index + 1 : undefined}
                             titleTagSubText={
                                 typeof musicItem.duration === "number"

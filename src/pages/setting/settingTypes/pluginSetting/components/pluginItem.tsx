@@ -1,11 +1,8 @@
+import { radius, spacing } from "@/constants/designSystem";
 import React, { memo } from "react";
 
 import useColors from "@/hooks/useColors";
-import pluginManager, {
-    Plugin,
-    usePluginDisplayNameResolver,
-    usePluginEnabled,
-} from "@/core/pluginManager";
+import pluginManager, { Plugin, usePluginDisplayNameResolver, usePluginEnabled } from "@/core/pluginManager";
 
 import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
@@ -16,7 +13,7 @@ import { normalizeImportedMusicSheet } from "@/utils/mediaUtils";
 import rpx from "@/utils/rpx";
 import { StyleSheet, View } from "react-native";
 import ThemeText from "@/components/base/themeText";
-import IconTextButton from "@/components/base/iconTextButton";
+import { PageAction } from "@/components/base/pageSection";
 import ThemeSwitch from "@/components/base/switch";
 import { IIconName } from "@/components/base/icon.tsx";
 import { useI18N } from "@/core/i18n";
@@ -308,12 +305,7 @@ function PluginItemBase(props: IPluginItemProps) {
             <View style={styles.contents}>
                 {options.map((it, index) =>
                     it.show !== false ? (
-                        <IconTextButton
-                            key={index}
-                            icon={it.icon}
-                            onPress={it.onPress}>
-                            {it.title}
-                        </IconTextButton>
+                        <PageAction key={index} icon={it.icon} title={it.title} variant={it.icon === "trash-outline" ? "danger" : "tonal"} onPress={() => it.onPress?.()} />
                     ) : null,
                 )}
             </View>
@@ -367,14 +359,13 @@ export default PluginItem;
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        borderRadius: rpx(8),
-        marginHorizontal: rpx(24),
+        borderRadius: radius.lg,
+        marginHorizontal: spacing.xxxl,
         paddingVertical: rpx(18),
-        marginTop: rpx(36),
+        marginTop: spacing.md,
     },
     header: {
-        paddingHorizontal: rpx(16),
+        paddingHorizontal: spacing.lg,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -391,19 +382,20 @@ const styles = StyleSheet.create({
         flexGrow: 1,
     },
     description: {
-        marginHorizontal: rpx(16),
+        marginHorizontal: spacing.lg,
         marginVertical: rpx(24),
         flexDirection: "row",
     },
     alternativePluginDescription: {
-        marginHorizontal: rpx(16),
+        marginHorizontal: spacing.lg,
         marginBottom: rpx(24),
         flexDirection: "row",
     },
     contents: {
+        paddingHorizontal: spacing.lg,
         flexDirection: "row",
-        justifyContent: "space-between",
+        justifyContent: "flex-start",
         flexWrap: "wrap",
-        gap: rpx(16),
+        gap: spacing.xs,
     },
 });

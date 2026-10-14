@@ -2,7 +2,8 @@ import ListEmpty from "@/components/base/listEmpty";
 import ListFooter from "@/components/base/listFooter";
 import Loading from "@/components/base/loading";
 import { RequestStateCode } from "@/constants/commonConst";
-import useOrientation from "@/hooks/useOrientation";
+import useMediaGrid from "@/hooks/useMediaGrid";
+import { spacing } from "@/constants/designSystem";
 import { FlashList } from "@shopify/flash-list";
 import { useAtomValue } from "jotai";
 import React, { memo, useCallback, useEffect, useState } from "react";
@@ -25,7 +26,7 @@ function ResultWrapper(props: IResultWrapperProps) {
     const [searchState, setSearchState] = useState<RequestStateCode>(
         searchResult?.state ?? RequestStateCode.IDLE,
     );
-    const orientation = useOrientation();
+    const columns = useMediaGrid();
     const query = useAtomValue(queryAtom);
 
     const ResultComponent = renderMap[tab]!;
@@ -60,6 +61,8 @@ function ResultWrapper(props: IResultWrapperProps) {
         <Loading />
     ) : (
         <FlashList
+            key={tab === "sheet" ? columns : 1}
+            contentContainerStyle={tab === "sheet" ? { paddingHorizontal: spacing.xxxl - spacing.xs, paddingBottom: spacing.xxxl } : { paddingBottom: spacing.xxxl }}
             extraData={searchState}
             ListEmptyComponent={<ListEmpty state={searchState} onRetry={() => {
                 search(query, 1, tab, pluginHash);
@@ -78,7 +81,7 @@ function ResultWrapper(props: IResultWrapperProps) {
                     search(undefined, undefined, tab, pluginHash);
             }}
             numColumns={
-                tab === "sheet" ? (orientation === "vertical" ? 3 : 4) : 1
+                tab === "sheet" ? columns : 1
             }
             renderItem={renderItem}
             keyExtractor={keyExtractor}

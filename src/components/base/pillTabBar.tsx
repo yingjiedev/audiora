@@ -19,7 +19,7 @@ import Color from "color";
 import rpx, { fontRpx } from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
 import { fontWeightConst } from "@/constants/uiConst";
-import { controlSize } from "@/constants/designSystem";
+import { buttonHeight, controlSize, radius, spacing } from "@/constants/designSystem";
 
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
 
@@ -149,30 +149,32 @@ function PillTabBar(props: IPillTabBarProps) {
                         accessibilityLabel={title}
                         accessibilityState={{ selected: focused }}
                         onPress={() => onIndexChange(routeIndex)}
-                        style={[
+                        style={styles.pillTarget}>
+                        <View pointerEvents="none" accessible={false} style={[
                             styles.pillItem,
                             focused && {
                                 backgroundColor: activeBg,
                                 borderColor: activeBorder,
                             },
                         ]}>
-                        <View style={styles.labelRow}>
-                            <Text
-                                numberOfLines={1}
-                                style={[
-                                    styles.pillLabel,
-                                    {
-                                        fontWeight: focused
-                                            ? fontWeightConst.bolder
-                                            : fontWeightConst.medium,
-                                        color: focused
-                                            ? colors.active
-                                            : colors.textSecondary ?? colors.text,
-                                    },
-                                ]}>
-                                {title}
-                            </Text>
-                            {badgeNode}
+                            <View style={styles.labelRow}>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.pillLabel,
+                                        {
+                                            fontWeight: focused
+                                                ? fontWeightConst.bolder
+                                                : fontWeightConst.medium,
+                                            color: focused
+                                                ? colors.active
+                                                : colors.textSecondary ?? colors.text,
+                                        },
+                                    ]}>
+                                    {title}
+                                </Text>
+                                {badgeNode}
+                            </View>
                         </View>
                     </Pressable>
                 );
@@ -193,20 +195,31 @@ const styles = StyleSheet.create({
         paddingBottom: rpx(6),
         alignItems: "center",
     },
-    pillItem: {
+    pillTarget: {
         minWidth: minimumTouch,
         minHeight: minimumTouch,
         marginHorizontal: rpx(4),
-        paddingVertical: rpx(8),
-        paddingHorizontal: rpx(16),
-        borderRadius: rpx(16),
+        maxWidth: rpx(220),
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    pillItem: {
+        minHeight: buttonHeight.compact,
+        minWidth: buttonHeight.compact,
+        maxWidth: "100%",
+        paddingVertical: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        borderRadius: radius.pill,
+        alignItems: "center",
+        justifyContent: "center",
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: "transparent",
-        maxWidth: rpx(220),
     },
     pillLabel: {
         fontSize: fontRpx(26),
         textAlign: "center",
+        flexShrink: 1,
+        minWidth: 0,
     },
     underlineItem: {
         minWidth: Math.max(minimumTouch, rpx(120)),

@@ -1,8 +1,10 @@
 import Empty from "@/components/base/empty";
+import PillTabBar from "@/components/base/pillTabBar";
+import { radius, spacing } from "@/constants/designSystem";
 import AppBar from "@/components/base/appBar";
 import ListItem from "@/components/base/listItem";
 import StatusBar from "@/components/base/statusBar";
-import ThemeText from "@/components/base/themeText";
+
 import { showDialog } from "@/components/dialogs/useDialog";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
@@ -16,7 +18,7 @@ import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
 import { FlashList } from "@shopify/flash-list";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
 
@@ -60,25 +62,13 @@ export default function SheetBrowser() {
             <HorizontalSafeAreaView style={globalStyle.flex1}>
                 <FlashList
                     ListHeaderComponent={
-                        <View style={styles.tabsWrapper}>
-                            <TabButton
-                                title={t("home.myPlaylists")}
-                                count={localSheets.length}
-                                selected={sheetType === "local"}
-                                onPress={() => setSheetType("local")}
-                            />
-                            <TabButton
-                                title={t("home.starredPlaylists")}
-                                count={starredSheets.length}
-                                selected={sheetType === "starred"}
-                                onPress={() => setSheetType("starred")}
-                            />
-                        </View>
+                        <PillTabBar variant="underline" index={sheetType === "local" ? 0 : 1}
+                            routes={[{ key: "local", title: t("home.myPlaylists"), count: localSheets.length }, { key: "starred", title: t("home.starredPlaylists"), count: starredSheets.length }]}
+                            onIndexChange={index => setSheetType(index === 0 ? "local" : "starred")} contentContainerStyle={{ paddingHorizontal: spacing.xxl }} />
                     }
                     ListEmptyComponent={<Empty />}
                     data={currentSheets}
                     extraData={{ colors, sheetType, t }}
-                    estimatedItemSize={rpx(142)}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
                     renderItem={({ item: sheet }) => {
@@ -91,7 +81,7 @@ export default function SheetBrowser() {
                                 style={[
                                     styles.sheetFrame,
                                     {
-                                        backgroundColor: colors.surface,
+                                        backgroundColor: colors.card,
                                         borderColor: colors.border,
                                     },
                                 ]}>
@@ -179,41 +169,6 @@ export default function SheetBrowser() {
     );
 }
 
-function TabButton(props: {
-    title: string;
-    count: number;
-    selected: boolean;
-    onPress: () => void;
-}) {
-    const { title, count, selected, onPress } = props;
-    const colors = useColors();
-
-    return (
-        <Pressable
-            style={[
-                styles.tabButton,
-                {
-                    backgroundColor: selected ? colors.surface : "transparent",
-                    borderColor: selected ? colors.border : "transparent",
-                },
-            ]}
-            onPress={onPress}>
-            <ThemeText
-                numberOfLines={1}
-                fontWeight={selected ? "bold" : "regular"}
-                color={selected ? colors.text : colors.textSecondary}>
-                {title}
-            </ThemeText>
-            <ThemeText
-                fontSize="description"
-                color={selected ? colors.primaryText : colors.textSecondary}
-                style={styles.tabCount}>
-                {String(count).padStart(2, "0")}
-            </ThemeText>
-        </Pressable>
-    );
-}
-
 const styles = StyleSheet.create({
     tabsWrapper: {
         flexDirection: "row",
@@ -236,10 +191,10 @@ const styles = StyleSheet.create({
         marginLeft: rpx(8),
     },
     sheetFrame: {
-        marginHorizontal: rpx(24),
+        marginHorizontal: spacing.xxxl,
         marginVertical: rpx(7),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderRadius: rpx(22),
+        borderWidth: 0,
+        borderRadius: radius.lg,
         overflow: "hidden",
     },
     listContent: {

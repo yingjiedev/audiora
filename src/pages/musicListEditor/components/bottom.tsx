@@ -1,18 +1,19 @@
-import Icon, { IIconName } from "@/components/base/icon.tsx";
-import ThemeText from "@/components/base/themeText";
+import { IIconName } from "@/components/base/icon.tsx";
+
 import { showPanel } from "@/components/panels/usePanel";
-import { iconSizeConst } from "@/constants/uiConst";
+import { PageAction } from "@/components/base/pageSection";
+import { spacing } from "@/constants/designSystem";
 import downloader from "@/core/downloader";
 import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
 import TrackPlayer from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
-import rpx from "@/utils/rpx";
+
 import Toast from "@/utils/toast";
 import { produce } from "immer";
 import { useAtom, useSetAtom } from "jotai";
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { editingMusicListAtom, musicListChangedAtom } from "../store/atom";
 
 export default function Bottom() {
@@ -21,6 +22,7 @@ export default function Bottom() {
         useAtom(editingMusicListAtom);
     const setMusicListChanged = useSetAtom(musicListChangedAtom);
     const { t } = useI18N();
+    const colors = useColors();
 
     const selectedEditorItems = useMemo(
         () => editingMusicList.filter(_ => _.checked),
@@ -42,8 +44,9 @@ export default function Bottom() {
     }
 
     return (
-        <View style={style.wrapper}>
+        <View style={[style.wrapper, { backgroundColor: colors.card }]}>
             <BottomIcon
+                disabled={!selectedItems.length}
                 icon="motion-play"
                 title={t("musicListEditor.addToNextPlay")}
                 onPress={async () => {
@@ -53,6 +56,7 @@ export default function Bottom() {
                 }}
             />
             <BottomIcon
+                disabled={!selectedItems.length}
                 icon="folder-plus"
                 title={t("musicListEditor.addToSheet")}
                 onPress={() => {
@@ -65,6 +69,7 @@ export default function Bottom() {
                 }}
             />
             <BottomIcon
+                disabled={!selectedItems.length}
                 icon="arrow-down-tray"
                 title={t("common.download")}
                 onPress={() => {
@@ -78,13 +83,11 @@ export default function Bottom() {
                 }}
             />
             <BottomIcon
+                disabled={!selectedItems.length}
                 icon="trash-outline"
                 title={t("common.delete")}
-                color={
-                    selectedItems.length && musicSheet?.id
-                        ? "text"
-                        : "textSecondary"
-                }
+                danger
+                unavailable={!musicSheet?.id}
                 onPress={() => {
                     if (selectedItems.length && musicSheet?.id) {
                         setEditingMusicList(
@@ -99,54 +102,8 @@ export default function Bottom() {
     );
 }
 
-interface IBottomIconProps {
-    icon: IIconName;
-    title: string;
-    color?: "text" | "textSecondary";
-    onPress: () => void;
+interface IBottomIconProps { icon: IIconName; title: string; onPress: () => void; disabled?: boolean; unavailable?: boolean; danger?: boolean; }
+function BottomIcon({ icon, title, onPress, disabled, unavailable, danger }: IBottomIconProps) {
+    return <View style={style.item}><PageAction title={title} icon={icon} onPress={onPress} disabled={disabled || unavailable} variant={danger ? "danger" : "tonal"} /></View>;
 }
-function BottomIcon(props: IBottomIconProps) {
-    const { icon, title, onPress, color = "text" } = props;
-    const colors = useColors();
-    return (
-        <Pressable
-            onPress={onPress}
-            style={[style.bottomIconWrapper, { backgroundColor: colors.appBar }]}>
-            <Icon
-                name={icon}
-                color={colors.appBarText}
-                style={color === "textSecondary" ? style.opacity_06 : undefined}
-                size={iconSizeConst.big}
-                onPress={onPress}
-            />
-            <ThemeText
-                fontSize="subTitle"
-                fontColor={"appBarText"}
-                opacity={color === "textSecondary" ? 0.6 : undefined}
-                style={style.bottomIconText}>
-                {title}
-            </ThemeText>
-        </Pressable>
-    );
-}
-
-const style = StyleSheet.create({
-    wrapper: {
-        width: "100%",
-        height: rpx(144),
-        flexDirection: "row",
-    },
-
-    bottomIconWrapper: {
-        flex: 1,
-        height: "100%",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    bottomIconText: {
-        marginTop: rpx(12),
-    },
-    opacity_06: {
-        opacity: 0.6,
-    },
-});
+const style = StyleSheet.create({ wrapper: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.md, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, item: { flexGrow: 1, flexBasis: "45%", minWidth: 0 } });

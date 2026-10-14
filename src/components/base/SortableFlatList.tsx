@@ -8,7 +8,7 @@ import globalStyle from "@/constants/globalStyle";
 import { iconSizeConst } from "@/constants/uiConst";
 import useTextColor from "@/hooks/useTextColor";
 import rpx from "@/utils/rpx";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import React, {
     ForwardedRef,
     forwardRef,
@@ -41,7 +41,7 @@ interface ISortableFlatListProps<T> {
         | "space-around"
         | "space-evenly";
     // 滚动list距离顶部的距离, 这里写的不好
-    marginTop: number;
+    marginTop?: number;
     /** 拖拽时的背景色 */
     activeBackgroundColor?: string;
     /** 交换结束 */
@@ -69,9 +69,11 @@ export default function SortableFlatList<T extends any = any>(
     const activeRef = useRef(-1);
     const [activeItem, setActiveItem] = useState<T | null>(null);
 
+    const containerRef = useRef<View>(null);
+    const containerTopRef = useRef<number | null>(null);
     const layoutRef = useRef<LayoutRectangle | null>(null);
     // listref
-    const listRef = useRef<FlashList<T> | null>(null);
+    const listRef = useRef<FlashListRef<T> | null>(null);
     // fakeref
     const fakeItemRef = useRef<View | null>(null);
     // contentoffset
@@ -156,7 +158,9 @@ export default function SortableFlatList<T extends any = any>(
     //#endregion
 
     return (
-        <View style={globalStyle.fwflex1}>
+        <View ref={containerRef} style={globalStyle.fwflex1} onLayout={() => containerRef.current?.measureInWindow?.((_x, y) => {
+            containerTopRef.current = y;
+        })}>
             {/* 纯展示 */}
             <FakeFlatListItem
                 ref={ref => {
@@ -177,7 +181,6 @@ export default function SortableFlatList<T extends any = any>(
                     layoutRef.current = evt.nativeEvent.layout;
                 }}
                 data={_data}
-                estimatedItemSize={itemHeight}
                 scrollEventThrottle={16}
                 onTouchStart={e => {
                     if (activeRef.current !== -1) {
@@ -190,7 +193,7 @@ export default function SortableFlatList<T extends any = any>(
                     if (activeRef.current !== -1) {
                         offsetRef.current =
                             e.nativeEvent.pageY -
-                            (marginTop ?? layoutRef.current?.y ?? 0) -
+                            (containerTopRef.current ?? marginTop ?? 0) -
                             itemHeight / 2;
 
                         if (offsetRef.current < 0) {
@@ -334,7 +337,7 @@ interface ISortableFlatListItemProps<T extends any = any> {
     setActiveItem: (item: T | null) => void;
     activeRef: React.MutableRefObject<number>;
 }
-function _SortableFlatListItem(props: ISortableFlatListItemProps) {
+function SortableFlatListItemView(props: ISortableFlatListItemProps) {
     const {
         itemHeight,
         setScrollEnabled,
@@ -396,7 +399,7 @@ function _SortableFlatListItem(props: ISortableFlatListItemProps) {
 }
 
 const SortableFlatListItem = memo(
-    _SortableFlatListItem,
+    SortableFlatListItemView,
     (prev, curr) => prev.index === curr.index && prev.item === curr.item,
 );
 

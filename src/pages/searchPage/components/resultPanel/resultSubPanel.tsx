@@ -11,6 +11,8 @@ import DefaultResults from "./results/defaultResults";
 import ResultWrapper from "./resultWrapper";
 import { useParams } from "@/core/router";
 import { scopeSearchPlugins } from "../../common/searchScope";
+import { useI18N } from "@/core/i18n";
+import { spacing } from "@/constants/designSystem";
 
 interface IResultSubPanelProps {
     tab: ICommon.SupportMediaType;
@@ -64,6 +66,7 @@ function ResultSubPanel(props: IResultSubPanelProps) {
     const params = useParams<"search-page">();
     const [index, setIndex] = useState(0);
     const getDisplayName = usePluginDisplayNameResolver();
+    const { t } = useI18N();
     // Do not over-memoize: plugins can load/enable after mount.
     const routes = scopeSearchPlugins(PluginManager.getSortedSearchablePlugins(props.tab), params?.pluginHash).map(
         _ => ({
@@ -100,6 +103,8 @@ function ResultSubPanel(props: IResultSubPanelProps) {
                     index={safeIndex}
                     onIndexChange={setIndex}
                     variant="pill"
+                    contentContainerStyle={{ paddingHorizontal: spacing.xxxl }}
+                    getTitle={route => t("searchPage.sourceLabel", { source: route.title ?? route.key })}
                 />
             )}
             renderScene={renderScene}

@@ -8,6 +8,7 @@ import { RequestStateCode } from "@/constants/commonConst";
 
 interface IMusicSheetPageProps {
     navTitle: string;
+    typeLabel?: string;
     sheetInfo: ICommon.WithMusicList<IMusic.IMusicSheetItemBase> | null;
     musicList?: IMusic.IMusicItem[] | null;
     // 是否可收藏
@@ -19,7 +20,7 @@ interface IMusicSheetPageProps {
 }
 
 export default function MusicSheetPage(props: IMusicSheetPageProps) {
-    const { navTitle, sheetInfo, musicList, canStar, onLoadMore, onRetry, state } =
+    const { navTitle, typeLabel, sheetInfo, musicList, canStar, onLoadMore, onRetry, state } =
         props;
 
     return (
@@ -30,6 +31,7 @@ export default function MusicSheetPage(props: IMusicSheetPageProps) {
                 navTitle={navTitle}
             />
             <SheetMusicList
+                typeLabel={typeLabel}
                 canStar={canStar}
                 sheetInfo={sheetInfo as any}
                 musicList={musicList ?? sheetInfo?.musicList}

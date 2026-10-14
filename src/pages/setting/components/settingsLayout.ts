@@ -1,4 +1,5 @@
 import rpx from "@/utils/rpx";
+import { controlSize, radius, spacing } from "@/constants/designSystem";
 
 /**
  * 设置首页与所有子设置页共用的横向布局令牌。
@@ -10,15 +11,15 @@ import rpx from "@/utils/rpx";
  */
 export const settingsLayout = {
     /** 分组卡片距离屏幕安全区左右边缘的距离 */
-    groupMargin: rpx(24),
+    groupMargin: spacing.xxxl,
     /** 分组卡片圆角 */
-    cardRadius: rpx(16),
+    cardRadius: radius.lg,
     /** 分组标题与卡片之间的间距 */
     titleGap: rpx(12),
     /** 设置行内容的左右内边距（卡片内的安全呼吸区） */
-    rowPadding: rpx(24),
+    rowPadding: spacing.lg,
     /** 设置行最小高度 */
-    rowMinHeight: rpx(92),
+    rowMinHeight: Math.max(44, controlSize.minimumTouch),
     /** 标题与右侧「当前值 / 控件」之间的间距 */
     valueGap: rpx(24),
     /** 右侧控件与层级箭头之间的间距 */
