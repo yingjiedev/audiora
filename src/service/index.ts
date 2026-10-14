@@ -14,8 +14,8 @@ let resumeState: State | null;
 function pushCompactFavoriteState(musicItem: IMusic.IMusicItem | null) {
     const isFavorite = musicItem
         ? MusicSheet.getSortedMusicListBySheetId(
-              MusicSheet.defaultSheet.id,
-          ).has(musicItem)
+            MusicSheet.defaultSheet.id,
+        ).has(musicItem)
         : false;
     NativeModules.LyricUtil?.setCompactNotificationFavorite?.(isFavorite)?.catch?.(
         () => undefined,
