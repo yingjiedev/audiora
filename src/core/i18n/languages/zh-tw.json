@@ -214,6 +214,7 @@
     "searchPage.searchLabel.a11y": "搜尋框",
     "searchPage.history": "歷史紀錄",
     "searchPage.sourceLabel": "音源：{source}",
+    "searchPage.sourceTitle": "音源",
     "searchPage.artistResultWorksNum": "{count} 個作品",
     "searchPage.comingSoon": "敬請期待",
     "topList.title": "榜單",

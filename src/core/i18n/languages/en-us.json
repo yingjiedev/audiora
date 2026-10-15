@@ -214,6 +214,7 @@
     "searchPage.searchLabel.a11y": "Search Box",
     "searchPage.history": "History",
     "searchPage.sourceLabel": "Source: {source}",
+    "searchPage.sourceTitle": "Sources",
     "searchPage.artistResultWorksNum": "{count} works",
     "searchPage.comingSoon": "Coming Soon",
     "topList.title": "Charts",

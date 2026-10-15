@@ -30,15 +30,16 @@ export type PillTabRoute = {
     count?: number | string;
 };
 
-export type PillTabBarVariant = "pill" | "underline";
+export type PillTabBarVariant = "pill" | "underline" | "compact";
 
 interface IPillTabBarProps {
     routes: PillTabRoute[];
     index: number;
     onIndexChange: (index: number) => void;
-    /** pill = capsule chip; underline = text + bottom bar (default: pill) */
+    /** Compact chips provide a quieter second-level selector. Default: pill. */
     variant?: PillTabBarVariant;
     getTitle?: (route: PillTabRoute, index: number) => string;
+    getAccessibilityLabel?: (route: PillTabRoute, index: number) => string;
     /**
      * 分栏计数徽标。返回 null / undefined / 0 时不显示。
      * issue #87：下载管理页的三个分栏都要带数量，否则用户看不出哪栏有内容。
@@ -55,6 +56,7 @@ function PillTabBar(props: IPillTabBarProps) {
         onIndexChange,
         variant = "pill",
         getTitle,
+        getAccessibilityLabel,
         getBadge,
         style,
         contentContainerStyle,
@@ -62,17 +64,19 @@ function PillTabBar(props: IPillTabBarProps) {
     const colors = useColors();
     const activeBg = Color(colors.primary).alpha(0.2).toString();
     const activeBorder = Color(colors.primary).alpha(0.5).toString();
+    const compact = variant === "compact";
 
     return (
         <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={[styles.bar, style]}
-            contentContainerStyle={[styles.barContent, contentContainerStyle]}>
+            contentContainerStyle={[styles.barContent, compact && styles.compactBarContent, contentContainerStyle]}>
             {routes.map((route, routeIndex) => {
                 const focused = routeIndex === index;
                 const title =
                     getTitle?.(route, routeIndex) ?? route.title ?? route.key;
+                const accessibilityLabel = getAccessibilityLabel?.(route, routeIndex) ?? title;
                 const rawBadge = getBadge?.(route, routeIndex);
                 const badge = rawBadge === 0 ? null : rawBadge;
                 const badgeNode = badge ? (
@@ -105,7 +109,7 @@ function PillTabBar(props: IPillTabBarProps) {
                         <Pressable
                             key={route.key}
                             accessibilityRole="tab"
-                            accessibilityLabel={title}
+                            accessibilityLabel={accessibilityLabel}
                             accessibilityState={{ selected: focused }}
                             onPress={() => onIndexChange(routeIndex)}
                             style={styles.underlineItem}>
@@ -146,25 +150,27 @@ function PillTabBar(props: IPillTabBarProps) {
                     <Pressable
                         key={route.key}
                         accessibilityRole="tab"
-                        accessibilityLabel={title}
+                        accessibilityLabel={accessibilityLabel}
                         accessibilityState={{ selected: focused }}
                         onPress={() => onIndexChange(routeIndex)}
-                        style={styles.pillTarget}>
+                        style={[styles.pillTarget, compact && styles.compactTarget]}>
                         <View pointerEvents="none" accessible={false} style={[
                             styles.pillItem,
-                            focused && {
+                            compact && styles.compactItem,
+                            focused && (compact ? { backgroundColor: colors.tonalSurface } : {
                                 backgroundColor: activeBg,
                                 borderColor: activeBorder,
-                            },
+                            }),
                         ]}>
                             <View style={styles.labelRow}>
                                 <Text
                                     numberOfLines={1}
                                     style={[
                                         styles.pillLabel,
+                                        compact && styles.compactLabel,
                                         {
                                             fontWeight: focused
-                                                ? fontWeightConst.bolder
+                                                ? compact ? fontWeightConst.semibold : fontWeightConst.bolder
                                                 : fontWeightConst.medium,
                                             color: focused
                                                 ? colors.active
@@ -220,6 +226,26 @@ const styles = StyleSheet.create({
         textAlign: "center",
         flexShrink: 1,
         minWidth: 0,
+    },
+    compactBarContent: {
+        paddingHorizontal: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        gap: spacing.sm,
+    },
+    compactTarget: {
+        marginHorizontal: 0,
+        maxWidth: rpx(280),
+    },
+    compactItem: {
+        minHeight: 28,
+        minWidth: 28,
+        paddingHorizontal: spacing.lg,
+        borderRadius: radius.sm,
+        borderWidth: 0,
+    },
+    compactLabel: {
+        fontSize: fontRpx(24),
     },
     underlineItem: {
         minWidth: Math.max(minimumTouch, rpx(120)),

@@ -13,6 +13,8 @@ import { useParams } from "@/core/router";
 import { scopeSearchPlugins } from "../../common/searchScope";
 import { useI18N } from "@/core/i18n";
 import { spacing } from "@/constants/designSystem";
+import { StyleSheet, View } from "react-native";
+import ThemeText from "@/components/base/themeText";
 
 interface IResultSubPanelProps {
     tab: ICommon.SupportMediaType;
@@ -98,14 +100,17 @@ function ResultSubPanel(props: IResultSubPanelProps) {
                 routes,
             }}
             renderTabBar={() => (
-                <PillTabBar
-                    routes={routes}
-                    index={safeIndex}
-                    onIndexChange={setIndex}
-                    variant="pill"
-                    contentContainerStyle={{ paddingHorizontal: spacing.xxxl }}
-                    getTitle={route => t("searchPage.sourceLabel", { source: route.title ?? route.key })}
-                />
+                <View style={styles.sourceRow}>
+                    <ThemeText fontSize="description" fontColor="textSecondary" style={styles.sourceLabel}>{t("searchPage.sourceTitle")}</ThemeText>
+                    <PillTabBar
+                        routes={routes}
+                        index={safeIndex}
+                        onIndexChange={setIndex}
+                        variant="compact"
+                        style={styles.sourceTabs}
+                        getAccessibilityLabel={route => t("searchPage.sourceLabel", { source: route.title ?? route.key })}
+                    />
+                </View>
             )}
             renderScene={renderScene}
             onIndexChange={setIndex}
@@ -113,6 +118,12 @@ function ResultSubPanel(props: IResultSubPanelProps) {
         />
     );
 }
+
+const styles = StyleSheet.create({
+    sourceRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.xxxl, paddingVertical: spacing.xxs, gap: spacing.md },
+    sourceLabel: { flexShrink: 0 },
+    sourceTabs: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
+});
 
 // 不然会一直重新渲染
 export default memo(ResultSubPanel);

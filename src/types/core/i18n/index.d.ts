@@ -282,6 +282,7 @@ export interface ILanguageData {
     "searchPage.searchLabel.a11y": string; // 搜索标签
     "searchPage.history": string; // 历史记录
     "searchPage.sourceLabel": string;
+    "searchPage.sourceTitle": string;
     "searchPage.artistResultWorksNum": string; // 艺术家作品数量
     "searchPage.comingSoon": string; // 敬请期待
 
