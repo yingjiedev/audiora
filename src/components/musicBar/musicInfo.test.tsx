@@ -10,6 +10,8 @@ import MarqueeText from "@/components/base/marqueeText";
 let mockUIRuntime = false;
 let mockMeasuredFrame: { pageX: number; pageY: number; width: number; height: number } | null = null;
 const mockTransitionOrigin = { value: null as { x: number; y: number; width: number; height: number } | null };
+let mockDeferAnimations = false;
+const mockAnimationCallbacks: Array<(finished?: boolean) => void> = [];
 const song: IMusic.IMusicItem = {
     id: "song",
     platform: "test",
@@ -60,8 +62,14 @@ jest.mock("react-native-reanimated", () => ({
     useAnimatedRef: () => ({ current: null }),
     measure: () => mockMeasuredFrame,
     useAnimatedStyle: (factory: () => unknown) => factory(),
-    withTiming: (value: number, _config: unknown, callback?: () => void) => {
-        callback?.();
+    withTiming: (value: number, _config: unknown, callback?: (finished?: boolean) => void) => {
+        if (callback) {
+            if (mockDeferAnimations) {
+                mockAnimationCallbacks.push(callback);
+            } else {
+                callback(true);
+            }
+        }
         return value;
     },
     runOnJS: (callback: () => void) => callback,
@@ -123,6 +131,8 @@ describe("MusicInfo interactions", () => {
         mockUIRuntime = false;
         mockMeasuredFrame = null;
         mockTransitionOrigin.value = null;
+        mockDeferAnimations = false;
+        mockAnimationCallbacks.length = 0;
     });
 
     it("updates the artwork frame on the UI runtime without calling the JS state accessor", () => {
@@ -180,6 +190,27 @@ describe("MusicInfo interactions", () => {
         expect(TrackPlayer.skipToPrevious).toHaveBeenCalledTimes(1);
         expect(TrackPlayer.skipToNext).toHaveBeenCalledTimes(1);
         expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it("does not skip when a horizontal animation is cancelled, and completes the next valid swipe once", () => {
+        mockDeferAnimations = true;
+        const renderer = render(undefined, jest.fn());
+        const info = renderer.root.findAll(node => typeof node.props.onLayout === "function")[0];
+        act(() => info.props.onLayout({ nativeEvent: { layout: { width: 100 } } }));
+        const pan = renderer.root.findByType(GestureDetector).props.gesture.pan;
+        act(() => pan.callbacks.end({ translationX: -40, translationY: 0, velocityX: -300 }, true));
+        expect(mockAnimationCallbacks).toHaveLength(1);
+        expect(TrackPlayer.skipToNext).not.toHaveBeenCalled();
+        act(() => mockAnimationCallbacks.shift()!(false));
+        expect(TrackPlayer.skipToNext).not.toHaveBeenCalled();
+        expect(TrackPlayer.skipToPrevious).not.toHaveBeenCalled();
+
+        act(() => pan.callbacks.end({ translationX: 40, translationY: 0, velocityX: 300 }, true));
+        expect(mockAnimationCallbacks).toHaveLength(1);
+        act(() => mockAnimationCallbacks.shift()!(true));
+        expect(TrackPlayer.skipToPrevious).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.skipToNext).not.toHaveBeenCalled();
+        act(() => renderer.unmount());
     });
 
     it("expands on upward swipe, hold and accessibility while keeping tap as the full-player shortcut", () => {

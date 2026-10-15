@@ -19,11 +19,6 @@ import React, {
     useState,
 } from "react";
 import { LayoutRectangle, Pressable, StyleSheet, View } from "react-native";
-import {
-    runOnJS,
-    useDerivedValue,
-    useSharedValue,
-} from "react-native-reanimated";
 import Icon from "@/components/base/icon.tsx";
 
 const defaultZIndex = 10;
@@ -80,7 +75,9 @@ export default function SortableFlatList<T extends any = any>(
     const contentOffsetYRef = useRef<number>(-1);
     const targetOffsetYRef = useRef<number>(0);
 
-    const direction = useSharedValue(0);
+    // Touch and scroll events already run on RN. Keep their mutable state here
+    // rather than capturing React refs into a separate UI-runtime snapshot.
+    const directionRef = useRef(0);
 
     useEffect(() => {
         _setData([...(data ?? [])]);
@@ -108,18 +105,17 @@ export default function SortableFlatList<T extends any = any>(
 
         // 滚动中就不滚了 /
         if (scrollingRef.current && !forceScroll) {
-            scrollingRef.current = true;
             return;
         }
         // 方向是0
-        if (direction.value === 0) {
+        if (directionRef.current === 0) {
             scrollingRef.current = false;
             return;
         }
 
         const nextTarget =
-            Math.sign(direction.value) *
-                Math.max(Math.abs(direction.value), 0.3) *
+            Math.sign(directionRef.current) *
+                Math.max(Math.abs(directionRef.current), 0.3) *
                 300 +
             contentOffsetYRef.current;
         // 当前到极限了
@@ -144,16 +140,6 @@ export default function SortableFlatList<T extends any = any>(
             offset: targetOffsetYRef.current,
         });
     }
-
-    useDerivedValue(() => {
-        // 正在滚动
-        if (scrollingRef.current) {
-            return;
-        } else if (direction.value !== 0) {
-            // 开始滚动
-            runOnJS(scrollToTarget)();
-        }
-    }, []);
 
     //#endregion
 
@@ -214,14 +200,14 @@ export default function SortableFlatList<T extends any = any>(
                         // 如果超出范围，停止
                         if (offsetRef.current < itemHeight * 2) {
                             // 上滑
-                            direction.value =
+                            directionRef.current =
                                 offsetRef.current / itemHeight / 2 - 1;
                         } else if (
                             offsetRef.current >
                             (layoutRef.current?.height ?? 0) - 3 * itemHeight
                         ) {
                             // 下滑
-                            direction.value =
+                            directionRef.current =
                                 (offsetRef.current -
                                     (layoutRef.current?.height ?? 0) +
                                     3 * itemHeight) /
@@ -229,8 +215,9 @@ export default function SortableFlatList<T extends any = any>(
                                 2;
                         } else {
                             // 不滑动
-                            direction.value = 0;
+                            directionRef.current = 0;
                         }
+                        scrollToTarget();
                     }
                 }}
                 onTouchEnd={e => {
@@ -266,6 +253,7 @@ export default function SortableFlatList<T extends any = any>(
                             // _setData(nData);
                         }
                     }
+                    directionRef.current = 0;
                     scrollingRef.current = false;
                     activeRef.current = -1;
                     setScrollEnabled(true);
@@ -278,6 +266,7 @@ export default function SortableFlatList<T extends any = any>(
                 }}
                 onTouchCancel={() => {
                     // todo: 滑动很快的时候会触发取消，native的flatlist就这样
+                    directionRef.current = 0;
                     activeRef.current = -1;
                     scrollingRef.current = false;
                     setScrollEnabled(true);

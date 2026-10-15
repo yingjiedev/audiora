@@ -1,0 +1,44 @@
+name: Check motion safety
+
+on:
+    pull_request:
+        paths:
+            - "src/**"
+            - "scripts/check-animation-callbacks.js"
+            - "scripts/check-worklet-bridges.js"
+            - "package.json"
+            - "package-lock.json"
+            - "babel.config.js"
+            - "jest.config.js"
+            - "jest.setup.js"
+            - ".github/workflows/check-motion.yml"
+
+permissions:
+    contents: read
+
+jobs:
+    check-motion:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+
+            - name: Install locked dependencies
+              run: npm ci
+
+            - name: Check animation callbacks and production worklet bridges
+              run: npm run check:motion
+
+            - name: Verify gesture cancellation and sorting
+              run: >-
+                  node node_modules/jest/bin/jest.js --runInBand
+                  src/components/musicBar/musicInfo.test.tsx
+                  src/components/base/SortableFlatList.test.tsx
+                  src/utils/animationCallbacks.test.js
+                  src/utils/workletBridges.test.js

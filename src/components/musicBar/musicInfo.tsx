@@ -261,7 +261,7 @@ export default function MusicInfo(props: IMusicInfoProps) {
         }
     };
     const tapGesture = Gesture.Tap()
-        .onStart(handlePress)
+        .onStart(() => handlePress())
         .runOnJS(true);
     const handleExpand = () => {
         if (musicItem) {
@@ -270,7 +270,9 @@ export default function MusicInfo(props: IMusicInfoProps) {
     };
     const longPressGesture = Gesture.LongPress()
         .minDuration(motion.duration("slow"))
-        .onStart(handleExpand)
+        // A direct handler argument is auto-workletized even with runOnJS(true).
+        // Keep handleExpand on RN so the pan can safely bridge to it as well.
+        .onStart(() => handleExpand())
         .runOnJS(true);
     const canExpand = !!onExpand;
 
@@ -316,9 +318,11 @@ export default function MusicInfo(props: IMusicInfoProps) {
                         transformSharedValue.value = withTiming(
                             skip,
                             skipTiming,
-                            () => {
+                            finished => {
                                 "worklet";
-                                runOnJS(skipMusicItem)(skip);
+                                if (finished) {
+                                    runOnJS(skipMusicItem)(skip);
+                                }
                             },
                         );
                     } else if (Math.abs(vX) > 1500) {
