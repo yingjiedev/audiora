@@ -21,6 +21,7 @@ interface IProps {
     musicList: IMusic.IMusicItem[] | null;
     canStar?: boolean;
     musicSheet?: IMusic.IMusicSheetItem | null;
+    onEdit?: () => void;
 }
 
 function ToolbarAction({ name, label, accessibilityLabel = label, color, selected, onPress }: {
@@ -48,7 +49,7 @@ function ToolbarAction({ name, label, accessibilityLabel = label, color, selecte
 
 export default function PlayAllBar(props: IProps) {
     const route = useRoute();
-    const { musicList, canStar, musicSheet } = props;
+    const { musicList, canStar, musicSheet, onEdit } = props;
 
     const sheetName = musicSheet?.title;
     const sheetId = musicSheet?.id;
@@ -127,6 +128,10 @@ export default function PlayAllBar(props: IProps) {
                     name="pencil-outline"
                     label={t("common.edit")}
                     onPress={async () => {
+                        if (onEdit) {
+                            onEdit();
+                            return;
+                        }
                         navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
                             musicList: musicList,
                             musicSheet: {

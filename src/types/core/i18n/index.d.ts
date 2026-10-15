@@ -1,5 +1,8 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "musicListEditor.actionFailed": string;
+    "sheetDetail.manualSortMusic": string;
+    "sheetDetail.removeSelectedContent": string;
     "subpage.copy": string;
     "subpage.addSubscription": string;
     "subpage.back": string;

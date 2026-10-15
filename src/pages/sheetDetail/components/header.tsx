@@ -7,7 +7,7 @@ import { useI18N } from "@/core/i18n";
 import { useSheetItem } from "@/core/musicSheet";
 import { useParams } from "@/core/router";
 
-export default function Header() {
+export default function Header({ onEdit, editingControls }: { onEdit?: () => void; editingControls?: React.ReactNode }) {
     const { id = "favorite" } = useParams<"local-sheet-detail">();
     const sheet = useSheetItem(id);
     const { t } = useI18N();
@@ -16,7 +16,7 @@ export default function Header() {
             <MediaDetailHeader title={sheet?.title ?? t("common.unknownName")} artwork={sheet?.coverImg}
                 typeLabel={t("common.sheet")} source={t("common.local")}
                 subtitle={t("sheetDetail.totalMusicCount", { count: sheet?.musicList?.length ?? 0 })} description={sheet?.description} />
-            <View style={styles.actions}><PlayAllBar musicList={sheet?.musicList ?? []} musicSheet={sheet} /></View>
+            <View style={styles.actions}>{editingControls ?? <PlayAllBar musicList={sheet?.musicList ?? []} musicSheet={sheet} onEdit={onEdit} />}</View>
         </>
     );
 }

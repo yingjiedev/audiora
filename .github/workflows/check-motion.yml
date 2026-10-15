@@ -35,11 +35,13 @@ jobs:
             - name: Check animation callbacks and production worklet bridges
               run: npm run check:motion
 
-            - name: Verify gesture cancellation and sorting
+            - name: Verify gestures, sorting and playlist selection
               run: >-
                   node node_modules/jest/bin/jest.js --runInBand
                   src/components/musicBar/musicInfo.test.tsx
                   src/components/base/SortableFlatList.test.tsx
                   src/pages/musicListEditor/components/musicList.test.tsx
+                  src/components/musicList/useMusicSelection.test.tsx
+                  src/pages/sheetDetail/index.test.tsx
                   src/utils/animationCallbacks.test.js
                   src/utils/workletBridges.test.js

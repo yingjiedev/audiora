@@ -34,6 +34,8 @@ interface IMusicItemProps {
     itemPaddingRight?: number;
     itemPaddingLeft?: number;
     left?: React.ReactNode;
+    /** Defined only when the row selects music instead of playing it. */
+    checked?: boolean;
     containerStyle?: StyleProp<ViewStyle>;
     highlight?: boolean;
     highlightText?: string;
@@ -99,7 +101,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
 export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
-        musicSheet, itemPaddingRight, itemPaddingLeft, left, containerStyle,
+        musicSheet, itemPaddingRight, itemPaddingLeft, left, checked, containerStyle,
         highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library",
     } = props;
     const colors = useColors();
@@ -119,9 +121,9 @@ export default function MusicItem(props: IMusicItemProps) {
     return (
         <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }, itemPaddingLeft !== undefined && { paddingLeft: itemPaddingLeft }]}>
             <Pressable
-                accessibilityRole="button"
+                accessibilityRole={checked === undefined ? "button" : "checkbox"}
                 accessibilityLabel={[musicItem.title, musicItem.artist].filter(Boolean).join(" - ")}
-                accessibilityState={{ selected: active }}
+                accessibilityState={{ selected: active, checked }}
                 onLongPress={onItemLongPress}
                 onPress={() => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem)}
                 style={({ pressed }) => [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, pressed && { backgroundColor: colors.listActive }]}>

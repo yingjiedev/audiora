@@ -37,7 +37,7 @@ export default function Checkbox(props: ICheckboxProps) {
                 style,
             ]}>
             {checked ? (
-                <Icon name="check" color={colors.appBarText} size={rpx(34)} />
+                <Icon name="check" color={colors.onPrimary} size={rpx(34)} />
             ) : null}
         </View>
     );

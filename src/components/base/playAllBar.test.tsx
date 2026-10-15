@@ -90,6 +90,20 @@ describe("PlayAllBar touch targets and behavior", () => {
         act(() => renderer!.unmount());
     });
 
+    it("starts inline selection when the current page supplies an edit handler", async () => {
+        const onEdit = jest.fn();
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<PlayAllBar musicList={[music]} onEdit={onEdit} />);
+        });
+        await act(async () => {
+            await renderer!.root.findAllByProps({ accessibilityLabel: "common.edit" }).find(node => typeof node.props.onPress === "function")!.props.onPress();
+        });
+        expect(onEdit).toHaveBeenCalledTimes(1);
+        expect(mockNavigate).not.toHaveBeenCalled();
+        act(() => renderer!.unmount());
+    });
+
     it.each([false, true])("preserves the playlist favorite toggle when selected=%s", async starred => {
         mockStarred = starred;
         const sheet = { id: "sheet", title: "List" } as IMusic.IMusicSheetItem;
