@@ -22,6 +22,14 @@ function render(props: React.ComponentProps<typeof PageAction>) {
 }
 
 describe("PageAction compact sizing", () => {
+    it("lets a text action use the foreground of a custom navigation bar", () => {
+        mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground, appBar: "#18233C", appBarText: "#FFFFFF" }, false);
+        const { renderer, surface } = render({ title: "Done", onPress: jest.fn(), variant: "text", textColor: mockColors.appBarText });
+        const text = surface.findByType("MockText" as any);
+        const fill = blendOver(StyleSheet.flatten(surface.props.style).backgroundColor as string, mockColors.appBar!);
+        expect(contrastRatio(text.props.color, fill)).toBeGreaterThanOrEqual(4.5);
+        act(() => renderer.unmount());
+    });
     it("fits content by default while keeping a larger labeled click target", () => {
         const press = jest.fn();
         const { renderer, button, surface } = render({ title: "Pause all", icon: "pause", onPress: press });
@@ -67,7 +75,7 @@ describe("PageAction compact sizing", () => {
         mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
         const defaultPage = dark ? darkColors.pageBackground : lightColors.pageBackground;
         const page = blendOver(mockColors.pageBackground ?? defaultPage, defaultPage);
-        for (const variant of ["primary", "tonal", "danger"] as const) {
+        for (const variant of ["primary", "tonal", "danger", "text"] as const) {
             const { renderer, surface } = render({ title: "Action", onPress: jest.fn(), variant });
             const background = blendOver(StyleSheet.flatten(surface.props.style).backgroundColor as string, page);
             const text = surface.findByType("MockText" as any);

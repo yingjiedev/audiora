@@ -8,24 +8,26 @@ import rpx, { fontRpx } from "@/utils/rpx";
 
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
 
-export function PageAction({ title, icon, onPress, disabled = false, variant = "tonal", size = "compact", fullWidth = false }: {
+export function PageAction({ title, icon, onPress, disabled = false, variant = "tonal", size = "compact", fullWidth = false, textColor }: {
     title: string;
     icon?: IIconName;
     onPress: () => void;
     disabled?: boolean;
-    variant?: "primary" | "tonal" | "danger";
+    variant?: "primary" | "tonal" | "danger" | "text";
     size?: keyof typeof buttonHeight;
     fullWidth?: boolean;
+    /** Match text actions to their actual surface, such as a custom app bar. */
+    textColor?: string;
 }) {
     const colors = useColors();
-    const backgroundColor = variant === "primary" ? colors.primary : variant === "danger" ? colors.dangerSurface : colors.tonalSurface;
-    const foreground = variant === "primary" ? colors.onPrimary : variant === "danger" ? colors.danger : colors.onTonal;
+    const backgroundColor = variant === "text" ? "transparent" : variant === "primary" ? colors.primary : variant === "danger" ? colors.dangerSurface : colors.tonalSurface;
+    const foreground = variant === "text" ? textColor ?? colors.primaryText : variant === "primary" ? colors.onPrimary : variant === "danger" ? colors.danger : colors.onTonal;
     return (
         <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled}
             onPress={onPress} style={({ pressed }) => [styles.actionTarget, fullWidth && styles.fullWidth, { opacity: disabled ? 0.45 : pressed ? 0.7 : 1 }]}>
             <View pointerEvents="none" accessible={false} style={[styles.action, size === "standard" && styles.standardAction, fullWidth && styles.fullWidth, { backgroundColor }]}>
                 {icon ? <Icon name={icon} size={fontRpx(28)} color={foreground} /> : null}
-                <ThemeText fontSize="description" fontWeight="medium" color={foreground} style={styles.actionText}>{title}</ThemeText>
+                <ThemeText fontSize="description" fontWeight="medium" color={foreground} allowFontScaling={variant === "text"} style={styles.actionText}>{title}</ThemeText>
             </View>
         </Pressable>
     );

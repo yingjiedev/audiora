@@ -39,7 +39,7 @@ export default function ThemeText(props: IThemeTextProps) {
         : [themeStyle, style];
 
     return (
-        <Text {...props} style={_style} allowFontScaling={false}>
+        <Text {...props} style={_style} allowFontScaling={props.allowFontScaling ?? false}>
             {children}
         </Text>
     );

@@ -129,7 +129,7 @@ export default function MusicItem(props: IMusicItemProps) {
                 style={({ pressed }) => [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, pressed && { backgroundColor: colors.listActive }]}>
                 {left}
                 {index !== undefined ? (
-                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex]}>
+                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex, checked !== undefined && styles.selectionIndex]}>
                         {index}
                     </ThemeText>
                 ) : null}
@@ -186,6 +186,7 @@ const styles = StyleSheet.create({
     metadata: { flexDirection: "row", alignItems: "center", marginTop: spacing.xs },
     artist: { flexShrink: 1, minWidth: 0, marginRight: spacing.xs },
     index: { width: rpx(64), textAlign: "center", marginRight: spacing.sm },
+    selectionIndex: { width: "auto", minWidth: rpx(40), marginRight: spacing.xs },
     cover: { width: rpx(80), height: rpx(80), borderRadius: spacing.sm, marginRight: spacing.xl },
     metadataIcon: { marginRight: spacing.xs },
     duration: { flexShrink: 0 },

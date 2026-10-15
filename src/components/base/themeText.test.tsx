@@ -7,6 +7,17 @@ jest.mock("@/hooks/useColors", () => () => ({ primary: "#3867F4", primaryText: "
 jest.mock("@/hooks/useFontFamily", () => ({ useAppFontFamily: () => undefined }));
 
 describe("theme text color roles", () => {
+    it("keeps the existing font scale default and allows controls to opt into system text sizing", () => {
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<>
+                <ThemeText>Default</ThemeText>
+                <ThemeText allowFontScaling>Scalable</ThemeText>
+            </>);
+        });
+        expect(renderer.root.findAllByType(Text).map(node => node.props.allowFontScaling)).toEqual([false, true]);
+        act(() => renderer.unmount());
+    });
     it("uses readable primary text while preserving button foreground and explicit overrides", () => {
         let renderer!: TestRenderer.ReactTestRenderer;
         act(() => {

@@ -154,7 +154,7 @@ describe("local playlist inline editing", () => {
 
     it("disables empty actions and passes only selected songs to next-play, add and download", async () => {
         await press("common.edit");
-        for (const label of ["musicListEditor.addToNextPlay", "musicListEditor.addToSheet", "common.download", "common.delete"]) {
+        for (const label of ["musicListEditor.addToNextPlay", "musicListEditor.addToSheet", "common.download", "sheetDetail.removeFromSheet"]) {
             expect(button(label).props.disabled).toBe(true);
             await press(label);
         }
@@ -176,7 +176,7 @@ describe("local playlist inline editing", () => {
     it("removes only the confirmed selection and retains it when removal fails", async () => {
         await press("common.edit");
         await press("First - Artist");
-        await press("common.delete");
+        await press("sheetDetail.removeFromSheet");
         expect(MusicSheet.removeMusic).not.toHaveBeenCalled();
         expect(showDialog).toHaveBeenLastCalledWith("SimpleDialog", expect.objectContaining({ content: "sheetDetail.removeSelectedContent:1" }));
         (MusicSheet.removeMusic as jest.Mock).mockRejectedValueOnce(new Error("disk"));
@@ -184,13 +184,13 @@ describe("local playlist inline editing", () => {
             (showDialog as jest.Mock).mock.calls.at(-1)[1].onOk();
         });
         expect(MusicSheet.removeMusic).toHaveBeenCalledWith("favorite", [songs[0]]);
-        expect(Toast.warn).toHaveBeenCalledWith("toast.deleteFailed");
+        expect(Toast.warn).toHaveBeenCalledWith("musicListEditor.actionFailed");
         expect(rows()[0].props.checked).toBe(true);
-        await press("common.delete");
+        await press("sheetDetail.removeFromSheet");
         await act(async () => {
             (showDialog as jest.Mock).mock.calls.at(-1)[1].onOk();
         });
-        expect(Toast.success).toHaveBeenCalledWith("toast.deleteSuccess");
+        expect(Toast.success).toHaveBeenCalledWith("sheetDetail.removeSuccess");
         expect(rows().every(row => row.props.checked === false)).toBe(true);
         expect(mockNavigate).not.toHaveBeenCalled();
     });
@@ -207,7 +207,7 @@ describe("local playlist inline editing", () => {
             submit(); submit();
         });
         expect(TrackPlayer.addNext).toHaveBeenCalledTimes(1);
-        expect(button("common.delete").props.disabled).toBe(true);
+        expect(button("sheetDetail.removeFromSheet").props.disabled).toBe(true);
         await act(async () => {
             reject(new Error("queue"));
         });

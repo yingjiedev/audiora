@@ -3,6 +3,10 @@ export interface ILanguageData {
     "musicListEditor.actionFailed": string;
     "sheetDetail.manualSortMusic": string;
     "sheetDetail.removeSelectedContent": string;
+    "sheetDetail.removeAction": string;
+    "sheetDetail.removeFromSheet": string;
+    "sheetDetail.removeSuccess": string;
+    "musicListEditor.nextAction": string;
     "subpage.copy": string;
     "subpage.addSubscription": string;
     "subpage.back": string;

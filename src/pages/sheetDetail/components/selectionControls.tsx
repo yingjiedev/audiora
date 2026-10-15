@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { PageAction } from "@/components/base/pageSection";
 import ThemeText from "@/components/base/themeText";
 import { spacing } from "@/constants/designSystem";
@@ -11,6 +11,27 @@ import downloader from "@/core/downloader";
 import { showPanel } from "@/components/panels/usePanel";
 import { showDialog } from "@/components/dialogs/useDialog";
 import Toast from "@/utils/toast";
+import Icon, { IIconName } from "@/components/base/icon";
+import { iconSizeConst } from "@/constants/uiConst";
+
+function SelectionAction({ title, accessibilityLabel = title, icon, disabled, danger, onPress }: {
+    title: string;
+    accessibilityLabel?: string;
+    icon: IIconName;
+    disabled: boolean;
+    danger?: boolean;
+    onPress: () => void;
+}) {
+    const colors = useColors();
+    const foreground = danger ? colors.danger : colors.textSecondary ?? colors.text;
+    return (
+        <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ disabled }} disabled={disabled}
+            onPress={onPress} style={({ pressed }) => [styles.action, { opacity: disabled ? 0.45 : pressed ? 0.7 : 1 }]}>
+            <Icon name={icon} size={iconSizeConst.light} color={foreground} />
+            <ThemeText fontSize="description" color={foreground} allowFontScaling style={styles.actionText}>{title}</ThemeText>
+        </Pressable>
+    );
+}
 
 export function SelectionBar({ count, allSelected, disabled, onToggleAll }: {
     count: number;
@@ -22,7 +43,7 @@ export function SelectionBar({ count, allSelected, disabled, onToggleAll }: {
     return (
         <View style={styles.selectionBar}>
             <ThemeText fontSize="description" fontColor="textSecondary">{t("musicListEditor.selectMusicCount", { count })}</ThemeText>
-            <PageAction title={t(allSelected ? "common.unselectAll" : "common.selectAll")} disabled={disabled} onPress={onToggleAll} />
+            <PageAction title={t(allSelected ? "common.unselectAll" : "common.selectAll")} variant="text" disabled={disabled} onPress={onToggleAll} />
         </View>
     );
 }
@@ -63,29 +84,30 @@ export function SelectionActions({ sheetId, selectedItems, onClear }: {
     };
     return (
         <View style={[styles.actions, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-            <View style={styles.action}><PageAction title={t("musicListEditor.addToNextPlay")} icon="motion-play" disabled={disabled}
-                onPress={() => run(() => TrackPlayer.addNext(selectedItems), t("toast.addToNextPlay"), t("musicListEditor.actionFailed"))} /></View>
-            <View style={styles.action}><PageAction title={t("musicListEditor.addToSheet")} icon="folder-plus" disabled={disabled} onPress={() => {
+            <SelectionAction title={t("musicListEditor.nextAction")} accessibilityLabel={t("musicListEditor.addToNextPlay")} icon="motion-play" disabled={disabled}
+                onPress={() => run(() => TrackPlayer.addNext(selectedItems), t("toast.addToNextPlay"), t("musicListEditor.actionFailed"))} />
+            <SelectionAction title={t("musicListEditor.addToSheet")} icon="folder-plus" disabled={disabled} onPress={() => {
                 if (disabled || pending.current) return;
                 showPanel("AddToMusicSheet", { musicItem: selectedItems });
                 onClear(selectedItems);
-            }} /></View>
-            <View style={styles.action}><PageAction title={t("common.download")} icon="arrow-down-tray" disabled={disabled}
-                onPress={() => run(() => downloader.download(selectedItems), t("toast.beginDownload"), t("musicListEditor.actionFailed"))} /></View>
-            <View style={styles.action}><PageAction title={t("common.delete")} icon="trash-outline" variant="danger" disabled={disabled} onPress={() => {
+            }} />
+            <SelectionAction title={t("common.download")} icon="arrow-down-tray" disabled={disabled}
+                onPress={() => run(() => downloader.download(selectedItems), t("toast.beginDownload"), t("musicListEditor.actionFailed"))} />
+            <SelectionAction title={t("sheetDetail.removeAction")} accessibilityLabel={t("sheetDetail.removeFromSheet")} icon="trash-outline" danger disabled={disabled} onPress={() => {
                 if (disabled || pending.current) return;
                 showDialog("SimpleDialog", {
-                    title: t("common.delete"),
+                    title: t("sheetDetail.removeFromSheet"),
                     content: t("sheetDetail.removeSelectedContent", { count: selectedItems.length }),
-                    onOk: () => run(() => MusicSheet.removeMusic(sheetId, selectedItems), t("toast.deleteSuccess"), t("toast.deleteFailed")),
+                    onOk: () => run(() => MusicSheet.removeMusic(sheetId, selectedItems), t("sheetDetail.removeSuccess"), t("musicListEditor.actionFailed")),
                 });
-            }} /></View>
+            }} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     selectionBar: { minHeight: 44, paddingVertical: spacing.sm, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
-    actions: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-    action: { flexGrow: 1, flexBasis: "45%", minWidth: 0 },
+    actions: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row" },
+    action: { flex: 1, minWidth: 44, minHeight: 44, paddingHorizontal: spacing.xxs, paddingVertical: spacing.xs, alignItems: "center", justifyContent: "center", gap: spacing.xxs },
+    actionText: { maxWidth: "100%", textAlign: "center" },
 });

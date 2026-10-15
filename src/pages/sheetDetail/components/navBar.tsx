@@ -9,18 +9,20 @@ import { default as Toast, default as toast } from "@/utils/toast";
 import { useNavigation } from "@react-navigation/native";
 import React from "react";
 import { PageAction } from "@/components/base/pageSection";
+import useColors from "@/hooks/useColors";
 
 export default function NavBar({ editing = false, onEdit, onFinishEdit }: { editing?: boolean; onEdit: () => void; onFinishEdit: () => void }) {
     const navigation = useNavigation<any>();
     const { id = "favorite" } = useParams<"local-sheet-detail">();
     const musicSheet = useSheetItem(id);
     const { t } = useI18N();
+    const colors = useColors();
 
     return (
         <>
             <AppBar
                 onBackPress={editing ? onFinishEdit : undefined}
-                actionComponent={editing ? <PageAction title={t("common.done")} onPress={onFinishEdit} /> : undefined}
+                actionComponent={editing ? <PageAction title={t("common.done")} variant="text" textColor={colors.appBarText ?? colors.text} onPress={onFinishEdit} /> : undefined}
                 menu={editing ? [] : [
                     {
                         icon: "pencil-outline",

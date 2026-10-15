@@ -4,7 +4,7 @@ import { StyleSheet, View } from "react-native";
 import Checkbox from "./checkbox";
 import { darkColors, lightColors } from "@/constants/colorPalette";
 import { resolveThemeColors } from "@/utils/themeColors";
-import { contrastRatio } from "@/utils/colorContrast";
+import { blendOver, contrastRatio } from "@/utils/colorContrast";
 
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 jest.mock("@/hooks/useColors", () => () => mockColors);
@@ -27,5 +27,9 @@ it.each([
     expect(contrastRatio(check.props.color, fill)).toBeGreaterThanOrEqual(4.5);
     act(() => renderer!.update(<Checkbox checked={false} />));
     expect(renderer!.root.findAllByType("Icon" as any)).toHaveLength(0);
+    const border = StyleSheet.flatten(renderer!.root.findAllByType(View)[0].props.style).borderColor as string;
+    expect(border).toBe(mockColors.textSecondary);
+    const page = blendOver(mockColors.pageBackground!, dark ? darkColors.pageBackground : lightColors.pageBackground);
+    expect(contrastRatio(blendOver(border, page), page)).toBeGreaterThanOrEqual(3);
     act(() => renderer!.unmount());
 });

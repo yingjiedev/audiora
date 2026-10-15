@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     },
     selection: {
         flexShrink: 0,
-        marginRight: spacing.sm,
+        marginRight: spacing.xs,
     },
     badge: {
         position: "absolute",
