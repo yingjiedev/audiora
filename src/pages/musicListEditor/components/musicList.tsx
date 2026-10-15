@@ -36,6 +36,7 @@ function MusicEditorItemView(props: IMusicEditorItemProps) {
                 </View>
             }
             actions={[]}
+            containerStyle={style.musicItem}
             itemPaddingRight={rpx(100)}
             onItemPress={onPress}
         />
@@ -80,6 +81,11 @@ export default function MusicList() {
 }
 
 const style = StyleSheet.create({
+    // The sortable wrapper lays out children horizontally, including the drag preview.
+    musicItem: {
+        flex: 1,
+        minWidth: 0,
+    },
     checkBox: {
         height: "100%",
         justifyContent: "center",

@@ -40,5 +40,6 @@ jobs:
                   node node_modules/jest/bin/jest.js --runInBand
                   src/components/musicBar/musicInfo.test.tsx
                   src/components/base/SortableFlatList.test.tsx
+                  src/pages/musicListEditor/components/musicList.test.tsx
                   src/utils/animationCallbacks.test.js
                   src/utils/workletBridges.test.js
