@@ -1,3 +1,6 @@
+import { FavoriteGroupsState, parseFavoriteGroups } from "@/core/favoriteGroupsModel";
+import { trackSourceKey } from "@/utils/trackGroup";
+
 export const BACKUP_SCHEMA = "bakamusic.music-sheet-backup";
 export const BACKUP_VERSION = 3;
 export const MAX_BACKUP_BYTES = 128 * 1024 * 1024;
@@ -16,6 +19,15 @@ export interface IBackupPlugin {
 export interface IParsedBackupPayload {
     musicSheets: IMusic.IMusicSheetItem[];
     plugins: IBackupPlugin[];
+    audiora?: { favoriteGroups: FavoriteGroupsState };
+}
+
+function parseAudiora(value: unknown, sheets: IMusic.IMusicSheetItem[]) {
+    if (value === undefined) return undefined;
+    if (!isRecord(value)) throw new Error("Invalid Audiora backup extension");
+    if (value.favoriteGroups === undefined) return undefined;
+    const keys = new Set((sheets.find(sheet => sheet.id === "favorite")?.musicList ?? []).map(trackSourceKey));
+    return { favoriteGroups: parseFavoriteGroups(value.favoriteGroups, keys) };
 }
 
 interface IBackupEnvelope {
@@ -246,14 +258,17 @@ export function createBackupPayload(
     musicSheets: IMusic.IMusicSheetItem[],
     plugins: IBackupPlugin[] = [],
     createdAt = Date.now(),
+    favoriteGroups?: FavoriteGroupsState,
 ) {
+    const validatedSheets = validateMusicSheetList(musicSheets);
     const envelope: IBackupEnvelope = {
         schema: BACKUP_SCHEMA,
         version: BACKUP_VERSION,
         createdAt,
         data: {
-            musicSheets: validateMusicSheetList(musicSheets),
+            musicSheets: validatedSheets,
             plugins: validatePluginList(plugins),
+            ...(favoriteGroups ? { audiora: parseAudiora({ favoriteGroups }, validatedSheets) } : {}),
         },
     };
     const serialized = JSON.stringify(envelope);
@@ -294,9 +309,12 @@ export function parseBackupPayload(
         throw new Error("Unsupported backup schema or version");
     }
     if (parsed.version === BACKUP_VERSION) {
+        const musicSheets = validateMusicSheetList(parsed.data.musicSheets);
+        const audiora = parseAudiora(parsed.data.audiora, musicSheets);
         return {
-            musicSheets: validateMusicSheetList(parsed.data.musicSheets),
+            musicSheets,
             plugins: validatePluginList(parsed.data.plugins ?? parsed.plugins),
+            ...(audiora ? { audiora } : {}),
         };
     }
     if (parsed.version === STRINGIFIED_TRACK_ID_BACKUP_VERSION) {

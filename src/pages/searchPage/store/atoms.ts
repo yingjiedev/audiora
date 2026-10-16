@@ -6,6 +6,7 @@ import { atom } from "jotai";
 export interface ISearchResult<T extends ICommon.SupportMediaType> {
     /** 当前页码 */
     page?: number;
+    requestedPage?: number;
     /** 搜索词 */
     query?: string;
     /** 搜索状态 */
@@ -47,5 +48,6 @@ export enum PageStatus {
 const pageStatusAtom = atom<PageStatus>(PageStatus.EDITING);
 
 const queryAtom = atom<string>("");
+export const searchSessionAtom = atom(0);
 
 export { pageStatusAtom, searchResultsAtom, queryAtom };

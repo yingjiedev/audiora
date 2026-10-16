@@ -65,6 +65,7 @@ function RowAction(props: { icon: IIconName; label: string; onPress: () => void;
 
 function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
     const isFavorite = useFavorite(musicItem);
+    const grouped = !!MusicSheet.favorites.groupFor(musicItem);
     const colors = useColors();
     const { t } = useI18N();
     const pending = useRef(false);
@@ -74,11 +75,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
         pending.current = true;
         setBusy(true);
         try {
-            if (isFavorite) {
-                await MusicSheet.removeMusic(MusicSheet.defaultSheet.id, musicItem);
-            } else {
-                await MusicSheet.addMusic(MusicSheet.defaultSheet.id, musicItem);
-            }
+            await MusicSheet.favorites.toggle(musicItem);
         } catch {
             Toast.warn(t(isFavorite ? "toast.deleteFailed" : "panel.addToMusicSheet.toast.fail"));
         } finally {
@@ -89,7 +86,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
     return (
         <RowAction
             icon={isFavorite ? "heart" : "heart-outline"}
-            label={t(isFavorite ? "musicDetail.a11y.unfavorite" : "musicDetail.a11y.favorite")}
+            label={t(isFavorite ? (grouped ? "aggregate.unfavoriteGroup" : "musicDetail.a11y.unfavorite") : "musicDetail.a11y.favorite")}
             color={isFavorite ? colors.favorite : undefined}
             onPress={toggle}
             disabled={busy}

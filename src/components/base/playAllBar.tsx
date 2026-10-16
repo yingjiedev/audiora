@@ -19,6 +19,8 @@ const minimumTouch = Math.max(44, controlSize.minimumTouch);
 
 interface IProps {
     musicList: IMusic.IMusicItem[] | null;
+    /** Display grouping must not hide sources from editing/export actions. */
+    actionMusicList?: IMusic.IMusicItem[];
     canStar?: boolean;
     musicSheet?: IMusic.IMusicSheetItem | null;
     onEdit?: () => void;
@@ -50,6 +52,7 @@ function ToolbarAction({ name, label, accessibilityLabel = label, color, selecte
 export default function PlayAllBar(props: IProps) {
     const route = useRoute();
     const { musicList, canStar, musicSheet, onEdit } = props;
+    const actionMusicList = props.actionMusicList ?? musicList;
 
     const sheetName = musicSheet?.title;
     const sheetId = musicSheet?.id;
@@ -119,7 +122,7 @@ export default function PlayAllBar(props: IProps) {
                     label={t("musicListEditor.addToSheet")}
                     onPress={async () => {
                         showPanel("AddToMusicSheet", {
-                            musicItem: musicList ?? [],
+                            musicItem: actionMusicList ?? [],
                             newSheetDefaultName: sheetName,
                         });
                     }}
@@ -133,7 +136,7 @@ export default function PlayAllBar(props: IProps) {
                             return;
                         }
                         navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
-                            musicList: musicList,
+                            musicList: actionMusicList,
                             musicSheet: {
                                 title: sheetName,
                                 id: sheetId,

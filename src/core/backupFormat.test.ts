@@ -5,6 +5,8 @@ import {
     createBackupPayload,
     parseBackupPayload,
 } from "./backupFormat.ts";
+import { emptyFavoriteGroups, linkFavoriteGroups } from "./favoriteGroupsModel";
+import { trackSourceKey } from "@/utils/trackGroup";
 
 function fixtureMusic(id: string | number) {
     return {
@@ -28,6 +30,27 @@ function fixtureSheet(musicList = [fixtureMusic("one")]) {
 }
 
 describe("backup format", () => {
+    it("round-trips a namespaced favorite extension without changing the shared version", () => {
+        const a = fixtureMusic(12), b = { ...fixtureMusic("0012"), platform: "other" };
+        const sheet = { ...fixtureSheet([a, b]), id: "favorite" };
+        const groups = linkFavoriteGroups(emptyFavoriteGroups(), [a, b].map(trackSourceKey), trackSourceKey(b), "group");
+        const raw = createBackupPayload([sheet], [], 1234, groups);
+        expect(JSON.parse(raw).version).toBe(3);
+        expect(parseBackupPayload(raw).audiora?.favoriteGroups).toEqual(groups);
+        expect(parseBackupPayload(raw).musicSheets[0].musicList[0].id).toBe(12);
+        // A client that drops the optional namespace still has every original source.
+        const downgraded = JSON.parse(raw); delete downgraded.data.audiora;
+        expect(parseBackupPayload(downgraded).musicSheets[0].musicList).toEqual([a, b]);
+    });
+    it("rejects a dangling relation before any restore writes can start", () => {
+        const a = fixtureMusic("one"), b = fixtureMusic("two");
+        const groups = linkFavoriteGroups(emptyFavoriteGroups(), [a, b].map(trackSourceKey), trackSourceKey(a), "group");
+        const raw = JSON.parse(createBackupPayload([{ ...fixtureSheet([a, b]), id: "favorite" }], [], 1, groups));
+        raw.data.musicSheets[0].musicList.pop();
+        expect(() => parseBackupPayload(raw)).toThrow("Invalid favorite group member");
+        raw.data.audiora.favoriteGroups.version = 9;
+        expect(() => parseBackupPayload(raw)).toThrow("Invalid favorite groups");
+    });
     it("writes the shared v3 envelope and preserves plugin ID scalar types", () => {
         const sheet = fixtureSheet([
             fixtureMusic(108175950),

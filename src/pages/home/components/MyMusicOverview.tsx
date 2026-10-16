@@ -6,7 +6,7 @@ import { ImgAsset } from "@/constants/assetsConst";
 import { controlSize, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import { useMusicHistory } from "@/core/musicHistory";
-import MusicSheet, { useSheetItem, useSheetsBase, useStarredSheets } from "@/core/musicSheet";
+import MusicSheet, { useFavoriteCount, useSheetItem, useSheetsBase, useStarredSheets } from "@/core/musicSheet";
 import { usePluginDisplayNameResolver, usePlugins } from "@/core/pluginManager";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import TrackPlayer from "@/core/trackPlayer";
@@ -41,6 +41,7 @@ export default function MyMusicOverview() {
     const plugins = usePlugins();
     const favoriteSheet = sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id);
     const favoriteContents = useSheetItem(MusicSheet.defaultSheet.id);
+    const favoriteCount = useFavoriteCount();
     const favoriteCover = favoriteSheet?.coverImg || favoriteSheet?.artwork
         || favoriteContents.musicList?.find(music => music.artwork?.trim())?.artwork;
     const userSheets = sheets.filter(sheet => sheet.id !== MusicSheet.defaultSheet.id);
@@ -140,7 +141,7 @@ export default function MyMusicOverview() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <MyListeningCard sheetId={favoriteSheet?.id} count={favoriteSheet?.worksNum ?? 0} cover={favoriteCover} />
+                <MyListeningCard sheetId={favoriteSheet?.id} count={favoriteCount} cover={favoriteCover} />
 
                 <View style={styles.quickRow}>
                     {quickEntries.map(entry => (

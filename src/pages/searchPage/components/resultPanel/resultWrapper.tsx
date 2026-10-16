@@ -6,7 +6,7 @@ import useMediaGrid from "@/hooks/useMediaGrid";
 import { spacing } from "@/constants/designSystem";
 import { FlashList } from "@shopify/flash-list";
 import { useAtomValue } from "jotai";
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect } from "react";
 import useSearch from "../../hooks/useSearch";
 import { ISearchResult, queryAtom } from "../../store/atoms";
 import { renderMap } from "./results";
@@ -39,13 +39,9 @@ function ResultWrapper(props: IResultWrapperProps) {
 
     useEffect(() => {
         if (searchState === RequestStateCode.IDLE) {
-            search(query, 1, tab, pluginHash);
+            search(undefined, undefined, tab, pluginHash, "ensure");
         }
-    }, []);
-
-    useEffect(() => {
-        setSearchState(searchResult?.state ?? RequestStateCode.IDLE);
-    }, [searchResult]);
+    }, [search, searchState, tab, pluginHash]);
 
     const renderItem = ({ item, index }: any) => (
         <ResultComponent
@@ -65,15 +61,15 @@ function ResultWrapper(props: IResultWrapperProps) {
             contentContainerStyle={tab === "sheet" ? { paddingHorizontal: spacing.xxxl - spacing.xs, paddingBottom: spacing.xxxl } : { paddingBottom: spacing.xxxl }}
             extraData={searchState}
             ListEmptyComponent={<ListEmpty state={searchState} onRetry={() => {
-                search(query, 1, tab, pluginHash);
+                search(undefined, undefined, tab, pluginHash, "retry");
             }} />}
             ListFooterComponent={data?.length ? <ListFooter state={searchState} onRetry={() => {
-                search(query, undefined, tab, pluginHash);
+                search(undefined, undefined, tab, pluginHash, "retry");
             }} /> : null}
             data={data}
             refreshing={false}
             onRefresh={() => {
-                search(query, 1, tab, pluginHash);
+                search(undefined, 1, tab, pluginHash, "refresh");
             }}
             onEndReached={() => {
                 (searchState === RequestStateCode.PARTLY_DONE ||

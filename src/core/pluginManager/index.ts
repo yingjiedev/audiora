@@ -710,8 +710,8 @@ class PluginManager implements IPluginManager, IInjectable {
      * @param enabled - 是否启用插件
      */
     setPluginEnabled(plugin: Plugin, enabled: boolean) {
-        ee.emit("enabled-updated", plugin.name, enabled);
         pluginMeta.setPluginEnabled(plugin.name, enabled);
+        ee.emit("enabled-updated", plugin.name, enabled);
     }
 
     /**
@@ -794,6 +794,21 @@ class PluginManager implements IPluginManager, IInjectable {
 const pluginManager = new PluginManager();
 
 export const usePlugins = () => useAtomValue(pluginsAtom);
+
+export function useSearchablePlugins(type?: ICommon.SupportMediaType) {
+    useAtomValue(pluginsAtom);
+    const [, setRevision] = useState(0);
+    useEffect(() => {
+        const update = () => setRevision(value => value + 1);
+        ee.on("enabled-updated", update);
+        ee.on("order-updated", update);
+        return () => {
+            ee.off("enabled-updated", update);
+            ee.off("order-updated", update);
+        };
+    }, []);
+    return pluginManager.getSortedSearchablePlugins(type);
+}
 
 export function useSortedPlugins() {
     const plugins = useAtomValue(pluginsAtom);

@@ -1,6 +1,8 @@
 import Empty from "@/components/base/empty";
 import PillTabBar from "@/components/base/pillTabBar";
-import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
+import { usePluginDisplayNameResolver, useSearchablePlugins } from "@/core/pluginManager";
+import { useI18N } from "@/core/i18n";
+import AggregateResults from "./aggregateResults";
 import { vw } from "@/utils/rpx";
 import { useAtomValue } from "jotai";
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
@@ -19,6 +21,8 @@ import ThemeText from "@/components/base/themeText";
 interface IResultSubPanelProps {
     tab: ICommon.SupportMediaType;
 }
+
+const aggregateKey = "aggregate-all";
 
 // 展示结果的视图
 function getResultComponent(
@@ -59,7 +63,7 @@ function getSubRouterScene(
 ) {
     const scene: Record<string, React.FC> = {};
     routes.forEach(r => {
-        scene[r.key] = getResultComponent(tab, r.key, r.title);
+        scene[r.key] = r.key === aggregateKey ? AggregateResults : getResultComponent(tab, r.key, r.title);
     });
     return SceneMap(scene);
 }
@@ -70,12 +74,15 @@ function ResultSubPanel(props: IResultSubPanelProps) {
     const getDisplayName = usePluginDisplayNameResolver();
     const { t } = useI18N();
     // Do not over-memoize: plugins can load/enable after mount.
-    const routes = scopeSearchPlugins(PluginManager.getSortedSearchablePlugins(props.tab), params?.pluginHash).map(
+    const routes = scopeSearchPlugins(useSearchablePlugins(props.tab), params?.pluginHash).map(
         _ => ({
             key: _.hash,
             title: getDisplayName(_),
         }),
     );
+    if (props.tab === "music" && !params?.pluginHash && routes.length) {
+        routes.unshift({ key: aggregateKey, title: t("aggregate.allSources") });
+    }
     // 标题参与 memo key：插件改名后场景随之重建，避免残留旧名字
     const routeKey = routes.map(r => `${r.key}:${r.title}`).join("|");
     const renderScene = useMemo(

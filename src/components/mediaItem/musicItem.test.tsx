@@ -13,7 +13,13 @@ const song = { id: "one", platform: "plugin", title: "Song", artist: "Artist", a
 let mockFavorite = false;
 let mockCurrent: IMusic.IMusicItem | null = null;
 jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { play: jest.fn(), addNext: jest.fn() }, useCurrentMusic: () => mockCurrent }));
-jest.mock("@/core/musicSheet", () => ({ __esModule: true, default: { defaultSheet: { id: "favorite" }, addMusic: jest.fn(async () => {}), removeMusic: jest.fn(async () => {}) }, useFavorite: () => mockFavorite }));
+jest.mock("@/core/musicSheet", () => {
+    const addMusic = jest.fn(async (_sheetId: string, _item: IMusic.IMusicItem) => {});
+    const removeMusic = jest.fn(async (_sheetId: string, _item: IMusic.IMusicItem) => {});
+    return { __esModule: true, default: { defaultSheet: { id: "favorite" }, addMusic, removeMusic,
+        favorites: { groupFor: () => undefined, toggle: jest.fn(item => mockFavorite ? removeMusic("favorite", item) : addMusic("favorite", item)) },
+    }, useFavorite: () => mockFavorite };
+});
 jest.mock("@/core/localMusicSheet", () => ({ __esModule: true, default: { useIsLocal: () => false } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));

@@ -278,6 +278,25 @@ export interface ILanguageData {
     "searchMusicList.searchLabel.a11y": string; // 搜索音乐标签
 
     // 搜索页面相关
+    "aggregate.linkFavorites": string;
+    "aggregate.linkConfirm": string;
+    "aggregate.splitFavorites": string;
+    "aggregate.splitConfirm": string;
+    "aggregate.removeSource": string;
+    "aggregate.updateFailed": string;
+    "aggregate.saved": string;
+    "aggregate.removed": string;
+    "aggregate.playingSource": string;
+    "aggregate.unfavoriteGroup": string;
+    "aggregate.groupHeartHint": string;
+    "aggregate.allSources": string;
+    "aggregate.bySong": string;
+    "aggregate.bySource": string;
+    "aggregate.currentSource": string;
+    "aggregate.chooseSource": string;
+    "aggregate.collectionCount": string;
+    "aggregate.searchProgress": string;
+    "aggregate.retrySource": string;
     "searchPage.searchPlaceHolder": string; // 搜索
     "searchPage.searchLabel.a11y": string; // 搜索标签
     "searchPage.history": string; // 历史记录
