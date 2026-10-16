@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
  * 全屏播放器开关。
  *
  * 播放器是根层 Overlay（见 components/playerOverlay），不是导航路由：
- * 主页在播放器打开期间保持挂载和渲染，但由 entry 屏蔽输入；返回时交叉淡化到底下的
+ * 主页在播放器打开期间保持挂载和渲染，但由 entry 屏蔽输入；返回时整页下滑淡出，露出
  * 实时主页，不存在「重新挂载 + 解冻重渲染」的白屏窗口。
  */
 interface PlayerOverlayState {

@@ -11,6 +11,7 @@ import Animated, {
     interpolate,
     runOnJS,
     useAnimatedStyle,
+    useDerivedValue,
     useSharedValue,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -32,8 +33,8 @@ import {
 } from "@/core/playerTransition";
 import {
     dismissDecision,
-    dragProgress,
-    DRAG_FULL_RATIO,
+    playerDismissProgress,
+    playerDismissTransform,
 } from "@/utils/motionMath";
 
 /** Never let a stuck animation trap the user on this screen. */
@@ -65,9 +66,8 @@ export default function MusicDetail(props: IMusicDetailProps) {
         coverStyle === "square" &&
         musicDetailCoverStyle === "immersive";
     const useImmersiveCover = showAlbumCover && immersiveCoverEnabled;
-    const renderImmersiveCover = useImmersiveCover && !isExiting;
 
-    const { progress } = playerTransition();
+    const { progress, dismissProgress } = playerTransition();
     const motion = useMotion();
     const { height: windowHeight } = useWindowDimensions();
     const isClosing = useSharedValue(false);
@@ -75,8 +75,11 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const closingRef = useRef(false);
     const removalRef = useRef<(() => void) | null>(null);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const visibilityProgress = useDerivedValue(() =>
+        progress.value * (1 - dismissProgress.value),
+    );
     const acceptsInput = usePlayerVisibility(
-        progress, isDragging, isClosing, isExiting, onClose,
+        visibilityProgress, isDragging, isClosing, isExiting, onClose,
     );
 
     useEffect(() => {
@@ -183,7 +186,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
             // Cancelled: spring back to full screen, keeping the finger's speed.
             cancelPlayerTransitionCollapse({
                 reduceMotion: motion.reduceMotion,
-                velocity: -velocityY / (windowHeight * DRAG_FULL_RATIO),
+                velocity: velocityY / Math.max(1, windowHeight),
             });
         },
         [motion.reduceMotion, onClose, requestClose, windowHeight],
@@ -203,11 +206,11 @@ export default function MusicDetail(props: IMusicDetailProps) {
                 return;
             }
             isDragging.value = true;
-            cancelAnimation(progress);
+            cancelAnimation(dismissProgress);
         })
         .onUpdate(e => {
             if (isDragging.value && !isClosing.value) {
-                progress.value = dragProgress(e.translationY, windowHeight);
+                dismissProgress.value = playerDismissProgress(e.translationY, windowHeight);
             }
         })
         .onEnd((e, success) => {
@@ -233,6 +236,13 @@ export default function MusicDetail(props: IMusicDetailProps) {
             }
         });
 
+    const dismissStyle = useAnimatedStyle(() => {
+        const { opacity, translateY } = playerDismissTransform(
+            dismissProgress.value, windowHeight, motion.reduceMotion,
+        );
+        return { opacity, transform: [{ translateY }] };
+    });
+
     const backgroundStyle = useAnimatedStyle(() => ({
         // The blurred artwork is the "room" the player expands into, so it
         // arrives after the artwork has already started travelling.
@@ -248,7 +258,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
         // Alpha alone does not remove native views from hit testing. Keep the
         // input gate on the UI thread so it changes with the same opacity frame.
         pointerEvents: !isClosing.value &&
-            (isDragging.value || progress.value > PLAYER_INPUT_THRESHOLD)
+            (isDragging.value || visibilityProgress.value > PLAYER_INPUT_THRESHOLD)
             ? "auto" as const : "none" as const,
         // Chrome (title, controls, lyrics) settles in behind the artwork.
         opacity: interpolate(
@@ -260,13 +270,18 @@ export default function MusicDetail(props: IMusicDetailProps) {
     }));
 
     return (
-        <>
+        <Animated.View
+            style={[globalStyle.fwflex1, dismissStyle]}
+            pointerEvents="box-none"
+            needsOffscreenAlphaCompositing
+            renderToHardwareTextureAndroid={isExiting}
+            collapsable={false}>
             <Animated.View
                 pointerEvents="none"
                 style={[style.backgroundLayer, backgroundStyle]}>
                 <Background
                     immersiveCoverEnabled={immersiveCoverEnabled}
-                    renderImmersiveCover={renderImmersiveCover}
+                    renderImmersiveCover={useImmersiveCover}
                     showImmersiveCover={useImmersiveCover}
                 />
             </Animated.View>
@@ -296,7 +311,6 @@ export default function MusicDetail(props: IMusicDetailProps) {
                                     keepAlbumCoverMounted
                                     tab={tab}
                                     selectTab={selectTab}
-                                    isExiting={isExiting}
                                 />
                                 <Bottom />
                             </View>
@@ -316,7 +330,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
                     </SafeAreaView>
                 </Animated.View>
             </GestureDetector>
-        </>
+        </Animated.View>
     );
 }
 

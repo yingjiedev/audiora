@@ -48,15 +48,13 @@ export function getCoverLeftMargin(coverStyle: string) {
 
 interface IProps {
     onTurnPageClick?: () => void;
-    /** Only true when leaving music-detail — keep mini lyric mounted across cover/lyric tabs */
-    isExiting?: boolean;
     /** Hidden album tab stays mounted, but expensive animations are suspended. */
     isActive?: boolean;
 }
 
 export default function AlbumCover(props: IProps) {
     const colors = useColors();
-    const { onTurnPageClick, isExiting = false, isActive = true } = props;
+    const { onTurnPageClick, isActive = true } = props;
 
     const musicItem = useCurrentMusic();
     // React to associated cover changes
@@ -389,7 +387,7 @@ export default function AlbumCover(props: IProps) {
                             onPress={onTurnPageClick}
                             layout={miniLyricLayout === "compact" ? "compact" : "normal"}
                             immersive
-                            hidden={isExiting || !isActive}
+                            hidden={!isActive}
                         />
                     </View>
                     <View style={{ flex: 1 }} />
@@ -439,7 +437,7 @@ export default function AlbumCover(props: IProps) {
                 <MiniLyric
                     onPress={onTurnPageClick}
                     layout={miniLyricLayout === "compact" ? "compact" : "normal"}
-                    hidden={isExiting || !isActive}
+                    hidden={!isActive}
                 />
             </View>
             <View style={{ flex: 1 }} />

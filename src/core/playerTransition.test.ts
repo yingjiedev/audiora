@@ -6,12 +6,13 @@ import {
     playerTransition,
     resetPlayerTransition,
 } from "./playerTransition";
-import { withMotionSpring } from "@/utils/motion";
+import { withMotionSpring, withMotionTiming } from "@/utils/motion";
 
 let mockOnUI = false;
 let mockQueue: (() => void)[] = [];
 let mockCompletion: ((finished: boolean) => void) | undefined;
 const mockSpringOrigins: number[] = [];
+const mockDismissOrigins: number[] = [];
 
 jest.mock("react-native-reanimated", () => ({
     makeMutable: (initial: unknown) => {
@@ -43,7 +44,14 @@ jest.mock("react-native-reanimated", () => ({
 jest.mock("@/utils/motion", () => ({
     withMotionSpring: jest.fn((target: number, _options: unknown, callback?: (finished: boolean) => void) => {
         expect(mockOnUI).toBe(true);
-        mockSpringOrigins.push(require("./playerTransition").playerTransition().progress.value);
+        const state = require("./playerTransition").playerTransition();
+        mockSpringOrigins.push(target === 0 ? state.dismissProgress.value : state.progress.value);
+        mockCompletion = callback;
+        return target;
+    }),
+    withMotionTiming: jest.fn((target: number, _options: unknown, callback?: (finished: boolean) => void) => {
+        expect(mockOnUI).toBe(true);
+        mockDismissOrigins.push(require("./playerTransition").playerTransition().dismissProgress.value);
         mockCompletion = callback;
         return target;
     }),
@@ -71,6 +79,7 @@ describe("player transition UI ordering", () => {
         flushUI();
         jest.clearAllMocks();
         mockSpringOrigins.length = 0;
+        mockDismissOrigins.length = 0;
         mockCompletion = undefined;
     });
 
@@ -98,6 +107,11 @@ describe("player transition UI ordering", () => {
         collapsePlayerTransition(finished);
         expect(finished).not.toHaveBeenCalled();
         flushUI();
+        expect(playerTransition().progress.value).toBe(1);
+        expect(playerTransition().dismissProgress.value).toBe(1);
+        expect(withMotionTiming).toHaveBeenCalledWith(1, {
+            duration: "screen", easing: "accelerate", reduceMotion: undefined,
+        }, expect.any(Function));
         onUI(() => mockCompletion?.(false));
         expect(finished).not.toHaveBeenCalled();
         onUI(() => mockCompletion?.(true));
@@ -106,14 +120,37 @@ describe("player transition UI ordering", () => {
 
     it("restores a cancelled drag from its current progress and velocity", () => {
         onUI(() => {
-            playerTransition().progress.value = 0.2;
+            playerTransition().dismissProgress.value = 0.2;
         });
         cancelPlayerTransitionCollapse({ velocity: -2 });
-        expect(playerTransition().progress.value).toBe(0.2);
+        expect(playerTransition().dismissProgress.value).toBe(0.2);
         flushUI();
         expect(mockSpringOrigins).toEqual([0.2]);
-        expect(withMotionSpring).toHaveBeenCalledWith(1, { velocity: -2 });
+        expect(withMotionSpring).toHaveBeenCalledWith(0, { velocity: -2 });
+        expect(playerTransition().dismissProgress.value).toBe(0);
         expect(playerTransition().progress.value).toBe(1);
+    });
+
+    it("continues dismissal from a drag without reversing the cover morph", () => {
+        onUI(() => {
+            playerTransition().dismissProgress.value = 0.4;
+        });
+        collapsePlayerTransition(jest.fn(), { reduceMotion: true });
+        flushUI();
+        expect(mockDismissOrigins).toEqual([0.4]);
+        expect(playerTransition().progress.value).toBe(1);
+        expect(withMotionTiming).toHaveBeenCalledWith(1, {
+            duration: "screen", easing: "accelerate", reduceMotion: true,
+        }, expect.any(Function));
+    });
+
+    it("clears dismissal before a new entrance", () => {
+        onUI(() => {
+            playerTransition().dismissProgress.value = 1;
+        });
+        armPlayerTransition();
+        flushUI();
+        expect(playerTransition().dismissProgress.value).toBe(0);
     });
 
     it("clears an old frame before measuring and arming a new opening", () => {
