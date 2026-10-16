@@ -191,6 +191,40 @@ describe("full player input lifecycle", () => {
         expect(expandPlayerTransition).toHaveBeenCalledWith({ reduceMotion: false });
     });
 
+    it("starts the entire background and controls below the screen, then slides them up together", () => {
+        const { renderer, onClose } = render();
+        const page = renderer.root.findAllByType(View)
+            .find(node => node.props.needsOffscreenAlphaCompositing)!;
+        const initial = StyleSheet.flatten(page.props.style);
+        expect(initial.opacity).toBe(0);
+        expect(initial.transform[0].translateY).toBeGreaterThan(0);
+        expect(StyleSheet.flatten(contentView(renderer).props.style).opacity).toBeUndefined();
+        expect(page.findAllByType(NavBar)).toHaveLength(1);
+        mockProgress.value = 0.5;
+        act(() => renderer.update(<MusicDetail onClose={onClose} />));
+        const middle = StyleSheet.flatten(page.props.style);
+        expect(middle.transform[0].translateY).toBeCloseTo(initial.transform[0].translateY / 2);
+        mockProgress.value = 1;
+        flushVisibility();
+        expect(StyleSheet.flatten(page.props.style)).toMatchObject({
+            opacity: 1, transform: [{ translateY: 0 }],
+        });
+    });
+
+    it("closes a partially opened page from its current position without snapping to full screen", () => {
+        mockProgress.value = 0.4;
+        const { renderer, onClose } = render();
+        const page = renderer.root.findAllByType(View)
+            .find(node => node.props.needsOffscreenAlphaCompositing)!;
+        const initialY = StyleSheet.flatten(page.props.style).transform[0].translateY;
+        act(() => renderer.root.findByType(NavBar).props.onBack());
+        expect(StyleSheet.flatten(page.props.style).transform[0].translateY).toBe(initialY);
+        mockDismissProgress.value = 0.5;
+        act(() => renderer.update(<MusicDetail onClose={onClose} />));
+        expect(StyleSheet.flatten(page.props.style).transform[0].translateY).toBeGreaterThan(initialY);
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
     it("restores the player when an active drag is cancelled even beyond the dismiss threshold", () => {
         const { renderer, onClose } = render();
         act(() => {

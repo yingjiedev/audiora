@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useLayoutEffect, useMemo } from "react";
+import React, { memo, useLayoutEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import FastImage from "../base/fastImage";
@@ -10,12 +10,8 @@ import useColors from "@/hooks/useColors";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import TrackPlayer from "@/core/trackPlayer";
 import Animated, {
-    AnimatedRef,
     SharedValue,
-    measure,
     runOnJS,
-    runOnUI,
-    useAnimatedRef,
     useAnimatedStyle,
     useSharedValue,
     withTiming,
@@ -23,7 +19,7 @@ import Animated, {
 import { useMediaExtraProperty } from "@/utils/mediaExtra";
 import useMotion from "@/hooks/useMotion";
 import { resolveArtwork } from "@/utils/artwork";
-import { armPlayerTransition, playerTransition } from "@/core/playerTransition";
+import { armPlayerTransition } from "@/core/playerTransition";
 import { openPlayer } from "@/core/playerOverlay";
 import { elevation, radius, spacing } from "@/constants/designSystem";
 import { compactCoverOverhang, compactCoverSize } from "./compactLayout";
@@ -32,16 +28,13 @@ interface IBarMusicItemProps {
     musicItem: IMusic.IMusicItem | null;
     activeIndex: number; // 当前展示的是0/1/2
     transformSharedValue: SharedValue<number>;
-    /** Only the visible (current) item carries the shared-element frame. */
-    artworkRef?: AnimatedRef<Animated.View>;
-    onArtworkLayout?: () => void;
     foregroundColor?: string;
     compact?: boolean;
 }
 function BarMusicItemView(props: IBarMusicItemProps) {
     const {
         musicItem, activeIndex, transformSharedValue,
-        artworkRef, onArtworkLayout, foregroundColor, compact,
+        foregroundColor, compact,
     } = props;
     const colors = useColors();
     // Subscribe so minibar updates when cover is associated/restored
@@ -70,8 +63,6 @@ function BarMusicItemView(props: IBarMusicItemProps) {
             ]}>
             <Animated.View
                 collapsable={false}
-                ref={artworkRef}
-                onLayout={onArtworkLayout}
                 style={compact ? [styles.compactArtwork, { shadowColor: colors.shadow ?? colors.text }] : undefined}>
                 <FastImage
                     key={displayArtwork ?? "default"}
@@ -228,27 +219,6 @@ export default function MusicInfo(props: IMusicInfoProps) {
         [motion],
     );
 
-    // Shared-element source: the mini artwork's frame in window coordinates.
-    // Kept fresh on every layout so tapping the bar never has to wait for an
-    // async measurement before opening the overlay.
-    const artworkRef = useAnimatedRef<Animated.View>();
-    // Capture the shared value on JS; the UI runtime cannot call the accessor.
-    const { origin } = playerTransition();
-    const measureArtwork = useCallback(() => {
-        runOnUI(() => {
-            const frame = measure(artworkRef);
-            if (!frame || frame.width <= 0 || frame.height <= 0) {
-                return;
-            }
-            origin.value = {
-                x: frame.pageX,
-                y: frame.pageY,
-                width: frame.width,
-                height: frame.height,
-            };
-        })();
-    }, [artworkRef, origin]);
-
     const handlePress = () => {
         if (!musicItem) {
             return;
@@ -256,7 +226,6 @@ export default function MusicInfo(props: IMusicInfoProps) {
         if (onPress) {
             onPress();
         } else {
-            measureArtwork();
             openPlayer(armPlayerTransition);
         }
     };
@@ -376,8 +345,6 @@ export default function MusicInfo(props: IMusicInfoProps) {
                     transformSharedValue={transformSharedValue}
                     musicItem={musicItem}
                     activeIndex={0}
-                    artworkRef={artworkRef}
-                    onArtworkLayout={measureArtwork}
                     foregroundColor={foregroundColor}
                     compact={compact}
                 />

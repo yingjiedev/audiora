@@ -9,10 +9,6 @@ import { useCurrentMusic, useMusicState, MusicState } from "@/core/trackPlayer";
 import Animated, {
     cancelAnimation,
     Easing,
-    measure,
-    runOnUI,
-    useAnimatedRef,
-    useAnimatedStyle,
     useDerivedValue,
     useSharedValue,
     withRepeat,
@@ -33,8 +29,6 @@ import {
 import { resolveArtwork } from "@/utils/artwork";
 import { useMediaExtraProperty } from "@/utils/mediaExtra";
 import useMotion from "@/hooks/useMotion";
-import { playerTransition } from "@/core/playerTransition";
-import { coverMorphTransform, MotionRect } from "@/utils/motionMath";
 
 const ROTATION_DURATION = 25000; // 25秒转一圈
 export const COVER_SIZE = rpx(600); // 大封面尺寸
@@ -178,8 +172,8 @@ export default function AlbumCover(props: IProps) {
             }
         };
     }, []);
-    // 旋转动画 — Reanimated, so it shares one animation runtime with the
-    // Mini ↔ Full transition (the old RN Core loop could not be interrupted).
+    // Reanimated rotation follows playback and the active tab independently
+    // of the whole-page entrance and dismissal.
     const rotation = useSharedValue(0);
     const lastAnimatedMusicIdRef = useRef(musicItem?.id);
     const motion = useMotion();
@@ -216,62 +210,6 @@ export default function AlbumCover(props: IProps) {
         musicItem?.id,
         rotation,
     ]);
-
-    // ---- Shared element (Mini ↔ Full) -------------------------------------
-    // The resting frame of the artwork is derived from *layout* metrics plus an
-    // untransformed parent, never from `measure()` on the artwork itself: once
-    // the morph transform is applied, a measured frame would feed the moving
-    // position back into the animation.
-    const { progress: transitionProgress, origin: transitionOrigin } =
-        playerTransition();
-    const coverAreaRef = useAnimatedRef<Animated.View>();
-    const coverLayout = useSharedValue<MotionRect | null>(null);
-    const coverTarget = useSharedValue<MotionRect | null>(null);
-
-    const syncCoverTarget = useCallback(() => {
-        runOnUI(() => {
-            const area = measure(coverAreaRef);
-            const layout = coverLayout.value;
-            if (!area || !layout) {
-                return;
-            }
-            coverTarget.value = {
-                x: area.pageX + layout.x,
-                y: area.pageY + layout.y,
-                width: layout.width,
-                height: layout.height,
-            };
-        })();
-    }, [coverAreaRef, coverLayout, coverTarget]);
-
-    const coverMorphStyle = useAnimatedStyle(() => {
-        const origin = transitionOrigin.value;
-        const target = coverTarget.value;
-        const p = transitionProgress.value;
-        if (p >= 1 || !origin) {
-            return { opacity: 1 };
-        }
-        if (!target) {
-            // Frame not measured yet — stay hidden instead of popping in.
-            return { opacity: 0 };
-        }
-        const { translateX, translateY, scale } = coverMorphTransform(
-            origin,
-            target,
-            p,
-        );
-        return {
-            opacity: 1,
-            transform: isCircle
-                ? [
-                    { translateX },
-                    { translateY },
-                    { scale },
-                    { rotate: spin.value },
-                ]
-                : [{ translateX }, { translateY }, { scale }],
-        };
-    }, [isCircle]);
 
     const immersiveCoverHeight = useMemo(
         () => getImmersiveCoverHeight(windowWidth),
@@ -402,26 +340,14 @@ export default function AlbumCover(props: IProps) {
     return (
         <View style={styles.verticalRoot} onLayout={onRootLayout}>
             <Animated.View
-                ref={coverAreaRef}
                 style={containerStyle}
                 collapsable={false}>
                 <GestureDetector gesture={combineGesture}>
                     <Animated.View
                         collapsable={false}
-                        onLayout={event => {
-                            const layout = event.nativeEvent.layout;
-                            coverLayout.value = {
-                                x: layout.x,
-                                y: layout.y,
-                                width: layout.width,
-                                height: layout.height,
-                            };
-                            syncCoverTarget();
-                        }}
                         style={[
                             !isCircle ? [styles.coverShadow, { shadowColor: colors.onMediaScrim }] : null,
                             isCircle ? { transform: [{ rotate: spin }] } : null,
-                            coverMorphStyle,
                         ]}>
                         <FastImage
                             key={displayArtwork ?? "default"}

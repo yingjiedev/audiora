@@ -5,24 +5,18 @@ import {
     runOnUI,
     SharedValue,
 } from "react-native-reanimated";
-import { MotionRect } from "@/utils/motionMath";
 import { withMotionSpring, withMotionTiming } from "@/utils/motion";
 
 /**
- * Shared state for the mini-player entrance and whole-player dismissal.
- *
- * The mini player lives inside whatever page is behind, the full player is a
- * root overlay, so the transition cannot be expressed as a single
- * view tree. `progress` only drives entry from the mini artwork to full screen.
- * Dismissal has its own progress so the full cover never shrinks back over the
- * dock while the page slides away. All values live on the UI thread.
+ * Whole-player entrance and dismissal. Both move the same root surface:
+ * entry goes from below the screen to its resting position, exit goes back
+ * down. Separate progress values allow closing halfway through entry without
+ * jumping to a fully expanded frame. All values live on the UI thread.
  */
 export interface PlayerTransitionState {
     progress: SharedValue<number>;
     /** 0 = resting full player, 1 = the whole page has left the screen. */
     dismissProgress: SharedValue<number>;
-    /** Frame of the mini player artwork in window coordinates. */
-    origin: SharedValue<MotionRect | null>;
 }
 
 let state: PlayerTransitionState | null = null;
@@ -32,7 +26,6 @@ function getState(): PlayerTransitionState {
         state = {
             progress: makeMutable(1),
             dismissProgress: makeMutable(0),
-            origin: makeMutable<MotionRect | null>(null),
         };
     }
     return state;
@@ -42,36 +35,28 @@ export function playerTransition(): PlayerTransitionState {
     return getState();
 }
 
-/** Write the artwork entrance progress directly. Dismissal is independent. */
-export function setPlayerTransitionProgress(value: number) {
-    getState().progress.value = value;
-}
-
 /**
- * Arm the transition from the mini player. Called right before navigating so
- * the full player knows it has a shared element to morph from. When no frame
- * has been measured (player opened from a list, or the very first frame) the
- * full player simply skips the morph and shows up directly.
+ * Queue the hidden first frame before mounting, regardless of opening source.
+ * The entrance animation queues after this preparation on the same UI runtime.
  */
 export function armPlayerTransition() {
-    const { progress, dismissProgress, origin } = getState();
+    const { progress, dismissProgress } = getState();
     runOnUI(() => {
         cancelAnimation(progress);
         cancelAnimation(dismissProgress);
         dismissProgress.value = 0;
-        progress.value = origin.value === null ? 1 : 0;
+        progress.value = 0;
     })();
 }
 
-/** Forget the shared frame once the full player is gone. */
+/** Cancel old animations once the full player is gone. */
 export function resetPlayerTransition() {
-    const { progress, dismissProgress, origin } = getState();
+    const { progress, dismissProgress } = getState();
     runOnUI(() => {
         cancelAnimation(progress);
         cancelAnimation(dismissProgress);
-        progress.value = 1;
-        dismissProgress.value = 0;
-        origin.value = null;
+        // A previous session can unmount after the next opening was armed.
+        // Preserve that hidden first frame; only armPlayerTransition resets it.
     })();
 }
 
@@ -80,14 +65,18 @@ export interface PlayerTransitionMotionOptions {
     velocity?: number;
 }
 
-/** Collapse → full screen. Interrupting it just re-targets the spring. */
+/** Slide the whole page up from the bottom with a bounded screen transition. */
 export function expandPlayerTransition(
     options: PlayerTransitionMotionOptions = {},
 ) {
     const { progress } = getState();
     runOnUI(() => {
         cancelAnimation(progress);
-        progress.value = withMotionSpring(1, options);
+        progress.value = withMotionTiming(1, {
+            duration: "screen",
+            easing: "decelerate",
+            reduceMotion: options.reduceMotion,
+        });
     })();
 }
 
@@ -99,8 +88,10 @@ export function collapsePlayerTransition(
     onFinished: () => void,
     options: PlayerTransitionMotionOptions = {},
 ) {
-    const { dismissProgress } = getState();
+    const { progress, dismissProgress } = getState();
     runOnUI(() => {
+        // Freeze an interrupted entrance, then exit from that exact position.
+        cancelAnimation(progress);
         cancelAnimation(dismissProgress);
         dismissProgress.value = withMotionTiming(1, {
             duration: "screen",

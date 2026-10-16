@@ -7,9 +7,6 @@ import { openPlayer } from "@/core/playerOverlay";
 import MusicInfo from "./musicInfo";
 import MarqueeText from "@/components/base/marqueeText";
 
-let mockUIRuntime = false;
-let mockMeasuredFrame: { pageX: number; pageY: number; width: number; height: number } | null = null;
-const mockTransitionOrigin = { value: null as { x: number; y: number; width: number; height: number } | null };
 let mockDeferAnimations = false;
 const mockAnimationCallbacks: Array<(finished?: boolean) => void> = [];
 const song: IMusic.IMusicItem = {
@@ -32,12 +29,6 @@ jest.mock("@/hooks/useMotion", () => () => ({
 }));
 jest.mock("@/core/playerTransition", () => ({
     armPlayerTransition: jest.fn(),
-    playerTransition: () => {
-        if (mockUIRuntime) {
-            throw new Error("JS transition accessor called on the UI runtime");
-        }
-        return { origin: mockTransitionOrigin };
-    },
 }));
 jest.mock("@/core/playerOverlay", () => ({
     openPlayer: jest.fn((prepare?: () => void) => prepare?.()),
@@ -59,8 +50,6 @@ jest.mock("react-native-reanimated", () => ({
     __esModule: true,
     default: { View: "AnimatedView" },
     useSharedValue: (value: number) => ({ value }),
-    useAnimatedRef: () => ({ current: null }),
-    measure: () => mockMeasuredFrame,
     useAnimatedStyle: (factory: () => unknown) => factory(),
     withTiming: (value: number, _config: unknown, callback?: (finished?: boolean) => void) => {
         if (callback) {
@@ -73,14 +62,6 @@ jest.mock("react-native-reanimated", () => ({
         return value;
     },
     runOnJS: (callback: () => void) => callback,
-    runOnUI: (callback: () => void) => () => {
-        mockUIRuntime = true;
-        try {
-            callback();
-        } finally {
-            mockUIRuntime = false;
-        }
-    },
 }));
 jest.mock("react-native-gesture-handler", () => {
     function gesture() {
@@ -128,19 +109,8 @@ function render(onPress?: () => void, onExpand?: () => void) {
 describe("MusicInfo interactions", () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockUIRuntime = false;
-        mockMeasuredFrame = null;
-        mockTransitionOrigin.value = null;
         mockDeferAnimations = false;
         mockAnimationCallbacks.length = 0;
-    });
-
-    it("updates the artwork frame on the UI runtime without calling the JS state accessor", () => {
-        mockMeasuredFrame = { pageX: 12, pageY: 640, width: 40, height: 40 };
-        const renderer = render();
-        const artwork = renderer.root.findAll(node => node.props.collapsable === false && typeof node.props.onLayout === "function")[0];
-        act(() => artwork.props.onLayout());
-        expect(mockTransitionOrigin.value).toEqual({ x: 12, y: 640, width: 40, height: 40 });
     });
 
     it("keeps the full-player shortcut for existing music bars", () => {

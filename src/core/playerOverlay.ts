@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { armPlayerTransition } from "./playerTransition";
 
 /**
  * 全屏播放器开关。
@@ -39,13 +40,13 @@ export const playerOverlayStore = {
 };
 
 /** Prepare the animation only when a new player will actually mount. */
-export function openPlayer(prepare?: () => void) {
+export function openPlayer(prepare: () => void = armPlayerTransition) {
     if (state.open || preparing) {
         return;
     }
     preparing = true;
     try {
-        prepare?.();
+        prepare();
         publish({ open: true, sessionId: state.sessionId + 1 });
     } finally {
         preparing = false;

@@ -13,6 +13,7 @@ let mockQueue: (() => void)[] = [];
 let mockCompletion: ((finished: boolean) => void) | undefined;
 const mockSpringOrigins: number[] = [];
 const mockDismissOrigins: number[] = [];
+const mockEntryOrigins: number[] = [];
 
 jest.mock("react-native-reanimated", () => ({
     makeMutable: (initial: unknown) => {
@@ -51,7 +52,8 @@ jest.mock("@/utils/motion", () => ({
     }),
     withMotionTiming: jest.fn((target: number, _options: unknown, callback?: (finished: boolean) => void) => {
         expect(mockOnUI).toBe(true);
-        mockDismissOrigins.push(require("./playerTransition").playerTransition().dismissProgress.value);
+        const state = require("./playerTransition").playerTransition();
+        (callback ? mockDismissOrigins : mockEntryOrigins).push(callback ? state.dismissProgress.value : state.progress.value);
         mockCompletion = callback;
         return target;
     }),
@@ -77,29 +79,35 @@ describe("player transition UI ordering", () => {
         mockQueue = [];
         resetPlayerTransition();
         flushUI();
+        onUI(() => {
+            playerTransition().progress.value = 1;
+            playerTransition().dismissProgress.value = 0;
+        });
         jest.clearAllMocks();
         mockSpringOrigins.length = 0;
         mockDismissOrigins.length = 0;
+        mockEntryOrigins.length = 0;
         mockCompletion = undefined;
     });
 
-    it("starts from the measured frame even while JS reads pre-preparation progress", () => {
-        const { origin, progress } = playerTransition();
-        origin.value = { x: 10, y: 600, width: 40, height: 40 };
+    it("starts below the screen even while JS reads pre-preparation progress", () => {
+        const { progress } = playerTransition();
         armPlayerTransition();
         expect(progress.value).toBe(1);
         expandPlayerTransition();
         flushUI();
-        expect(mockSpringOrigins).toEqual([0]);
+        expect(mockEntryOrigins).toEqual([0]);
         expect(progress.value).toBe(1);
     });
 
-    it("opens directly without a measured artwork frame", () => {
+    it("uses the same entrance without artwork measurements and supports Reduce Motion", () => {
         armPlayerTransition();
         expandPlayerTransition({ reduceMotion: true });
         flushUI();
-        expect(mockSpringOrigins).toEqual([1]);
-        expect(withMotionSpring).toHaveBeenCalledWith(1, { reduceMotion: true });
+        expect(mockEntryOrigins).toEqual([0]);
+        expect(withMotionTiming).toHaveBeenCalledWith(1, {
+            duration: "screen", easing: "decelerate", reduceMotion: true,
+        });
     });
 
     it("runs collapse completion on JS only when the UI animation finishes", () => {
@@ -131,7 +139,7 @@ describe("player transition UI ordering", () => {
         expect(playerTransition().progress.value).toBe(1);
     });
 
-    it("continues dismissal from a drag without reversing the cover morph", () => {
+    it("continues dismissal from a drag without reversing entry", () => {
         onUI(() => {
             playerTransition().dismissProgress.value = 0.4;
         });
@@ -153,17 +161,36 @@ describe("player transition UI ordering", () => {
         expect(playerTransition().dismissProgress.value).toBe(0);
     });
 
-    it("clears an old frame before measuring and arming a new opening", () => {
-        const { origin } = playerTransition();
+    it("resets an old transition before arming a new opening", () => {
         onUI(() => {
-            origin.value = { x: 10, y: 700, width: 40, height: 40 };
+            playerTransition().progress.value = 0.4;
+            playerTransition().dismissProgress.value = 0.6;
         });
         resetPlayerTransition();
-        origin.value = { x: 30, y: 590, width: 70, height: 70 };
         armPlayerTransition();
         expandPlayerTransition();
         flushUI();
-        expect(origin.value).toEqual({ x: 30, y: 590, width: 70, height: 70 });
-        expect(mockSpringOrigins).toEqual([0]);
+        expect(playerTransition().dismissProgress.value).toBe(0);
+        expect(mockEntryOrigins).toEqual([0]);
+    });
+
+    it("freezes entry when closing halfway through so exit starts from its current position", () => {
+        onUI(() => {
+            playerTransition().progress.value = 0.35;
+        });
+        collapsePlayerTransition(jest.fn());
+        flushUI();
+        expect(playerTransition().progress.value).toBe(0.35);
+        expect(mockDismissOrigins).toEqual([0]);
+        expect(playerTransition().dismissProgress.value).toBe(1);
+    });
+
+    it("preserves a newly armed opening when the previous player's cleanup arrives afterwards", () => {
+        armPlayerTransition();
+        resetPlayerTransition();
+        expandPlayerTransition();
+        flushUI();
+        expect(mockEntryOrigins).toEqual([0]);
+        expect(playerTransition().progress.value).toBe(1);
     });
 });

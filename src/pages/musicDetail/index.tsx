@@ -7,8 +7,6 @@ import { BackHandler, StyleSheet, useWindowDimensions, View } from "react-native
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
     cancelAnimation,
-    Extrapolation,
-    interpolate,
     runOnJS,
     useAnimatedStyle,
     useDerivedValue,
@@ -33,6 +31,7 @@ import {
 } from "@/core/playerTransition";
 import {
     dismissDecision,
+    clamp,
     playerDismissProgress,
     playerDismissTransform,
 } from "@/utils/motionMath";
@@ -76,7 +75,7 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const removalRef = useRef<(() => void) | null>(null);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const visibilityProgress = useDerivedValue(() =>
-        progress.value * (1 - dismissProgress.value),
+        clamp(progress.value, 0, 1) * (1 - clamp(dismissProgress.value, 0, 1)),
     );
     const acceptsInput = usePlayerVisibility(
         visibilityProgress, isDragging, isClosing, isExiting, onClose,
@@ -94,11 +93,10 @@ export default function MusicDetail(props: IMusicDetailProps) {
         };
     }, []);
 
-    // Enter: the mini player armed progress to 0 before navigating, so the
-    // first frame already sits on the mini artwork and springs to full screen.
+    // Every opening source arms the whole page below the screen before mount.
     useEffect(() => {
         // JS can still read 1 while the queued UI preparation will set 0.
-        // Always queue the spring after preparation; read/write on UI only.
+        // Always queue entry after preparation; read/write on UI only.
         expandPlayerTransition({ reduceMotion: motion.reduceMotion });
         return () => {
             cancelAnimation(progress);
@@ -236,23 +234,12 @@ export default function MusicDetail(props: IMusicDetailProps) {
             }
         });
 
-    const dismissStyle = useAnimatedStyle(() => {
+    const transitionStyle = useAnimatedStyle(() => {
         const { opacity, translateY } = playerDismissTransform(
-            dismissProgress.value, windowHeight, motion.reduceMotion,
+            1 - visibilityProgress.value, windowHeight, motion.reduceMotion,
         );
         return { opacity, transform: [{ translateY }] };
     });
-
-    const backgroundStyle = useAnimatedStyle(() => ({
-        // The blurred artwork is the "room" the player expands into, so it
-        // arrives after the artwork has already started travelling.
-        opacity: interpolate(
-            progress.value,
-            [0.05, 0.8],
-            [0, 1],
-            Extrapolation.CLAMP,
-        ),
-    }));
 
     const contentStyle = useAnimatedStyle(() => ({
         // Alpha alone does not remove native views from hit testing. Keep the
@@ -260,31 +247,24 @@ export default function MusicDetail(props: IMusicDetailProps) {
         pointerEvents: !isClosing.value &&
             (isDragging.value || visibilityProgress.value > PLAYER_INPUT_THRESHOLD)
             ? "auto" as const : "none" as const,
-        // Chrome (title, controls, lyrics) settles in behind the artwork.
-        opacity: interpolate(
-            progress.value,
-            [0, 0.25],
-            [0, 1],
-            Extrapolation.CLAMP,
-        ),
     }));
 
     return (
         <Animated.View
-            style={[globalStyle.fwflex1, dismissStyle]}
+            style={[globalStyle.fwflex1, transitionStyle]}
             pointerEvents="box-none"
             needsOffscreenAlphaCompositing
             renderToHardwareTextureAndroid={isExiting}
             collapsable={false}>
-            <Animated.View
+            <View
                 pointerEvents="none"
-                style={[style.backgroundLayer, backgroundStyle]}>
+                style={style.backgroundLayer}>
                 <Background
                     immersiveCoverEnabled={immersiveCoverEnabled}
                     renderImmersiveCover={useImmersiveCover}
                     showImmersiveCover={useImmersiveCover}
                 />
-            </Animated.View>
+            </View>
             <GestureDetector gesture={dismissGesture}>
                 <Animated.View
                     style={[globalStyle.fwflex1, contentStyle]}
