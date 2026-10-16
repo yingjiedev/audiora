@@ -281,6 +281,19 @@ export interface ILanguageData {
     "searchPage.searchPlaceHolder": string; // 搜索
     "searchPage.searchLabel.a11y": string; // 搜索标签
     "searchPage.history": string; // 历史记录
+    "searchPage.manageHistory": string;
+    "searchPage.removeHistory": string;
+    "searchPage.historyHint": string;
+    "searchPage.historyEmpty": string;
+    "searchPage.historyError": string;
+    "searchPage.retryHistory": string;
+    "searchPage.clearHistory": string;
+    "searchPage.clearHistoryConfirm": string;
+    "searchPage.discovery": string;
+    "searchPage.discovery.recent": string;
+    "searchPage.discovery.favorite": string;
+    "searchPage.discoveryEmpty": string;
+    "searchPage.refreshDiscovery": string;
     "searchPage.sourceLabel": string;
     "searchPage.sourceTitle": string;
     "searchPage.artistResultWorksNum": string; // 艺术家作品数量
