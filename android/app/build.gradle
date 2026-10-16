@@ -51,6 +51,7 @@ static def getVersion() {
 
 def appVersion = findProperty("appVersion") ?: getVersion()
 def appVersionCode = (findProperty("appVersionCode") ?: 1791892584).toInteger()
+def previewApp = (findProperty("previewApp") ?: "false").toBoolean()
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -61,7 +62,8 @@ android {
     namespace "fun.xwj.musicfree"
 
     defaultConfig {
-        applicationId "io.github.yingjiedev.audiora"
+        applicationId "io.github.yingjiedev.audiora${previewApp ? '.preview' : ''}"
+        manifestPlaceholders = [appLabel: previewApp ? "@string/app_name_preview" : "@string/app_name"]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode

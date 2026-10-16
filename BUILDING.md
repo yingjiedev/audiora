@@ -57,6 +57,12 @@ npm run build-preview
 npm run build-preview -- -Abi all
 ```
 
+构建可与正式版并存的预览应用（显示名为“Audiora 预览”，包名追加 `.preview`）：
+
+```powershell
+npm run build-preview -- -PreviewApp
+```
+
 强制重新安装依赖：
 
 ```powershell
