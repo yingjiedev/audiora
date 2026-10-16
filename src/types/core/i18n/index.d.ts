@@ -292,6 +292,7 @@ export interface ILanguageData {
     "searchPage.discovery": string;
     "searchPage.discovery.recent": string;
     "searchPage.discovery.favorite": string;
+    "searchPage.discovery.chart": string;
     "searchPage.discoveryEmpty": string;
     "searchPage.refreshDiscovery": string;
     "searchPage.sourceLabel": string;

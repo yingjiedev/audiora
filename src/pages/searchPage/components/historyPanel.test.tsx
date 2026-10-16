@@ -13,6 +13,7 @@ import { blendOver, contrastRatio } from "@/utils/colorContrast";
 let mockHistory: string[] = [];
 let mockRecent: Array<{ title: string; artist: string }> = [];
 let mockFavorites: Array<{ title: string; artist: string }> = [];
+let mockCharts: Array<{ title: string; artist: string }> = [];
 let mockDimensions = { width: 412, height: 892, scale: 3, fontScale: 1 };
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 const mockSearch = jest.fn();
@@ -23,6 +24,7 @@ jest.mock("../common/historySearch", () => ({
     removeHistory: jest.fn(),
 }));
 jest.mock("../hooks/useSearch", () => () => mockSearch);
+jest.mock("../hooks/useDiscoveryCharts", () => () => mockCharts);
 jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({ __esModule: true, default: () => mockDimensions }));
 jest.mock("@/core/musicHistory", () => ({ useMusicHistory: () => mockRecent }));
 jest.mock("@/core/musicSheet", () => ({ __esModule: true, default: { defaultSheet: { id: "favorite" } }, useSheetItem: () => ({ musicList: mockFavorites }) }));
@@ -47,6 +49,7 @@ describe("search landing history and discovery", () => {
         mockHistory = ["Song", "Another song"];
         mockRecent = [{ title: "Recent song", artist: "Recent artist" }];
         mockFavorites = [{ title: "Favorite song", artist: "Favorite artist" }];
+        mockCharts = [];
         mockDimensions = { width: 412, height: 892, scale: 3, fontScale: 1 };
         mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
         (getHistory as jest.Mock).mockImplementation(async () => mockHistory);
@@ -169,6 +172,19 @@ describe("search landing history and discovery", () => {
         expect(texts()).toContain("searchPage.historyEmpty");
         expect(texts()).toContain("searchPage.discoveryEmpty");
         expect(buttons()).toHaveLength(0);
+    });
+
+    it("keeps a chosen chart batch stable during history management and searches chart titles", async () => {
+        mockCharts = Array.from({ length: 12 }, (_, index) => ({ title: `Chart song ${index}`, artist: "Chart artist" }));
+        await render();
+        const chartTitles = () => texts().filter(value => typeof value === "string" && value.startsWith("Chart song "));
+        const first = chartTitles();
+        expect(first.length).toBeGreaterThanOrEqual(2);
+        act(() => button("searchPage.manageHistory").props.onPress());
+        expect(chartTitles()).toEqual(first);
+        const chart = buttons().find(node => node.props.accessibilityLabel === `${first[0]}，searchPage.discovery.chart`)!;
+        act(() => chart.props.onPress());
+        expect(mockSearch).toHaveBeenCalledWith(first[0], 1);
     });
 
     it.each([lightColors, darkColors, { ...lightColors, primary: "#824717", card: "rgba(254,241,218,0.8)", text: "#432718" }])("keeps tag and caption colors legible on the active theme", async preset => {

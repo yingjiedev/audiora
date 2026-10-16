@@ -16,6 +16,7 @@ import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
 import { useMusicHistory } from "@/core/musicHistory";
 import MusicSheet, { useSheetItem } from "@/core/musicSheet";
+import useDiscoveryCharts from "../hooks/useDiscoveryCharts";
 
 function SectionIcon({ name, label, onPress, disabled = false }: { name: IIconName; label: string; onPress: () => void; disabled?: boolean }) {
     const colors = useColors();
@@ -34,6 +35,7 @@ export default function HistoryPanel() {
     const [batch, setBatch] = useState(0);
     const recentMusic = useMusicHistory();
     const favoriteSheet = useSheetItem(MusicSheet.defaultSheet.id);
+    const chartMusic = useDiscoveryCharts();
     const colors = useColors();
     const { width, fontScale } = useWindowDimensions();
     const oneColumn = width < 360 || fontScale > 1.3;
@@ -43,8 +45,8 @@ export default function HistoryPanel() {
     const setSearchResultsState = useSetAtom(searchResultsAtom);
     const { t } = useI18N();
 
-    const discovery = useMemo(() => buildSearchDiscovery(recentMusic, favoriteSheet.musicList ?? [], history ?? []), [recentMusic, favoriteSheet.musicList, history]);
-    const suggestions = getDiscoveryBatch(discovery, batch);
+    const discovery = useMemo(() => buildSearchDiscovery(recentMusic, favoriteSheet.musicList ?? [], history ?? [], chartMusic), [recentMusic, favoriteSheet.musicList, history, chartMusic]);
+    const suggestions = useMemo(() => getDiscoveryBatch(discovery, batch), [discovery, batch]);
 
     useEffect(() => {
         let active = true;
