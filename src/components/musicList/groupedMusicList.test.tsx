@@ -75,6 +75,18 @@ describe("grouped song rows", () => {
         act(() => renderer.root.findByType(FlashList).props.onEndReached());
         expect(onLoadMore).toHaveBeenCalledTimes(1);
     });
+    it("reuses an untouched row while its stable play handler uses the newly appended queue", () => {
+        const groups = groupTracks([a, other]);
+        act(() => {
+            renderer = TestRenderer.create(<GroupedMusicList groups={groups} state={RequestStateCode.FINISHED} onPlay={onPlay} />);
+        });
+        const firstPress = renderer.root.findAllByType(MusicItem)[0].props.onItemPress;
+        const extra = { ...a, id: "extra", title: "Extra" };
+        act(() => renderer.update(<GroupedMusicList groups={[...groups, ...groupTracks([extra])]} state={RequestStateCode.FINISHED} onPlay={onPlay} />));
+        expect(renderer.root.findAllByType(MusicItem)[0].props.onItemPress).toBe(firstPress);
+        act(() => firstPress());
+        expect(onPlay).toHaveBeenCalledWith(a, [a, other, extra]);
+    });
     it("restores a saved preferred source and routes split and single-source removal independently", async () => {
         const actions = { link: jest.fn(), split: jest.fn(), removeSource: jest.fn(async () => {}), prefer: jest.fn(async () => {}) };
         const group = { key: "saved", groupId: "g", preferredKey: trackSourceKey(b), candidates: [a, b] };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import MusicItem from "@/components/mediaItem/musicItem";
@@ -24,6 +24,8 @@ interface GroupedMusicListProps {
     onLoadMore?: () => void;
     onRetry?: () => void;
     onRefresh?: () => void;
+    emptyComponent?: React.ReactElement;
+    footerComponent?: React.ReactElement | null;
     favoriteActions?: {
         link(group: TrackGroup, selected: IMusic.IMusicItem): void;
         split(group: TrackGroup): void;
@@ -32,11 +34,11 @@ interface GroupedMusicListProps {
     };
 }
 
-function GroupRow({ group, selected, onSelect, onPlay, musicSheet, query, favoriteActions }: {
+const GroupRow = memo(function TrackGroupRow({ group, selected, onSelect, onPlay, musicSheet, query, favoriteActions }: {
     group: TrackGroup;
     selected: IMusic.IMusicItem;
-    onSelect: (key: string) => void;
-    onPlay: () => void;
+    onSelect: (group: TrackGroup, key: string) => void;
+    onPlay: (item: IMusic.IMusicItem) => void;
     musicSheet?: IMusic.IMusicSheetItem;
     query?: string;
     favoriteActions?: GroupedMusicListProps["favoriteActions"];
@@ -61,7 +63,7 @@ function GroupRow({ group, selected, onSelect, onPlay, musicSheet, query, favori
                 highlight={!!playing}
                 actions={["favorite", "addNext", "more"]}
                 titleTagSubText={Number.isFinite(selected.duration) && selected.duration > 0 ? timeformat(selected.duration) : undefined}
-                onItemPress={onPlay}
+                onItemPress={() => onPlay(selected)}
             />
             <View style={styles.sourceLine}>
                 <ThemeText fontColor="textSecondary" fontSize="description" style={styles.sourceName} numberOfLines={1}>
@@ -95,7 +97,7 @@ function GroupRow({ group, selected, onSelect, onPlay, musicSheet, query, favori
                                 key={key}
                                 accessibilityRole="radio"
                                 accessibilityState={{ checked }}
-                                onPress={() => onSelect(key)}
+                                onPress={() => onSelect(group, key)}
                                 style={[styles.choice, { backgroundColor: colors.surface, borderColor: checked ? colors.active : colors.divider }]}>
                                 <ThemeText color={checked ? colors.active : colors.text} fontSize="description">
                                     {getDisplayName(candidate.platform)}
@@ -134,45 +136,54 @@ function GroupRow({ group, selected, onSelect, onPlay, musicSheet, query, favori
             ) : null}
         </View>
     );
-}
+});
 
 /** Every action receives the original source; confirmed groups also save selection. */
 export default function GroupedMusicList(props: GroupedMusicListProps) {
     const [selection, setSelection] = useState<Record<string, string>>({});
-    const selected = props.groups.map(group =>
+    const selected = useMemo(() => props.groups.map(group =>
         group.candidates.find(item => trackSourceKey(item) === (selection[group.key] ?? group.preferredKey)) ?? group.candidates[0],
-    );
+    ), [props.groups, selection]);
+    const latest = useRef({ selected, onPlay: props.onPlay, actions: props.favoriteActions });
+    useLayoutEffect(() => {
+        latest.current = { selected, onPlay: props.onPlay, actions: props.favoriteActions };
+    }, [selected, props.onPlay, props.favoriteActions]);
+    const onPlay = useCallback((item: IMusic.IMusicItem) => latest.current.onPlay(item, [...latest.current.selected]), []);
+    const onSelect = useCallback((group: TrackGroup, key: string) => {
+        setSelection(previous => ({ ...previous, [group.key]: key }));
+        if (group.groupId) {
+            const candidate = group.candidates.find(item => trackSourceKey(item) === key);
+            if (candidate) latest.current.actions?.prefer(candidate);
+        }
+    }, []);
+    const renderItem = useCallback(({ item: group, index }: { item: TrackGroup; index: number }) => (
+        <GroupRow
+            group={group}
+            selected={selected[index]}
+            onSelect={onSelect}
+            onPlay={onPlay}
+            musicSheet={props.musicSheet}
+            query={props.query}
+            favoriteActions={props.favoriteActions}
+        />
+    ), [selected, onSelect, onPlay, props.musicSheet, props.query, props.favoriteActions]);
     return (
         <FlashList
             data={props.groups}
             extraData={selection}
             keyExtractor={group => group.key}
             ListHeaderComponent={props.renderHeader?.(selected)}
-            ListEmptyComponent={<ListEmpty state={props.state} onRetry={props.onRetry} />}
-            ListFooterComponent={props.groups.length ? <ListFooter state={props.state} onRetry={props.onRetry} /> : null}
+            ListEmptyComponent={props.emptyComponent ?? <ListEmpty state={props.state} onRetry={props.onRetry} />}
+            ListFooterComponent={props.footerComponent === undefined
+                ? (props.groups.length ? <ListFooter state={props.state} onRetry={props.onRetry} /> : null)
+                : props.footerComponent}
             refreshing={false}
             onRefresh={props.onRefresh}
             onEndReached={() => {
                 if (props.state === RequestStateCode.PARTLY_DONE) props.onLoadMore?.();
             }}
             onEndReachedThreshold={0.1}
-            renderItem={({ item: group, index }) => (
-                <GroupRow
-                    group={group}
-                    selected={selected[index]}
-                    onSelect={key => {
-                        setSelection(previous => ({ ...previous, [group.key]: key }));
-                        if (group.groupId) {
-                            const candidate = group.candidates.find(item => trackSourceKey(item) === key);
-                            if (candidate) props.favoriteActions?.prefer(candidate);
-                        }
-                    }}
-                    onPlay={() => props.onPlay(selected[index], [...selected])}
-                    musicSheet={props.musicSheet}
-                    query={props.query}
-                    favoriteActions={props.favoriteActions}
-                />
-            )}
+            renderItem={renderItem}
         />
     );
 }

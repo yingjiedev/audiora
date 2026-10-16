@@ -11,7 +11,7 @@ const mockA = { hash: "a", name: "A", instance: { platform: "A" }, methods: { se
 const mockB = { hash: "b", name: "B", instance: { platform: "B" }, methods: { search: jest.fn(async () => ({ data: [], isEnd: true })) } };
 let mockPlugins = [mockA, mockB];
 jest.mock("@/core/router", () => ({ useParams: () => mockSource ? { pluginHash: mockSource } : undefined }));
-jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getSearchablePlugins: () => mockPlugins } }));
+jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getSearchablePlugins: () => mockPlugins, getSortedSearchablePlugins: () => mockPlugins } }));
 jest.mock("@/utils/log", () => ({ devLog: jest.fn(), errorLog: jest.fn(), trace: jest.fn() }));
 jest.mock("@/constants/commonConst", () => ({ RequestStateCode: { IDLE: 0, PENDING_FIRST_PAGE: 2, PENDING_REST_PAGE: 3, PARTLY_DONE: 4, FINISHED: 8, ERROR: 128 } }));
 

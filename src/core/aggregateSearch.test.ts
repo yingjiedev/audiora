@@ -118,4 +118,38 @@ describe("aggregate search sessions", () => {
         expect(sources[3].search).not.toHaveBeenCalled();
         expect(search.results).toEqual({});
     });
+    it("bounds a whole request wave, including queue time, and lets unstarted sources retry", async () => {
+        search = new AggregateSearch(() => {}, item => item, 2, 100, 150);
+        search.reset("song");
+        const sources = Array.from({ length: 8 }, (_, i) => ({ key: String(i), search: jest.fn(() => new Promise<SearchPage<string>>(() => {})) }));
+        const done = search.request(sources, "ensure");
+        await flush();
+        jest.advanceTimersByTime(100); await flush();
+        jest.advanceTimersByTime(50); await done;
+        expect(Object.values(search.results).every(result => result.state === "error")).toBe(true);
+        expect(sources.filter(source => source.search.mock.calls.length)).toHaveLength(4);
+        sources[7].search.mockResolvedValueOnce({ data: ["recovered"], isEnd: true });
+        await search.request([sources[7]], "retry");
+        expect(search.results["7"].data).toEqual(["recovered"]);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+    it("retains identity indexes on appends and only changes the replacement version on refresh success", async () => {
+        const identity = jest.fn((item: string) => item);
+        search = new AggregateSearch(() => {}, identity);
+        search.reset("song");
+        const source = { key: "a", search: jest.fn().mockResolvedValueOnce({ data: ["a", "b"], isEnd: false })
+            .mockResolvedValueOnce({ data: ["b", "c"], isEnd: false })
+            .mockRejectedValueOnce(new Error("offline"))
+            .mockResolvedValueOnce({ data: ["new"], isEnd: true }) };
+        await search.request([source], "ensure");
+        const version = search.results.a.dataVersion;
+        identity.mockClear();
+        await search.request([source], "next");
+        expect(identity).toHaveBeenCalledTimes(2);
+        expect(search.results.a).toMatchObject({ data: ["a", "b", "c"], dataVersion: version });
+        await search.request([source], "refresh");
+        expect(search.results.a.dataVersion).toBe(version);
+        await search.request([source], "retry");
+        expect(search.results.a).toMatchObject({ data: ["new"], dataVersion: version + 1 });
+    });
 });

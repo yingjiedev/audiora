@@ -1,4 +1,4 @@
-import { AggregateSearch, SearchOperation } from "@/core/aggregateSearch";
+import { AggregateSearch, SearchOperation, SourceSearchResult } from "@/core/aggregateSearch";
 import PluginManager from "@/core/pluginManager";
 import { RequestStateCode } from "@/constants/commonConst";
 import { getDefaultStore } from "jotai";
@@ -7,11 +7,29 @@ import { scopeSearchPlugins } from "../common/searchScope";
 import { initSearchResults, pageStatusAtom, PageStatus, queryAtom, searchResultsAtom, searchSessionAtom } from "./atoms";
 
 let currentScope: string | undefined;
-const coordinator = new AggregateSearch<ICommon.IMediaBase>(() => {
+let publishTimer: ReturnType<typeof setTimeout> | undefined;
+let publishedRaw: Record<string, SourceSearchResult<ICommon.IMediaBase>> = {};
+let publishedPending = false;
+let publishedDataTypes = new Set<string>();
+
+function publish() {
+    clearTimeout(publishTimer);
+    publishTimer = undefined;
     const store = getDefaultStore();
-    const results = { music: {}, album: {}, artist: {}, sheet: {}, lyric: {} };
+    const previous = store.get(searchResultsAtom);
+    let results = previous;
+    const changedTypes = new Set<string>();
+    const dataTypes = new Set<string>();
+    let pending = false;
     for (const [key, result] of Object.entries(coordinator.results)) {
         const [type, hash] = JSON.parse(key) as [ICommon.SupportMediaType, string];
+        pending ||= result.state === "loading";
+        if (result.data.length) dataTypes.add(type);
+        if (publishedRaw[key] === result && previous[type][hash]) continue;
+        if (!changedTypes.has(type)) {
+            results = { ...results, [type]: { ...previous[type] } };
+            changedTypes.add(type);
+        }
         results[type][hash] = {
             ...result,
             query: coordinator.query,
@@ -21,8 +39,24 @@ const coordinator = new AggregateSearch<ICommon.IMediaBase>(() => {
                     : result.state === "finished" ? RequestStateCode.FINISHED : RequestStateCode.ERROR,
         };
     }
+    if (!Object.keys(coordinator.results).length) results = { music: {}, album: {}, artist: {}, sheet: {}, lyric: {} };
+    publishedRaw = coordinator.results;
+    publishedPending = pending;
+    publishedDataTypes = dataTypes;
     store.set(searchResultsAtom, results);
-}, trackSourceKey);
+}
+
+function schedulePublication() {
+    if (coordinator.results === publishedRaw) return;
+    const entries = Object.entries(coordinator.results);
+    const pending = entries.some(([, result]) => result.state === "loading");
+    const firstData = entries.some(([key, result]) => result.data.length && !publishedDataTypes.has(JSON.parse(key)[0]));
+    // First results and loading/completion transitions are immediate. Coalesce bursts.
+    if (!entries.length || firstData || pending !== publishedPending) publish();
+    else if (publishTimer === undefined) publishTimer = setTimeout(publish, 50);
+}
+
+const coordinator = new AggregateSearch<ICommon.IMediaBase>(schedulePublication, trackSourceKey);
 
 export function resetSearch(query = "", scope?: string) {
     currentScope = scope;
@@ -54,7 +88,7 @@ export function runSearch(
         || (query !== undefined && page === 1 && !pluginHash)) {
         resetSearch(keyword, scope);
     }
-    const plugins = scopeSearchPlugins(PluginManager.getSearchablePlugins(type), pluginHash ?? scope)
+    const plugins = scopeSearchPlugins(PluginManager.getSortedSearchablePlugins(type), pluginHash ?? scope)
         .filter(plugin => plugin.hash && plugin.instance.platform);
     if (!plugins.length) {
         const anySources = scopeSearchPlugins(PluginManager.getSearchablePlugins(), scope);

@@ -16,6 +16,42 @@ export const emptyFavoriteGroups = (): FavoriteGroupsState => ({ version: 1, gro
 const MAX_GROUPS = 10_000;
 export const MAX_GROUP_SOURCES = 32;
 
+/** One identity lookup replaces scanning all saved groups for every search row. */
+export function favoriteGroupIndex(state: FavoriteGroupsState) {
+    const index = new Map<string, FavoriteGroup>();
+    for (const group of state.groups) for (const key of group.memberKeys) index.set(key, group);
+    return index;
+}
+
+export class FavoriteGroupDecorator {
+    private state?: FavoriteGroupsState;
+    private index = new Map<string, FavoriteGroup>();
+    private cache = new WeakMap<TrackGroup, TrackGroup>();
+    private groups?: TrackGroup[];
+    private result: TrackGroup[] = [];
+
+    sync(groups: TrackGroup[], state: FavoriteGroupsState) {
+        if (this.state === state && this.groups === groups) return this.result;
+        if (this.state !== state) {
+            this.index = favoriteGroupIndex(state);
+            this.cache = new WeakMap();
+        }
+        this.state = state;
+        this.groups = groups;
+        this.result = groups.map(group => {
+            const cached = this.cache.get(group);
+            if (cached) return cached;
+            const saved = this.index.get(trackSourceKey(group.candidates[0]));
+            const decorated = saved && group.candidates.every(item => this.index.get(trackSourceKey(item)) === saved)
+                ? { ...group, groupId: saved.id, preferredKey: saved.preferredKey }
+                : group;
+            this.cache.set(group, decorated);
+            return decorated;
+        });
+        return this.result;
+    }
+}
+
 function validKey(value: unknown): value is string {
     if (typeof value !== "string" || value.length > 4096) return false;
     try {

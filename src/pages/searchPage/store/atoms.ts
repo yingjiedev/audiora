@@ -7,6 +7,7 @@ export interface ISearchResult<T extends ICommon.SupportMediaType> {
     /** 当前页码 */
     page?: number;
     requestedPage?: number;
+    dataVersion?: number;
     /** 搜索词 */
     query?: string;
     /** 搜索状态 */
@@ -32,6 +33,7 @@ export const initSearchResults: ISearchResults = {
 
 /** key: pluginhash value: searchResult */
 const searchResultsAtom = atom(initSearchResults);
+export const musicSearchResultsAtom = atom(get => get(searchResultsAtom).music);
 
 export enum PageStatus {
     /** 编辑中 */

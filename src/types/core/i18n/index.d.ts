@@ -278,6 +278,10 @@ export interface ILanguageData {
     "searchMusicList.searchLabel.a11y": string; // 搜索音乐标签
 
     // 搜索页面相关
+    "aggregate.searching": string;
+    "aggregate.searchingMore": string;
+    "aggregate.slowSources": string;
+    "aggregate.loadMore": string;
     "aggregate.linkFavorites": string;
     "aggregate.linkConfirm": string;
     "aggregate.splitFavorites": string;

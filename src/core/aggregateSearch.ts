@@ -14,6 +14,8 @@ export interface SourceSearchResult<T> {
     /** Last successfully loaded page. Failed requests do not advance it. */
     page: number;
     requestedPage: number;
+    /** Replacement generation; append pages preserve it. */
+    dataVersion: number;
 }
 
 export type SearchOperation = "ensure" | "next" | "retry" | "refresh";
@@ -30,12 +32,14 @@ export class AggregateSearch<T> {
     private session = 0;
     private queue: SearchTask[] = [];
     private active = new Set<SearchTask>();
+    private dataKeys = new Map<string, Set<string>>();
 
     constructor(
         private onChange: () => void,
         private getKey: (item: T) => string,
         private concurrency = 3,
         private timeoutMs = 10_000,
+        private requestBudgetMs = 15_000,
     ) {}
 
     reset(query = "") {
@@ -45,12 +49,14 @@ export class AggregateSearch<T> {
         this.queue = [];
         this.active.clear();
         this.results = {};
+        this.dataKeys.clear();
         this.onChange();
     }
 
     request(sources: SearchSource<T>[], operation: SearchOperation, explicitPage?: number) {
         const session = this.session;
         const query = this.query;
+        const deadline = Date.now() + this.requestBudgetMs;
         const requests: Promise<void>[] = [];
         for (const source of sources) {
             const previous = this.results[source.key];
@@ -65,6 +71,7 @@ export class AggregateSearch<T> {
                 data: previous?.data ?? [],
                 page: previous?.page ?? 0,
                 requestedPage: page,
+                dataVersion: previous?.dataVersion ?? 0,
             };
             this.results = { ...this.results, [source.key]: result };
             let finish!: () => void;
@@ -81,8 +88,9 @@ export class AggregateSearch<T> {
                 },
                 run: async () => {
                     try {
+                        if (Date.now() >= deadline) throw new Error("Search budget exhausted");
                         const response = await new Promise<SearchPage<T> | null>((resolve, reject) => {
-                            const timer = setTimeout(() => reject(new Error("Search timed out")), this.timeoutMs);
+                            const timer = setTimeout(() => reject(new Error("Search timed out")), Math.min(this.timeoutMs, deadline - Date.now()));
                             cancelWait = () => {
                                 clearTimeout(timer); resolve(null);
                             };
@@ -98,20 +106,24 @@ export class AggregateSearch<T> {
                         if (cancelled || session !== this.session) return;
                         if (!response || !Array.isArray(response.data)) throw new Error("Invalid search response");
                         const existing = page === 1 ? [] : result.data;
-                        const keys = new Set(existing.map(this.getKey));
+                        const keys = page === 1 ? new Set<string>() : this.dataKeys.get(source.key) ?? new Set(existing.map(this.getKey));
+                        const incoming = new Set<string>();
                         const additions = response.data.filter(item => {
                             const key = this.getKey(item);
-                            if (keys.has(key)) return false;
-                            keys.add(key);
+                            if (keys.has(key) || incoming.has(key)) return false;
+                            incoming.add(key);
                             return true;
                         });
+                        for (const key of incoming) keys.add(key);
+                        this.dataKeys.set(source.key, keys);
                         this.results = {
                             ...this.results,
                             [source.key]: {
                                 state: response.isEnd === false && additions.length > 0 ? "ready" : "finished",
-                                data: [...existing, ...additions],
+                                data: page !== 1 && !additions.length ? existing : [...existing, ...additions],
                                 page,
                                 requestedPage: page,
+                                dataVersion: result.dataVersion + (page === 1 ? 1 : 0),
                             },
                         };
                     } catch {

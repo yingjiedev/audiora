@@ -4,7 +4,7 @@ import { usePluginDisplayNameResolver, useSearchablePlugins } from "@/core/plugi
 import { useI18N } from "@/core/i18n";
 import AggregateResults from "./aggregateResults";
 import { vw } from "@/utils/rpx";
-import { useAtomValue } from "jotai";
+import { atom, useAtomValue } from "jotai";
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { SceneMap, TabView } from "react-native-tab-view";
 import { searchResultsAtom } from "../../store/atoms";
@@ -30,11 +30,11 @@ function getResultComponent(
     pluginHash: string,
     pluginName: string,
 ) {
+    const sourceResultAtom = atom(get => get(searchResultsAtom)[tab][pluginHash]);
     return tab in renderMap
         ? memo(
             () => {
-                const searchResults = useAtomValue(searchResultsAtom);
-                const pluginSearchResult = searchResults[tab][pluginHash];
+                const pluginSearchResult = useAtomValue(sourceResultAtom);
                 const pluginSearchResultRef = useRef(pluginSearchResult);
 
                 useEffect(() => {

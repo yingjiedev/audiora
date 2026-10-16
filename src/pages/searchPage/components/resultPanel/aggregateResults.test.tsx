@@ -8,6 +8,7 @@ import Button from "@/components/base/textButton";
 import { pageStatusAtom, PageStatus, queryAtom } from "../../store/atoms";
 import { resetSearch } from "../../store/searchController";
 import TrackPlayer from "@/core/trackPlayer";
+import SearchPending from "./searchPending";
 
 const song = { id: "1", platform: "A", title: "Song", artist: "Artist", duration: 200 } as IMusic.IMusicItem;
 const mockA = { hash: "a", name: "A", instance: { platform: "A" }, methods: { search: jest.fn() } };
@@ -16,7 +17,7 @@ let mockSource: string | undefined;
 let mockBehavior = "playMusicAndReplace";
 jest.mock("@/core/pluginManager", () => ({
     __esModule: true,
-    default: { getSearchablePlugins: () => [mockA, mockB] },
+    default: { getSearchablePlugins: () => [mockA, mockB], getSortedSearchablePlugins: () => [mockA, mockB] },
     useSearchablePlugins: () => [mockA, mockB],
     usePluginDisplayNameResolver: () => (plugin: { name: string }) => plugin.name,
 }));
@@ -29,6 +30,7 @@ jest.mock("@/components/musicList/groupedMusicList", () => {
 });
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/base/textButton", () => "Button");
+jest.mock("./searchPending", () => "SearchPending");
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/constants/commonConst", () => ({ RequestStateCode: { IDLE: 0, PENDING_FIRST_PAGE: 2, PENDING_REST_PAGE: 3, PARTLY_DONE: 4, FINISHED: 8, ERROR: 128 } }));
 
@@ -78,6 +80,22 @@ describe("aggregate search view integration", () => {
         mockSource = "a"; await render();
         expect(mockB.methods.search).not.toHaveBeenCalled();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
+    });
+    it("keeps early results usable during a slow source and stops waiting when only pagination remains", async () => {
+        let finish!: (value: { data: IMusic.IMusicItem[]; isEnd: boolean }) => void;
+        mockB.methods.search.mockImplementationOnce(() => new Promise(resolve => {
+            finish = resolve;
+        }));
+        await render();
+        const early = renderer.root.findByType(GroupedMusicList).props;
+        expect(early.groups[0].candidates).toEqual([song]);
+        expect(early.footerComponent.type).toBe(SearchPending);
+        act(() => early.onPlay(song, [song]));
+        expect(TrackPlayer.playWithReplacePlayList).toHaveBeenCalledWith(song, [song]);
+        await act(async () => finish({ data: [], isEnd: true }));
+        const ready = renderer.root.findByType(GroupedMusicList).props;
+        expect(ready.footerComponent.type).not.toBe(SearchPending);
+        expect(ready.emptyComponent).toBeUndefined();
     });
 });
 
