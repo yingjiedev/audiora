@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from "react";
 import TestRenderer, { act } from "react-test-renderer";
+import { armPlayerTransition } from "./playerTransition";
 import {
     closePlayer,
     isPlayerOpen,
@@ -7,9 +8,26 @@ import {
     playerOverlayStore,
 } from "./playerOverlay";
 
+jest.mock("./playerTransition", () => ({ armPlayerTransition: jest.fn() }));
+
 describe("player overlay sessions", () => {
-    beforeEach(() => closePlayer());
+    beforeEach(() => {
+        closePlayer();
+        jest.clearAllMocks();
+    });
     afterEach(() => closePlayer());
+
+    it("arms ordinary opening sources before publishing and only once per session", () => {
+        (armPlayerTransition as jest.Mock).mockImplementationOnce(() => {
+            expect(isPlayerOpen()).toBe(false);
+        });
+        openPlayer();
+        openPlayer();
+        expect(armPlayerTransition).toHaveBeenCalledTimes(1);
+        closePlayer();
+        openPlayer();
+        expect(armPlayerTransition).toHaveBeenCalledTimes(2);
+    });
 
     it("prepares once and preserves the animation for repeated open requests", () => {
         let progress = 1;

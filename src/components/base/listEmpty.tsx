@@ -1,62 +1,19 @@
+import React from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { RequestStateCode } from "@/constants/commonConst";
-import { fontSizeConst } from "@/constants/uiConst";
+import { spacing } from "@/constants/designSystem";
+import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
-import React from "react";
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
 import ThemeText from "./themeText";
-import { useI18N } from "@/core/i18n";
-
-interface IEmptyProps {
-    state: RequestStateCode
-    onRetry?: () => void;
-}
-export default function ListEmpty(props: IEmptyProps) {
-    const { state, onRetry } = props;
-
+import { PageAction, PageState } from "./pageSection";
+export default function ListEmpty({ state, onRetry }: { state: RequestStateCode; onRetry?: () => void }) {
     const colors = useColors();
     const { t } = useI18N();
-
-    if (state === RequestStateCode.FINISHED || state === RequestStateCode.PARTLY_DONE) {
-        return <View style={style.wrapper}>
-            <ThemeText fontSize="title">
-                {t("common.emptyList")}
-            </ThemeText>
-        </View>;
-    } else if (state === RequestStateCode.PENDING_FIRST_PAGE) {
-        return <View style={style.wrapper}>
-            <ActivityIndicator animating color={colors.text} size={fontSizeConst.appbar}/>
-            <ThemeText
-                fontSize="title"
-                fontWeight="semibold">
-                {t("common.loading")}
-            </ThemeText>
-        </View>;
-    } else if (state === RequestStateCode.ERROR) {
-        return <View style={style.wrapper}>
-            <ThemeText fontSize="title">
-                {t("common.error")}
-            </ThemeText>
-            <TouchableOpacity onPress={onRetry} style={[style.retryButton, { backgroundColor: colors.surface }]}>
-                <ThemeText>{t("common.clickToRetry")}</ThemeText>
-            </TouchableOpacity>
-        </View>;
+    if (state === RequestStateCode.PENDING_FIRST_PAGE || state === RequestStateCode.PENDING_REST_PAGE) {
+        return <View style={styles.loading}><ActivityIndicator color={colors.primaryText} /><ThemeText fontColor="textSecondary">{t("common.loading")}</ThemeText></View>;
     }
- 
+    if (state === RequestStateCode.ERROR) return <PageState icon="x-mark" title={t("common.failToLoad")} tone="danger" action={onRetry ? <PageAction title={t("common.clickToRetry")} icon="arrow-path" onPress={onRetry} /> : undefined} />;
+    return <PageState title={t("common.emptyList")} />;
 }
-
-const style = StyleSheet.create({
-    wrapper: {
-        width: "100%",
-        flex: 1,
-        minHeight: rpx(540),
-        justifyContent: "center",
-        alignItems: "center",
-        gap: rpx(36),
-    },
-    retryButton: {
-        paddingVertical: rpx(24),
-        paddingHorizontal: rpx(48),
-        borderRadius: rpx(36),
-    },
-});
+const styles = StyleSheet.create({ loading: { minHeight: rpx(360), padding: spacing.xxxl, alignItems: "center", justifyContent: "center", gap: spacing.md } });

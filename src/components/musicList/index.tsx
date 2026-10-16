@@ -1,18 +1,21 @@
 import { RequestStateCode } from "@/constants/commonConst";
 import TrackPlayer from "@/core/trackPlayer";
 import rpx from "@/utils/rpx";
+import { spacing } from "@/constants/designSystem";
 import timeformat from "@/utils/timeformat";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
-import React, { useRef, useCallback, useState, useEffect } from "react";
+import React, { useRef, useCallback, useState, useEffect, useMemo } from "react";
 import { FlatListProps, Pressable, StyleSheet, View } from "react-native";
 import ListEmpty from "../base/listEmpty";
 import ListFooter from "../base/listFooter";
 import MusicItem, { MusicItemAction } from "../mediaItem/musicItem";
-import { isSameMediaItem } from "@/utils/mediaUtils";
+import { getMediaUniqueKey, isSameMediaItem } from "@/utils/mediaUtils";
 import Icon from "../base/icon";
 import { iconSizeConst } from "@/constants/uiConst";
 import useColors from "@/hooks/useColors";
 import { useRoute } from "@react-navigation/native";
+import Checkbox from "../base/checkbox";
+import type { MusicListSelection } from "./useMusicSelection";
 
 interface IMusicListProps {
     /** 顶部 */
@@ -38,6 +41,7 @@ interface IMusicListProps {
     showCover?: boolean;
     /** 按场景配置右侧操作，共用相同歌曲行 */
     actions?: readonly MusicItemAction[];
+    selection?: MusicListSelection;
 }
 
 /** 音乐列表 */
@@ -55,11 +59,13 @@ export default function MusicList(props: IMusicListProps) {
         highlightMusicItem,
         showCover,
         actions,
+        selection,
     } = props;
     const colors = useColors();
     const flashListRef = useRef<FlashListRef<IMusic.IMusicItem>>(null);
     const [showBadge, setShowBadge] = useState(false);
     const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const extraData = useMemo(() => ({ highlightMusicItem, selection, actions, showCover }), [highlightMusicItem, selection, actions, showCover]);
 
     // 查找高亮项的索引
     const highlightIndex = React.useMemo(() => {
@@ -122,7 +128,7 @@ export default function MusicList(props: IMusicListProps) {
                 ListFooterComponent={
                     musicList?.length ? <ListFooter state={state} onRetry={onRetry} /> : null
                 }
-                extraData={highlightMusicItem}
+                extraData={extraData}
                 data={musicList ?? []}
                 keyExtractor={item => `${item.platform}@${item.id}`}
                 onScrollBeginDrag={handleScrollBegin}
@@ -132,14 +138,20 @@ export default function MusicList(props: IMusicListProps) {
                     return (
                         <MusicItem
                             musicItem={musicItem}
+                            itemPaddingLeft={spacing.xxxl}
+                            itemPaddingRight={spacing.xxxl}
                             index={showIndex ? index + 1 : undefined}
+                            checked={selection ? selection.selectedKeys.has(getMediaUniqueKey(musicItem)) : undefined}
+                            left={selection ? <View style={styles.selection}><Checkbox checked={selection.selectedKeys.has(getMediaUniqueKey(musicItem))} /></View> : undefined}
                             titleTagSubText={
                                 typeof musicItem.duration === "number"
                                     ? timeformat(musicItem.duration)
                                     : undefined
                             }
                             onItemPress={() => {
-                                if (onItemPress) {
+                                if (selection) {
+                                    selection.onToggle(musicItem);
+                                } else if (onItemPress) {
                                     onItemPress(musicItem, musicList);
                                 } else {
                                     TrackPlayer.playWithReplacePlayList(
@@ -152,7 +164,7 @@ export default function MusicList(props: IMusicListProps) {
                             musicSheet={musicSheet}
                             highlight={highlightMusicItem ? isSameMediaItem(musicItem, highlightMusicItem) : undefined}
                             showCover={showCover}
-                            actions={actions}
+                            actions={selection ? [] : actions}
                         />
                     );
                 }}
@@ -184,6 +196,10 @@ export default function MusicList(props: IMusicListProps) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    selection: {
+        flexShrink: 0,
+        marginRight: spacing.xs,
     },
     badge: {
         position: "absolute",

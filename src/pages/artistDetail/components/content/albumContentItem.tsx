@@ -1,3 +1,4 @@
+import { radius, spacing } from "@/constants/designSystem";
 import React from "react";
 import AlbumItem from "@/components/mediaItem/albumItem";
 import { View, StyleSheet } from "react-native";
@@ -12,8 +13,8 @@ export default function AlbumContentItem(props: IAlbumContentProps) {
     const { item } = props;
     const colors = useColors();
     const cardStyle = useCardStyle({
-        borderWidth: rpx(1),
-        elevation: 2,
+        borderWidth: 0,
+        elevation: 0,
     });
 
     return (
@@ -21,7 +22,7 @@ export default function AlbumContentItem(props: IAlbumContentProps) {
             style={[
                 styles.cardWrapper,
                 {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.card,
                 },
                 cardStyle,
             ]}>
@@ -32,14 +33,14 @@ export default function AlbumContentItem(props: IAlbumContentProps) {
 
 const styles = StyleSheet.create({
     cardWrapper: {
-        marginHorizontal: rpx(16),
-        marginVertical: rpx(6),
-        borderRadius: rpx(12),
+        marginHorizontal: spacing.xxxl,
+        marginVertical: spacing.xxs,
+        borderRadius: radius.lg,
         overflow: "hidden",
         shadowOffset: {
             width: 0,
             height: rpx(2),
         },
-        shadowRadius: rpx(4),
+        shadowRadius: 0,
     },
 });

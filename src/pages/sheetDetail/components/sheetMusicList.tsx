@@ -7,8 +7,15 @@ import globalStyle from "@/constants/globalStyle";
 import { useSheetItem } from "@/core/musicSheet";
 import { RequestStateCode } from "@/constants/commonConst";
 import { useCurrentMusic } from "@/core/trackPlayer";
+import type { MusicListSelection } from "@/components/musicList/useMusicSelection";
 
-export default function SheetMusicList() {
+interface Props {
+    onEdit?: () => void;
+    selection?: MusicListSelection;
+    editingControls?: React.ReactNode;
+}
+
+export default function SheetMusicList({ onEdit, selection, editingControls }: Props) {
     const { id = "favorite" } = useParams<"local-sheet-detail">();
     const musicSheet = useSheetItem(id);
     const currentMusic = useCurrentMusic();
@@ -16,13 +23,13 @@ export default function SheetMusicList() {
     return (
         <HorizontalSafeAreaView style={globalStyle.flex1}>
             <MusicList
-                Header={<Header />}
+                Header={<Header onEdit={onEdit} editingControls={editingControls} />}
                 musicList={musicSheet?.musicList}
                 musicSheet={musicSheet}
                 showIndex
                 state={RequestStateCode.IDLE}
                 highlightMusicItem={currentMusic}
-
+                selection={selection}
             />
         </HorizontalSafeAreaView>
     );

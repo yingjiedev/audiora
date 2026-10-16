@@ -8,17 +8,22 @@ import { ROUTE_PATH, useParams } from "@/core/router";
 import { default as Toast, default as toast } from "@/utils/toast";
 import { useNavigation } from "@react-navigation/native";
 import React from "react";
+import { PageAction } from "@/components/base/pageSection";
+import useColors from "@/hooks/useColors";
 
-export default function () {
+export default function NavBar({ editing = false, onEdit, onFinishEdit }: { editing?: boolean; onEdit: () => void; onFinishEdit: () => void }) {
     const navigation = useNavigation<any>();
     const { id = "favorite" } = useParams<"local-sheet-detail">();
     const musicSheet = useSheetItem(id);
     const { t } = useI18N();
+    const colors = useColors();
 
     return (
         <>
             <AppBar
-                menu={[
+                onBackPress={editing ? onFinishEdit : undefined}
+                actionComponent={editing ? <PageAction title={t("common.done")} variant="text" textColor={colors.appBarText ?? colors.text} onPress={onFinishEdit} /> : undefined}
+                menu={editing ? [] : [
                     {
                         icon: "pencil-outline",
                         title: t("sheetDetail.editSheetInfo"),
@@ -31,6 +36,11 @@ export default function () {
                     {
                         icon: "pencil-square",
                         title: t("sheetDetail.batchEditMusic"),
+                        onPress: onEdit,
+                    },
+                    {
+                        icon: "bars-3",
+                        title: t("sheetDetail.manualSortMusic"),
                         onPress() {
                             navigation.navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
                                 musicList: musicSheet.musicList,
@@ -98,7 +108,7 @@ export default function () {
                         },
                     },
                 ]}
-                actions={[
+                actions={editing ? [] : [
                     {
                         icon: "magnifying-glass",
                         onPress() {

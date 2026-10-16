@@ -1,3 +1,4 @@
+import { spacing } from "@/constants/designSystem";
 import React from "react";
 import MusicItem from "@/components/mediaItem/musicItem";
 import Config from "@/core/appConfig";
@@ -16,6 +17,8 @@ export default function MusicResultItem(props: IMusicResultsProps) {
     const { item: musicItem, pluginSearchResultRef, query } = props;
     return (
         <MusicItem
+            itemPaddingLeft={spacing.xxxl}
+            itemPaddingRight={spacing.xxxl}
             musicItem={musicItem}
             highlightText={query}
             actions={["favorite", "addNext", "more"]}

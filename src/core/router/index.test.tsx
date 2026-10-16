@@ -10,6 +10,7 @@ jest.mock("@react-navigation/native", () => ({
     useNavigation: () => mockNavigation,
     useRoute: () => ({ params: {} }),
 }));
+jest.mock("@/core/playerTransition", () => ({ armPlayerTransition: jest.fn() }));
 
 import { useNavigate, usePush } from "./index";
 

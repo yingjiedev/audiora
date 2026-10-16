@@ -1,3 +1,4 @@
+import { spacing, controlSize } from "@/constants/designSystem";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
@@ -9,11 +10,7 @@ import Empty from "@/components/base/empty";
 import useColors from "@/hooks/useColors";
 import { useI18N } from "@/core/i18n";
 import Toast from "@/utils/toast";
-import downloader, {
-    DownloadStatus,
-    useDownloadQueue,
-    useDownloadTask,
-} from "@/core/downloader";
+import downloader, { DownloadStatus, useDownloadQueue, useDownloadTask } from "@/core/downloader";
 import { iconSizeConst } from "@/constants/uiConst";
 import { formatFileSize } from "./utils";
 
@@ -162,7 +159,9 @@ const styles = StyleSheet.create({
         borderRadius: rpx(3),
     },
     actionButton: {
-        paddingHorizontal: rpx(12),
+        minWidth: Math.max(44, controlSize.minimumTouch),
+        minHeight: Math.max(44, controlSize.minimumTouch),
+        paddingHorizontal: spacing.xs,
         justifyContent: "center",
         alignItems: "center",
     },

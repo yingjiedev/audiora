@@ -1,5 +1,19 @@
 import { useEffect, useState } from "react";
 
+function createMappedStateHook<T>(getValue: () => T, callbacks: Set<Function>) {
+    return function useMappedState() {
+        const [value, setValue] = useState<T>(getValue);
+        useEffect(() => {
+            const update = () => setValue(getValue());
+            callbacks.add(update);
+            return () => {
+                callbacks.delete(update);
+            };
+        }, []);
+        return value;
+    };
+}
+
 export default class StateMapper<T> {
     private getFun: () => T;
     private cbs: Set<Function> = new Set([]);
@@ -11,19 +25,8 @@ export default class StateMapper<T> {
         this.cbs.forEach(_ => _?.());
     };
 
-    useMappedState = () => {
-        const [_state, _setState] = useState<T>(this.getFun);
-        const updateState = () => {
-            _setState(this.getFun());
-        };
-        useEffect(() => {
-            this.cbs.add(updateState);
-            return () => {
-                this.cbs.delete(updateState);
-            };
-        }, []);
-        return _state;
-    };
+    useMappedState = createMappedStateHook(() => this.getFun(), this.cbs);
+
 }
 
 type UpdateFunc<T> = (prev: T) => T;

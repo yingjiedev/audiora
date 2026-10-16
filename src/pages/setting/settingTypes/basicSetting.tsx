@@ -18,15 +18,11 @@ import { getQualityKeys, getQualityText } from "@/utils/qualities";
 import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
+import { spacing } from "@/constants/designSystem";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlatList, ScrollView } from "react-native-gesture-handler";
-import {
-    getPresetTemplates,
-    validateTemplate,
-    DEFAULT_FILE_NAMING_CONFIG,
-    TEMPLATE_VARIABLES,
-} from "@/utils/fileNamingFormatter";
+import { getPresetTemplates, validateTemplate, DEFAULT_FILE_NAMING_CONFIG, TEMPLATE_VARIABLES } from "@/utils/fileNamingFormatter";
 import { getAndroidSafDirectoryLabel } from "@/utils/androidSaf";
 import SettingRow from "../components/settingRow";
 import { settingsLayout } from "../components/settingsLayout";
@@ -139,12 +135,12 @@ export default function BasicSetting() {
     const showExitOnNotification = useAppConfig("basic.showExitOnNotification");
     const musicOrderInLocalSheet = useAppConfig("basic.musicOrderInLocalSheet");
     const tryChangeSourceWhenPlayFail = useAppConfig("basic.tryChangeSourceWhenPlayFail");
-    
+
     // 文件命名相关配置
     const fileNamingType = useAppConfig("basic.fileNamingType");
     const fileNamingPreset = useAppConfig("basic.fileNamingPreset");
     const fileNamingCustom = useAppConfig("basic.fileNamingCustom");
-    
+
     // 自定义音质翻译
     const customQualityTranslations = useAppConfig("basic.qualityTranslations");
 
@@ -786,23 +782,23 @@ const styles = StyleSheet.create({
         marginHorizontal: settingsLayout.groupMargin,
     },
     sectionItemFirst: {
-        borderTopLeftRadius: rpx(16),
-        borderTopRightRadius: rpx(16),
+        borderTopLeftRadius: settingsLayout.cardRadius,
+        borderTopRightRadius: settingsLayout.cardRadius,
     },
     sectionItemLast: {
-        borderBottomLeftRadius: rpx(16),
-        borderBottomRightRadius: rpx(16),
+        borderBottomLeftRadius: settingsLayout.cardRadius,
+        borderBottomRightRadius: settingsLayout.cardRadius,
     },
     headerContainer: {
-        height: rpx(80),
+        minHeight: 44,
     },
     headerContentContainer: {
         height: rpx(80),
         alignItems: "center",
-        paddingHorizontal: rpx(24),
+        paddingHorizontal: spacing.xxxl,
     },
     headerItemStyle: {
-        paddingHorizontal: rpx(36),
+        paddingHorizontal: spacing.lg,
         height: rpx(80),
         justifyContent: "center",
         alignItems: "center",

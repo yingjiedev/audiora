@@ -1,3 +1,4 @@
+import { spacing } from "@/constants/designSystem";
 import React, { useCallback, useEffect } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
@@ -17,13 +18,7 @@ import downloader from "@/core/downloader";
 import LocalMusicSheet from "@/core/localMusicSheet";
 import TrackPlayer from "@/core/trackPlayer";
 import { iconSizeConst } from "@/constants/uiConst";
-import {
-    formatFileSize,
-    formatQuality,
-    formatRecordTime,
-    groupRecordsByDate,
-    type IDownloadRecordGroup,
-} from "./utils";
+import { formatFileSize, formatQuality, formatRecordTime, groupRecordsByDate, type IDownloadRecordGroup } from "./utils";
 
 /** 已完成的单条：展示音质 / 大小 / 完成时间，文件缺失时整行转警示态 */
 interface ICompletedRowRecord {
@@ -297,7 +292,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: rpx(24),
+        paddingHorizontal: spacing.xxxl,
         paddingTop: rpx(20),
         paddingBottom: rpx(8),
     },

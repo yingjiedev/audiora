@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, Share, StyleSheet, View } from "react-native";
+import { FlatList, Platform, Share, StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import ListItem from "@/components/base/listItem";
 import ThemeText from "@/components/base/themeText";
@@ -20,7 +20,6 @@ import { ROUTE_PATH } from "@/core/router";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PanelBase from "../base/panelBase";
-import { FlatList } from "react-native-gesture-handler";
 import musicHistory from "@/core/musicHistory";
 import { showDialog, hideDialog } from "@/components/dialogs/useDialog";
 import { hidePanel, showPanel } from "../usePanel";
@@ -41,6 +40,7 @@ import { musicItemHasQualitySizes } from "@/utils/qualities";
 import { canPlayMusicVideo } from "@/utils/musicVideo";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { showMvPlayer } from "@/components/mvPlayer/useMvPlayer";
+import { spacing, radius } from "@/constants/designSystem";
 
 interface IMusicItemOptionsProps {
     /** 歌曲信息 */
@@ -50,8 +50,6 @@ interface IMusicItemOptionsProps {
     /** 来源 */
     from?: string;
 }
-
-const ITEM_HEIGHT = rpx(96);
 
 interface IOption {
     icon: IIconName;
@@ -544,12 +542,7 @@ export default function MusicItemOptions(props: IMusicItemOptionsProps) {
                     <Divider />
                     <View style={style.wrapper}>
                         <FlatList
-                            data={options}
-                            getItemLayout={(_, index) => ({
-                                length: ITEM_HEIGHT,
-                                offset: ITEM_HEIGHT * index,
-                                index,
-                            })}
+                            data={options.filter(item => item.show !== false)}
                             ListFooterComponent={<View style={style.footer} />}
                             style={[
                                 style.listWrapper,
@@ -558,21 +551,22 @@ export default function MusicItemOptions(props: IMusicItemOptionsProps) {
                                 },
                             ]}
                             keyExtractor={_ => _.title}
-                            renderItem={({ item }) =>
-                                item.show !== false ? (
-                                    <ListItem
-                                        withHorizontalPadding
-                                        heightType="small"
-                                        onPress={item.onPress}>
-                                        <ListItem.ListItemIcon
-                                            width={rpx(48)}
-                                            icon={item.icon}
-                                            iconSize={iconSizeConst.light}
-                                        />
-                                        <ListItem.Content title={item.title} />
-                                    </ListItem>
-                                ) : null
-                            }
+                            renderItem={({ item }) => (
+                                <ListItem
+                                    withHorizontalPadding
+                                    leftPadding={spacing.xxxl}
+                                    rightPadding={spacing.xxxl}
+                                    heightType="small"
+                                    onPress={item.onPress}>
+                                    <ListItem.ListItemIcon
+                                        fixedWidth
+                                        width={rpx(48)}
+                                        icon={item.icon}
+                                        iconSize={iconSizeConst.light}
+                                    />
+                                    <ListItem.Content title={item.title} />
+                                </ListItem>
+                            )}
                         />
                     </View>
                 </>
@@ -583,34 +577,37 @@ export default function MusicItemOptions(props: IMusicItemOptionsProps) {
 
 const style = StyleSheet.create({
     wrapper: {
-        width: rpx(750),
+        width: "100%",
         flex: 1,
     },
     header: {
-        width: rpx(750),
-        height: rpx(200),
+        width: "100%",
+        minHeight: rpx(180),
         flexDirection: "row",
-        padding: rpx(24),
+        alignItems: "center",
+        paddingHorizontal: spacing.xxxl,
+        paddingVertical: spacing.lg,
     },
     listWrapper: {
+        flex: 1,
         paddingTop: rpx(12),
     },
     artwork: {
         width: rpx(140),
         height: rpx(140),
-        borderRadius: rpx(16),
+        borderRadius: radius.md,
     },
     content: {
-        marginLeft: rpx(36),
-        width: rpx(526),
-        height: rpx(140),
-        justifyContent: "space-around",
+        marginLeft: spacing.lg,
+        flex: 1,
+        minWidth: 0,
+        gap: spacing.sm,
     },
     title: {
-        paddingRight: rpx(24),
+        flexShrink: 1,
     },
     footer: {
-        width: rpx(750),
+        width: "100%",
         height: rpx(30),
     },
 });

@@ -1,30 +1,7 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import rpx from "@/utils/rpx";
-import ThemeText from "./themeText";
 import { useI18N } from "@/core/i18n";
-
-interface IEmptyProps {
-    content?: string;
-}
-export default function Empty(props: IEmptyProps) {
+import { PageState } from "./pageSection";
+export default function Empty({ content }: { content?: string }) {
     const { t } = useI18N();
-
-    return (
-        <View style={style.wrapper}>
-            <ThemeText fontSize="title">
-                {props?.content ?? t("common.emptyList")}
-            </ThemeText>
-        </View>
-    );
+    return <PageState title={content || t("common.emptyList")} />;
 }
-
-const style = StyleSheet.create({
-    wrapper: {
-        width: "100%",
-        flex: 1,
-        minHeight: rpx(300),
-        justifyContent: "center",
-        alignItems: "center",
-    },
-});

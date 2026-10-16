@@ -1,3 +1,4 @@
+import { spacing, controlSize } from "@/constants/designSystem";
 import React, { memo, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -80,7 +81,8 @@ const style = StyleSheet.create({
         flexGrow: 0,
     },
     header: {
-        height: rpx(100),
+        minHeight: Math.max(44, controlSize.minimumTouch),
+        paddingHorizontal: spacing.xxxl,
         alignItems: "center",
     },
 });

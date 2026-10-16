@@ -9,6 +9,7 @@ import {
 import rpx from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
 import Icon from "@/components/base/icon.tsx";
+import { radius } from "@/constants/designSystem";
 
 interface ICheckboxProps {
     checked?: boolean;
@@ -32,12 +33,12 @@ export default function Checkbox(props: ICheckboxProps) {
                         borderColor: colors.primary,
                     }
                     : {
-                        borderColor: colors.text,
+                        borderColor: colors.textSecondary ?? colors.text,
                     },
                 style,
             ]}>
             {checked ? (
-                <Icon name="check" color={colors.appBarText} size={rpx(34)} />
+                <Icon name="check" color={colors.onPrimary} size={rpx(34)} />
             ) : null}
         </View>
     );
@@ -62,7 +63,7 @@ const styles = StyleSheet.create({
     container: {
         width: rpx(36),
         height: rpx(36),
-        borderRadius: rpx(2),
+        borderRadius: radius.xs,
         borderWidth: rpx(1),
         alignItems: "center",
         justifyContent: "center",

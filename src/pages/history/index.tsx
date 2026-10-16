@@ -1,4 +1,5 @@
 import React from "react";
+import { PageSummary } from "@/components/base/pageSection";
 import { View } from "react-native";
 import useEnterTransitionEnd from "@/hooks/useEnterTransitionEnd";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
@@ -52,6 +53,7 @@ export default function History() {
             </AppBar>
             {listReady ? (
                 <MusicList
+                    Header={<PageSummary title={t("home.songCount", { count: musicHistoryList.length })} description={t("myMusic.historyHint")} />}
                     musicList={musicHistoryList}
                     showIndex
                     state={RequestStateCode.IDLE}

@@ -1,5 +1,7 @@
 import React from "react";
-import ListItem from "@/components/base/listItem";
+import { PageAction, PageState } from "@/components/base/pageSection";
+import { ROUTE_PATH, usePush } from "@/core/router";
+import SettingRow from "../../components/settingRow";
 import SliderRow from "@/components/base/sliderRow";
 import BackgroundTuningSliders from "@/components/base/backgroundTuningSliders";
 import Config, { useAppConfig } from "@/core/appConfig";
@@ -15,6 +17,7 @@ import SettingSection from "../../components/settingSection";
 
 export default function BackgroundTuning() {
     const { t } = useI18N();
+    const push = usePush();
     const backgroundInfo = Theme.useBackground();
     const activeBackground = Theme.useActiveBackground();
     const backgroundMask = useAppConfig("theme.backgroundMask") ?? 0;
@@ -40,17 +43,14 @@ export default function BackgroundTuning() {
 
     // 没配过背景图、当前主题也不显示壁纸时，这一段没有任何可调项
     if (!hasBackground && !isBackgroundActive) {
-        return null;
+        return <PageState title={t("subpage.noBackground")} description={t("subpage.chooseBackground")}
+            action={<PageAction title={t("themeSettings.setTheme")} onPress={() => push(ROUTE_PATH.SETTING, { type: "theme", section: "theme" })} />} />;
     }
 
     return (
         <SettingSection title={t("themeSettings.backgroundTuning")}>
             {hasBackground ? (
-                <ListItem withHorizontalPadding onPress={onClearPress}>
-                    <ListItem.Content
-                        title={t("themeSettings.clearBackground")}
-                    />
-                </ListItem>
+                <SettingRow onPress={onClearPress} title={t("themeSettings.clearBackground")} />
             ) : null}
             {isBackgroundActive ? (
                 <>
@@ -66,16 +66,11 @@ export default function BackgroundTuning() {
                             Config.setConfig("theme.backgroundMask", val);
                         }}
                     />
-                    <ListItem withHorizontalPadding onPress={onResetPress}>
-                        <ListItem.Content
-                            title={t(
-                                "themeSettings.resetBackgroundTuning",
-                            )}
-                            description={t(
-                                "themeSettings.resetBackgroundTuningDesc",
-                            )}
-                        />
-                    </ListItem>
+                    <SettingRow onPress={onResetPress} title={t(
+                        "themeSettings.resetBackgroundTuning",
+                    )} description={t(
+                        "themeSettings.resetBackgroundTuningDesc",
+                    )} descriptionLines={2} />
                 </>
             ) : null}
         </SettingSection>

@@ -2,6 +2,7 @@ import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
+import { spacing } from "@/constants/designSystem";
 import React, { ReactNode } from "react";
 import {
     Pressable,
@@ -137,6 +138,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         minHeight: settingsLayout.rowMinHeight,
+        paddingVertical: spacing.sm,
     },
     content: {
         flex: 1,

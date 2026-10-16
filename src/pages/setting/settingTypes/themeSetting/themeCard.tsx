@@ -1,4 +1,5 @@
 import React from "react";
+import { radius, spacing } from "@/constants/designSystem";
 import { Pressable, StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
@@ -22,6 +23,9 @@ export default function ThemeCard(props: IThemeCardProps) {
     return (
         <View>
             <Pressable
+                accessibilityRole="radio"
+                accessibilityLabel={title}
+                accessibilityState={{ checked: !!selected }}
                 onPress={onPress}
                 style={[
                     styles.borderContainer,
@@ -29,7 +33,7 @@ export default function ThemeCard(props: IThemeCardProps) {
                         ? [
                             styles.selectedBorder,
                             {
-                                borderColor: colors.primary,
+                                borderColor: colors.active,
                             },
                         ]
                         : null,
@@ -67,8 +71,8 @@ const styles = StyleSheet.create({
     borderContainer: {
         width: rpx(160),
         height: rpx(160),
-        borderRadius: rpx(22),
-        marginRight: rpx(24),
+        borderRadius: radius.lg,
+        marginRight: spacing.md,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -79,7 +83,7 @@ const styles = StyleSheet.create({
     container: {
         width: rpx(136),
         height: rpx(136),
-        borderRadius: rpx(12),
+        borderRadius: radius.md,
     },
     title: {
         textAlign: "center",
@@ -89,6 +93,6 @@ const styles = StyleSheet.create({
     image: {
         width: "100%",
         height: "100%",
-        borderRadius: rpx(12),
+        borderRadius: radius.md,
     },
 });

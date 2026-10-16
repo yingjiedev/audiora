@@ -32,7 +32,10 @@ interface IMusicItemProps {
     onItemPress?: (musicItem: IMusic.IMusicItem) => void;
     onItemLongPress?: () => void;
     itemPaddingRight?: number;
+    itemPaddingLeft?: number;
     left?: React.ReactNode;
+    /** Defined only when the row selects music instead of playing it. */
+    checked?: boolean;
     containerStyle?: StyleProp<ViewStyle>;
     highlight?: boolean;
     highlightText?: string;
@@ -98,7 +101,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
 export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
-        musicSheet, itemPaddingRight, left, containerStyle,
+        musicSheet, itemPaddingRight, itemPaddingLeft, left, checked, containerStyle,
         highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library",
     } = props;
     const colors = useColors();
@@ -116,17 +119,17 @@ export default function MusicItem(props: IMusicItemProps) {
     const discovery = presentation === "discovery";
 
     return (
-        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
+        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }, itemPaddingLeft !== undefined && { paddingLeft: itemPaddingLeft }]}>
             <Pressable
-                accessibilityRole="button"
+                accessibilityRole={checked === undefined ? "button" : "checkbox"}
                 accessibilityLabel={[musicItem.title, musicItem.artist].filter(Boolean).join(" - ")}
-                accessibilityState={{ selected: active }}
+                accessibilityState={{ selected: active, checked }}
                 onLongPress={onItemLongPress}
                 onPress={() => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem)}
                 style={({ pressed }) => [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, pressed && { backgroundColor: colors.listActive }]}>
                 {left}
                 {index !== undefined ? (
-                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex]}>
+                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex, checked !== undefined && styles.selectionIndex]}>
                         {index}
                     </ThemeText>
                 ) : null}
@@ -183,6 +186,7 @@ const styles = StyleSheet.create({
     metadata: { flexDirection: "row", alignItems: "center", marginTop: spacing.xs },
     artist: { flexShrink: 1, minWidth: 0, marginRight: spacing.xs },
     index: { width: rpx(64), textAlign: "center", marginRight: spacing.sm },
+    selectionIndex: { width: "auto", minWidth: rpx(40), marginRight: spacing.xs },
     cover: { width: rpx(80), height: rpx(80), borderRadius: spacing.sm, marginRight: spacing.xl },
     metadataIcon: { marginRight: spacing.xs },
     duration: { flexShrink: 0 },

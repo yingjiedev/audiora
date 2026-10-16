@@ -1,227 +1,37 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import rpx from "@/utils/rpx";
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-} from "react-native-reanimated";
-import useMotion from "@/hooks/useMotion";
+import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useAtomValue } from "jotai";
 import { scrollToTopAtom } from "../store/atoms";
-import ThemeText from "@/components/base/themeText";
-import Tag from "@/components/base/tag";
+import MediaDetailHeader from "@/components/base/mediaDetailHeader";
 import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { useParams } from "@/core/router";
-import Image from "@/components/base/image";
-import { ImgAsset } from "@/constants/assetsConst";
 import { useI18N } from "@/core/i18n";
-import useColors from "@/hooks/useColors";
-import useCardStyle from "@/hooks/useCardStyle";
-import Color from "color";
-
-const headerHeight = rpx(350);
-
-/** Header collapse is a small spatial move — standard curve, normal token. */
+import useMotion from "@/hooks/useMotion";
+import rpx from "@/utils/rpx";
 const HEADER_TIMING = { duration: "normal", easing: "standard" } as const;
-
-interface IHeaderProps {
-    neverFold?: boolean;
-}
-
-export default function Header(props: IHeaderProps) {
-    const { neverFold } = props;
-
+export default function Header({ neverFold }: { neverFold?: boolean }) {
     const { artistItem } = useParams<"artist-detail">();
-
-    const heightValue = useSharedValue(headerHeight);
+    const [measuredHeight, setMeasuredHeight] = useState(rpx(350));
+    const heightValue = useSharedValue(measuredHeight);
     const opacityValue = useSharedValue(1);
-    const scrollToTopState = useAtomValue(scrollToTopAtom);
-
+    const atTop = useAtomValue(scrollToTopAtom);
     const { t } = useI18N();
-    const colors = useColors();
     const motion = useMotion();
-    const getPluginDisplayName = usePluginDisplayNameResolver();
-    const cardStyle = useCardStyle({
-        borderWidth: 0,
-        elevation: 3,
-    });
-    const accentBackground = Color(colors.primary).alpha(0.1).toString();
-    const detailBackground = colors.surfaceElevated ?? colors.card;
-
-    const heightStyle = useAnimatedStyle(() => {
-        return {
-            height: heightValue.value,
-            opacity: opacityValue.value,
-        };
-    });
-
-    const avatar = artistItem.avatar?.startsWith("//")
-        ? `https:${artistItem.avatar}`
-        : artistItem.avatar;
-
-    /** 折叠 */
+    const getDisplayName = usePluginDisplayNameResolver();
+    const heightStyle = useAnimatedStyle(() => ({ height: heightValue.value, opacity: opacityValue.value }));
     useEffect(() => {
-        if (neverFold) {
-            heightValue.value = motion.timing(headerHeight, HEADER_TIMING);
-            opacityValue.value = motion.timing(1, HEADER_TIMING);
-            return;
-        }
-        if (scrollToTopState) {
-            heightValue.value = motion.timing(headerHeight, HEADER_TIMING);
-            opacityValue.value = motion.timing(1, HEADER_TIMING);
-        } else {
-            heightValue.value = motion.timing(0, HEADER_TIMING);
-            opacityValue.value = motion.timing(0, HEADER_TIMING);
-        }
-    }, [motion, neverFold, opacityValue, heightValue, scrollToTopState]);
-
-    return (
-        <Animated.View style={[styles.wrapper, heightStyle]}>
-            <View
-                style={[
-                    styles.infoCard,
-                    {
-                        backgroundColor: colors.surface,
-                    },
-                    cardStyle,
-                ]}>
-                <View style={styles.headerWrapper}>
-                    <View
-                        style={[
-                            styles.artistShell,
-                            {
-                                backgroundColor: detailBackground,
-                            },
-                        ]}>
-                        <Image
-                            emptySrc={ImgAsset.albumDefault}
-                            uri={avatar}
-                            style={styles.artist}
-                        />
-                    </View>
-                    <View style={styles.info}>
-                        <View style={styles.metaRow}>
-                            <View
-                                style={[
-                                    styles.typeBadge,
-                                    {
-                                        backgroundColor: accentBackground,
-                                    },
-                                ]}>
-                                <ThemeText
-                                    color={colors.primaryText}
-                                    fontSize="caption"
-                                    fontWeight="bold">
-                                    {t("common.artist")}
-                                </ThemeText>
-                            </View>
-                            {artistItem.platform ? (
-                                <Tag
-                                    tagName={getPluginDisplayName(
-                                        artistItem.platform,
-                                    )}
-                                />
-                            ) : null}
-                        </View>
-                        <ThemeText
-                            fontSize="title"
-                            fontWeight="bold"
-                            style={styles.titleText}
-                            numberOfLines={2}
-                            ellipsizeMode="tail">
-                            {artistItem?.name ?? ""}
-                        </ThemeText>
-
-                        {artistItem.fans ? (
-                            <ThemeText
-                                fontSize="subTitle"
-                                fontColor="textSecondary">
-                                {t("artistDetail.fansCount", {
-                                    count: artistItem.fans,
-                                })}
-                            </ThemeText>
-                        ) : null}
-                    </View>
-                </View>
-
-                <View
-                    style={[
-                        styles.descriptionCard,
-                        {
-                            backgroundColor: detailBackground,
-                        },
-                    ]}>
-                    <ThemeText
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
-                        fontColor="textSecondary"
-                        fontSize="description">
-                        {artistItem?.description ?? ""}
-                    </ThemeText>
-                </View>
-            </View>
-        </Animated.View>
-    );
+        heightValue.value = motion.timing(neverFold || atTop ? measuredHeight : 0, HEADER_TIMING);
+        opacityValue.value = motion.timing(neverFold || atTop ? 1 : 0, HEADER_TIMING);
+    }, [atTop, neverFold, measuredHeight, motion, heightValue, opacityValue]);
+    const avatar = artistItem.avatar?.startsWith("//") ? `https:${artistItem.avatar}` : artistItem.avatar;
+    return <Animated.View style={[styles.wrapper, neverFold && styles.horizontal, heightStyle]}>
+        <View onLayout={event => {
+            const height = event.nativeEvent.layout.height; if (height > 0) setMeasuredHeight(height);
+        }}>
+            <MediaDetailHeader title={artistItem.name || t("common.unknownName")} artwork={avatar} typeLabel={t("common.artist")} source={artistItem.platform ? getDisplayName(artistItem.platform) : null}
+                subtitle={artistItem.fans ? t("artistDetail.fansCount", { count: artistItem.fans }) : undefined} description={artistItem.description} />
+        </View>
+    </Animated.View>;
 }
-
-const styles = StyleSheet.create({
-    wrapper: {
-        width: rpx(750),
-        height: headerHeight,
-        zIndex: 1,
-        paddingHorizontal: rpx(12),
-        paddingTop: rpx(12),
-    },
-    infoCard: {
-        borderRadius: rpx(22),
-        padding: rpx(22),
-        shadowOffset: {
-            width: 0,
-            height: rpx(2),
-        },
-        shadowRadius: rpx(4),
-    },
-    artist: {
-        width: "100%",
-        height: "100%",
-        borderRadius: rpx(24),
-    },
-    artistShell: {
-        width: rpx(176),
-        height: rpx(176),
-        borderRadius: rpx(28),
-        padding: rpx(14),
-        marginRight: rpx(22),
-    },
-    headerWrapper: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-    },
-    info: {
-        flex: 1,
-        minHeight: rpx(176),
-        justifyContent: "space-between",
-    },
-    metaRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        flexWrap: "wrap",
-        marginBottom: rpx(14),
-    },
-    typeBadge: {
-        minHeight: rpx(36),
-        paddingHorizontal: rpx(14),
-        borderRadius: rpx(18),
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    titleText: {
-        marginBottom: rpx(14),
-    },
-    descriptionCard: {
-        marginTop: rpx(20),
-        paddingHorizontal: rpx(18),
-        paddingVertical: rpx(16),
-        borderRadius: rpx(18),
-    },
-});
+const styles = StyleSheet.create({ wrapper: { width: "100%", overflow: "hidden" }, horizontal: { width: "40%" } });

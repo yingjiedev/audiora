@@ -1,4 +1,5 @@
 import React from "react";
+import { controlSize, radius, spacing } from "@/constants/designSystem";
 import {
     Image,
     Linking,
@@ -102,17 +103,17 @@ export default function AboutSetting() {
                     orientation === "horizontal" ? style.horizontalSize : null,
                 ]}>
                 <Image
-                    source={ImgAsset.author}
+                    source={ImgAsset.logo}
                     style={style.image}
                     resizeMode="contain"
                 />
                 <ThemeText fontSize="title" style={style.appTitle}>
                     Audiora
                 </ThemeText>
-                <ThemeText style={style.versionText}>
+                <ThemeText fontColor="textSecondary" style={style.versionText}>
                     {t("about.version", { version })}
                 </ThemeText>
-                <ThemeText style={style.buildText}>
+                <ThemeText fontColor="textSecondary" style={style.buildText}>
                     {t("about.buildTime", { buildTime })}
                 </ThemeText>
             </View>
@@ -204,7 +205,8 @@ const style = StyleSheet.create({
         // 不要写 rpx(750)：它等于整屏宽度，再叠上 HorizontalSafeAreaView
         // 的左右 inset 就会横向溢出。用 100% 让它跟着安全区收缩。
         width: "100%",
-        height: rpx(300),
+        minHeight: rpx(240),
+        paddingVertical: spacing.lg,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -213,9 +215,9 @@ const style = StyleSheet.create({
         height: "100%",
     },
     image: {
-        width: rpx(150),
-        height: rpx(150),
-        borderRadius: rpx(28),
+        width: rpx(96),
+        height: rpx(96),
+        borderRadius: radius.lg,
     },
     appTitle: {
         marginTop: rpx(24),
@@ -237,14 +239,15 @@ const style = StyleSheet.create({
         paddingBottom: rpx(96),
     },
     infoCard: {
-        padding: rpx(24),
+        padding: spacing.lg,
     },
     cardContent: {
         fontSize: fontRpx(28),
     },
     actionRow: {
-        minHeight: rpx(92),
-        paddingHorizontal: rpx(24),
+        minHeight: Math.max(44, controlSize.minimumTouch),
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.lg,
         flexDirection: "row",
         alignItems: "center",
     },

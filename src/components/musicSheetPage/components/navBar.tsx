@@ -2,6 +2,7 @@ import React from "react";
 
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import AppBar from "@/components/base/appBar";
+import { useI18N } from "@/core/i18n";
 
 interface INavBarProps {
     navTitle: string;
@@ -10,6 +11,7 @@ interface INavBarProps {
 
 export default function (props: INavBarProps) {
     const navigate = useNavigate();
+    const { t } = useI18N();
     const { navTitle, musicList = [] } = props;
 
     return (
@@ -27,7 +29,7 @@ export default function (props: INavBarProps) {
             menu={[
                 {
                     icon: "pencil-square",
-                    title: "批量编辑",
+                    title: t("common.batchEdit"),
                     onPress() {
                         navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
                             musicList: musicList,
