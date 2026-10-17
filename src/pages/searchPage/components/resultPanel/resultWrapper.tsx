@@ -23,9 +23,7 @@ interface IResultWrapperProps<
 function ResultWrapper(props: IResultWrapperProps) {
     const { tab, pluginHash, searchResult, pluginSearchResultRef } = props;
     const search = useSearch();
-    const [searchState, setSearchState] = useState<RequestStateCode>(
-        searchResult?.state ?? RequestStateCode.IDLE,
-    );
+    const searchState = searchResult?.state ?? RequestStateCode.IDLE;
     const columns = useMediaGrid();
     const query = useAtomValue(queryAtom);
 
