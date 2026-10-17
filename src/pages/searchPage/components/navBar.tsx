@@ -28,9 +28,11 @@ export default function NavBar() {
         Keyboard.dismiss();
         setQuery(keyword);
         setSearchResultsState(initSearchResults);
-        setPageStatus(prev => prev === PageStatus.EDITING ? PageStatus.SEARCHING : prev);
-        await search(keyword, 1);
-        await addHistory(keyword).catch(() => {});
+        setPageStatus(prev =>
+            prev === PageStatus.EDITING ? PageStatus.SEARCHING : prev,
+        );
+        void search(keyword, 1);
+        void addHistory(keyword).catch(() => {});
     };
     return <AppBar actionComponent={<PageAction title={t("common.search")} variant="text" textColor={colors.appBarText} onPress={onSearchSubmit} disabled={!query.trim()} />}>
         <SearchField autoFocus value={query} placeholder={placeholder} accessibilityLabel={t("searchPage.searchLabel.a11y")} accessibilityHint={placeholder}

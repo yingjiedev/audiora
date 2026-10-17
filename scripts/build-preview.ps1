@@ -2,6 +2,7 @@
 # Examples:
 #   npm run build-preview
 #   npm run build-preview -- -Abi all
+#   npm run build-preview -- -PreviewApp
 #   npm run build-preview -- -InstallDependencies
 
 [CmdletBinding()]
@@ -10,6 +11,7 @@ param(
     [string]$Abi = "arm64-v8a",
     [string]$PreviewVersion,
     [long]$VersionCode = 0,
+    [switch]$PreviewApp,
     [switch]$InstallDependencies,
     [switch]$SkipBuildInfo,
     [switch]$SkipVerification,
@@ -234,6 +236,10 @@ try {
             "-PbuildAbi=$Abi",
             "-PreactNativeArchitectures=$Abi"
         )
+    }
+
+    if ($PreviewApp) {
+        $gradleArguments += "-PpreviewApp=true"
     }
 
     $gradleArguments += @(

@@ -50,6 +50,7 @@ jest.mock("@/core/listeningStats", () => ({ useListeningStats: () => ({ version:
 jest.mock("@/core/musicSheet", () => ({
     __esModule: true,
     default: { defaultSheet: { id: "favorite" } },
+    useFavoriteCount: () => mockSheets.find(sheet => sheet.id === "favorite")?.worksNum ?? 0,
     useSheetsBase: () => mockSheets,
     useStarredSheets: () => mockStarred,
     useSheetItem: () => ({ musicList: mockFavoriteMusic }),

@@ -21,6 +21,7 @@
     "preview:web": "expo start --web",
     "clean": "node ./scripts/clean-android.js",
     "test": "jest",
+    "benchmark:search": "node scripts/benchmark-aggregate-search.js",
     "commit-lint": "commitlint --edit",
     "connect-mumu": "adb kill-server & adb connect localhost:7555",
     "build-android": "npm run typecheck:runtime && node ./scripts/generate-build-info.js && cd .\\android\\ && .\\gradlew assembleRelease",

@@ -6,10 +6,12 @@ import useMediaGrid from "@/hooks/useMediaGrid";
 import { spacing } from "@/constants/designSystem";
 import { FlashList } from "@shopify/flash-list";
 import { useAtomValue } from "jotai";
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect } from "react";
 import useSearch from "../../hooks/useSearch";
 import { ISearchResult, queryAtom } from "../../store/atoms";
 import { renderMap } from "./results";
+import { SourceIssue } from "./sourceFeedback";
+import { useNavigate } from "@/core/router";
 
 interface IResultWrapperProps<
     T extends ICommon.SupportMediaType = ICommon.SupportMediaType,
@@ -23,9 +25,10 @@ interface IResultWrapperProps<
 function ResultWrapper(props: IResultWrapperProps) {
     const { tab, pluginHash, searchResult, pluginSearchResultRef } = props;
     const search = useSearch();
-    const [searchState, setSearchState] = useState<RequestStateCode>(
-        searchResult?.state ?? RequestStateCode.IDLE,
-    );
+    const navigate = useNavigate();
+    const issue = searchResult?.state === RequestStateCode.ERROR ? <SourceIssue standalone pluginHash={pluginHash} type={tab} result={searchResult}
+        search={search} onManage={() => navigate("setting", { type: "plugin" })} /> : null;
+    const searchState = searchResult?.state ?? RequestStateCode.IDLE;
     const columns = useMediaGrid();
     const query = useAtomValue(queryAtom);
 
@@ -39,13 +42,9 @@ function ResultWrapper(props: IResultWrapperProps) {
 
     useEffect(() => {
         if (searchState === RequestStateCode.IDLE) {
-            search(query, 1, tab, pluginHash);
+            search(undefined, undefined, tab, pluginHash, "ensure");
         }
-    }, []);
-
-    useEffect(() => {
-        setSearchState(searchResult?.state ?? RequestStateCode.IDLE);
-    }, [searchResult]);
+    }, [search, searchState, tab, pluginHash]);
 
     const renderItem = ({ item, index }: any) => (
         <ResultComponent
@@ -64,16 +63,16 @@ function ResultWrapper(props: IResultWrapperProps) {
             key={tab === "sheet" ? columns : 1}
             contentContainerStyle={tab === "sheet" ? { paddingHorizontal: spacing.xxxl - spacing.xs, paddingBottom: spacing.xxxl } : { paddingBottom: spacing.xxxl }}
             extraData={searchState}
-            ListEmptyComponent={<ListEmpty state={searchState} onRetry={() => {
-                search(query, 1, tab, pluginHash);
+            ListEmptyComponent={issue ?? <ListEmpty state={searchState} onRetry={() => {
+                search(undefined, undefined, tab, pluginHash, "retry");
             }} />}
-            ListFooterComponent={data?.length ? <ListFooter state={searchState} onRetry={() => {
-                search(query, undefined, tab, pluginHash);
+            ListFooterComponent={data?.length ? issue ?? <ListFooter state={searchState} onRetry={() => {
+                search(undefined, undefined, tab, pluginHash, "retry");
             }} /> : null}
             data={data}
             refreshing={false}
             onRefresh={() => {
-                search(query, 1, tab, pluginHash);
+                search(undefined, 1, tab, pluginHash, "refresh");
             }}
             onEndReached={() => {
                 (searchState === RequestStateCode.PARTLY_DONE ||

@@ -1,5 +1,29 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "subscription.neverUpdated": string;
+    "subscription.queued": string;
+    "subscription.fetching": string;
+    "subscription.progress": string;
+    "subscription.finished": string;
+    "subscription.hasFailures": string;
+    "subscription.cancelled": string;
+    "subscription.timedOut": string;
+    "subscription.installed": string;
+    "subscription.updated": string;
+    "subscription.unchanged": string;
+    "subscription.failed": string;
+    "subscription.lastChecked": string;
+    "subscription.keptChanges": string;
+    "subscription.updateAll": string;
+    "subscription.backgroundHint": string;
+    "subscription.stop": string;
+    "subscription.stopping": string;
+    "subscription.emptyHint": string;
+    "subscription.edit": string;
+    "subscription.details": string;
+    "subscription.retryFailed": string;
+    "subscription.updating": string;
+    "subscription.viewProgress": string;
     "musicListEditor.actionFailed": string;
     "sheetDetail.manualSortMusic": string;
     "sheetDetail.removeSelectedContent": string;
@@ -278,6 +302,63 @@ export interface ILanguageData {
     "searchMusicList.searchLabel.a11y": string; // 搜索音乐标签
 
     // 搜索页面相关
+    "aggregate.searching": string;
+    "aggregate.searchingMore": string;
+    "aggregate.slowSources": string;
+    "aggregate.loadMore": string;
+    "aggregate.linkFavorites": string;
+    "aggregate.linkConfirm": string;
+    "aggregate.splitFavorites": string;
+    "aggregate.splitConfirm": string;
+    "aggregate.removeSource": string;
+    "aggregate.updateFailed": string;
+    "aggregate.saved": string;
+    "aggregate.removed": string;
+    "aggregate.playingSource": string;
+    "aggregate.unfavoriteGroup": string;
+    "aggregate.groupHeartHint": string;
+    "aggregate.allSources": string;
+    "aggregate.all": string;
+    "aggregate.moreSources": string;
+    "aggregate.bySong": string;
+    "aggregate.bySource": string;
+    "aggregate.currentSource": string;
+    "aggregate.chooseSource": string;
+    "aggregate.sourcePickerTitle": string;
+    "aggregate.sourceSelected": string;
+    "aggregate.sourcePlaying": string;
+    "aggregate.sourceSelectionHint": string;
+    "aggregate.collectionCount": string;
+    "aggregate.searchProgress": string;
+    "aggregate.retrySource": string;
+    "aggregate.sourceSummary": string;
+    "aggregate.pendingSources": string;
+    "aggregate.pendingWithIssues": string;
+    "aggregate.issueCount": string;
+    "aggregate.searchFinished": string;
+    "aggregate.sourceDetails": string;
+    "aggregate.retryIncomplete": string;
+    "aggregate.sourceDeferred": string;
+    "aggregate.continueSource": string;
+    "aggregate.retry": string;
+    "aggregate.configureSource": string;
+    "aggregate.manageSources": string;
+    "aggregate.sourceSearching": string;
+    "aggregate.sourceQueued": string;
+    "aggregate.sourceReturned": string;
+    "aggregate.sourceEmpty": string;
+    "aggregate.sourceTiming": string;
+    "aggregate.httpStatus": string;
+    "aggregate.allSourcesIncomplete": string;
+    "aggregate.incompleteHint": string;
+    "aggregate.error.timeout": string;
+    "aggregate.error.network": string;
+    "aggregate.error.authentication": string;
+    "aggregate.error.rateLimited": string;
+    "aggregate.error.unavailable": string;
+    "aggregate.error.configuration": string;
+    "aggregate.error.invalidResponse": string;
+    "aggregate.error.plugin": string;
     "searchPage.searchPlaceHolder": string; // 搜索
     "searchPage.searchLabel.a11y": string; // 搜索标签
     "searchPage.history": string; // 历史记录

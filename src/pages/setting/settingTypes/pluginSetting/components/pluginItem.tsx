@@ -22,6 +22,7 @@ import useRerender from "@/hooks/useRerender";
 
 interface IPluginItemProps {
     plugin: Plugin;
+    installing?: boolean;
 }
 
 interface IOption {
@@ -305,7 +306,8 @@ function PluginItemBase(props: IPluginItemProps) {
             <View style={styles.contents}>
                 {options.map((it, index) =>
                     it.show !== false ? (
-                        <PageAction key={index} icon={it.icon} title={it.title} variant={it.icon === "trash-outline" ? "danger" : "tonal"} onPress={() => it.onPress?.()} />
+                        <PageAction key={index} icon={it.icon} title={it.title} variant={it.icon === "trash-outline" ? "danger" : "tonal"}
+                            disabled={props.installing && (it.icon === "trash-outline" || it.icon === "arrow-path")} onPress={() => it.onPress?.()} />
                     ) : null,
                 )}
             </View>
@@ -353,7 +355,7 @@ function PluginItemBase(props: IPluginItemProps) {
 }
 
 const PluginItem = memo(PluginItemBase, (prev, curr) => {
-    return prev.plugin === curr.plugin;
+    return prev.plugin === curr.plugin && prev.installing === curr.installing;
 });
 export default PluginItem;
 

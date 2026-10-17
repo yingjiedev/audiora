@@ -17,23 +17,33 @@ import StatusBar from "@/components/base/statusBar";
 import NoPlugin from "../../components/base/noPlugin";
 import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
+import { resetSearch, updateSearchSources } from "./store/searchController";
+import { useSearchablePlugins } from "@/core/pluginManager";
 
 export default function () {
     const params = useParams<"search-page">();
+    const plugins = useSearchablePlugins();
+    const sourceKey = plugins.map(plugin => plugin.hash).join("|");
     const [pageStatus, setPageStatus] = useAtom(pageStatusAtom);
     const setQuery = useSetAtom(queryAtom);
     const setSearchResultsState = useSetAtom(searchResultsAtom);
     const { t } = useI18N();
 
     useEffect(() => {
+        resetSearch("", params?.pluginHash);
         setPageStatus(PageStatus.EDITING);
         setQuery("");
         setSearchResultsState(initSearchResults);
         return () => {
+            resetSearch();
             setPageStatus(PageStatus.EDITING);
             setQuery("");
         };
     }, [setPageStatus, setQuery, setSearchResultsState, params?.pluginHash]);
+
+    useEffect(() => {
+        updateSearchSources(params?.pluginHash);
+    }, [sourceKey, params?.pluginHash]);
 
     return (
         <SafeAreaView

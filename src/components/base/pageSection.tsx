@@ -8,7 +8,7 @@ import rpx, { fontRpx } from "@/utils/rpx";
 
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
 
-export function PageAction({ title, icon, onPress, disabled = false, variant = "tonal", size = "compact", fullWidth = false, textColor }: {
+export function PageAction({ title, icon, onPress, disabled = false, variant = "tonal", size = "compact", fullWidth = false, textColor, allowFontScaling }: {
     title: string;
     icon?: IIconName;
     onPress: () => void;
@@ -18,6 +18,7 @@ export function PageAction({ title, icon, onPress, disabled = false, variant = "
     fullWidth?: boolean;
     /** Match text actions to their actual surface, such as a custom app bar. */
     textColor?: string;
+    allowFontScaling?: boolean;
 }) {
     const colors = useColors();
     const backgroundColor = variant === "text" ? "transparent" : variant === "primary" ? colors.primary : variant === "danger" ? colors.dangerSurface : colors.tonalSurface;
@@ -27,7 +28,7 @@ export function PageAction({ title, icon, onPress, disabled = false, variant = "
             onPress={onPress} style={({ pressed }) => [styles.actionTarget, fullWidth && styles.fullWidth, { opacity: disabled ? 0.45 : pressed ? 0.7 : 1 }]}>
             <View pointerEvents="none" accessible={false} style={[styles.action, size === "standard" && styles.standardAction, fullWidth && styles.fullWidth, { backgroundColor }]}>
                 {icon ? <Icon name={icon} size={fontRpx(28)} color={foreground} /> : null}
-                <ThemeText fontSize="description" fontWeight="medium" color={foreground} allowFontScaling={variant === "text"} style={styles.actionText}>{title}</ThemeText>
+                <ThemeText fontSize="description" fontWeight="medium" color={foreground} allowFontScaling={allowFontScaling ?? (variant === "text")} style={styles.actionText}>{title}</ThemeText>
             </View>
         </Pressable>
     );

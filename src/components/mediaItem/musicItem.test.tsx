@@ -8,7 +8,8 @@ import { showPanel } from "@/components/panels/usePanel";
 import Toast from "@/utils/toast";
 import Badge from "@/components/base/badge";
 import ThemeText from "@/components/base/themeText";
-import { darkColors, lightColors } from "@/constants/colorPalette";
+import Icon from "@/components/base/icon";
+import { lightColors, darkColors } from "@/constants/colorPalette";
 import { resolveThemeColors } from "@/utils/themeColors";
 import { contrastRatio } from "@/utils/colorContrast";
 
@@ -17,7 +18,13 @@ let mockFavorite = false;
 let mockCurrent: IMusic.IMusicItem | null = null;
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { play: jest.fn(), addNext: jest.fn() }, useCurrentMusic: () => mockCurrent }));
-jest.mock("@/core/musicSheet", () => ({ __esModule: true, default: { defaultSheet: { id: "favorite" }, addMusic: jest.fn(async () => {}), removeMusic: jest.fn(async () => {}) }, useFavorite: () => mockFavorite }));
+jest.mock("@/core/musicSheet", () => {
+    const addMusic = jest.fn(async (_sheetId: string, _item: IMusic.IMusicItem) => {});
+    const removeMusic = jest.fn(async (_sheetId: string, _item: IMusic.IMusicItem) => {});
+    return { __esModule: true, default: { defaultSheet: { id: "favorite" }, addMusic, removeMusic,
+        favorites: { groupFor: () => undefined, toggle: jest.fn(item => mockFavorite ? removeMusic("favorite", item) : addMusic("favorite", item)) },
+    }, useFavorite: () => mockFavorite };
+});
 jest.mock("@/core/localMusicSheet", () => ({ __esModule: true, default: { useIsLocal: () => false } }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string, args?: { count: number }) => key === "listening.playCount" ? `播放 ${args?.count} 次` : key }) }));
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
@@ -168,6 +175,73 @@ describe("shared song row interactions", () => {
         const texts = renderer.root.findAllByType(ThemeText);
         expect(texts.some(node => node.props.children === "Song" && node.props.fontColor === "primary")).toBe(true);
         expect(texts.some(node => node.props.children === " (Live)" && node.props.fontColor === "text")).toBe(true);
+    });
+    function layOutSource(x = 120) {
+        const anchor = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === "function")!;
+        act(() => anchor.props.onLayout({ nativeEvent: { layout: { x, y: 0, width: 44, height: 0 } } }));
+    }
+    it("keeps source selection separate from playback and metadata within the existing row", () => {
+        const onChoose = jest.fn();
+        render({ source: { name: "小狗音乐", count: 2, onPress: onChoose }, titleTagSubText: "03:00" });
+        const outer = StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style);
+        expect(outer.minHeight).toBe(MUSIC_ITEM_HEIGHT);
+        layOutSource();
+        const choose = button("aggregate.chooseSource");
+        const play = button("Song - Artist");
+        expect(play.findAll(node => node.props.accessibilityLabel === "aggregate.chooseSource")).toHaveLength(0);
+        expect(StyleSheet.flatten(choose.props.style)).toMatchObject({ left: 120, height: 44, width: 44, position: "absolute" });
+        act(() => choose.props.onPress());
+        expect(onChoose).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
+        expect(TrackPlayer.addNext).not.toHaveBeenCalled();
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "小狗音乐")).toBe(true);
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === 2)).toBe(true);
+        act(() => play.props.onPress());
+        expect(TrackPlayer.play).toHaveBeenCalledWith(song);
+    });
+    it("keeps single-source attribution visible and marks actual playback without a switch button", () => {
+        render({ musicItem: { ...song, fee: 1, mv: 42 }, source: { name: "QQ音乐", count: 1, playing: true } });
+        expect(renderer.root.findAllByType(Badge)).toHaveLength(0);
+        expect(renderer.root.findAllByProps({ accessibilityLabel: "aggregate.chooseSource" })).toHaveLength(0);
+        expect(renderer.root.findAllByType(Icon).some(node => node.props.name === "speaker-wave")).toBe(true);
+        const source = renderer.root.findAllByType(ThemeText).find(node => node.props.children === "QQ音乐")!;
+        expect(source.props.accessibilityLabel).toBe("aggregate.playingSource");
+        expect(source.props.fontColor).toBe("primary");
+        expect(StyleSheet.flatten(source.props.style).maxWidth).toBe("42%");
+    });
+    it("reserves the count beside a truncated long title and follows layout changes", () => {
+        render({ musicItem: { ...song, title: "A very long song title (Live version)" }, source: { name: "Long source name", count: 24, onPress: jest.fn() } });
+        layOutSource(160);
+        const title = renderer.root.findAllByType(ThemeText).find(node => node.props.numberOfLines === 1 && Array.isArray(node.props.children))!;
+        expect(StyleSheet.flatten(title.props.style).flexShrink).toBe(1);
+        expect(StyleSheet.flatten(button("aggregate.chooseSource").props.style).left).toBe(160);
+        layOutSource(100);
+        expect(StyleSheet.flatten(button("aggregate.chooseSource").props.style).left).toBe(100);
+    });
+    it.each([lightColors, darkColors, { ...lightColors, primary: "#ac52bd" }])("keeps the numeric control readable in light, dark and custom themes", palette => {
+        mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, palette === darkColors);
+        render({ source: { name: "Source", count: 2, onPress: jest.fn() } });
+        layOutSource();
+        const number = renderer.root.findAllByType(ThemeText).find(node => node.props.children === 2)!;
+        const background = StyleSheet.flatten(number.parent!.props.style).backgroundColor;
+        expect(contrastRatio(number.props.color, background)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it("keeps replay counts and aggregate source controls independent when both props are present", () => {
+        const chooseSource = jest.fn();
+        render({ presentation: "favorites", playCount: 128, sourceName: "Favorite source",
+            source: { name: "Playback source", count: 2, onPress: chooseSource }, actions: [],
+        });
+        layOutSource();
+        expect(renderer.root.findByProps({ testID: "music-play-count" }).findByType(ThemeText).props.children).toBe("99+");
+        const sourceButton = button("aggregate.chooseSource");
+        expect(sourceButton).toBeDefined();
+        expect(button("Song - Artist").props.accessibilityHint).toBe("Album · Favorite source · 播放 128 次 · aggregate.currentSource");
+        act(() => sourceButton.props.onPress());
+        expect(chooseSource).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
+        act(() => button("Song - Artist").props.onPress());
+        expect(TrackPlayer.play).toHaveBeenCalledWith(song);
     });
 
     it.each([[1, "1"], [12, "12"], [99, "99"], [100, "99+"], [1234, "99+"]])("caps the favorite badge for %s plays while preserving the full spoken total", (count, displayed) => {

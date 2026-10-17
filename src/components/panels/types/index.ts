@@ -27,8 +27,10 @@ import EditMusicSheetInfo from "./editMusicSheetInfo";
 import DownloadTaskOptions from "./downloadTaskOptions";
 import QualityTranslation from "./qualityTranslation";
 import MusicMetadataSettings from "./musicMetadataSettings";
+import TrackGroupSources from "./trackGroupSources";
 
 export default {
+    TrackGroupSources,
     /** 加入歌单 */
     AddToMusicSheet,
     /** 歌手选择 */

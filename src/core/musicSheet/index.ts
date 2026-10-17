@@ -14,6 +14,9 @@ import { useEffect, useMemo, useState } from "react";
 import migrate, { migrateV2 } from "./migrate.ts";
 import SortedMusicList from "./sortedMusicList.ts";
 import storage from "./storage.ts";
+import { FavoriteCollection } from "@/core/favoriteCollection";
+import { FavoriteGroups, useFavoriteGroups } from "@/core/favoriteGroups";
+import { favoriteDisplayGroups } from "@/core/favoriteGroupsModel";
 
 const produce = new Immer({
     autoFreeze: false,
@@ -49,6 +52,11 @@ class MusicSheetClazz implements IInjectable {
     private appConfig!: IAppConfig;
 
     defaultSheet: IMusic.IMusicSheetItemBase = _defaultSheet;
+    favorites = new FavoriteCollection({
+        get: () => this.getSortedMusicListBySheetId(_defaultSheet.id).musicList,
+        add: items => this.addMusicRaw(_defaultSheet.id, items),
+        remove: items => this.removeMusicRaw(_defaultSheet.id, items),
+    });
 
     injectDependencies(appConfigService: IAppConfig): void {
         this.appConfig = appConfigService;
@@ -128,7 +136,7 @@ class MusicSheetClazz implements IInjectable {
             }
         }
 
-
+        FavoriteGroups.setup(this.getSortedMusicListBySheetId(_defaultSheet.id).musicList);
     }
 
     // 获取音乐
@@ -310,7 +318,13 @@ class MusicSheetClazz implements IInjectable {
      * @param sheetId 歌单id
      * @param musicItem 音乐
      */
-    async addMusic(
+    async addMusic(sheetId: string, items: IMusic.IMusicItem | IMusic.IMusicItem[]) {
+        return sheetId === _defaultSheet.id
+            ? this.favorites.mutate(() => this.addMusicRaw(sheetId, items))
+            : this.addMusicRaw(sheetId, items);
+    }
+
+    private async addMusicRaw(
         sheetId: string,
         musicItem: IMusic.IMusicItem | Array<IMusic.IMusicItem>,
     ) {
@@ -361,6 +375,12 @@ class MusicSheetClazz implements IInjectable {
 
 
     async removeMusicByIndex(sheetId: string, indices: number | number[]) {
+        return sheetId === _defaultSheet.id
+            ? this.favorites.mutate(() => this.removeMusicByIndexRaw(sheetId, indices))
+            : this.removeMusicByIndexRaw(sheetId, indices);
+    }
+
+    private async removeMusicByIndexRaw(sheetId: string, indices: number | number[]) {
         if (!Array.isArray(indices)) {
             indices = [indices];
         }
@@ -398,7 +418,13 @@ class MusicSheetClazz implements IInjectable {
     }
 
 
-    async removeMusic(
+    async removeMusic(sheetId: string, items: IMusic.IMusicItem | IMusic.IMusicItem[]) {
+        return sheetId === _defaultSheet.id
+            ? this.favorites.mutate(() => this.removeMusicRaw(sheetId, items))
+            : this.removeMusicRaw(sheetId, items);
+    }
+
+    private async removeMusicRaw(
         sheetId: string,
         musicItems: IMusic.IMusicItem | IMusic.IMusicItem[],
     ) {
@@ -421,9 +447,7 @@ class MusicSheetClazz implements IInjectable {
             patchData.coverImg = musicList.at(0)?.artwork;
         }
         patchData.worksNum = musicList.length;
-        await this.updateMusicSheetBase(sheetId, {
-            coverImg: musicList.at(0)?.artwork,
-        });
+        await this.updateMusicSheetBase(sheetId, patchData);
 
         await storage.setMusicList(sheetId, musicList.musicList);
         ee.emit("UpdateMusicList", {
@@ -434,6 +458,12 @@ class MusicSheetClazz implements IInjectable {
 
 
     async setSortType(sheetId: string, sortType: SortType) {
+        return sheetId === _defaultSheet.id
+            ? this.favorites.mutate(() => this.setSortTypeRaw(sheetId, sortType))
+            : this.setSortTypeRaw(sheetId, sortType);
+    }
+
+    private async setSortTypeRaw(sheetId: string, sortType: SortType) {
         const musicList = this.getSortedMusicListBySheetId(sheetId);
         musicList.setSortType(sortType);
 
@@ -446,7 +476,13 @@ class MusicSheetClazz implements IInjectable {
         });
     }
 
-    async manualSort(
+    async manualSort(sheetId: string, items: IMusic.IMusicItem[]) {
+        return sheetId === _defaultSheet.id
+            ? this.favorites.mutate(() => this.manualSortRaw(sheetId, items))
+            : this.manualSortRaw(sheetId, items);
+    }
+
+    private async manualSortRaw(
         sheetId: string,
         musicListAfterSort: IMusic.IMusicItem[],
     ) {
@@ -464,6 +500,15 @@ class MusicSheetClazz implements IInjectable {
     }
 
     getSheetMeta = storage.getSheetMeta;
+    subscribeFavorites(callback: () => void) {
+        const listener = ({ sheetId }: { sheetId: string }) => {
+            if (sheetId === _defaultSheet.id) callback();
+        };
+        ee.on("UpdateMusicList", listener);
+        return () => {
+            ee.off("UpdateMusicList", listener);
+        };
+    }
 
 
 
@@ -553,6 +598,7 @@ function useSheetItem(sheetId: string) {
 }
 
 function useFavorite(musicItem: IMusic.IMusicItem | null) {
+    useFavoriteGroups();
     const [fav, setFav] = useState(false);
 
     useEffect(() => {
@@ -560,11 +606,11 @@ function useFavorite(musicItem: IMusic.IMusicItem | null) {
             if (updatedSheetId !== _defaultSheet.id || updateType === "resort") {
                 return;
             }
-            setFav(musicListMap.get(_defaultSheet.id)?.has(musicItem) || false);
+            setFav(MusicSheet.favorites.isFavorite(musicItem));
         };
         ee.on("UpdateMusicList", onUpdateMusicList);
 
-        setFav(musicListMap.get(_defaultSheet.id)?.has(musicItem) || false);
+        setFav(MusicSheet.favorites.isFavorite(musicItem));
         return () => {
             ee.off("UpdateMusicList", onUpdateMusicList);
         };
@@ -599,3 +645,10 @@ function useStarredSheets() {
 
 
 export { useSheetIsStarred, useSheetsBase, useSheetItem, useStarredSheets, useFavorite };
+
+/** Match the visible favorite groups; keep raw worksNum for source-based editing. */
+export function useFavoriteCount() {
+    const sheet = useSheetItem(_defaultSheet.id);
+    const groups = useFavoriteGroups();
+    return useMemo(() => favoriteDisplayGroups(sheet.musicList ?? [], groups).length, [sheet.musicList, groups]);
+}
