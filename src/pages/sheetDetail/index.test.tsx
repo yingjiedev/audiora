@@ -3,6 +3,8 @@ import TestRenderer, { act } from "react-test-renderer";
 import { BackHandler } from "react-native";
 import SheetDetail from "./index";
 import MusicItem from "@/components/mediaItem/musicItem";
+import Checkbox from "@/components/base/checkbox";
+import ThemeText from "@/components/base/themeText";
 import TrackPlayer from "@/core/trackPlayer";
 import MusicSheet from "@/core/musicSheet";
 import downloader from "@/core/downloader";
@@ -56,7 +58,10 @@ jest.mock("@/components/base/listEmpty", () => "ListEmpty");
 jest.mock("@/components/base/listFooter", () => "ListFooter");
 jest.mock("@/core/playerOverlay", () => ({ isPlayerOpen: () => mockPlayerOpen }));
 jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { playWithReplacePlayList: jest.fn(), addNext: jest.fn(async () => {}) }, useCurrentMusic: () => null }));
-jest.mock("@/core/musicSheet", () => ({ __esModule: true, default: { removeMusic: jest.fn(async () => {}), defaultSheet: { id: "favorite" }, getSheetMeta: jest.fn() }, useSheetItem: () => mockSheet, useFavorite: () => false, useSheetIsStarred: () => false }));
+jest.mock("@/core/musicSheet", () => ({ __esModule: true, default: {
+    removeMusic: jest.fn(async () => {}), defaultSheet: { id: "favorite" }, getSheetMeta: jest.fn(),
+    favorites: { groupFor: jest.fn(), toggle: jest.fn(async () => {}) },
+}, useSheetItem: () => mockSheet, useFavorite: () => false, useSheetIsStarred: () => false }));
 jest.mock("@/core/localMusicSheet", () => ({ __esModule: true, default: { useIsLocal: () => false } }));
 jest.mock("@/core/downloader", () => ({ __esModule: true, default: { download: jest.fn() } }));
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => (name: string) => name }));
@@ -96,7 +101,8 @@ describe("local playlist inline editing", () => {
         jest.restoreAllMocks();
     });
 
-    it("keeps the original list mounted and adds selection before the existing numbers", async () => {
+    it("keeps the source list mounted and adds selection before the existing numbers", async () => {
+        await press("aggregate.bySource");
         const originalList = renderer.root.findByType("FlashList" as any);
         const originalRows = rows();
         await press("common.edit");
@@ -107,7 +113,9 @@ describe("local playlist inline editing", () => {
         expect(rows().every(row => row.props.left && row.props.checked === false && row.props.actions.length === 0)).toBe(true);
         const main = button("First - Artist");
         expect(main.props.accessibilityRole).toBe("checkbox");
-        expect(main.props.children[0]).toBe(rows()[0].props.left);
+        const contentOrder = main.findAll(node => node.type === Checkbox || node.type === ThemeText);
+        expect(contentOrder[0].type).toBe(Checkbox);
+        expect(contentOrder[1].props.children).toBe(1);
         await press("First - Artist");
         expect(button("First - Artist").props.accessibilityState.checked).toBe(true);
         expect(TrackPlayer.playWithReplacePlayList).not.toHaveBeenCalled();
@@ -122,6 +130,18 @@ describe("local playlist inline editing", () => {
         expect(rows().every(row => row.props.checked === undefined && !row.props.left)).toBe(true);
         await press("Second - Artist");
         expect(TrackPlayer.playWithReplacePlayList).toHaveBeenCalledWith(songs[1], songs, { sheet: mockSheet, routeName: "local-sheet-detail" });
+    });
+
+    it("edits original sources from grouped favorites and restores the grouped view on completion", async () => {
+        expect(rows().every(row => row.props.source)).toBe(true);
+        await press("common.edit");
+        expect(rows().map(row => row.props.musicItem)).toEqual(songs);
+        expect(rows().every(row => !row.props.source && row.props.checked === false)).toBe(true);
+        await press("First - Artist");
+        expect(rows()[0].props.checked).toBe(true);
+        await press("common.done");
+        expect(rows().every(row => row.props.source && row.props.checked === undefined)).toBe(true);
+        expect(TrackPlayer.playWithReplacePlayList).not.toHaveBeenCalled();
     });
 
     it("uses the menu to enter selection and keeps manual reordering available separately", async () => {
