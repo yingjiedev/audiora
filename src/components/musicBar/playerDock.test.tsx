@@ -64,6 +64,10 @@ jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => 
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: (state: boolean) => state }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: (item: typeof mockSong | null) => item?.artwork }));
 jest.mock("@/utils/mediaExtra", () => ({ useMediaExtraProperty: jest.fn() }));
+// mediaUtils pulls commonConst -> motion -> Reanimated ESM; this test only needs key generation.
+jest.mock("@/utils/mediaUtils", () => ({
+    getMediaUniqueKey: (item: { platform: string; id: string }) => `${item.platform}@${item.id}`,
+}));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 12, left: 0, right: 0 }) }));
 
 function render(collapseKey = "home", onDockHeightChange?: (height: number) => void) {
