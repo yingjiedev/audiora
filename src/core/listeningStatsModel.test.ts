@@ -1,10 +1,31 @@
-import { addListeningInterval, calendarDays, ListeningData, ListeningProgressTracker, localDateKey, restoreListeningData, summarizeListening } from "./listeningStatsModel";
+import { addListeningInterval, calendarDays, countSongPlays, ListeningData, ListeningProgressTracker, localDateKey, restoreListeningData, songKey, summarizeListening } from "./listeningStatsModel";
 
 const song = { id: "same-id", platform: "source-a", title: "Music", artist: "Artist", artwork: "cover" };
 const at = (day: number, hour = 12, minute = 0, second = 0) => new Date(2026, 9, day, hour, minute, second).getTime();
 const empty = (): ListeningData => ({ version: 1, startedAt: at(1), days: [] });
 
 describe("listening aggregates", () => {
+    it("sums all retained plays by typed platform/id, including songs outside report rankings", () => {
+        let data = empty();
+        const songs = Array.from({ length: 9 }, (_, index) => ({ ...song, id: String(index) }));
+        for (const music of songs) data = addListeningInterval(data, music, at(10), at(10) + 1000, true);
+        data = addListeningInterval(data, songs[8], at(11), at(11) + 1000, true);
+        const otherPlatform = { ...songs[8], platform: "source-b" };
+        const numericId = { ...songs[8], id: 8 } as any;
+        data = addListeningInterval(data, otherPlatform, at(11), at(11) + 1000, true);
+        data = addListeningInterval(data, numericId, at(11), at(11) + 1000, true);
+        data.days[0].songs[8].plays = 123;
+        const before = JSON.stringify(data);
+        const counts = countSongPlays(data.days);
+        expect(counts.size).toBe(11);
+        expect(counts.get(songKey(songs[8]))).toBe(124);
+        expect(counts.get(songKey(otherPlatform))).toBe(1);
+        expect(counts.get(songKey(numericId))).toBe(1);
+        expect(counts.get(songKey({ ...song, id: "absent" })) ?? 0).toBe(0);
+        expect(countSongPlays([]).size).toBe(0);
+        expect(JSON.stringify(data)).toBe(before);
+    });
+
     it("splits playback across local midnight without duplicating the play count", () => {
         const before = empty();
         const result = addListeningInterval(before, song, at(10, 23, 59, 59), at(11, 0, 0, 2), true);

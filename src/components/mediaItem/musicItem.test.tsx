@@ -26,7 +26,7 @@ jest.mock("@/core/musicSheet", () => {
     }, useFavorite: () => mockFavorite };
 });
 jest.mock("@/core/localMusicSheet", () => ({ __esModule: true, default: { useIsLocal: () => false } }));
-jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
+jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string, args?: { count: number }) => key === "listening.playCount" ? `播放 ${args?.count} 次` : key }) }));
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
@@ -225,5 +225,86 @@ describe("shared song row interactions", () => {
         const number = renderer.root.findAllByType(ThemeText).find(node => node.props.children === 2)!;
         const background = StyleSheet.flatten(number.parent!.props.style).backgroundColor;
         expect(contrastRatio(number.props.color, background)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it("keeps replay counts and aggregate source controls independent when both props are present", () => {
+        const chooseSource = jest.fn();
+        render({ presentation: "favorites", playCount: 128, sourceName: "Favorite source",
+            source: { name: "Playback source", count: 2, onPress: chooseSource }, actions: [],
+        });
+        layOutSource();
+        expect(renderer.root.findByProps({ testID: "music-play-count" }).findByType(ThemeText).props.children).toBe("99+");
+        const sourceButton = button("aggregate.chooseSource");
+        expect(sourceButton).toBeDefined();
+        expect(button("Song - Artist").props.accessibilityHint).toBe("Album · Favorite source · 播放 128 次 · aggregate.currentSource");
+        act(() => sourceButton.props.onPress());
+        expect(chooseSource).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
+        act(() => button("Song - Artist").props.onPress());
+        expect(TrackPlayer.play).toHaveBeenCalledWith(song);
+    });
+
+    it.each([[1, "1"], [12, "12"], [99, "99"], [100, "99+"], [1234, "99+"]])("caps the favorite badge for %s plays while preserving the full spoken total", (count, displayed) => {
+        render({ presentation: "favorites", density: "compact", playCount: count, sourceName: "My source" });
+        const badge = renderer.root.findByProps({ testID: "music-play-count" });
+        expect(badge.findByType(ThemeText).props.children).toBe(displayed);
+        expect(badge.findByType("Icon" as any).props.name).toBe("play");
+        expect(badge.props.onPress).toBeUndefined();
+        expect(badge.props.importantForAccessibility).toBe("no-hide-descendants");
+        expect(button("Song - Artist").props.accessibilityHint).toBe(`Album · My source · 播放 ${count} 次`);
+    });
+
+    it.each([undefined, 0, -1, NaN, Infinity])("hides empty or invalid play counts: %s", count => {
+        render({ presentation: "favorites", playCount: count });
+        expect(renderer.root.findAllByProps({ testID: "music-play-count" })).toHaveLength(0);
+        expect(button("Song - Artist").props.accessibilityHint).toBe("Album · 播放 0 次");
+    });
+
+    it("keeps a long favorite title truncatable beside the badge and isolates favorite taps", async () => {
+        const longSong = { ...song, title: "A long title that must leave space for its play counter", artist: "A long artist", album: "An actual album" };
+        render({ musicItem: longSong, presentation: "favorites", density: "compact", playCount: 128, sourceName: "Renamed source", actions: ["favorite"] });
+        const badge = renderer.root.findByProps({ testID: "music-play-count" });
+        const heading = badge.parent!;
+        const title = heading.findAllByType(ThemeText).find(node => node.props.numberOfLines === 1)!;
+        expect(StyleSheet.flatten(title.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0 });
+        expect(StyleSheet.flatten(badge.props.style).flexShrink).toBe(0);
+        const text = renderer.root.findAllByType(ThemeText).map(node => React.Children.toArray(node.props.children).filter(child => typeof child === "string").join(""));
+        expect(text).toContain("A long artist · An actual album");
+        expect(text).toContain(" | Renamed source");
+        await act(async () => button("musicDetail.a11y.favorite").props.onPress());
+        expect(MusicSheet.addMusic).toHaveBeenCalledWith("favorite", longSong);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
+        act(() => button(`${longSong.title} - ${longSong.artist}`).props.onPress());
+        expect(TrackPlayer.play).toHaveBeenCalledWith(longSong);
+    });
+
+    it("omits absent and duplicate album metadata and leaves other presentations unchanged", () => {
+        render({ musicItem: { ...song, artist: "", album: "Song" }, presentation: "favorites", playCount: 12, sourceName: "  Source  " });
+        expect(button("Song").props.accessibilityHint).toBe("Source · 播放 12 次");
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "Source")).toBe(true);
+        act(() => renderer.update(<MusicItem musicItem={{ ...song, album: "" }} presentation="favorites" sourceName=" " />));
+        expect(button("Song - Artist").props.accessibilityHint).toBe("播放 0 次");
+        for (const presentation of ["library", "discovery"] as const) {
+            act(() => renderer.update(<MusicItem musicItem={song} presentation={presentation} playCount={12} sourceName="Source" />));
+            expect(renderer.root.findAllByProps({ testID: "music-play-count" })).toHaveLength(0);
+            expect(button("Song - Artist").props.accessibilityHint).toBeUndefined();
+        }
+    });
+
+    it.each([
+        ["light", lightColors, false],
+        ["dark", darkColors, true],
+        ["custom", { ...lightColors, primary: "#FFCC00" }, false],
+        ["transparent", { ...darkColors, primary: "rgba(116,89,199,0.4)", card: "rgba(18,18,18,0.22)" }, true],
+    ] as const)("uses readable theme colors for the count in %s", (_name, palette, dark) => {
+        mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
+        render({ presentation: "favorites", playCount: 99 });
+        const badge = renderer.root.findByProps({ testID: "music-play-count" });
+        const fill = StyleSheet.flatten(badge.props.style).backgroundColor;
+        expect(fill).toBe(mockColors.tonalSurface);
+        for (const foreground of [badge.findByType(ThemeText).props.color, badge.findByType("Icon" as any).props.color]) {
+            expect(foreground).toBe(mockColors.onTonal);
+            expect(contrastRatio(foreground, fill)).toBeGreaterThanOrEqual(4.5);
+        }
     });
 });

@@ -4,7 +4,8 @@ module.exports = api => {
         [
             "module-resolver",
             {
-                root: ["./"],
+                // Keep dependency-relative imports intact; app aliases are defined below.
+                root: [],
                 alias: {
                     "^@/(.+)": "./src/\\1",
                     webdav: "webdav/dist/react-native",
