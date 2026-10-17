@@ -27,6 +27,9 @@ jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
+jest.mock("@react-native-masked-view/masked-view", () => "MaskedView");
+jest.mock("react-native-svg", () => ({ __esModule: true, default: "Svg", Circle: "Circle" }));
+jest.mock("react-native-track-player", () => ({ useActiveTrack: () => mockMusic ? { ...mockMusic, url: "file:///song.mp3" } : undefined }));
 jest.mock("./musicInfo", () => "MusicInfo");
 jest.mock("./useAutoExpand", () => ({ __esModule: true, default: jest.fn() }));
 jest.mock("@/pages/musicDetail/components/bottom/seekBar", () => "SeekBar");
@@ -45,6 +48,7 @@ jest.mock("@/core/trackPlayer", () => ({
     default: { play: jest.fn(), pause: jest.fn(), skipToPrevious: jest.fn(), skipToNext: jest.fn() },
     useCurrentMusic: () => mockMusic,
     useMusicState: () => mockPaused,
+    useProgress: () => ({ position: 30, duration: 180 }),
 }));
 jest.mock("@/core/musicSheet", () => ({
     __esModule: true,
@@ -60,6 +64,10 @@ jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => 
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: (state: boolean) => state }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: (item: typeof mockSong | null) => item?.artwork }));
 jest.mock("@/utils/mediaExtra", () => ({ useMediaExtraProperty: jest.fn() }));
+// mediaUtils pulls commonConst -> motion -> Reanimated ESM; this test only needs key generation.
+jest.mock("@/utils/mediaUtils", () => ({
+    getMediaUniqueKey: (item: { platform: string; id: string }) => `${item.platform}@${item.id}`,
+}));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 12, left: 0, right: 0 }) }));
 
 function render(collapseKey = "home", onDockHeightChange?: (height: number) => void) {

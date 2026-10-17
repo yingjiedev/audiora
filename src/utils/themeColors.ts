@@ -99,6 +99,10 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const onFeaturedAction = bestForeground(featuredActionSurface, [mediaOnDark, lightColors.text, controlNeutralDark]);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
+    const compactPlaybackBackground = blendOver(dark ? colors.tabBar ?? surface : colors.musicBar ?? card, page);
+    // Keep active as the progress color; only its leading edge has a faint violet tint.
+    const compactPlaybackTint = readableAccent(Color(primaryText).mix(Color(accentWarm).alpha(1), 0.12).hex(), [compactPlaybackBackground], colorContrastMinimum.control);
+    const compactPlaybackProgressGradient = [compactPlaybackTint, primaryText, primaryText];
     const activityUnrecorded = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.04).hex();
     const activityEmpty = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.09).hex();
     const activityBackgrounds = [cardBackground, activityUnrecorded, activityEmpty];
@@ -114,6 +118,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         primary,
         primaryText,
         active: primaryText,
+        compactPlaybackProgressGradient,
         favorite: readableAccent(safeColor(colors.favorite, preset.favorite).hex(), backgrounds, colorContrastMinimum.control),
         onPrimary: bestForeground(blendOver(primary, blendOver(card, page)), [mediaOnDark, lightColors.text, controlNeutralDark]),
         tonalSurface,

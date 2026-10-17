@@ -36,6 +36,7 @@ Audiora 使用蓝色主色、蓝灰表面和少量紫色装饰。参考产品用
 - 展开播放器用 `playerSurface`、`playerGradient`、`playerText`、`playerTextSecondary`、`playerTextTertiary`。按用户对实机可见度的反馈，面板装饰渐变改用 `accentWarm` 紫色与表面混合 28%、12%、0%；浅色默认为 #E9D6FC → #F6EEFE → #FFFFFF，深色为 #4B4380 → #333763 → #212E4E。紫色限用于播放器背景装饰，进度、选中态和主操作仍使用各自的主色语义。
 - 面板内部使用不透明的当前表面 RGB，避免壁纸透过后破坏前景对比度。面板外继续透明；其他页面的自定义表面透明度不被重置。
 - 播放器进度与队列当前歌曲使用 `active`；普通控制图标使用对应表面的前景色。喜欢使用 `favorite`。
+- 紧凑播放按钮保留原有图标，以自下而上的填充表示进度。填充主体使用 `active`，仅上沿允许混入 12% 的 `accentWarm`，在填充高度的前 35% 内渐变回 `active`；通过 `compactPlaybackProgressGradient` 统一派生，并校准实际音乐栏底色上的控件对比度。紫色只作轻微表面装饰，不独立承担进度含义，不改变用户主色设置。
 - `ThemeText` 的 `fontColor="primary"` 自动使用 `primaryText`。主色填充按钮的文字使用 `onPrimary`。显式 `color` 和样式覆盖必须由调用者确认实际背景上的可读性。
 - 作者、副标题优先尊重主题配置的 `textSecondary`；旧配置缺少该字段时才使用派生回落。
 - 次级按钮与音质/VIP 徽标用 `tonalSurface` / `onTonal`，标签文字承担具体含义。选中时间、确认按钮使用主色填充与 `onPrimary`，定时进度使用 `active`；不固定使用另一套蓝紫渐变。
