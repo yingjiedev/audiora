@@ -15,15 +15,18 @@ import globalStyle from "@/constants/globalStyle";
 import musicHistory from "@/core/musicHistory";
 import MusicSheet from "@/core/musicSheet";
 import { useI18N } from "@/core/i18n";
-export default function Body() {
-    const { musicSheet } = useParams<"music-list-editor">();
+import { MusicListSource } from "@/core/musicListSource";
+import { RequestStateCode } from "@/constants/commonConst";
+export default function Body(props: { source?: MusicListSource; state: RequestStateCode }) {
+    const { musicSheet, sourceId, selectionOnly } = useParams<"music-list-editor">();
+    const canEdit = !!musicSheet?.id && !sourceId && !selectionOnly;
     const { t } = useI18N();
     const [editingMusicList, setEditingMusicList] = useAtom(editingMusicListAtom);
     const [musicListChanged, setMusicListChanged] = useAtom(musicListChangedAtom);
     const selectedItems = useMemo(() => editingMusicList.filter(item => item.checked), [editingMusicList]);
     const allSelected = editingMusicList.length > 0 && selectedItems.length === editingMusicList.length;
     const save = async () => {
-        if (!musicListChanged || !musicSheet?.id) return;
+        if (!canEdit || !musicListChanged || !musicSheet?.id) return;
         const tracks = editingMusicList.map(item => item.musicItem);
         if (musicSheet.id === localMusicSheetId) await LocalMusicSheet.updateMusicList(tracks);
         else if (musicSheet.id === musicHistorySheetId) await musicHistory.setHistory(tracks);
@@ -36,13 +39,17 @@ export default function Body() {
             <View style={styles.actions}>
                 <PageAction title={t(allSelected ? "common.unselectAll" : "common.selectAll")} disabled={!editingMusicList.length}
                     onPress={() => setEditingMusicList(editingMusicList.map(item => ({ ...item, checked: !allSelected })))} />
-                <PageAction title={t("common.save")} variant="primary" disabled={!musicListChanged || !musicSheet?.id} onPress={save} />
+                {canEdit ? <PageAction title={t("common.save")} variant="primary" disabled={!musicListChanged} onPress={save} /> : null}
             </View>
         </View>
-        <MusicList />
+        {sourceId ? <ThemeText style={styles.summary} fontSize="description" fontColor="textSecondary">
+            {t("musicListEditor.loadedCount", { count: editingMusicList.length })}
+        </ThemeText> : null}
+        <MusicList source={props.source} state={props.state} canEdit={canEdit} />
     </HorizontalSafeAreaView>;
 }
 const styles = StyleSheet.create({
+    summary: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.md },
     header: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.md, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
     actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs },
 });

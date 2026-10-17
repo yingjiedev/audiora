@@ -191,6 +191,8 @@
     "lyric.alignSwitched": "歌词对齐方式已切换为",
     "lyric.detailAlign": "歌词对齐方式",
     "musicListEditor.selectMusicCount": "已选择 {count} 首",
+    "musicListEditor.loadedCount": "已加载 {count} 首；全选仅包含已加载歌曲",
+    "musicListEditor.loadMore": "加载更多",
     "musicListEditor.addToNextPlay": "下一首播放",
     "musicListEditor.nextAction": "下一首",
     "musicListEditor.addToSheet": "加入歌单",

@@ -191,6 +191,8 @@
     "lyric.alignSwitched": "Lyric alignment switched to",
     "lyric.detailAlign": "Lyric alignment",
     "musicListEditor.selectMusicCount": "{count} songs selected",
+    "musicListEditor.loadedCount": "{count} songs loaded; Select all includes loaded songs only",
+    "musicListEditor.loadMore": "Load more",
     "musicListEditor.addToNextPlay": "Play Next",
     "musicListEditor.nextAction": "Play Next",
     "musicListEditor.addToSheet": "Add to Playlist",

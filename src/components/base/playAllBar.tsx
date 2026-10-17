@@ -18,6 +18,7 @@ import RoundActionButton from "./roundActionButton";
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
 
 interface IProps {
+    sourceId?: string;
     musicList: IMusic.IMusicItem[] | null;
     /** Display grouping must not hide sources from editing/export actions. */
     actionMusicList?: IMusic.IMusicItem[];
@@ -51,7 +52,7 @@ function ToolbarAction({ name, label, accessibilityLabel = label, color, selecte
 
 export default function PlayAllBar(props: IProps) {
     const route = useRoute();
-    const { musicList, canStar, musicSheet, onEdit } = props;
+    const { musicList, canStar, musicSheet, onEdit, sourceId } = props;
     const actionMusicList = props.actionMusicList ?? musicList;
 
     const sheetName = musicSheet?.title;
@@ -136,6 +137,7 @@ export default function PlayAllBar(props: IProps) {
                             return;
                         }
                         navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                            ...(sourceId ? { sourceId, selectionOnly: true } : {}),
                             musicList: actionMusicList,
                             musicSheet: {
                                 title: sheetName,

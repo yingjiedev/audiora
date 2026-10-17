@@ -86,6 +86,8 @@ interface RouterParams extends RouterParamsBase {
     "music-list-editor": {
         musicSheet?: Partial<IMusic.IMusicSheetItem>;
         musicList: IMusic.IMusicItem[] | null;
+        sourceId?: string;
+        selectionOnly?: boolean;
     };
     "file-selector": {
         fileType?: "folder" | "file" | "file-and-folder"; // 10: folder 11: file and folder,

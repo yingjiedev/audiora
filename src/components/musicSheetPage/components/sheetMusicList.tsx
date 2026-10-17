@@ -13,6 +13,7 @@ import { RequestStateCode } from "@/constants/commonConst";
 import { useRoute } from "@react-navigation/native";
 
 interface IMusicListProps {
+    sourceId?: string;
     sheetInfo: IMusic.IMusicSheetItem | null;
     typeLabel?: string;
     musicList?: IMusic.IMusicItem[] | null;
@@ -25,7 +26,7 @@ interface IMusicListProps {
 }
 export default function SheetMusicList(props: IMusicListProps) {
     const route = useRoute();
-    const { sheetInfo, typeLabel, musicList, canStar, state, onRetry, onLoadMore } = props;
+    const { sheetInfo, typeLabel, musicList, canStar, state, onRetry, onLoadMore, sourceId } = props;
     // 高亮正在播放的歌（与本地歌单页行为一致）
     const currentMusic = useCurrentMusic();
 
@@ -39,6 +40,7 @@ export default function SheetMusicList(props: IMusicListProps) {
                         showIndex
                         Header={
                             <Header
+                                sourceId={sourceId}
                                 typeLabel={typeLabel}
                                 canStar={canStar}
                                 musicSheet={sheetInfo}

@@ -17,7 +17,8 @@ import { StyleSheet, View } from "react-native";
 import { editingMusicListAtom, musicListChangedAtom } from "../store/atom";
 
 export default function Bottom() {
-    const { musicSheet } = useParams<"music-list-editor">();
+    const { musicSheet, sourceId, selectionOnly } = useParams<"music-list-editor">();
+    const canEdit = !!musicSheet?.id && !sourceId && !selectionOnly;
     const [editingMusicList, setEditingMusicList] =
         useAtom(editingMusicListAtom);
     const setMusicListChanged = useSetAtom(musicListChangedAtom);
@@ -82,14 +83,14 @@ export default function Bottom() {
                     }
                 }}
             />
-            <BottomIcon
+            {canEdit ? <BottomIcon
                 disabled={!selectedItems.length}
                 icon="trash-outline"
                 title={t("common.delete")}
                 danger
                 unavailable={!musicSheet?.id}
                 onPress={() => {
-                    if (selectedItems.length && musicSheet?.id) {
+                    if (selectedItems.length && canEdit) {
                         setEditingMusicList(
                             produce(prev => prev.filter(_ => !_.checked)),
                         );
@@ -97,7 +98,7 @@ export default function Bottom() {
                         Toast.warn(t("toast.rememberToSave"));
                     }
                 }}
-            />
+            /> : null}
         </View>
     );
 }

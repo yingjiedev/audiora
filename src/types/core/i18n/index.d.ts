@@ -282,6 +282,8 @@ export interface ILanguageData {
 
     // 音乐列表编辑器相关
     "musicListEditor.selectMusicCount": string; // 选择的音乐数量
+    "musicListEditor.loadedCount": string;
+    "musicListEditor.loadMore": string;
     "musicListEditor.addToNextPlay": string; // 添加到下一曲
     "musicListEditor.addToSheet": string; // 添加到歌单
 

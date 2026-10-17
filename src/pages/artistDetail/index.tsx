@@ -10,10 +10,18 @@ import globalStyle from "@/constants/globalStyle";
 import useOrientation from "@/hooks/useOrientation";
 import AppBar from "@/components/base/appBar";
 import { useI18N } from "@/core/i18n";
+import { RequestStateCode } from "@/constants/commonConst";
+import useMusicListSource from "@/hooks/useMusicListSource";
+import useQueryArtist from "./hooks/useQuery";
 
 export default function ArtistDetail() {
     const [queryResult, setQueryResult] = useAtom(queryResultAtom);
-    const { artistItem } = useParams<"artist-detail">();
+    const { artistItem, pluginHash } = useParams<"artist-detail">();
+    const queryArtist = useQueryArtist(pluginHash);
+    const { sourceId } = useMusicListSource(
+        { musicList: queryResult.music.data ?? [], state: queryResult.music.state ?? RequestStateCode.IDLE },
+        () => queryArtist(artistItem),
+    );
     const setScrollToTopState = useSetAtom(scrollToTopAtom);
     const navigate = useNavigate();
     const orientation = useOrientation();
@@ -36,6 +44,8 @@ export default function ArtistDetail() {
                         icon: "pencil-square",
                         onPress() {
                             navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                                sourceId,
+                                selectionOnly: true,
                                 musicList: queryResult?.music?.data ?? [],
                                 musicSheet: {
                                     title: t("artistDetail.musicSheet", {
