@@ -985,7 +985,7 @@
     "subpage.manageLocal": "Scan and manage music on this device",
     "subpage.pluginCount": "{count} installed plugins",
     "subpage.subscribeCount": "{count} subscriptions",
-    "subpage.subscriptionHint": "Add subscriptions and update sources in plugin management",
+    "subpage.subscriptionHint": "Add a subscription, then tap Update Subscription to install or update sources",
     "subpage.noBackground": "No background image yet",
     "subpage.chooseBackground": "Choose a custom theme and add a background before tuning it",
     "subpage.backgroundPreview": "Background preview",

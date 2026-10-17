@@ -985,7 +985,7 @@
     "subpage.manageLocal": "扫描并管理设备中的音乐",
     "subpage.pluginCount": "已安装 {count} 个插件",
     "subpage.subscribeCount": "已添加 {count} 个订阅",
-    "subpage.subscriptionHint": "添加订阅地址，在插件管理中更新音源",
+    "subpage.subscriptionHint": "添加订阅地址后，点击「更新订阅」安装或更新音源",
     "subpage.noBackground": "还没有设置背景图",
     "subpage.chooseBackground": "先选择自定义主题并添加背景图，再调整显示效果",
     "subpage.backgroundPreview": "背景预览",

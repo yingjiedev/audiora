@@ -8,7 +8,6 @@ import PluginManager, { useSortedPlugins } from "@/core/pluginManager";
 import { trace } from "@/utils/log";
 
 import Toast from "@/utils/toast";
-import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import Config from "@/core/appConfig";
 import Empty from "@/components/base/empty";
@@ -22,6 +21,8 @@ import PluginItem from "../components/pluginItem";
 import { IIconName } from "@/components/base/icon.tsx";
 import { IInstallPluginResult } from "@/types/core/pluginManager";
 import { useI18N } from "@/core/i18n";
+import installPluginFromUrl from "../utils/installPluginFromUrl";
+import useUpdateSubscriptions from "../hooks/useUpdateSubscriptions";
 
 interface IOption {
     icon: IIconName;
@@ -33,7 +34,9 @@ export default function PluginList() {
     const plugins = useSortedPlugins();
     const { t } = useI18N();
 
-    const [loading, setLoading] = useState(false);
+    const [installing, setLoading] = useState(false);
+    const { updating, updateSubscriptions } = useUpdateSubscriptions();
+    const loading = installing || updating;
 
     const navigator = useNavigation<any>();
 
@@ -151,71 +154,6 @@ export default function PluginList() {
         });
     }
 
-    async function onSubscribeClick() {
-        const urls = Config.getConfig("plugin.subscribeUrl");
-        if (!urls) {
-            Toast.warn(t("toast.noSubscription"));
-        }
-        setLoading(true);
-
-        const successResults: IInstallPluginResult[] = [];
-        const failResults: IInstallPluginResult[] = [];
-
-        try {
-            const urlItems = JSON.parse(urls!);
-            if (Array.isArray(urlItems)) {
-                for (let i = 0; i < urlItems.length; ++i) {
-                    const result = await installPluginFromUrl(urlItems[i].url);
-                    if (result[0]) {
-                        if (result[0].success) {
-                            successResults.push(result[0]);
-                        } else {
-                            failResults.push(result[0]);
-                        }
-                    }
-                }
-            } else {
-                throw new Error();
-            }
-
-            if (!failResults.length) {
-                Toast.success(t("toast.installPluginSuccess"));
-            } else {
-                Toast.warn((successResults.length ? t("toast.partialPluginInstallFailed") : t("toast.allPluginInstallFailed")), {
-                    "type": "warn",
-                    "actionText": t("common.view"),
-                    "onActionClick": () => {
-                        showDialog("SimpleDialog", {
-                            title: t("pluginSetting.menu.pluginInstallFailedDialogTitle"),
-                            content: t("pluginSetting.pluginInstallFailedDialogContent", {
-                                detail: failResults.map(it => (it.pluginUrl ?? "") + "\n" + t("pluginSetting.failReason", {
-                                    reason: it.message ?? "",
-                                })).join("\n-----\n"),
-                            }),
-                        });
-                    },
-                });
-            }
-
-        } catch {
-            if (urls?.length) {
-                const result = await installPluginFromUrl(urls);
-                if (result[0]) {
-                    if (result[0].success) {
-                        Toast.success(t("toast.installPluginSuccess"));
-                    } else {
-                        Toast.warn(t("toast.partialPluginInstallFailedWithReason", {
-                            reason: result[0].message ?? "",
-                        }));
-                    }
-                } else {
-                    Toast.warn(t("toast.subscriptionInvalid"));
-                }
-            }
-        }
-        setLoading(false);
-    }
-
     async function onUpdateAllClick() {
         const enabledPlugins = PluginManager.getEnabledPlugins();
         setLoading(true);
@@ -288,6 +226,9 @@ export default function PluginList() {
                     <Fab
                         icon="plus"
                         onPress={() => {
+                            if (loading) {
+                                return;
+                            }
                             showPanel("SimpleSelect", {
                                 header: t("pluginSetting.menu.installPlugin"),
                                 candidates: [
@@ -317,7 +258,7 @@ export default function PluginList() {
                                     ) {
                                         onInstallFromNetworkClick();
                                     } else if (item.value === "更新订阅") {
-                                        onSubscribeClick();
+                                        updateSubscriptions();
                                     } else if (item.value === "更新全部插件") {
                                         onUpdateAllClick();
                                     }
@@ -340,45 +281,3 @@ const style = StyleSheet.create({
         height: rpx(200),
     },
 });
-
-
-
-async function installPluginFromUrl(text: string): Promise<IInstallPluginResult[]> {
-    try {
-        let urls: string[] = [];
-        const inputUrl = text.trim();
-        if (text.endsWith(".json")) {
-            const jsonFile = (
-                await axios.get(inputUrl, {
-                    headers: {
-                        "Cache-Control": "no-cache",
-                        Pragma: "no-cache",
-                        Expires: "0",
-                    },
-                })
-            ).data;
-            /**
-             * {
-             *     plugins: [{
-             *          version: xxx,
-             *          url: xxx
-             *      }]
-             * }
-             */
-            urls = (jsonFile?.plugins ?? []).map((_: any) => _.url);
-        } else {
-            urls = [inputUrl];
-        }
-        return await Promise.all(
-            urls.map(url =>
-                PluginManager.installPluginFromUrl(url, {
-                    notCheckVersion: Config.getConfig(
-                        "basic.notCheckPluginVersion",
-                    ),
-                }),
-            ),
-        );
-    } catch (e: any) {
-        return [{ success: false, message: e?.message, pluginUrl: text }];
-    }
-}

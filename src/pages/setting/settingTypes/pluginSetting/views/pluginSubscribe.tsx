@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Config, { useAppConfig } from "@/core/appConfig";
 import { FlatList } from "react-native-gesture-handler";
 import Empty from "@/components/base/empty";
@@ -14,6 +14,8 @@ import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx
 import globalStyle from "@/constants/globalStyle";
 import { showDialog } from "@/components/dialogs/useDialog";
 import AppBar from "@/components/base/appBar";
+import Loading from "@/components/base/loading";
+import useUpdateSubscriptions from "../hooks/useUpdateSubscriptions";
 
 import { useI18N } from "@/core/i18n";
 
@@ -29,6 +31,7 @@ export default function PluginSubscribe() {
 
     const { t } = useI18N();
     const colors = useColors();
+    const { updating, updateSubscriptions } = useUpdateSubscriptions();
 
     useEffect(() => {
         try {
@@ -86,9 +89,13 @@ export default function PluginSubscribe() {
     return <>
         <AppBar>{t("pluginSetting.menu.subscriptionSetting")}</AppBar>
         <PageSummary title={t("subpage.subscribeCount", { count: subscribes.length })} description={t("subpage.subscriptionHint")}
-            action={<PageAction title={t("subpage.addSubscription")} icon="plus" onPress={addSubscription} />} />
+            action={<PageAction title={t("subpage.addSubscription")} icon="plus" disabled={updating} onPress={addSubscription} />} />
         <HorizontalSafeAreaView style={globalStyle.flex1}>
-            <FlatList contentContainerStyle={style.content} ListEmptyComponent={Empty} data={subscribes}
+            <View style={style.actions}>
+                <PageAction title={t("pluginSetting.fabOptions.updateSubscription")} icon="arrow-path"
+                    disabled={updating || !subscribes.length} onPress={updateSubscriptions} />
+            </View>
+            {updating ? <Loading /> : <FlatList contentContainerStyle={style.content} ListEmptyComponent={Empty} data={subscribes}
                 keyExtractor={(_item, index) => String(index)} renderItem={({ item, index }) => <SettingRow
                     title={item.name} description={item.url} descriptionLines={2} style={[style.row, { backgroundColor: colors.card }]}
                     right={<PageAction title={t("subpage.copy")} onPress={() => {
@@ -98,8 +105,12 @@ export default function PluginSubscribe() {
                         onDelete(editingIndex, hideDialog) {
                             Config.setConfig("plugin.subscribeUrl", JSON.stringify([...subscribes.slice(0, editingIndex), ...subscribes.slice(editingIndex + 1)])); hideDialog(); Toast.success(t("toast.deleteSuccess"));
                         },
-                    })} />} />
+                    })} />} />}
         </HorizontalSafeAreaView>
     </>;
 }
-const style = StyleSheet.create({ content: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.xxxl }, row: { borderRadius: radius.lg, marginBottom: spacing.xs } });
+const style = StyleSheet.create({
+    actions: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.md, flexDirection: "row", flexWrap: "wrap" },
+    content: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.xxxl },
+    row: { borderRadius: radius.lg, marginBottom: spacing.xs },
+});
