@@ -11,7 +11,7 @@ import Toast from "@/utils/toast";
 import { useNavigation } from "@react-navigation/native";
 import Config from "@/core/appConfig";
 import Empty from "@/components/base/empty";
-import { PageSummary } from "@/components/base/pageSection";
+import { PageAction, PageSummary } from "@/components/base/pageSection";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { showPanel } from "@/components/panels/usePanel";
@@ -36,7 +36,7 @@ export default function PluginList() {
 
     const [installing, setLoading] = useState(false);
     const { updating, updateSubscriptions } = useUpdateSubscriptions();
-    const loading = installing || updating;
+    const loading = installing;
 
     const navigator = useNavigation<any>();
 
@@ -59,6 +59,9 @@ export default function PluginList() {
             icon: "trash-outline",
             title: t("pluginSetting.menu.uninstallAll"),
             onPress() {
+                if (updating || installing) {
+                    return;
+                }
                 showDialog("SimpleDialog", {
                     title: t("pluginSetting.menu.uninstallAll"),
                     content: t("pluginSetting.menu.uninstallAllContent"),
@@ -212,13 +215,15 @@ export default function PluginList() {
                         <Loading />
                     ) : (
                         <FlatList
-                            ListHeaderComponent={<PageSummary title={t("subpage.pluginCount", { count: plugins.length })} description={t("settingsOverview.sourceDescription")} />}
+                            ListHeaderComponent={<PageSummary title={t("subpage.pluginCount", { count: plugins.length })}
+                                description={updating ? t("subscription.backgroundHint") : t("settingsOverview.sourceDescription")}
+                                action={updating ? <PageAction title={t("subscription.viewProgress")} variant="text" onPress={() => navigator.navigate("/pluginsetting/subscribe")} /> : undefined} />}
                             ListEmptyComponent={Empty}
                             ListFooterComponent={<View style={style.blank} />}
                             data={plugins ?? []}
                             keyExtractor={_ => _.hash}
                             renderItem={({ item: plugin }) => (
-                                <PluginItem key={plugin.hash} plugin={plugin} />
+                                <PluginItem key={plugin.hash} plugin={plugin} installing={updating} />
                             )}
                         />
                     )}
@@ -226,7 +231,7 @@ export default function PluginList() {
                     <Fab
                         icon="plus"
                         onPress={() => {
-                            if (loading) {
+                            if (loading || updating) {
                                 return;
                             }
                             showPanel("SimpleSelect", {

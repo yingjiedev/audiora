@@ -61,6 +61,7 @@ function resolveDisplayName(
 }
 
 class PluginManager implements IPluginManager, IInjectable {
+    private installationQueue: Promise<void> = Promise.resolve();
     private appConfigService!: IAppConfig;
 
     injectDependencies(config: IAppConfig): void {
@@ -410,15 +411,30 @@ class PluginManager implements IPluginManager, IInjectable {
         config?: IInstallPluginConfig,
     ): Promise<IInstallPluginResult> {
         try {
-            const funcCode = (
-                await axios.get(url, {
-                    headers: {
-                        "Cache-Control": "no-cache",
-                        Pragma: "no-cache",
-                        Expires: "0",
-                    },
-                })
-            ).data;
+            const { data } = await axios.get(url, {
+                headers: { "Cache-Control": "no-cache", Pragma: "no-cache", Expires: "0" },
+                timeout: 10_000,
+                signal: config?.signal,
+            });
+            return await this.installPluginFromCode(data, url, config);
+        } catch (e: any) {
+            return { success: false, pluginUrl: url, message: e?.message ?? "" };
+        }
+    }
+
+    installPluginFromCode(code: string, url: string, config?: IInstallPluginConfig): Promise<IInstallPluginResult> {
+        const pending = this.installationQueue.then(() => {
+            if (config?.signal?.aborted) {
+                return { success: false, pluginUrl: url, message: "Cancelled" };
+            }
+            return this.installPluginCode(code, url, config);
+        });
+        this.installationQueue = pending.then(() => undefined, () => undefined);
+        return pending;
+    }
+
+    private async installPluginCode(funcCode: string, url: string, config?: IInstallPluginConfig): Promise<IInstallPluginResult> {
+        try {
             if (funcCode) {
                 const plugin = new Plugin(funcCode, "");
                 let allPlugins = [...this.getPlugins()];
@@ -430,6 +446,7 @@ class PluginManager implements IPluginManager, IInjectable {
                     return {
                         success: true,
                         message: "插件已安装",
+                        status: "unchanged",
                         pluginName: plugin.name,
                         pluginHash: plugin.hash,
                         pluginUrl: url,
@@ -473,6 +490,7 @@ class PluginManager implements IPluginManager, IInjectable {
                     this.setPlugins(allPlugins);
                     return {
                         success: true,
+                        status: oldVersionPlugin ? "updated" : "installed",
                         pluginName: plugin.name,
                         pluginHash: plugin.hash,
                         pluginUrl: url,

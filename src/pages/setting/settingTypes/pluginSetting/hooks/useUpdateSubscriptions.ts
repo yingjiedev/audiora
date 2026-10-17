@@ -1,82 +1,53 @@
-import { useRef, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Config from "@/core/appConfig";
 import { useI18N } from "@/core/i18n";
-import { showDialog } from "@/components/dialogs/useDialog";
-import { IInstallPluginResult } from "@/types/core/pluginManager";
+import getOrCreateMMKV from "@/utils/getOrCreateMMKV";
 import Toast from "@/utils/toast";
-import installPluginFromUrl from "../utils/installPluginFromUrl";
+import { createSubscriptionUpdateStore, SubscriptionUpdate } from "../utils/subscriptionUpdateStore";
+import { parseSubscriptions, Subscription } from "../utils/subscriptions";
+
+const storage = getOrCreateMMKV("plugin-subscription-updates");
+export const subscriptionUpdates = createSubscriptionUpdateStore({
+    read() {
+        try {
+            const parsed = JSON.parse(storage.getString("history") ?? "{}");
+            if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
+                return {};
+            }
+            return Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, SubscriptionUpdate] => {
+                const [url, value] = entry as [string, SubscriptionUpdate];
+                return /^https?:\/\//i.test(url) && !!value && ["finished", "cancelled", "timedOut"].includes(value.phase)
+                    && Number.isFinite(value.finishedAt) && (value.total === undefined || Number.isFinite(value.total))
+                    && Array.isArray(value.results) && value.results.every(result => result && typeof result.success === "boolean"
+                        && (result.pluginUrl === undefined || typeof result.pluginUrl === "string")
+                        && (result.pluginName === undefined || typeof result.pluginName === "string")
+                        && (result.status === undefined || ["installed", "updated", "unchanged"].includes(result.status))
+                        && (result.message === undefined || typeof result.message === "string"));
+            }).slice(0, 50));
+        } catch {
+            return {};
+        }
+    },
+    save(history) {
+        storage.set("history", JSON.stringify(history));
+    },
+});
 
 export default function useUpdateSubscriptions() {
+    const state = useSyncExternalStore(subscriptionUpdates.subscribe, subscriptionUpdates.getSnapshot, subscriptionUpdates.getSnapshot);
     const { t } = useI18N();
-    const [updating, setUpdating] = useState(false);
-    const inProgress = useRef(false);
-
-    async function updateSubscriptions() {
-        if (inProgress.current) {
-            return;
-        }
-        const configuredUrls = Config.getConfig("plugin.subscribeUrl")?.trim();
-        if (!configuredUrls) {
-            Toast.warn(t("toast.noSubscription"));
-            return;
-        }
-
-        let subscriptions: unknown;
+    function updateSubscriptions(items?: Subscription[], retryOnly = false) {
         try {
-            subscriptions = JSON.parse(configuredUrls);
+            const selected = items ?? parseSubscriptions(Config.getConfig("plugin.subscribeUrl"));
+            if (!selected.length) {
+                Toast.warn(t("toast.noSubscription"));
+                return Promise.resolve();
+            }
+            return subscriptionUpdates.start(selected, retryOnly);
         } catch {
-            // Older settings store a single subscription URL without JSON.
-            subscriptions = [{ url: configuredUrls }];
-        }
-        if (!Array.isArray(subscriptions)) {
             Toast.warn(t("toast.subscriptionInvalid"));
-            return;
-        }
-        if (!subscriptions.length) {
-            Toast.warn(t("toast.noSubscription"));
-            return;
-        }
-
-        inProgress.current = true;
-        setUpdating(true);
-        try {
-            const results: IInstallPluginResult[] = [];
-            for (const subscription of subscriptions) {
-                const url = typeof subscription?.url === "string" ? subscription.url.trim() : "";
-                if (!url) {
-                    results.push({ success: false, message: t("toast.subscriptionInvalid") });
-                    continue;
-                }
-                const installed = await installPluginFromUrl(url);
-                results.push(...(installed.length ? installed : [{
-                    success: false,
-                    pluginUrl: url,
-                    message: t("toast.subscriptionInvalid"),
-                }]));
-            }
-            const failures = results.filter(result => !result.success);
-            if (!failures.length) {
-                Toast.success(t("toast.updatePluginSuccess"));
-            } else {
-                Toast.warn(t(failures.length < results.length ? "toast.partialPluginUpdateFailed" : "toast.allPluginUpdateFailed"), {
-                    actionText: t("common.view"),
-                    onActionClick: () => showDialog("SimpleDialog", {
-                        title: t("pluginSetting.menu.pluginUpdateFailedDialogTitle"),
-                        content: t("pluginSetting.pluginUpdateFailedDialogContent", {
-                            detail: failures.map(result => (result.pluginUrl ?? "") + "\n" + t("pluginSetting.failReason", {
-                                reason: result.message ?? "",
-                            })).join("\n-----\n"),
-                        }),
-                    }),
-                });
-            }
-        } catch (e: any) {
-            Toast.warn(t("toast.unknownError", { reason: e?.message ?? e }));
-        } finally {
-            inProgress.current = false;
-            setUpdating(false);
+            return Promise.resolve();
         }
     }
-
-    return { updating, updateSubscriptions };
+    return { ...state, updating: state.running, updateSubscriptions, cancelUpdate: subscriptionUpdates.cancel };
 }

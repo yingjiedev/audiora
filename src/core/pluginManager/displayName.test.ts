@@ -16,7 +16,7 @@ jest.mock("./plugin", () => {
                 lazyProps ?? (typeof funcCode === "function" ? funcCode() : {});
             this.name = define?.platform ?? "";
             this.path = pluginPath;
-            this.hash = `hash-${this.name}`;
+            this.hash = `hash-${this.name}-${define?.version ?? ""}`;
             this.instance = define ?? {};
         }
     }
@@ -50,6 +50,7 @@ jest.mock("@/utils/nanoid", () => ({ nanoid: () => "test-nanoid" }));
 
 import pluginManager, { Plugin } from "./index";
 import pluginMeta from "./meta";
+import { writeFile } from "react-native-fs";
 
 function createPlugin(platform: string): Plugin {
     return new Plugin(
@@ -152,5 +153,56 @@ describe("插件显示名", () => {
         expect(pluginManager.getPluginDisplayName(plugin)).toBe("我的音源");
 
         pluginManager.setUserVariables(plugin, {});
+    });
+});
+
+describe("serialized plugin installation", () => {
+    const code = (platform: string, version = "1.0.0") => (() => ({ platform, version })) as unknown as string;
+    beforeEach(() => {
+        (pluginManager as any).setPlugins([]);
+        jest.mocked(writeFile).mockClear();
+    });
+    afterEach(() => {
+        jest.restoreAllMocks();
+        (pluginManager as any).setPlugins([]);
+    });
+    it("keeps both plugins when downloads finish together", async () => {
+        let finish!: () => void;
+        jest.mocked(writeFile).mockImplementationOnce(() => new Promise<void>(resolve => {
+            finish = resolve;
+        }));
+        const first = pluginManager.installPluginFromCode(code("first"), "https://source/first.js");
+        const second = pluginManager.installPluginFromCode(code("second"), "https://source/second.js");
+        await Promise.resolve();
+        expect(writeFile).toHaveBeenCalledTimes(1);
+        finish();
+        await expect(Promise.all([first, second])).resolves.toEqual([
+            expect.objectContaining({ success: true, status: "installed" }),
+            expect.objectContaining({ success: true, status: "installed" }),
+        ]);
+        expect(pluginManager.getEnabledPlugins().map(plugin => plugin.name)).toEqual(["first", "second"]);
+    });
+    it("distinguishes added, unchanged and replaced plugins", async () => {
+        expect((await pluginManager.installPluginFromCode(code("source"), "https://source/a.js")).status).toBe("installed");
+        expect((await pluginManager.installPluginFromCode(code("source"), "https://source/a.js")).status).toBe("unchanged");
+        expect((await pluginManager.installPluginFromCode(code("source", "2.0.0"), "https://source/a.js")).status).toBe("updated");
+        expect((await pluginManager.installPluginFromCode(code("source"), "https://source/a.js")).success).toBe(false);
+        expect(pluginManager.getEnabledPlugins()).toHaveLength(1);
+    });
+    it("skips a queued write cancelled while another write is finishing", async () => {
+        let finish!: () => void;
+        jest.mocked(writeFile).mockImplementationOnce(() => new Promise<void>(resolve => {
+            finish = resolve;
+        }));
+        const first = pluginManager.installPluginFromCode(code("first"), "https://source/first.js");
+        const controller = new AbortController();
+        const second = pluginManager.installPluginFromCode(code("second"), "https://source/second.js", { signal: controller.signal });
+        await Promise.resolve();
+        controller.abort();
+        finish();
+        await first;
+        expect((await second).success).toBe(false);
+        expect(writeFile).toHaveBeenCalledTimes(1);
+        expect(pluginManager.getEnabledPlugins().map(plugin => plugin.name)).toEqual(["first"]);
     });
 });

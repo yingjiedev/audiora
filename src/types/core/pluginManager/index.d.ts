@@ -5,6 +5,7 @@ type Plugin = any; // Placeholder for the actual Plugin type
  */
 export interface IInstallPluginConfig {
     notCheckVersion?: boolean;
+    signal?: AbortSignal;
 }
 
 /**
@@ -12,6 +13,7 @@ export interface IInstallPluginConfig {
  */
 export interface IInstallPluginResult {
     success: boolean;
+    status?: "installed" | "updated" | "unchanged";
     message?: string;
     pluginName?: string;
     pluginHash?: string;
@@ -52,6 +54,12 @@ export interface IPluginManager {
      * @returns 安装结果，包含成功状态和相关信息
      */
     installPluginFromUrl(
+        url: string,
+        config?: IInstallPluginConfig,
+    ): Promise<IInstallPluginResult>;
+
+    installPluginFromCode(
+        code: string,
         url: string,
         config?: IInstallPluginConfig,
     ): Promise<IInstallPluginResult>;

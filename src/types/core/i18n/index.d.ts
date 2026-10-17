@@ -1,5 +1,29 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "subscription.neverUpdated": string;
+    "subscription.queued": string;
+    "subscription.fetching": string;
+    "subscription.progress": string;
+    "subscription.finished": string;
+    "subscription.hasFailures": string;
+    "subscription.cancelled": string;
+    "subscription.timedOut": string;
+    "subscription.installed": string;
+    "subscription.updated": string;
+    "subscription.unchanged": string;
+    "subscription.failed": string;
+    "subscription.lastChecked": string;
+    "subscription.keptChanges": string;
+    "subscription.updateAll": string;
+    "subscription.backgroundHint": string;
+    "subscription.stop": string;
+    "subscription.stopping": string;
+    "subscription.emptyHint": string;
+    "subscription.edit": string;
+    "subscription.details": string;
+    "subscription.retryFailed": string;
+    "subscription.updating": string;
+    "subscription.viewProgress": string;
     "musicListEditor.actionFailed": string;
     "sheetDetail.manualSortMusic": string;
     "sheetDetail.removeSelectedContent": string;
