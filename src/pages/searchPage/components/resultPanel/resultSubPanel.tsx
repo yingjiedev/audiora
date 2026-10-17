@@ -13,7 +13,6 @@ import DefaultResults from "./results/defaultResults";
 import ResultWrapper from "./resultWrapper";
 import { useParams } from "@/core/router";
 import { scopeSearchPlugins } from "../../common/searchScope";
-import { useI18N } from "@/core/i18n";
 import { spacing } from "@/constants/designSystem";
 import { StyleSheet, View } from "react-native";
 import ThemeText from "@/components/base/themeText";
