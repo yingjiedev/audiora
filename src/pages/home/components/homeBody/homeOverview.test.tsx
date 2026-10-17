@@ -6,6 +6,7 @@ import HomeOverview from "./homeOverview";
 import { darkColors, lightColors } from "@/constants/colorPalette";
 import { resolveThemeColors } from "@/utils/themeColors";
 import { blendOver, contrastRatio } from "@/utils/colorContrast";
+import { addListeningInterval, type ListeningData } from "@/core/listeningStatsModel";
 
 const mockNavigate = jest.fn();
 const mockShowPanel = jest.fn();
@@ -13,6 +14,12 @@ let mockDisplayNames: Record<string, string> = {};
 let mockFeaturedMusic: IMusic.IMusicItem | null = null;
 let mockRecentMusics: IMusic.IMusicItem[] = [];
 let mockFavoriteMusics: IMusic.IMusicItem[] = [];
+let mockStats: ListeningData = { version: 1, startedAt: 0, days: [] };
+const mockStatsListeners = new Set<() => void>();
+const mockSubscribeStats = (listener: () => void) => {
+    mockStatsListeners.add(listener);
+    return () => mockStatsListeners.delete(listener);
+};
 let mockReducedMotion = false;
 const mockScrollTo = jest.fn();
 let mockHasSource = true;
@@ -22,6 +29,9 @@ const mockDataReads = jest.fn();
 let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 let mockDiscovery = { hasError: false, loading: false, topLists: [] as IMusic.IMusicSheetItemBase[], topListPluginHash: "plugin-1", topListPluginName: "demo" };
 jest.mock("@/components/mediaItem/musicItem", () => "MusicItem");
+jest.mock("@/core/listeningStats", () => ({
+    useListeningStats: () => jest.requireActual("react").useSyncExternalStore(mockSubscribeStats, () => mockStats),
+}));
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: (...args: unknown[]) => mockShowPanel(...args) }));
 
 jest.mock("@/components/base/fastImage", () => "FastImage");
@@ -145,6 +155,8 @@ describe("HomeOverview quick access", () => {
         mockFeaturedMusic = null;
         mockRecentMusics = [];
         mockFavoriteMusics = [];
+        mockStats = { version: 1, startedAt: 0, days: [] };
+        mockStatsListeners.clear();
         mockReducedMotion = false;
         mockHasSource = true;
         mockSheetCover = undefined;
@@ -334,7 +346,7 @@ describe("HomeOverview quick access", () => {
         expect(rows).toHaveLength(5);
         expect(rows[2].props.musicItem).toBe(mockFavoriteMusics[2]);
         expect(rows[0].props.actions).toEqual(["favorite"]);
-        expect(rows.every(row => row.props.presentation === "discovery")).toBe(true);
+        expect(rows.every(row => row.props.presentation === "favorites")).toBe(true);
         await act(async () => rows[4].props.onItemPress(mockFavoriteMusics[4]));
         expect(mockReplacePlayList).toHaveBeenLastCalledWith(mockFavoriteMusics[4], mockFavoriteMusics, {
             sheet: { id: "favorite", worksNum: 13, musicList: mockFavoriteMusics }, routeName: "local-sheet-detail",
@@ -358,6 +370,32 @@ describe("HomeOverview quick access", () => {
         await act(async () => rows[8].props.onItemPress(mockFavoriteMusics[8]));
         expect(mockReplacePlayList.mock.calls.at(-1)[1]).toEqual(mockFavoriteMusics);
         act(() => renderer.unmount());
+    });
+
+    it("updates retained play totals in place and resolves actual source names without rerendering the hero", () => {
+        mockFavoriteMusics = [shiyinMusic, { ...shiyinMusic, platform: "other" }, { ...shiyinMusic, platform: "本地" }];
+        mockDisplayNames = { test: "QQ音乐", other: "Renamed source" };
+        const start = new Date(2026, 9, 16, 12).getTime();
+        mockStats = addListeningInterval(mockStats, shiyinMusic, start, start + 1000, true);
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<HomeOverview />);
+        });
+        const rows = () => renderer.root.findAllByType("MusicItem" as any);
+        expect(rows().map(row => row.props.playCount)).toEqual([1, 0, 0]);
+        expect(rows().map(row => row.props.sourceName)).toEqual(["QQ音乐", "Renamed source", "home.localMusic"]);
+        const reads = mockDataReads.mock.calls.length;
+        act(() => {
+            mockStats = addListeningInterval(mockStats, shiyinMusic, start + 86400000, start + 86401000, true);
+            mockStatsListeners.forEach(listener => listener());
+        });
+        expect(rows().map(row => row.props.playCount)).toEqual([2, 0, 0]);
+        expect(mockDataReads).toHaveBeenCalledTimes(reads);
+        mockDisplayNames.test = "My source";
+        act(() => renderer.update(<HomeOverview />));
+        expect(rows()[0].props.sourceName).toBe("My source");
+        act(() => renderer.unmount());
+        expect(mockStatsListeners.size).toBe(0);
     });
 
     it("keeps empty Favorites useful without rendering a fake song or enabled play-all", () => {
