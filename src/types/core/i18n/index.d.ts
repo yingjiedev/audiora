@@ -322,6 +322,10 @@ export interface ILanguageData {
     "aggregate.bySource": string;
     "aggregate.currentSource": string;
     "aggregate.chooseSource": string;
+    "aggregate.sourcePickerTitle": string;
+    "aggregate.sourceSelected": string;
+    "aggregate.sourcePlaying": string;
+    "aggregate.sourceSelectionHint": string;
     "aggregate.collectionCount": string;
     "aggregate.searchProgress": string;
     "aggregate.retrySource": string;

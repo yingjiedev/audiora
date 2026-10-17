@@ -8,10 +8,15 @@ import { showPanel } from "@/components/panels/usePanel";
 import Toast from "@/utils/toast";
 import Badge from "@/components/base/badge";
 import ThemeText from "@/components/base/themeText";
+import Icon from "@/components/base/icon";
+import { lightColors, darkColors } from "@/constants/colorPalette";
+import { resolveThemeColors } from "@/utils/themeColors";
+import { contrastRatio } from "@/utils/colorContrast";
 
 const song = { id: "one", platform: "plugin", title: "Song", artist: "Artist", album: "Album", duration: 180 } as IMusic.IMusicItem;
 let mockFavorite = false;
 let mockCurrent: IMusic.IMusicItem | null = null;
+let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
 jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { play: jest.fn(), addNext: jest.fn() }, useCurrentMusic: () => mockCurrent }));
 jest.mock("@/core/musicSheet", () => {
     const addMusic = jest.fn(async (_sheetId: string, _item: IMusic.IMusicItem) => {});
@@ -29,7 +34,7 @@ jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/badge", () => "Badge");
 jest.mock("@/utils/toast", () => ({ __esModule: true, default: { success: jest.fn(), warn: jest.fn() } }));
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1 } }));
-jest.mock("@/hooks/useColors", () => () => ({ text: "black", textSecondary: "gray", primary: "blue", favorite: "pink", danger: "red", listActive: "lightgray" }));
+jest.mock("@/hooks/useColors", () => () => mockColors);
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: () => undefined }));
 jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getByMedia: () => ({ supportedMethods: new Set(["getMvSource"]) }) } }));
 jest.mock("@/utils/mediaUtils", () => ({ isSameMediaItem: (a: IMusic.IMusicItem, b: IMusic.IMusicItem) => !!b && a.id === b.id && a.platform === b.platform }));
@@ -38,6 +43,7 @@ describe("shared song row interactions", () => {
     let renderer: TestRenderer.ReactTestRenderer;
     beforeEach(() => {
         jest.clearAllMocks(); mockFavorite = false; mockCurrent = null;
+        mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
     });
     afterEach(() => act(() => renderer?.unmount()));
     function render(props: Partial<React.ComponentProps<typeof MusicItem>> = {}) {
@@ -169,5 +175,55 @@ describe("shared song row interactions", () => {
         const texts = renderer.root.findAllByType(ThemeText);
         expect(texts.some(node => node.props.children === "Song" && node.props.fontColor === "primary")).toBe(true);
         expect(texts.some(node => node.props.children === " (Live)" && node.props.fontColor === "text")).toBe(true);
+    });
+    function layOutSource(x = 120) {
+        const anchor = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === "function")!;
+        act(() => anchor.props.onLayout({ nativeEvent: { layout: { x, y: 0, width: 44, height: 0 } } }));
+    }
+    it("keeps source selection separate from playback and metadata within the existing row", () => {
+        const onChoose = jest.fn();
+        render({ source: { name: "小狗音乐", count: 2, onPress: onChoose }, titleTagSubText: "03:00" });
+        const outer = StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style);
+        expect(outer.minHeight).toBe(MUSIC_ITEM_HEIGHT);
+        layOutSource();
+        const choose = button("aggregate.chooseSource");
+        const play = button("Song - Artist");
+        expect(play.findAll(node => node.props.accessibilityLabel === "aggregate.chooseSource")).toHaveLength(0);
+        expect(StyleSheet.flatten(choose.props.style)).toMatchObject({ left: 120, height: 44, width: 44, position: "absolute" });
+        act(() => choose.props.onPress());
+        expect(onChoose).toHaveBeenCalledTimes(1);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
+        expect(TrackPlayer.addNext).not.toHaveBeenCalled();
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === "小狗音乐")).toBe(true);
+        expect(renderer.root.findAllByType(ThemeText).some(node => node.props.children === 2)).toBe(true);
+        act(() => play.props.onPress());
+        expect(TrackPlayer.play).toHaveBeenCalledWith(song);
+    });
+    it("keeps single-source attribution visible and marks actual playback without a switch button", () => {
+        render({ musicItem: { ...song, fee: 1, mv: 42 }, source: { name: "QQ音乐", count: 1, playing: true } });
+        expect(renderer.root.findAllByType(Badge)).toHaveLength(0);
+        expect(renderer.root.findAllByProps({ accessibilityLabel: "aggregate.chooseSource" })).toHaveLength(0);
+        expect(renderer.root.findAllByType(Icon).some(node => node.props.name === "speaker-wave")).toBe(true);
+        const source = renderer.root.findAllByType(ThemeText).find(node => node.props.children === "QQ音乐")!;
+        expect(source.props.accessibilityLabel).toBe("aggregate.playingSource");
+        expect(source.props.fontColor).toBe("primary");
+        expect(StyleSheet.flatten(source.props.style).maxWidth).toBe("42%");
+    });
+    it("reserves the count beside a truncated long title and follows layout changes", () => {
+        render({ musicItem: { ...song, title: "A very long song title (Live version)" }, source: { name: "Long source name", count: 24, onPress: jest.fn() } });
+        layOutSource(160);
+        const title = renderer.root.findAllByType(ThemeText).find(node => node.props.numberOfLines === 1 && Array.isArray(node.props.children))!;
+        expect(StyleSheet.flatten(title.props.style).flexShrink).toBe(1);
+        expect(StyleSheet.flatten(button("aggregate.chooseSource").props.style).left).toBe(160);
+        layOutSource(100);
+        expect(StyleSheet.flatten(button("aggregate.chooseSource").props.style).left).toBe(100);
+    });
+    it.each([lightColors, darkColors, { ...lightColors, primary: "#ac52bd" }])("keeps the numeric control readable in light, dark and custom themes", palette => {
+        mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, palette === darkColors);
+        render({ source: { name: "Source", count: 2, onPress: jest.fn() } });
+        layOutSource();
+        const number = renderer.root.findAllByType(ThemeText).find(node => node.props.children === 2)!;
+        const background = StyleSheet.flatten(number.parent!.props.style).backgroundColor;
+        expect(contrastRatio(number.props.color, background)).toBeGreaterThanOrEqual(4.5);
     });
 });

@@ -39,6 +39,8 @@ interface IMusicItemProps {
     containerStyle?: StyleProp<ViewStyle>;
     highlight?: boolean;
     highlightText?: string;
+    /** Aggregate rows keep the source inside their existing two text lines. */
+    source?: { name: string; count: number; playing?: boolean; onPress?: () => void };
     /** All scenes share this row; only leading content and actions vary. */
     actions?: readonly MusicItemAction[];
     showCover?: boolean;
@@ -99,7 +101,7 @@ export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
         musicSheet, itemPaddingRight, itemPaddingLeft, left, checked, containerStyle,
-        highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library",
+        highlight, highlightText, source, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library",
     } = props;
     const colors = useColors();
     const { t } = useI18N();
@@ -114,45 +116,83 @@ export default function MusicItem(props: IMusicItemProps) {
     const showAlbum = album && album !== String(musicItem.title ?? "").trim();
     const compact = density === "compact";
     const discovery = presentation === "discovery";
-
-    return (
-        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }, itemPaddingLeft !== undefined && { paddingLeft: itemPaddingLeft }]}>
-            <Pressable
-                accessibilityRole={checked === undefined ? "button" : "checkbox"}
-                accessibilityLabel={[musicItem.title, musicItem.artist].filter(Boolean).join(" - ")}
-                accessibilityState={{ selected: active, checked }}
-                onLongPress={onItemLongPress}
-                onPress={() => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem)}
-                style={({ pressed }) => [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, pressed && { backgroundColor: colors.listActive }]}>
-                {left}
-                {index !== undefined ? (
-                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex, checked !== undefined && styles.selectionIndex]}>
-                        {index}
-                    </ThemeText>
-                ) : null}
-                {showCover ? (
+    const [sourceAnchor, setSourceAnchor] = useState<number | null>(null);
+    const canChooseSource = !!source?.onPress && source.count > 1;
+    const play = () => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem);
+    const mainStyle = [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, source && styles.sourceMain];
+    const playProps = {
+        accessibilityRole: checked === undefined ? "button" as const : "checkbox" as const,
+        accessibilityLabel: [musicItem.title, musicItem.artist].filter(Boolean).join(" - "),
+        accessibilityState: { selected: active, checked },
+        onLongPress: onItemLongPress,
+        onPress: play,
+    };
+    const content = (
+        <>
+            {left}
+            {index !== undefined ? (
+                <ThemeText pointerEvents={source ? "none" : undefined} fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex, checked !== undefined && styles.selectionIndex]}>
+                    {index}
+                </ThemeText>
+            ) : null}
+            {showCover ? (
+                <View pointerEvents={source ? "none" : undefined}>
                     <FastImage style={[styles.cover, discovery && styles.discoveryCover]} source={resolveArtwork(musicItem) ?? musicItem.artwork} placeholderSource={ImgAsset.albumDefault} />
-                ) : null}
-                <View style={styles.content}>
-                    <ThemeText fontColor={active ? "primary" : "text"} fontSize={compact ? "subTitle" : "content"} numberOfLines={1}>
+                </View>
+            ) : null}
+            <View style={[styles.content, source && styles.sourceContent]} pointerEvents={source ? "box-none" : undefined}>
+                <View style={styles.titleLine} pointerEvents={source ? "box-none" : undefined}>
+                    <ThemeText pointerEvents={source ? "none" : undefined} style={styles.title} fontColor={active ? "primary" : "text"} fontSize={compact ? "subTitle" : "content"} numberOfLines={1}>
                         {titleParts.map((part, partIndex) => (
                             <ThemeText key={partIndex} fontSize={compact ? "subTitle" : "content"} fontColor={active || part.highlight ? "primary" : "text"}>
                                 {part.text}
                             </ThemeText>
                         ))}
                     </ThemeText>
-                    <View style={[styles.metadata, compact && styles.compactMetadata]}>
-                        <ThemeText numberOfLines={1} fontSize={compact && !discovery ? "tag" : "description"} fontColor="textSecondary" style={styles.artist}>
-                            {musicItem.artist}{showAlbum && !discovery ? ` · ${album}` : ""}
-                        </ThemeText>
-                        {!discovery && isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
-                        {!discovery && qualityBadge ? <Badge type={qualityBadge.type}>{qualityBadge.text}</Badge> : null}
-                        {!discovery && musicItem.fee === 1 ? <Badge type="vip">VIP</Badge> : null}
-                        {!discovery && hasMv ? <Badge type="source">MV</Badge> : null}
-                        {titleTagSubText ? <ThemeText fontSize="description" fontColor="textSecondary" style={styles.duration}>{titleTagSubText}</ThemeText> : null}
-                    </View>
+                    {canChooseSource ? <View pointerEvents="none" style={styles.sourceSpace} onLayout={event => setSourceAnchor(event.nativeEvent.layout.x)} /> : null}
                 </View>
-            </Pressable>
+                <View pointerEvents={source ? "none" : undefined} style={[styles.metadata, compact && styles.compactMetadata]}>
+                    {source ? <>
+                        {source.playing ? <Icon name="speaker-wave" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
+                        <ThemeText numberOfLines={1} fontSize="description" fontColor={source.playing ? "primary" : "textSecondary"}
+                            accessibilityLabel={t(source.playing ? "aggregate.playingSource" : "aggregate.currentSource", { name: source.name })} style={styles.sourceName}>{source.name}</ThemeText>
+                        <ThemeText fontSize="description" fontColor="textSecondary" style={styles.metadataSeparator}> · </ThemeText>
+                    </> : null}
+                    <ThemeText numberOfLines={1} fontSize={compact && !discovery ? "tag" : "description"} fontColor="textSecondary" style={styles.artist}>
+                        {musicItem.artist}{showAlbum && !discovery ? ` · ${album}` : ""}
+                    </ThemeText>
+                    {!discovery && !source && isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
+                    {!discovery && !source && qualityBadge ? <Badge type={qualityBadge.type}>{qualityBadge.text}</Badge> : null}
+                    {!discovery && !source && musicItem.fee === 1 ? <Badge type="vip">VIP</Badge> : null}
+                    {!discovery && !source && hasMv ? <Badge type="source">MV</Badge> : null}
+                    {titleTagSubText ? <ThemeText fontSize="description" fontColor="textSecondary" style={styles.duration}>{titleTagSubText}</ThemeText> : null}
+                </View>
+                {canChooseSource && sourceAnchor !== null ? (
+                    <Pressable accessibilityRole="button" accessibilityLabel={t("aggregate.chooseSource", { count: source.count })}
+                        accessibilityHint={t(source.playing ? "aggregate.playingSource" : "aggregate.currentSource", { name: source.name })}
+                        onPress={source.onPress} style={[styles.sourceTarget, { left: sourceAnchor }]}>
+                        {({ pressed }) => <View pointerEvents="none" style={[styles.sourceCount, { backgroundColor: colors.tonalSurface }]}>
+                            {pressed ? <Icon name="arrows-left-right" size={rpx(24)} color={colors.onTonal} />
+                                : <ThemeText fontSize="tag" color={colors.onTonal}>{source.count}</ThemeText>}
+                        </View>}
+                    </Pressable>
+                ) : null}
+            </View>
+        </>
+    );
+
+    return (
+        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }, itemPaddingLeft !== undefined && { paddingLeft: itemPaddingLeft }]}>
+            {source ? (
+                <View style={mainStyle}>
+                    {/* Sibling responders keep source selection out of the playback button. */}
+                    <Pressable {...playProps} accessibilityHint={t(source.playing ? "aggregate.playingSource" : "aggregate.currentSource", { name: source.name })}
+                        style={({ pressed }) => [StyleSheet.absoluteFill, pressed && { backgroundColor: colors.listActive }]} />
+                    {content}
+                </View>
+            ) : (
+                <Pressable {...playProps} style={({ pressed }) => [...mainStyle, pressed && { backgroundColor: colors.listActive }]}>{content}</Pressable>
+            )}
             <View style={styles.actions}>
                 {actions.map(action => action === "favorite" ? (
                     <FavoriteAction key={action} musicItem={musicItem} />
@@ -180,6 +220,15 @@ const styles = StyleSheet.create({
     row: { flexDirection: "row", alignItems: "center", minHeight: MUSIC_ITEM_HEIGHT, paddingLeft: spacing.xxl, paddingRight: spacing.xs },
     main: { flex: 1, minWidth: 0, minHeight: MUSIC_ITEM_HEIGHT, flexDirection: "row", alignItems: "center", paddingVertical: spacing.lg },
     content: { flex: 1, minWidth: 0 },
+    sourceMain: { paddingVertical: 0 },
+    sourceContent: { minHeight: 44 },
+    titleLine: { flexDirection: "row", alignItems: "center" },
+    title: { flexShrink: 1, minWidth: 0 },
+    sourceSpace: { width: 44, height: 0, flexShrink: 0 },
+    sourceTarget: { position: "absolute", top: 0, width: 44, height: 44, alignItems: "flex-start", paddingLeft: spacing.sm, paddingTop: spacing.xxs },
+    sourceCount: { minWidth: rpx(34), minHeight: rpx(34), paddingHorizontal: spacing.xxs, borderRadius: spacing.xs, alignItems: "center", justifyContent: "center" },
+    sourceName: { maxWidth: "42%", flexShrink: 0 },
+    metadataSeparator: { flexShrink: 0 },
     metadata: { flexDirection: "row", alignItems: "center", marginTop: spacing.xs },
     artist: { flexShrink: 1, minWidth: 0, marginRight: spacing.xs },
     index: { width: rpx(64), textAlign: "center", marginRight: spacing.sm },
