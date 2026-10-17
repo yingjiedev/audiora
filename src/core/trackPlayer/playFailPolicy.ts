@@ -25,7 +25,7 @@ export default class PlayFailPolicy {
         return this.consecutive;
     }
 
-    /** 有一首真的播起来了（拿到源并交给播放器）：重新计数 */
+    /** 原生播放器确认进入 Playing 状态后重新计数；仅拿到 URL 不算成功。 */
     noteSuccess(): void {
         this.consecutive = 0;
     }
