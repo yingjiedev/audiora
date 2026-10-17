@@ -5,6 +5,7 @@ import StatusBar from "@/components/base/statusBar";
 import globalStyle from "@/constants/globalStyle";
 import VerticalSafeAreaView from "../base/verticalSafeAreaView";
 import { RequestStateCode } from "@/constants/commonConst";
+import useMusicListSource from "@/hooks/useMusicListSource";
 
 interface IMusicSheetPageProps {
     navTitle: string;
@@ -22,6 +23,12 @@ interface IMusicSheetPageProps {
 export default function MusicSheetPage(props: IMusicSheetPageProps) {
     const { navTitle, typeLabel, sheetInfo, musicList, canStar, onLoadMore, onRetry, state } =
         props;
+    const { source, sourceId } = useMusicListSource(
+        { musicList: musicList ?? sheetInfo?.musicList ?? [], state },
+        async () => {
+            await (onLoadMore ?? onRetry)?.();
+        },
+    );
 
     return (
         <VerticalSafeAreaView style={globalStyle.fwflex1}>
@@ -29,6 +36,7 @@ export default function MusicSheetPage(props: IMusicSheetPageProps) {
             <NavBar
                 musicList={musicList ?? sheetInfo?.musicList ?? []}
                 navTitle={navTitle}
+                sourceId={sourceId}
             />
             <SheetMusicList
                 typeLabel={typeLabel}
@@ -36,8 +44,9 @@ export default function MusicSheetPage(props: IMusicSheetPageProps) {
                 sheetInfo={sheetInfo as any}
                 musicList={musicList ?? sheetInfo?.musicList}
                 state={state}
-                onRetry={onRetry}
-                onLoadMore={onLoadMore}
+                onRetry={() => source.loadMore(true)}
+                onLoadMore={() => source.loadMore()}
+                sourceId={sourceId}
             />
         </VerticalSafeAreaView>
     );

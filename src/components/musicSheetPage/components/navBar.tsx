@@ -5,6 +5,7 @@ import AppBar from "@/components/base/appBar";
 import { useI18N } from "@/core/i18n";
 
 interface INavBarProps {
+    sourceId: string;
     navTitle: string;
     musicList: IMusic.IMusicItem[] | null;
 }
@@ -12,7 +13,7 @@ interface INavBarProps {
 export default function (props: INavBarProps) {
     const navigate = useNavigate();
     const { t } = useI18N();
-    const { navTitle, musicList = [] } = props;
+    const { navTitle, musicList = [], sourceId } = props;
 
     return (
         <AppBar
@@ -32,6 +33,8 @@ export default function (props: INavBarProps) {
                     title: t("common.batchEdit"),
                     onPress() {
                         navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                            sourceId,
+                            selectionOnly: true,
                             musicList: musicList,
                             musicSheet: {
                                 title: navTitle,

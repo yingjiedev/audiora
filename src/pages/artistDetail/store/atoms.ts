@@ -8,7 +8,8 @@ export interface IQueryResult<
 > {
     state?: RequestStateCode;
     page?: number;
-    data?: ICommon.SupportMediaItemBase[T];
+    requestId?: number;
+    data?: ICommon.SupportMediaItemBase[T][];
 }
 
 type IQueryResults<

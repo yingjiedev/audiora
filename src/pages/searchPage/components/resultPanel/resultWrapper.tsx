@@ -5,13 +5,15 @@ import { RequestStateCode } from "@/constants/commonConst";
 import useMediaGrid from "@/hooks/useMediaGrid";
 import { spacing } from "@/constants/designSystem";
 import { FlashList } from "@shopify/flash-list";
-import { useAtomValue } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
 import React, { memo, useCallback, useEffect } from "react";
 import useSearch from "../../hooks/useSearch";
-import { ISearchResult, queryAtom } from "../../store/atoms";
+import { ISearchResult, queryAtom, searchResultsAtom } from "../../store/atoms";
 import { renderMap } from "./results";
 import { SourceIssue } from "./sourceFeedback";
 import { useNavigate } from "@/core/router";
+import useMusicListSource from "@/hooks/useMusicListSource";
+import BatchEditAction from "@/components/musicList/batchEditAction";
 
 interface IResultWrapperProps<
     T extends ICommon.SupportMediaType = ICommon.SupportMediaType,
@@ -23,7 +25,7 @@ interface IResultWrapperProps<
     pluginSearchResultRef: React.MutableRefObject<ISearchResult<T>>;
 }
 function ResultWrapper(props: IResultWrapperProps) {
-    const { tab, pluginHash, searchResult, pluginSearchResultRef } = props;
+    const { tab, pluginHash, pluginName, searchResult, pluginSearchResultRef } = props;
     const search = useSearch();
     const navigate = useNavigate();
     const issue = searchResult?.state === RequestStateCode.ERROR ? <SourceIssue standalone pluginHash={pluginHash} type={tab} result={searchResult}
@@ -34,6 +36,14 @@ function ResultWrapper(props: IResultWrapperProps) {
 
     const ResultComponent = renderMap[tab]!;
     const data: any = searchResult?.data ?? [];
+    const { source, sourceId } = useMusicListSource(
+        { musicList: data, state: searchState },
+        async retry => {
+            await search(undefined, undefined, tab, pluginHash, retry ? "retry" : "next");
+            const result = getDefaultStore().get(searchResultsAtom)[tab][pluginHash];
+            return { musicList: (result?.data ?? []) as IMusic.IMusicItem[], state: result?.state ?? RequestStateCode.ERROR };
+        },
+    );
 
     const keyExtractor = useCallback(
         (item: any, i: number) => `${i}-${item.platform}-${item.id}`,
@@ -60,6 +70,7 @@ function ResultWrapper(props: IResultWrapperProps) {
         <Loading />
     ) : (
         <FlashList
+            ListHeaderComponent={tab === "music" ? <BatchEditAction musicList={data} sourceId={sourceId} title={`${searchResult?.query ?? query} · ${pluginName}`} /> : null}
             key={tab === "sheet" ? columns : 1}
             contentContainerStyle={tab === "sheet" ? { paddingHorizontal: spacing.xxxl - spacing.xs, paddingBottom: spacing.xxxl } : { paddingBottom: spacing.xxxl }}
             extraData={searchState}
@@ -77,7 +88,7 @@ function ResultWrapper(props: IResultWrapperProps) {
             onEndReached={() => {
                 (searchState === RequestStateCode.PARTLY_DONE ||
                     searchState === RequestStateCode.IDLE) &&
-                    search(undefined, undefined, tab, pluginHash);
+                    source.loadMore();
             }}
             numColumns={
                 tab === "sheet" ? columns : 1
