@@ -33,8 +33,9 @@ export default function HomeBottomNavigation(props: {
     onSelectHome: () => void;
     onSelectLibrary: () => void;
     onSelectMine: () => void;
+    integrated?: boolean;
 }) {
-    const { activeTab, onSelectHome, onSelectLibrary, onSelectMine } = props;
+    const { activeTab, onSelectHome, onSelectLibrary, onSelectMine, integrated = false } = props;
     const colors = useColors();
     const insets = useSafeAreaInsets();
     const { t } = useI18N();
@@ -70,11 +71,13 @@ export default function HomeBottomNavigation(props: {
             style={[
                 styles.wrapper,
                 {
-                    backgroundColor: colors.tabBar ?? colors.surface,
+                    backgroundColor: integrated ? undefined : colors.tabBar ?? colors.surface,
                     paddingBottom: Math.max(insets.bottom, spacing.xs),
-                    shadowColor: colors.shadow ?? colors.text,
+                    paddingLeft: insets.left,
+                    paddingRight: insets.right,
+                    shadowColor: integrated ? undefined : colors.shadow ?? colors.text,
                 },
-                elevation.mid,
+                integrated ? styles.integrated : elevation.mid,
             ]}>
             {items.map(item => {
                 const selected = item.key === activeTab;
@@ -108,6 +111,10 @@ export default function HomeBottomNavigation(props: {
 }
 
 const styles = StyleSheet.create({
+    integrated: {
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+    },
     wrapper: {
         minHeight: rpx(112),
         paddingTop: rpx(12),

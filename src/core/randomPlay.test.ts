@@ -322,4 +322,3 @@ describe("拾音 - 候选降级", () => {
         expect(fallbackLevel).toBe(2);
     });
 });
-

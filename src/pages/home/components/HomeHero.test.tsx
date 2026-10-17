@@ -1,60 +1,203 @@
 import React from "react";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
+import { darkColors, lightColors } from "@/constants/colorPalette";
+import { resolveThemeColors } from "@/utils/themeColors";
+import { blendOver, contrastRatio } from "@/utils/colorContrast";
 import HomeHero from "./HomeHero";
+import type { HomeFeatureAppearance } from "./homeFeatureAppearance";
 
+const song: IMusic.IMusicItem = { id: "one", platform: "remote", title: "Real song", artist: "Real artist", album: "Album", duration: 180, artwork: "cover" };
+const mockNavigate = jest.fn();
+const mockOpen = jest.fn();
+const mockPlay = jest.fn();
+const mockPause = jest.fn();
+let mockCurrent: IMusic.IMusicItem | null = null;
+let mockPaused = true;
+let mockAssociatedArtwork: string | undefined;
+let mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+
+jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/icon", () => "Icon");
+jest.mock("@/components/base/marqueeText", () => "MarqueeText");
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/constants/assetsConst", () => ({
-    ImgAsset: { homeHero: 1 },
-}));
-jest.mock("@/core/i18n", () => ({
-    useI18N: () => ({ t: (key: string) => key }),
-}));
-jest.mock("@/core/router", () => ({
-    ROUTE_PATH: { LOCAL: "local", MUSIC_DETAIL: "music-detail" },
-    useNavigate: () => jest.fn(),
-}));
+jest.mock("react-native-linear-gradient", () => "LinearGradient");
+jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1, homeRecordHalo: 7 } }));
+jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
+jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => () => "Source label" }));
+jest.mock("@/core/playerOverlay", () => ({ openPlayer: () => mockOpen() }));
+jest.mock("@/core/router", () => ({ ROUTE_PATH: { LOCAL: "local" }, useNavigate: () => mockNavigate }));
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
-    default: { pause: jest.fn(), play: jest.fn() },
-    useCurrentMusic: () => null,
-    useMusicState: () => null,
+    default: { play: (...args: unknown[]) => mockPlay(...args), pause: () => mockPause() },
+    useCurrentMusic: () => mockCurrent, useMusicState: () => null,
 }));
-jest.mock("@/utils/rpx", () => ({
-    __esModule: true,
-    default: (value: number) => value,
-    fontRpx: (value: number) => value,
-}));
-jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => true }));
+jest.mock("@/hooks/useColors", () => () => mockColors);
+jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value, fontRpx: (value: number) => value }));
+jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => mockPaused }));
+jest.mock("@/utils/mediaUtils", () => ({ isSameMediaItem: (a: IMusic.IMusicItem, b?: IMusic.IMusicItem) => !!b && a.id === b.id && a.platform === b.platform }));
+jest.mock("@/utils/artwork", () => ({ resolveArtwork: (music?: IMusic.IMusicItem) => mockAssociatedArtwork || music?.artwork || undefined }));
 
-describe("HomeHero layout", () => {
+describe("Home listening card", () => {
+    let renderer: TestRenderer.ReactTestRenderer;
+    const render = (music?: IMusic.IMusicItem) => act(() => {
+        renderer = TestRenderer.create(<HomeHero music={music} />);
+    });
+    const press = (label: string) => act(() => renderer.root.findByProps({ accessibilityLabel: label }).props.onPress());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockCurrent = null;
+        mockPaused = true;
+        mockAssociatedArtwork = undefined;
+        mockColors = resolveThemeColors({ ...lightColors, background: lightColors.pageBackground }, false);
+    });
+    afterEach(() => act(() => renderer?.unmount()));
+
+    it("opens local music from both empty card controls", () => {
+        render();
+        expect(renderer.root.findAllByType("FastImage" as any)).toHaveLength(0);
+        press("home.localMusic");
+        press("musicDetail.a11y.play");
+        expect(mockNavigate).toHaveBeenCalledTimes(2);
+        expect(mockNavigate).toHaveBeenLastCalledWith("local");
+        expect(mockPlay).not.toHaveBeenCalled();
+    });
+
+    it("resumes the actual historical song with its artwork and source", () => {
+        mockCurrent = { ...song, id: "different" };
+        render(song);
+        const cover = renderer.root.findByType("FastImage" as any);
+        expect(cover.props.source).toBe("cover");
+        const times = renderer.root.findAllByType("ThemeText" as any);
+        expect(times.some(node => node.props.children === "Real artist · Source label")).toBe(true);
+        press("home.continueListening · Real song");
+        expect(mockPlay).toHaveBeenCalledWith(song);
+        expect(mockOpen).not.toHaveBeenCalled();
+    });
+
+    it("opens the existing player and pauses only the currently playing song", () => {
+        mockCurrent = song;
+        mockPaused = false;
+        render(song);
+        press("home.continueListening · Real song");
+        press("musicDetail.a11y.pause");
+        expect(mockOpen).toHaveBeenCalledTimes(1);
+        expect(mockPause).toHaveBeenCalledTimes(1);
+        expect(mockPlay).not.toHaveBeenCalled();
+    });
+
+    it("resumes the paused current song through its independent play control", () => {
+        mockCurrent = song;
+        render(song);
+        press("musicDetail.a11y.play");
+        expect(mockPlay).toHaveBeenCalledWith(song);
+        expect(mockPause).not.toHaveBeenCalled();
+    });
+
+    it.each(["window", "record"] as const)("uses the same associated artwork as the song row for local tracks in %s", appearance => {
+        mockAssociatedArtwork = "file:///actual-associated-cover.jpg";
+        act(() => {
+            renderer = TestRenderer.create(<HomeHero music={{ ...song, platform: "local", artwork: "" }} appearance={appearance} />);
+        });
+        expect(renderer.root.findByType("FastImage" as any).props.source).toBe(mockAssociatedArtwork);
+    });
+
+    it("keeps the existing image fallback when a real song has no cover", () => {
+        render({ ...song, artwork: "" });
+        const cover = renderer.root.findByType("FastImage" as any);
+        expect(cover.props.source).toBeUndefined();
+        expect(cover.props.placeholderSource).toBe(1);
+    });
+
     it.each([
-        ["light", DefaultTheme],
-        ["dark", DarkTheme],
-    ])("stretches horizontally without deriving width from an aspect ratio (%s)", (_mode, theme) => {
-        let renderer: TestRenderer.ReactTestRenderer;
+        ["light", lightColors, false],
+        ["dark", darkColors, true],
+        ["custom", { ...lightColors, primary: "#7459C7" }, false],
+        ["transparent", { ...lightColors, card: "rgba(255,255,255,0.72)", surface: "rgba(238,244,255,0.8)" }, false],
+    ].flatMap(row => ["window", "record"].map(appearance => [...row, appearance])))
+    ("keeps the media card and play control readable in the %s theme / %s", (_mode, colors, dark, appearance) => {
+        const palette = colors as typeof lightColors;
+        mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark as boolean);
         act(() => {
-            renderer = TestRenderer.create(
-                <ThemeProvider value={theme}>
-                    <HomeHero />
-                </ThemeProvider>,
-            );
+            renderer = TestRenderer.create(<HomeHero music={song} appearance={appearance as HomeFeatureAppearance} />);
         });
-
-        const card = renderer!.root.findByProps({
-            accessibilityLabel: "home.welcomeTitle",
+        const play = renderer.root.findByProps({ accessibilityLabel: "musicDetail.a11y.play" });
+        const target = StyleSheet.flatten(play.props.style);
+        expect(target.width).toBeGreaterThanOrEqual(44);
+        expect(target.height).toBeGreaterThanOrEqual(44);
+        const icon = play.findByType("Icon" as any);
+        const record = appearance === "record";
+        const actualCard = record ? mockColors.featuredRecordSurface : mockColors.featuredWindowSurface;
+        const buttonSurface = record ? mockColors.inverseSurface : mockColors.featuredActionSurface;
+        expect(contrastRatio(blendOver(icon.props.color, buttonSurface), buttonSurface)).toBeGreaterThanOrEqual(3);
+        renderer.root.findAllByType("ThemeText" as any).forEach(node => {
+            const background = node.props.children === "home.continueListening" ? mockColors.featuredRecordSurface : actualCard;
+            const backgrounds = record ? mockColors.featuredRecordGradient : [background];
+            backgrounds.forEach(surface => expect(contrastRatio(node.props.color, surface)).toBeGreaterThanOrEqual(4.5));
         });
-        const style = StyleSheet.flatten(card.props.style);
+        const title = renderer.root.findByType("MarqueeText" as any);
+        const titleBackgrounds = record ? mockColors.featuredRecordGradient : [actualCard];
+        titleBackgrounds.forEach(surface => expect(contrastRatio(title.props.color, surface)).toBeGreaterThanOrEqual(4.5));
+        press("home.continueListening · Real song");
+        press("musicDetail.a11y.play");
+        expect(mockPlay).toHaveBeenCalledWith(song);
+    });
 
-        expect(style.alignSelf).toBe("stretch");
-        expect(style.height).toBe(268);
-        expect(style.marginHorizontal).toBe(24);
-        expect(style.aspectRatio).toBeUndefined();
-
+    it("restores the continuous dark material and visible vinyl arc outside the title column", () => {
         act(() => {
-            renderer!.unmount();
+            renderer = TestRenderer.create(<HomeHero music={song} appearance="record" />);
         });
+        const lighting = renderer.root.findByProps({ testID: "home-record-lighting" });
+        expect(lighting.props.colors).toEqual(mockColors.featuredRecordGradient);
+        expect(lighting.props.pointerEvents).toBe("none");
+        const artwork = renderer.root.findByProps({ testID: "home-record-art-column" });
+        expect(artwork.props.pointerEvents).toBe("none");
+        const rim = renderer.root.findByProps({ testID: "home-record-rim" });
+        expect(rim.props.pointerEvents).toBe("none");
+        expect(StyleSheet.flatten(rim.props.style).borderColor).toBe(mockColors.featuredRecordRim);
+        const artworkStyle = StyleSheet.flatten(artwork.props.style);
+        expect(artworkStyle.backgroundColor).toBeUndefined();
+        const vinyl = artwork.findAll(node => node.props.source === 7)[0];
+        const imageStyle = StyleSheet.flatten(vinyl.props.style);
+        // A bounded bitmap is required on native Image; offsets alone allowed the
+        // previous photograph's intrinsic dimensions to show only its empty corner.
+        expect(imageStyle.width).toBeGreaterThan(0);
+        expect(imageStyle.width).toBe(imageStyle.height);
+        expect(imageStyle.opacity).toBe(1);
+        expect(imageStyle.top + imageStyle.height).toBeGreaterThan(0);
+        expect(imageStyle.right + imageStyle.width).toBeGreaterThan(0);
+        // The expanded alpha canvas must reach the bottom of the art viewport;
+        // cropping it to the old LP height cut off the matte ring and outer glow.
+        expect(imageStyle.top + imageStyle.height).toBeLessThanOrEqual(artworkStyle.height);
+        expect(vinyl.props.resizeMode).toBe("contain");
+        expect(renderer.root.findAllByProps({ testID: "home-record-art-stage" })).toHaveLength(0);
+        const compactHeight = StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-record" }).props.style).minHeight;
+        act(() => {
+            renderer.update(<HomeHero music={song} appearance="window" />);
+        });
+        expect(compactHeight).toBeLessThan(StyleSheet.flatten(renderer.root.findByProps({ testID: "home-hero-window" }).props.style).minHeight);
+    });
+
+    it.each(["window", "record"] as const)("keeps a long %s title in the footer marquee while resuming the complete song", appearance => {
+        const longSong = { ...song, title: "等待我再回来（等待我再回来完整版现场演唱）" };
+        act(() => {
+            renderer = TestRenderer.create(<HomeHero music={longSong} appearance={appearance} />);
+        });
+        const marquee = renderer.root.findByType("MarqueeText" as any);
+        expect(marquee.props.text).toBe(longSong.title);
+        expect(marquee.props.fontSize).toBe(appearance === "record" ? "tag" : "title");
+        expect(marquee.props.color).toBe(appearance === "record" ? mockColors.onFeaturedRecord : mockColors.onFeaturedWindow);
+        if (appearance === "record") {
+            const heading = renderer.root.findAllByType("ThemeText" as any)
+                .find(node => node.props.children === "home.continueListening")!;
+            expect(heading.props.fontSize).toBe("section");
+            expect(heading.props.numberOfLines).toBe(1);
+        }
+        expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === longSong.title)).toBe(false);
+        expect(renderer.root.findAllByType("ThemeText" as any).some(node => node.props.children === (appearance === "record" ? "Real artist" : "Real artist · Source label"))).toBe(true);
+        press(`home.continueListening · ${longSong.title}`);
+        expect(mockPlay).toHaveBeenCalledWith(longSong);
+        act(() => renderer.update(<HomeHero music={song} appearance={appearance} />));
+        expect(renderer.root.findByType("MarqueeText" as any).props.text).toBe(song.title);
     });
 });

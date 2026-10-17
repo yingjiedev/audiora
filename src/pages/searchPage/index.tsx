@@ -11,26 +11,29 @@ import {
 } from "./store/atoms";
 import HistoryPanel from "./components/historyPanel";
 import ResultPanel from "./components/resultPanel";
-import MusicBar from "@/components/musicBar";
 import Loading from "@/components/base/loading";
 import { SafeAreaView } from "react-native-safe-area-context";
 import StatusBar from "@/components/base/statusBar";
 import NoPlugin from "../../components/base/noPlugin";
 import { useI18N } from "@/core/i18n";
+import { useParams } from "@/core/router";
 
 export default function () {
+    const params = useParams<"search-page">();
     const [pageStatus, setPageStatus] = useAtom(pageStatusAtom);
     const setQuery = useSetAtom(queryAtom);
     const setSearchResultsState = useSetAtom(searchResultsAtom);
     const { t } = useI18N();
 
     useEffect(() => {
+        setPageStatus(PageStatus.EDITING);
+        setQuery("");
         setSearchResultsState(initSearchResults);
         return () => {
             setPageStatus(PageStatus.EDITING);
             setQuery("");
         };
-    }, [setPageStatus, setQuery, setSearchResultsState]);
+    }, [setPageStatus, setQuery, setSearchResultsState, params?.pluginHash]);
 
     return (
         <SafeAreaView
@@ -48,7 +51,6 @@ export default function () {
                     )}
                 </View>
             </SafeAreaView>
-            <MusicBar />
         </SafeAreaView>
     );
 }

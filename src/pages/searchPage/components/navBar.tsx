@@ -14,6 +14,8 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { addHistory } from "../common/historySearch";
 import useSearch from "../hooks/useSearch";
+import { useParams } from "@/core/router";
+import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import {
     PageStatus,
     initSearchResults,
@@ -23,6 +25,9 @@ import {
 } from "../store/atoms";
 
 export default function NavBar() {
+    const params = useParams<"search-page">();
+    const getDisplayName = usePluginDisplayNameResolver();
+    const source = params?.pluginHash ? PluginManager.getByHash(params.pluginHash) : undefined;
     const search = useSearch();
     const [query, setQuery] = useAtom(queryAtom);
     const setPageStatus = useSetAtom(pageStatusAtom);
@@ -34,6 +39,7 @@ export default function NavBar() {
     });
     const setSearchResultsState = useSetAtom(searchResultsAtom);
     const { t } = useI18N();
+    const placeholder = source ? t("musicLibrary.searchSourcePlaceholder", { name: getDisplayName(source) }) : t("searchPage.searchPlaceHolder");
 
     const onSearchSubmit = async () => {
         if (query === "") {
@@ -70,12 +76,12 @@ export default function NavBar() {
                     ]}
                     accessible
                     accessibilityLabel={t("searchPage.searchLabel.a11y")}
-                    accessibilityHint={t("searchPage.searchPlaceHolder")}
+                    accessibilityHint={placeholder}
                     onFocus={() => {
                         setPageStatus(PageStatus.EDITING);
                     }}
                     placeholderTextColor={hintTextColor}
-                    placeholder={t("searchPage.searchPlaceHolder")}
+                    placeholder={placeholder}
                     onSubmitEditing={onSearchSubmit}
                     onChangeText={_ => {
                         if (_ === "") {

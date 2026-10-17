@@ -41,10 +41,6 @@ const style = StyleSheet.create({
         width: "100%",
         flex: 1,
     },
-    appbar: {
-        shadowColor: "transparent",
-        backgroundColor: "#2b333eaa",
-    },
     header: {
         backgroundColor: "transparent",
         shadowColor: "transparent",

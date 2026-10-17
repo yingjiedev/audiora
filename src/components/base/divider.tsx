@@ -15,7 +15,7 @@ export default function Divider(props: IDividerProps) {
             style={[
                 vertical ? css.dividerVertical : css.divider,
                 {
-                    backgroundColor: colors.divider ?? "#999999",
+                    backgroundColor: colors.divider,
                 },
                 style,
             ]}

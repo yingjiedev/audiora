@@ -3,14 +3,12 @@ import { View } from "react-native";
 import LocalMusicSheet from "@/core/localMusicSheet";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import LocalMusicList from "./localMusicList";
-import MusicBar from "@/components/musicBar";
 import { localMusicSheetId } from "@/constants/commonConst";
-import Toast from "@/utils/toast";
-import { showDialog } from "@/components/dialogs/useDialog";
 import AppBar from "@/components/base/appBar";
 import { useI18N } from "@/core/i18n";
 import globalStyle from "@/constants/globalStyle";
 import useEnterTransitionEnd from "@/hooks/useEnterTransitionEnd";
+import { openLocalMusicScanner } from "../scanMusic";
 
 export default function MainPage() {
     const navigate = useNavigate();
@@ -35,42 +33,8 @@ export default function MainPage() {
                     {
                         icon: "magnifying-glass",
                         title: t("localMusic.scanLocalMusic"),
-                        async onPress() {
-                            navigate(ROUTE_PATH.FILE_SELECTOR, {
-                                fileType: "folder",
-                                multi: false,
-                                actionText: t("localMusic.beginScan"),
-                                async onAction(selectedFiles) {
-                                    return new Promise(resolve => {
-                                        showDialog("LoadingDialog", {
-                                            title: t("localMusic.scanLocalMusic"),
-                                            promise:
-                                                LocalMusicSheet.importLocal(
-                                                    selectedFiles.map(
-                                                        _ => _.path,
-                                                    ),
-                                                ),
-                                            onResolve(data, hideDialog) {
-                                                Toast.success(t("toast.importSuccess"));
-                                                hideDialog();
-                                                resolve(true);
-                                            },
-                                            onCancel(hideDialog) {
-                                                LocalMusicSheet.cancelImportLocal();
-                                                hideDialog();
-                                                resolve(false);
-                                            },
-                                            onReject(reason, hideDialog) {
-                                                hideDialog();
-                                                Toast.warn(
-                                                    `${t("toast.failToImportMusic")}: ${reason?.message ?? reason}`,
-                                                );
-                                                resolve(false);
-                                            },
-                                        });
-                                    });
-                                },
-                            });
+                        onPress() {
+                            openLocalMusicScanner(navigate);
                         },
                     },
                     {
@@ -94,7 +58,6 @@ export default function MainPage() {
             ) : (
                 <View style={globalStyle.flex1} />
             )}
-            <MusicBar />
         </>
     );
 }

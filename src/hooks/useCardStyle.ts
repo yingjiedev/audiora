@@ -42,7 +42,7 @@ export default function useCardStyle(
     return {
         borderWidth: options.borderWidth,
         borderColor: colors.border,
-        shadowColor: options.shadowColor ?? colors.shadow ?? "#000",
+        shadowColor: options.shadowColor ?? colors.shadow,
         // 深色下投影几乎是隐形的一层，加大不透明度才撑得起层级；
         // 浅色保持原本的轻投影，避免观感变化
         shadowOpacity: (options.shadowOpacity ?? (dark ? 0.28 : 0.08)) * shadowStrength,

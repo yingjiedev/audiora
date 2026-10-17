@@ -47,11 +47,11 @@ const activeToastStore = new GlobalState<IToastConfigInner | null>(null);
 const typeConfig = {
     success: {
         name: "check-circle",
-        color: "#457236",
+        color: "success",
     },
     warn: {
         name: "exclamation-circle",
-        color: "#de7622",
+        color: "warning",
     },
 } as const;
 
@@ -169,7 +169,7 @@ export function ToastBaseComponent() {
                     <Icon
                         size={fontSizeConst.appbar}
                         name={typeConfig[activeToast.type].name}
-                        color={typeConfig[activeToast.type].color}
+                        color={colors[typeConfig[activeToast.type].color]}
                     />
                     <Text
                         numberOfLines={2}
@@ -183,7 +183,7 @@ export function ToastBaseComponent() {
                                 { backgroundColor: colors.primary },
                             ]}
                             onPress={activeToast.onActionClick}>
-                            <Text style={styles.actionText} numberOfLines={1}>
+                            <Text style={[styles.actionText, { color: colors.onPrimary }]} numberOfLines={1}>
                                 {activeToast.actionText}
                             </Text>
                         </Pressable>
@@ -225,7 +225,6 @@ const styles = StyleSheet.create({
     actionText: {
         fontSize: fontSizeConst.content,
         includeFontPadding: false,
-        color: "white",
     },
     actionTextContainer: {
         marginLeft: rpx(24),

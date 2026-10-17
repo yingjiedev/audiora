@@ -19,6 +19,9 @@ import Color from "color";
 import rpx, { fontRpx } from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
 import { fontWeightConst } from "@/constants/uiConst";
+import { controlSize } from "@/constants/designSystem";
+
+const minimumTouch = Math.max(44, controlSize.minimumTouch);
 
 export type PillTabRoute = {
     key: string;
@@ -102,6 +105,7 @@ function PillTabBar(props: IPillTabBarProps) {
                         <Pressable
                             key={route.key}
                             accessibilityRole="tab"
+                            accessibilityLabel={title}
                             accessibilityState={{ selected: focused }}
                             onPress={() => onIndexChange(routeIndex)}
                             style={styles.underlineItem}>
@@ -115,7 +119,7 @@ function PillTabBar(props: IPillTabBarProps) {
                                                 ? fontWeightConst.bolder
                                                 : fontWeightConst.medium,
                                             color: focused
-                                                ? colors.primary
+                                                ? colors.active
                                                 : colors.textSecondary ??
                                                   colors.text,
                                         },
@@ -129,7 +133,7 @@ function PillTabBar(props: IPillTabBarProps) {
                                     styles.underlineIndicator,
                                     {
                                         backgroundColor: focused
-                                            ? colors.primary
+                                            ? colors.active
                                             : "transparent",
                                     },
                                 ]}
@@ -142,6 +146,7 @@ function PillTabBar(props: IPillTabBarProps) {
                     <Pressable
                         key={route.key}
                         accessibilityRole="tab"
+                        accessibilityLabel={title}
                         accessibilityState={{ selected: focused }}
                         onPress={() => onIndexChange(routeIndex)}
                         style={[
@@ -161,7 +166,7 @@ function PillTabBar(props: IPillTabBarProps) {
                                             ? fontWeightConst.bolder
                                             : fontWeightConst.medium,
                                         color: focused
-                                            ? colors.primary
+                                            ? colors.active
                                             : colors.textSecondary ?? colors.text,
                                     },
                                 ]}>
@@ -189,6 +194,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     pillItem: {
+        minWidth: minimumTouch,
+        minHeight: minimumTouch,
         marginHorizontal: rpx(4),
         paddingVertical: rpx(8),
         paddingHorizontal: rpx(16),
@@ -202,7 +209,8 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     underlineItem: {
-        minWidth: rpx(120),
+        minWidth: Math.max(minimumTouch, rpx(120)),
+        minHeight: minimumTouch,
         maxWidth: rpx(200),
         paddingHorizontal: rpx(12),
         paddingTop: rpx(12),

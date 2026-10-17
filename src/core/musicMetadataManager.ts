@@ -43,7 +43,7 @@ class MusicMetadataManager {
             const minutes = Math.floor(musicItem.duration / 60);
             const seconds = Math.floor(musicItem.duration % 60);
             const durationStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
-            metadata.comment = metadata.comment 
+            metadata.comment = metadata.comment
                 ? `${metadata.comment} | 时长: ${durationStr}`
                 : `时长: ${durationStr}`;
         }

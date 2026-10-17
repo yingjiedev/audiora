@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
     BackHandler,
@@ -53,6 +54,7 @@ export default function (props: IPanelFullScreenProps) {
 
     // 订阅主题：换主题 / 设清壁纸后面板底色要重算
     const theme = Theme.useTheme();
+    const colors = useColors();
     const panelBackgroundColor = useMemo(
         () => Theme.getOpaquePageBackgroundColor(),
         [theme],
@@ -190,7 +192,7 @@ export default function (props: IPanelFullScreenProps) {
                         onPress={closePanel}>
                         <Animated.View
                             collapsable={false}
-                            style={[style.mask, maskAnimated]}
+                            style={[style.mask, { backgroundColor: colors.modalScrim }, maskAnimated]}
                         />
                     </TouchableWithoutFeedback>
                 ) : null}
@@ -253,7 +255,6 @@ const style = StyleSheet.create({
         bottom: 0,
         width: "100%",
         height: "100%",
-        backgroundColor: "#000",
         zIndex: 0,
     },
     wrapper: {

@@ -45,6 +45,8 @@ export const ROUTE_PATH = {
     SHEET_BROWSER: "sheet-browser",
     /** 历史记录 */
     HISTORY: "history",
+    /** 本地听歌趋势 */
+    LISTENING_REPORT: "listening-report",
     /** 自定义主题 */
     SET_CUSTOM_THEME: "set-custom-theme",
     /** 权限管理 */
@@ -59,7 +61,7 @@ type RouterParamsBase = Record<RoutePaths, any>;
 interface RouterParams extends RouterParamsBase {
     home: undefined;
     "music-detail": undefined;
-    "search-page": undefined;
+    "search-page": { pluginHash?: string } | undefined;
     "local-sheet-detail": {
         id: string;
     };
@@ -76,6 +78,7 @@ interface RouterParams extends RouterParamsBase {
     };
     local: undefined;
     downloading: undefined;
+    "listening-report": undefined;
     "search-music-list": {
         musicList: IMusic.IMusicItem[] | null;
         musicSheet?: IMusic.IMusicSheetItem;

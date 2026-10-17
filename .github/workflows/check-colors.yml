@@ -5,7 +5,11 @@ on:
         paths:
             - "src/**"
             - "scripts/check-hardcoded-colors.mjs"
+            - "scripts/check-color-semantics.js"
+            - "scripts/lib/**"
             - "scripts/color-baseline.json"
+            - "COLOR_SYSTEM.md"
+            - "AGENTS.md"
             - "package.json"
             - ".github/workflows/check-colors.yml"
 
@@ -23,6 +27,13 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: "22"
+                  cache: npm
+
+            - name: Install locked dependencies
+              run: npm ci
 
             - name: Reject new hardcoded colors
               run: npm run check:colors
+
+            - name: Verify theme contrast and component color roles
+              run: npm run test:colors

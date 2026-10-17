@@ -36,7 +36,7 @@ export function blendOver(foreground: string, background: string): string {
 export function relativeLuminance(color: string): number {
     const [r, g, b] = toRgb(color).map(channel => {
         const ratio = channel / 255;
-        return ratio <= 0.03928
+        return ratio <= 0.04045
             ? ratio / 12.92
             : Math.pow((ratio + 0.055) / 1.055, 2.4);
     });
@@ -68,7 +68,7 @@ export function bestForeground(
     let bestRatio = -1;
 
     candidates.forEach(candidate => {
-        const ratio = contrastRatio(background, candidate);
+        const ratio = contrastRatio(background, blendOver(candidate, background));
         if (ratio > bestRatio) {
             bestRatio = ratio;
             best = candidate;

@@ -1,7 +1,7 @@
 import { useAtomValue } from "jotai";
 
 import { useMusicHistory } from "@/core/musicHistory";
-import MusicSheet, { useSheetsBase } from "@/core/musicSheet";
+import MusicSheet, { useSheetItem, useSheetsBase } from "@/core/musicSheet";
 import PluginManager, { useSortedPlugins } from "@/core/pluginManager";
 import { getPrimaryArtist } from "@/core/randomPlay";
 import { useCurrentMusic } from "@/core/trackPlayer";
@@ -19,6 +19,7 @@ export default function useHomeOverview() {
     const currentMusic = useCurrentMusic();
     const history = useMusicHistory();
     const sheets = useSheetsBase();
+    const favoriteContents = useSheetItem(MusicSheet.defaultSheet.id);
     const pluginsTopList = useAtomValue(pluginsTopListAtom);
 
     const enabledPlugins = useMemo(
@@ -52,8 +53,7 @@ export default function useHomeOverview() {
     const favoriteSheet = useMemo(
         () =>
             sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id) ??
-            sheets[0] ??
-            null,
+            MusicSheet.defaultSheet,
         [sheets],
     );
 
@@ -94,6 +94,7 @@ export default function useHomeOverview() {
         recentMusics,
         historyCount: history.length,
         favoriteSheet,
+        favoriteMusics: favoriteContents.musicList ?? [],
         topListPlugins,
         topListCache,
         recentHistory,

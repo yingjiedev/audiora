@@ -2,6 +2,11 @@ import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
 import Lyric from "./index";
 
+jest.mock("@/hooks/useColors", () => () => {
+    const { lightColors } = require("@/constants/colorPalette");
+    return require("@/utils/themeColors").resolveThemeColors({ ...lightColors, background: "transparent" }, false);
+});
+
 const mockScrollToOffset = jest.fn();
 const mockScrollToIndex = jest.fn();
 const mockTrackPlayer = {

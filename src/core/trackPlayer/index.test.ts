@@ -126,6 +126,7 @@ describe("TrackPlayer playback lifecycle", () => {
     let toast: { warn: jest.Mock };
     let adaptSource: jest.Mock;
     let autoStopWhenError: boolean;
+    let sheetHistory: typeof import("@/core/sheetPlaybackHistory");
 
     beforeEach(async () => {
         jest.useFakeTimers();
@@ -137,6 +138,7 @@ describe("TrackPlayer playback lifecycle", () => {
             toast = require("@/utils/toast");
             adaptSource = require("./mediaSourceAdapter").adaptMediaSourceForPlayback;
             player = require("./index").default;
+            sheetHistory = require("@/core/sheetPlaybackHistory");
         });
         queue = [];
         activeIndex = 0;
@@ -160,6 +162,11 @@ describe("TrackPlayer playback lifecycle", () => {
                 return { state: state.Error, error: { code: "test-error", message: "playback failed" } };
             }
             return { state: playbackState };
+        });
+        native.updateMetadataForTrack.mockImplementation(async (index, metadata) => {
+            if (queue[index]) {
+                queue[index] = { ...queue[index], ...metadata };
+            }
         });
         native.play.mockImplementation(async () => {
             playbackState = state.Buffering;
@@ -441,5 +448,27 @@ describe("TrackPlayer playback lifecycle", () => {
         expect(player.currentMusic?.id).toBe(items[0].id);
         await emit(event.PlaybackActiveTrackChanged, reachFakeTrack());
         expect(player.currentMusic?.id).toBe(items[1].id);
+    });
+
+    it("keeps native queue identity when reordering changes the next track", async () => {
+        await player.play(items[0]);
+        const queueRevision = queue[1].audioraQueueRevision;
+        player.reorderPlayList([items[0], items[2], items[1], ...items.slice(3)]);
+
+        expect(queue[1].id).toBe(items[2].id);
+        expect(queue[1].audioraQueueRevision).toBe(queueRevision);
+        await emit(event.PlaybackActiveTrackChanged, reachFakeTrack());
+        expect(player.currentMusic?.id).toBe(items[2].id);
+    });
+
+    it("records sheet playback while deduplicating a replacement playlist", async () => {
+        const context = {
+            sheet: { id: "sheet-1", platform: "test", title: "Sheet" },
+            routeName: "plugin-sheet-detail",
+        };
+        await player.playWithReplacePlayList(items[0], [items[0], items[1], items[0]], context);
+
+        expect(player.playList.map(item => item.id)).toEqual([items[0].id, items[1].id]);
+        expect(sheetHistory.getSheetPlaybackHistory()).toEqual([context]);
     });
 });

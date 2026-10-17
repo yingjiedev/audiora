@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React, { useCallback, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -22,6 +23,8 @@ interface ISongInfoProps {
 }
 
 export default function SongInfo(props: ISongInfoProps) {
+    const colors = useColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const { showHeart = false, immersive = false } = props;
     const musicItem = useCurrentMusic();
     const getPluginDisplayName = usePluginDisplayNameResolver();
@@ -150,7 +153,7 @@ export default function SongInfo(props: ISongInfoProps) {
                     <Icon
                         name={isFavorite ? "heart" : "heart-outline"}
                         size={iconSizeConst.normal}
-                        color={isFavorite ? "red" : "white"}
+                        color={isFavorite ? colors.mediaFavorite : colors.onMedia}
                         onPress={() => {
                             if (!musicItem) {
                                 return;
@@ -199,7 +202,7 @@ export default function SongInfo(props: ISongInfoProps) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
     container: {
         width: "100%",
         paddingVertical: rpx(18),
@@ -218,7 +221,7 @@ const styles = StyleSheet.create({
         marginBottom: rpx(10),
     },
     title: {
-        color: "white",
+        color: colors.onMedia,
         fontSize: fontSizeConst.appbar,
         fontWeight: fontWeightConst.bold,
         includeFontPadding: false,
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
         marginBottom: 0,
     },
     artist: {
-        color: "white",
+        color: colors.onMedia,
         fontSize: fontSizeConst.content,
         includeFontPadding: false,
         textAlign: "left",
@@ -249,15 +252,15 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     tagBg: {
-        backgroundColor: "rgba(255, 255, 255, 0.16)",
+        backgroundColor: colors.onMediaSurface,
         marginLeft: rpx(12),
         borderRadius: rpx(999),
     },
     tagText: {
-        color: "white",
+        color: colors.onMedia,
     },
     album: {
-        color: "white",
+        color: colors.onMedia,
         fontSize: fontSizeConst.description,
         includeFontPadding: false,
         textAlign: "left",

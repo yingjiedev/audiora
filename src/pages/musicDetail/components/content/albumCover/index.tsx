@@ -1,3 +1,4 @@
+import useColors from "@/hooks/useColors";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import rpx from "@/utils/rpx";
 import { ImgAsset } from "@/constants/assetsConst";
@@ -54,6 +55,7 @@ interface IProps {
 }
 
 export default function AlbumCover(props: IProps) {
+    const colors = useColors();
     const { onTurnPageClick, isExiting = false, isActive = true } = props;
 
     const musicItem = useCurrentMusic();
@@ -342,7 +344,7 @@ export default function AlbumCover(props: IProps) {
                             collapsable={false}
                             style={[
                                 styles.horizontalCoverWrapper,
-                                !isCircle ? styles.coverShadow : null,
+                                !isCircle ? [styles.coverShadow, { shadowColor: colors.onMediaScrim }] : null,
                                 isCircle ? { transform: [{ rotate: spin }] } : null,
                             ]}>
                             <FastImage
@@ -419,7 +421,7 @@ export default function AlbumCover(props: IProps) {
                             syncCoverTarget();
                         }}
                         style={[
-                            !isCircle ? styles.coverShadow : null,
+                            !isCircle ? [styles.coverShadow, { shadowColor: colors.onMediaScrim }] : null,
                             isCircle ? { transform: [{ rotate: spin }] } : null,
                             coverMorphStyle,
                         ]}>
@@ -473,7 +475,6 @@ const styles = {
     },
     coverShadow: {
         borderRadius: rpx(24),
-        shadowColor: "#07132C",
         shadowOffset: { width: 0, height: rpx(16) },
         shadowOpacity: 0.34,
         shadowRadius: rpx(24),

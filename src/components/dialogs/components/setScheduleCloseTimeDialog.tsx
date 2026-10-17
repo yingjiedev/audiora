@@ -11,7 +11,6 @@ import { useI18N } from "@/core/i18n";
 import PersistStatus from "@/utils/persistStatus";
 import useColors from "@/hooks/useColors";
 import { useTheme } from "@react-navigation/native";
-import Color from "color";
 
 interface ISetScheduleCloseTimeDialogProps {
     onOk?: (minutes: number) => void;
@@ -24,27 +23,15 @@ export default function SetScheduleCloseTimeDialog(
     const { t } = useI18N();
     const colors = useColors();
     const { dark } = useTheme();
-    // 品牌蓝两模式同款，深色下提亮一档
-    const brandBlue = dark ? Color("#4E73F5").lighten(0.18).toString() : "#4E73F5";
-    // 深色下按钮渐变被调亮，用近黑色才能维持 AA 对比度。
-    const gradientForeground = dark ? "#10172D" : "#FFFFFF"; // color-exempt: fixed brand gradient foregrounds
-    const surfaceGradient = dark
-        ? [colors.surfaceElevated ?? colors.card, colors.card]
-        : ["#FAFBFF", "#F5F8FF"];
-    // 加减按钮在两个模式下的描边与投影，浅色沿用设计稿的固定值
-    const stepButtonStyle = dark
-        ? {
-            backgroundColor: colors.placeholder,
-            borderColor: colors.border,
-            shadowColor: colors.shadow,
-            shadowOpacity: 0.28,
-        }
-        : {
-            backgroundColor: "#F8FAFF",
-            borderColor: "#E7ECFA",
-            shadowColor: "#8392BA",
-            shadowOpacity: 0.08,
-        };
+    const brandBlue = colors.active;
+    const gradientForeground = colors.onPrimary;
+    const surfaceGradient = colors.panelGradient;
+    const stepButtonStyle = {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        shadowColor: colors.shadow,
+        shadowOpacity: dark ? 0.28 : 0.08,
+    };
 
     const initialMinutes = useMemo(() => {
         const lastCustomTime = Number(
@@ -102,8 +89,8 @@ export default function SetScheduleCloseTimeDialog(
             containerStyle={[
                 style.dialogContainer,
                 {
-                    backgroundColor: dark ? colors.surfaceElevated : "#FAFBFF",
-                    shadowColor: dark ? colors.shadow : "#43547B",
+                    backgroundColor: colors.surfaceElevated,
+                    shadowColor: colors.shadow,
                 },
             ]}
             onDismiss={hideDialog}>
@@ -114,7 +101,7 @@ export default function SetScheduleCloseTimeDialog(
                 style={style.dialogSurface}>
                 <ThemeText
                     style={style.title}
-                    color={dark ? colors.text : "#121A31"}
+                    color={colors.text}
                     fontWeight="semibold">
                     {t("dialog.setScheduleCloseTime.title")}
                 </ThemeText>
@@ -122,7 +109,7 @@ export default function SetScheduleCloseTimeDialog(
                 <View
                     style={[
                         style.stepper,
-                        { backgroundColor: dark ? colors.surface : "#F3F6FE" },
+                        { backgroundColor: colors.surface },
                     ]}>
                     <TouchableOpacity
                         activeOpacity={0.72}
@@ -140,7 +127,7 @@ export default function SetScheduleCloseTimeDialog(
                             selectTextOnFocus
                             style={[
                                 style.textInput,
-                                { color: dark ? colors.text : "#121A31" },
+                                { color: colors.text },
                             ]}
                             value={timeInput}
                             onChangeText={text => {
@@ -154,7 +141,7 @@ export default function SetScheduleCloseTimeDialog(
                         />
                         <ThemeText
                             style={style.unitText}
-                            color={dark ? colors.textSecondary : "#7D869B"}>
+                            color={colors.textSecondary}>
                             {t("dialog.setScheduleCloseTime.unit")}
                         </ThemeText>
                     </View>
@@ -171,7 +158,7 @@ export default function SetScheduleCloseTimeDialog(
 
                 <ThemeText
                     style={style.hintText}
-                    color={dark ? colors.textSecondary : "#7D869B"}>
+                    color={colors.textSecondary}>
                     {t("dialog.setScheduleCloseTime.hint")}
                 </ThemeText>
 
@@ -183,11 +170,11 @@ export default function SetScheduleCloseTimeDialog(
                         onPress={hideDialog}
                         style={[
                             style.cancelButton,
-                            { backgroundColor: dark ? colors.placeholder : "#EDF1F9" },
+                            { backgroundColor: colors.surface },
                         ]}>
                         <ThemeText
                             style={style.actionText}
-                            color={dark ? colors.text : "#27314A"}
+                            color={colors.text}
                             fontWeight="semibold">
                             {t("common.cancel")}
                         </ThemeText>
@@ -199,17 +186,12 @@ export default function SetScheduleCloseTimeDialog(
                         onPress={handleConfirm}
                         style={style.confirmTouch}>
                         <LinearGradient
-                            colors={dark
-                                ? [
-                                    Color("#5B84F7").lighten(0.16).toString(),
-                                    Color("#3F6CF6").lighten(0.16).toString(),
-                                ]
-                                : ["#5B84F7", "#3F6CF6"]}
+                            colors={[colors.primary, colors.primary]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={[
                                 style.confirmButton,
-                                { shadowColor: dark ? colors.shadow : "#5B84F7" },
+                                { shadowColor: colors.shadow },
                             ]}>
                             <ThemeText
                                 style={style.actionText}

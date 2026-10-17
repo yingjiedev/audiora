@@ -2,6 +2,7 @@ import React, { Component, ReactNode, useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
 import DeviceInfo from "react-native-device-info";
 import Theme from "@/core/theme";
+import { resolveThemeColors } from "@/utils/themeColors";
 import type { CustomizedColors } from "@/hooks/useColors";
 import rpx, { fontRpx } from "@/utils/rpx";
 import { fontSizeConst, fontWeightConst } from "@/constants/uiConst";
@@ -9,7 +10,7 @@ import openUrl from "@/utils/openUrl";
 import { crashLog, devLog } from "@/utils/log";
 
 interface DeviceInfoProps {
-    colors: any;
+    colors: ReturnType<typeof resolveThemeColors>;
 }
 
 function DeviceInfoSection({ colors }: DeviceInfoProps) {
@@ -55,10 +56,10 @@ function DeviceInfoSection({ colors }: DeviceInfoProps) {
         getDeviceInfo();
     }, []);    const systemDisplayName = Platform.OS === "ios" ? "iOS" : "Android";
 
-    const text = colors?.text ?? "#F5F2EB";
-    const textSecondary = colors?.textSecondary ?? "rgba(245,242,235,0.64)";
-    const card = colors?.card ?? "#192028";
-    const divider = colors?.divider ?? "rgba(245,242,235,0.11)";
+    const text = colors.text;
+    const textSecondary = colors.textSecondary;
+    const card = colors.card;
+    const divider = colors.divider;
 
     return (
         <View
@@ -168,13 +169,13 @@ function ErrorFallback({ error, errorInfo }: ErrorFallbackProps) {
     // Use app Theme store — NOT react-navigation useTheme / useColors —
     // so this screen still works if NavigationContainer is unmounted.
     const theme = Theme.useTheme();
-    const colors = (theme.colors ?? {}) as CustomizedColors;
-    const text = colors.text ?? "#F5F2EB";
-    const textSecondary = colors.textSecondary ?? "rgba(245,242,235,0.64)";
-    const card = colors.card ?? "#192028";
-    const divider = colors.divider ?? "rgba(245,242,235,0.11)";
+    const colors = resolveThemeColors(theme.colors as CustomizedColors, theme.dark);
+    const text = colors.text;
+    const textSecondary = colors.textSecondary;
+    const card = colors.card;
+    const divider = colors.divider;
     const background =
-        colors.pageBackground ?? colors.background ?? "#101419";
+        colors.background;
 
     return (
         <View style={[styles.container, { backgroundColor: background }]}>
@@ -219,7 +220,7 @@ function ErrorFallback({ error, errorInfo }: ErrorFallbackProps) {
                     </Text>
                     {error?.stack ? (
                         <ScrollView
-                            style={styles.stackContainer}
+                            style={[styles.stackContainer, { backgroundColor: colors.surface }]}
                             showsVerticalScrollIndicator
                             nestedScrollEnabled>
                             <Text
@@ -251,7 +252,7 @@ function ErrorFallback({ error, errorInfo }: ErrorFallbackProps) {
                             📍 组件堆栈
                         </Text>
                         <ScrollView
-                            style={styles.stackContainer}
+                            style={[styles.stackContainer, { backgroundColor: colors.surface }]}
                             showsVerticalScrollIndicator
                             nestedScrollEnabled>
                             <Text
@@ -393,7 +394,6 @@ const styles = StyleSheet.create({
     stackContainer: {
         maxHeight: rpx(300),
         borderRadius: rpx(8),
-        backgroundColor: "rgba(0, 0, 0, 0.05)",
         padding: rpx(16),
     },
     stackText: {
