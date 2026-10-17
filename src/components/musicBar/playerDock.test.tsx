@@ -27,6 +27,9 @@ jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
+jest.mock("@react-native-masked-view/masked-view", () => "MaskedView");
+jest.mock("react-native-svg", () => ({ __esModule: true, default: "Svg", Circle: "Circle" }));
+jest.mock("react-native-track-player", () => ({ useActiveTrack: () => mockMusic ? { ...mockMusic, url: "file:///song.mp3" } : undefined }));
 jest.mock("./musicInfo", () => "MusicInfo");
 jest.mock("./useAutoExpand", () => ({ __esModule: true, default: jest.fn() }));
 jest.mock("@/pages/musicDetail/components/bottom/seekBar", () => "SeekBar");
@@ -45,6 +48,7 @@ jest.mock("@/core/trackPlayer", () => ({
     default: { play: jest.fn(), pause: jest.fn(), skipToPrevious: jest.fn(), skipToNext: jest.fn() },
     useCurrentMusic: () => mockMusic,
     useMusicState: () => mockPaused,
+    useProgress: () => ({ position: 30, duration: 180 }),
 }));
 jest.mock("@/core/musicSheet", () => ({
     __esModule: true,

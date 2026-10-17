@@ -18,11 +18,13 @@ import useColors from "@/hooks/useColors";
 import SeekBar from "@/pages/musicDetail/components/bottom/seekBar";
 import { resolveArtwork } from "@/utils/artwork";
 import { useMediaExtraProperty } from "@/utils/mediaExtra";
+import { getMediaUniqueKey } from "@/utils/mediaUtils";
 import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
 import { compactCoverOverhang, compactPlayerHeight } from "./compactLayout";
 import useAutoExpand from "./useAutoExpand";
+import CompactPlaybackButton from "./compactPlaybackButton";
 
 const TOUCH_SIZE = 48;
 const COVER_SIZE = Math.min(96, Math.max(80, rpx(180)));
@@ -344,8 +346,10 @@ export default function PlayerDock(props: IPlayerDockProps) {
                             selected={isFavorite}
                             onPress={toggleFavorite}
                         />
-                        <DockAction
-                            icon={isPaused ? "play" : "pause"}
+                        <CompactPlaybackButton
+                            key={getMediaUniqueKey(musicItem)}
+                            musicItem={musicItem}
+                            paused={isPaused}
                             label={playbackLabel}
                             color={foreground}
                             onPress={togglePlayback}
