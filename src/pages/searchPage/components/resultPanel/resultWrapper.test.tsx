@@ -14,6 +14,8 @@ jest.mock("@/components/base/loading", () => "MockLoading");
 jest.mock("@/components/base/listEmpty", () => "MockEmpty");
 jest.mock("@/components/base/listFooter", () => "MockFooter");
 jest.mock("./results", () => ({ renderMap: { music: () => null } }));
+jest.mock("./sourceFeedback", () => ({ SourceIssue: "MockSourceIssue" }));
+jest.mock("@/core/router", () => ({ useNavigate: () => jest.fn() }));
 
 it("leaves the loading state when new search results arrive and updates retry/pagination state", () => {
     let renderer!: TestRenderer.ReactTestRenderer;
@@ -44,8 +46,10 @@ it("leaves the loading state when new search results arrive and updates retry/pa
         renderer.update(<ResultWrapper {...props} searchResult={{ ...result, data: songs, state: RequestStateCode.ERROR }} />);
     });
     list = renderer.root.findByType("MockList" as any);
-    expect(list.props.ListFooterComponent.props.state).toBe(RequestStateCode.ERROR);
-    act(() => list.props.ListFooterComponent.props.onRetry());
-    expect(mockSearch).toHaveBeenCalledWith(undefined, undefined, "music", "source", "retry");
+    expect(list.props.ListFooterComponent.type).toBe("MockSourceIssue");
+    expect(list.props.ListFooterComponent.props.result.state).toBe(RequestStateCode.ERROR);
+    expect(list.props.data).toBe(songs);
+    act(() => list.props.onEndReached());
+    expect(mockSearch).not.toHaveBeenCalled();
     act(() => renderer.unmount());
 });

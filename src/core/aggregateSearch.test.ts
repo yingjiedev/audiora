@@ -118,7 +118,7 @@ describe("aggregate search sessions", () => {
         expect(sources[3].search).not.toHaveBeenCalled();
         expect(search.results).toEqual({});
     });
-    it("bounds a whole request wave, including queue time, and lets unstarted sources retry", async () => {
+    it("defers unstarted sources at the batch limit without calling them failed and allows continuation", async () => {
         search = new AggregateSearch(() => {}, item => item, 2, 100, 150);
         search.reset("song");
         const sources = Array.from({ length: 8 }, (_, i) => ({ key: String(i), search: jest.fn(() => new Promise<SearchPage<string>>(() => {})) }));
@@ -126,12 +126,73 @@ describe("aggregate search sessions", () => {
         await flush();
         jest.advanceTimersByTime(100); await flush();
         jest.advanceTimersByTime(50); await done;
-        expect(Object.values(search.results).every(result => result.state === "error")).toBe(true);
-        expect(sources.filter(source => source.search.mock.calls.length)).toHaveLength(4);
+        expect(Object.values(search.results).filter(result => result.state === "error")).toHaveLength(2);
+        expect(Object.values(search.results).filter(result => result.state === "deferred")).toHaveLength(6);
+        expect(search.results["7"].error).toBeUndefined();
+        expect(sources.filter(source => source.search.mock.calls.length)).toHaveLength(2);
         sources[7].search.mockResolvedValueOnce({ data: ["recovered"], isEnd: true });
         await search.request([sources[7]], "retry");
         expect(search.results["7"].data).toEqual(["recovered"]);
         expect(jest.getTimerCount()).toBe(0);
+    });
+    it("searches 24 healthy sources taking three seconds each without queue-induced failures", async () => {
+        search = new AggregateSearch(() => {}, item => item);
+        search.reset("song");
+        const sources = Array.from({ length: 24 }, (_, i) => ({ key: String(i), search: jest.fn(() => new Promise<SearchPage<string>>(resolve => {
+            setTimeout(() => resolve({ data: [String(i)], isEnd: true }), 3000);
+        })) }));
+        const done = search.request(sources, "ensure");
+        await jest.advanceTimersByTimeAsync(24_000);
+        await done;
+        expect(Object.values(search.results).every(result => result.state === "finished")).toBe(true);
+        expect(sources.every(source => source.search.mock.calls.length === 1)).toBe(true);
+        expect(search.results["23"]).toMatchObject({ waitMs: 21_000, elapsedMs: 3000 });
+        expect(jest.getTimerCount()).toBe(0);
+    });
+    it("gives an admitted queued source its complete execution timeout", async () => {
+        search = new AggregateSearch(() => {}, item => item, 1, 100, 250);
+        search.reset("song");
+        const source = (key: string, delay: number) => ({ key, search: () => new Promise<SearchPage<string>>(resolve => {
+            setTimeout(() => resolve({ data: [key] }), delay);
+        }) });
+        const done = search.request([source("first", 90), source("second", 90), source("third", 1)], "ensure");
+        await jest.advanceTimersByTimeAsync(180);
+        await done;
+        expect(search.results.second).toMatchObject({ state: "finished", waitMs: 90, elapsedMs: 90 });
+        expect(search.results.third.state).toBe("deferred");
+    });
+    it("does not duplicate plugin I/O when a timed-out page is retried before it settles", async () => {
+        const wait = deferred<SearchPage<string>>();
+        const source = { key: "a", search: jest.fn(() => wait.promise) };
+        const first = search.request([source], "ensure");
+        await flush();
+        await jest.advanceTimersByTimeAsync(100);
+        await first;
+        expect(search.results.a.error).toEqual({ kind: "timeout", retryable: true });
+        const retry = search.request([source], "retry");
+        await flush();
+        expect(source.search).toHaveBeenCalledTimes(1);
+        wait.resolve({ data: ["recovered"], isEnd: true });
+        await retry;
+        expect(search.results.a).toMatchObject({ state: "finished", data: ["recovered"] });
+        expect(search.results.a.error).toBeUndefined();
+        expect(jest.getTimerCount()).toBe(0);
+    });
+    it("exposes queued and executing states and preserves safe failure diagnostics", async () => {
+        search = new AggregateSearch(() => {}, item => item, 1, 100);
+        search.reset("song");
+        const first = deferred<SearchPage<string>>();
+        const done = search.request([{ key: "a", search: () => first.promise }, { key: "b", search: async () => {
+            throw { response: { status: 401 }, message: "password=secret", config: { authorization: "secret" } };
+        } }], "ensure");
+        await flush();
+        expect(search.results.a.state).toBe("loading");
+        expect(search.results.b.state).toBe("queued");
+        first.resolve({ data: [] });
+        await done;
+        expect(search.results.a).toMatchObject({ state: "finished", data: [] });
+        expect(search.results.b.error).toEqual({ kind: "authentication", status: 401, retryable: false });
+        expect(JSON.stringify(search.results)).not.toContain("secret");
     });
     it("retains identity indexes on appends and only changes the replacement version on refresh success", async () => {
         const identity = jest.fn((item: string) => item);

@@ -1,5 +1,7 @@
 import { AggregateSearch, SearchOperation, SourceSearchResult } from "@/core/aggregateSearch";
 import PluginManager from "@/core/pluginManager";
+import { missingSearchConfiguration } from "@/core/pluginManager/searchConfiguration";
+import { SearchRequestError } from "@/core/searchError";
 import { RequestStateCode } from "@/constants/commonConst";
 import { getDefaultStore } from "jotai";
 import { trackSourceKey } from "@/utils/trackGroup";
@@ -23,7 +25,7 @@ function publish() {
     let pending = false;
     for (const [key, result] of Object.entries(coordinator.results)) {
         const [type, hash] = JSON.parse(key) as [ICommon.SupportMediaType, string];
-        pending ||= result.state === "loading";
+        pending ||= result.state === "loading" || result.state === "queued";
         if (result.data.length) dataTypes.add(type);
         if (publishedRaw[key] === result && previous[type][hash]) continue;
         if (!changedTypes.has(type)) {
@@ -33,7 +35,8 @@ function publish() {
         results[type][hash] = {
             ...result,
             query: coordinator.query,
-            state: result.state === "loading"
+            phase: result.state,
+            state: result.state === "loading" || result.state === "queued"
                 ? (result.data.length ? RequestStateCode.PENDING_REST_PAGE : RequestStateCode.PENDING_FIRST_PAGE)
                 : result.state === "ready" ? RequestStateCode.PARTLY_DONE
                     : result.state === "finished" ? RequestStateCode.FINISHED : RequestStateCode.ERROR,
@@ -49,7 +52,7 @@ function publish() {
 function schedulePublication() {
     if (coordinator.results === publishedRaw) return;
     const entries = Object.entries(coordinator.results);
-    const pending = entries.some(([, result]) => result.state === "loading");
+    const pending = entries.some(([, result]) => result.state === "loading" || result.state === "queued");
     const firstData = entries.some(([key, result]) => result.data.length && !publishedDataTypes.has(JSON.parse(key)[0]));
     // First results and loading/completion transitions are immediate. Coalesce bursts.
     if (!entries.length || firstData || pending !== publishedPending) publish();
@@ -89,7 +92,8 @@ export function runSearch(
         resetSearch(keyword, scope);
     }
     const plugins = scopeSearchPlugins(PluginManager.getSortedSearchablePlugins(type), pluginHash ?? scope)
-        .filter(plugin => plugin.hash && plugin.instance.platform);
+        .filter(plugin => plugin.hash && plugin.instance.platform)
+        .filter(plugin => operation !== "retry" || pluginHash || store.get(searchResultsAtom)[type][plugin.hash]?.error?.retryable !== false);
     if (!plugins.length) {
         const anySources = scopeSearchPlugins(PluginManager.getSearchablePlugins(), scope);
         if (!anySources.length) store.set(pageStatusAtom, PageStatus.NO_PLUGIN);
@@ -99,7 +103,12 @@ export function runSearch(
     if (store.get(pageStatusAtom) !== PageStatus.EDITING) store.set(pageStatusAtom, PageStatus.RESULT);
     const sources = plugins.map(plugin => ({
         key: JSON.stringify([type, plugin.hash]),
-        search: (term: string, requestedPage: number) => plugin.methods.search(term, requestedPage, type),
+        search: (term: string, requestedPage: number) => {
+            if (plugin.instance.userVariables?.length && missingSearchConfiguration(plugin.instance, PluginManager.getUserVariables(plugin))) {
+                throw new SearchRequestError({ kind: "configuration", retryable: false });
+            }
+            return plugin.methods.search(term, requestedPage, type);
+        },
     }));
     const inferred = page === 1 ? "refresh" : query === undefined ? "next" : "refresh";
     return coordinator.request(sources, operation ?? inferred, page);

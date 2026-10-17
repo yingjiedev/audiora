@@ -11,6 +11,7 @@ const mockPlugins = [
 jest.mock("@/core/pluginManager", () => ({
     __esModule: true,
     default: { getSortedSearchablePlugins: () => mockPlugins },
+    useSearchablePlugins: () => mockPlugins,
     usePluginDisplayNameResolver: () => (plugin: { displayName: string }) => plugin.displayName,
 }));
 jest.mock("react-native-tab-view", () => ({
@@ -18,6 +19,7 @@ jest.mock("react-native-tab-view", () => ({
     SceneMap: jest.fn(),
 }));
 jest.mock("./resultWrapper", () => "MockResult");
+jest.mock("./aggregateResults", () => "MockAggregate");
 jest.mock("./results", () => ({ renderMap: { music: true } }));
 jest.mock("@/core/router", () => ({ useParams: () => ({}) }));
 jest.mock("@/hooks/useColors", () => () => ({ primary: "blue", active: "navy", text: "black", textSecondary: "gray", onPrimary: "white" }));
@@ -39,9 +41,9 @@ describe("Search source selection", () => {
         expect(renderer!.root.findByType("ThemeText" as any).props.children).toBe("Sources");
         expect(tabs.map(tab => tab.findByType(Text).props.children)).toEqual(["ʔ", "My source"]);
         expect(tabs.map(tab => tab.props.accessibilityLabel)).toEqual(["Source: ʔ", "Source: My source"]);
-        expect(renderer!.root.findByType(TabView).props.navigationState.routes.map((route: { key: string }) => route.key)).toEqual(["source-1", "source-2"]);
+        expect(renderer!.root.findByType(TabView).props.navigationState.routes.map((route: { key: string }) => route.key)).toEqual(["aggregate-all", "source-1", "source-2"]);
         act(() => tabs[1].props.onPress());
-        expect(renderer!.root.findByType(TabView).props.navigationState.index).toBe(1);
+        expect(renderer!.root.findByType(TabView).props.navigationState.index).toBe(2);
         expect(findTab("Source: My source").props.accessibilityState.selected).toBe(true);
         act(() => renderer!.unmount());
     });

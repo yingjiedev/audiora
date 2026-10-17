@@ -76,6 +76,8 @@ declare namespace IPlugin {
         name?: string;
         /** 提示文案 */
         hint?: string;
+        /** Explicitly required for search; absent flags preserve legacy optional inputs. */
+        required?: boolean;
     }
 
     interface IAlbumInfoResult {

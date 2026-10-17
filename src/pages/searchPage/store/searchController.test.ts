@@ -3,9 +3,9 @@ import { getDefaultStore } from "jotai";
 import { resetSearch, runSearch } from "./searchController";
 import { searchResultsAtom } from "./atoms";
 
-const mockPlugins = ["a", "b", "c", "d"].map(hash => ({ hash, instance: { platform: hash }, methods: { search: jest.fn() } }));
+const mockPlugins = ["a", "b", "c", "d"].map(hash => ({ hash, instance: { platform: hash, userVariables: [] as IPlugin.IUserVariable[] }, methods: { search: jest.fn() } }));
 let mockOrder = mockPlugins;
-jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getSearchablePlugins: () => mockPlugins, getSortedSearchablePlugins: () => mockOrder } }));
+jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getSearchablePlugins: () => mockPlugins, getSortedSearchablePlugins: () => mockOrder, getUserVariables: () => ({}) } }));
 jest.mock("@/constants/commonConst", () => ({ RequestStateCode: { PENDING_FIRST_PAGE: 2, PENDING_REST_PAGE: 3, PARTLY_DONE: 4, FINISHED: 8, ERROR: 128 } }));
 const store = getDefaultStore();
 const flush = async () => {
@@ -18,6 +18,9 @@ describe("search publications", () => {
     beforeEach(() => {
         jest.useFakeTimers(); jest.clearAllMocks(); resetSearch();
         mockOrder = mockPlugins;
+        mockPlugins.forEach(plugin => {
+            plugin.instance.userVariables = [];
+        });
         finish = [];
         mockPlugins.forEach((plugin, index) => plugin.methods.search.mockImplementation(() => new Promise(resolve => {
             finish[index] = resolve;
@@ -80,5 +83,21 @@ describe("search publications", () => {
         expect(mockPlugins[0].methods.search).not.toHaveBeenCalled();
         expect(Object.keys(store.get(searchResultsAtom).music)).toEqual(["d", "c", "b", "a"]);
         resetSearch(); await pending;
+    });
+    it("preflights required settings and excludes configuration failures from bulk retries", async () => {
+        mockPlugins[0].instance.userVariables = [{ key: "url", required: true }];
+        mockPlugins[1].methods.search.mockRejectedValueOnce({ code: "ERR_NETWORK" }).mockResolvedValueOnce({ data: [], isEnd: true });
+        mockPlugins[2].methods.search.mockResolvedValue({ data: [], isEnd: true });
+        mockPlugins[3].methods.search.mockResolvedValue({ data: [], isEnd: true });
+        await runSearch("song", 1);
+        expect(mockPlugins[0].methods.search).not.toHaveBeenCalled();
+        expect(store.get(searchResultsAtom).music.a).toMatchObject({ phase: "error", error: { kind: "configuration", retryable: false } });
+        await runSearch(undefined, undefined, "music", undefined, undefined, "retry");
+        expect(mockPlugins[1].methods.search).toHaveBeenCalledTimes(2);
+        expect(mockPlugins[2].methods.search).toHaveBeenCalledTimes(1);
+        expect(mockPlugins[0].methods.search).not.toHaveBeenCalled();
+        await runSearch(undefined, undefined, "music", "a", undefined, "retry");
+        expect(store.get(searchResultsAtom).music.a.error?.kind).toBe("configuration");
+        expect(jest.getTimerCount()).toBe(0);
     });
 });

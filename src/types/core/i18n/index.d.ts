@@ -325,6 +325,34 @@ export interface ILanguageData {
     "aggregate.collectionCount": string;
     "aggregate.searchProgress": string;
     "aggregate.retrySource": string;
+    "aggregate.sourceSummary": string;
+    "aggregate.pendingSources": string;
+    "aggregate.pendingWithIssues": string;
+    "aggregate.issueCount": string;
+    "aggregate.searchFinished": string;
+    "aggregate.sourceDetails": string;
+    "aggregate.retryIncomplete": string;
+    "aggregate.sourceDeferred": string;
+    "aggregate.continueSource": string;
+    "aggregate.retry": string;
+    "aggregate.configureSource": string;
+    "aggregate.manageSources": string;
+    "aggregate.sourceSearching": string;
+    "aggregate.sourceQueued": string;
+    "aggregate.sourceReturned": string;
+    "aggregate.sourceEmpty": string;
+    "aggregate.sourceTiming": string;
+    "aggregate.httpStatus": string;
+    "aggregate.allSourcesIncomplete": string;
+    "aggregate.incompleteHint": string;
+    "aggregate.error.timeout": string;
+    "aggregate.error.network": string;
+    "aggregate.error.authentication": string;
+    "aggregate.error.rateLimited": string;
+    "aggregate.error.unavailable": string;
+    "aggregate.error.configuration": string;
+    "aggregate.error.invalidResponse": string;
+    "aggregate.error.plugin": string;
     "searchPage.searchPlaceHolder": string; // 搜索
     "searchPage.searchLabel.a11y": string; // 搜索标签
     "searchPage.history": string; // 历史记录

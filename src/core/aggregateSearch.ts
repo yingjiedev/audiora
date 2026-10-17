@@ -1,3 +1,5 @@
+import { classifySearchError, SearchFailure, SearchRequestError } from "./searchError";
+
 export interface SearchPage<T> {
     data: T[];
     isEnd?: boolean;
@@ -9,13 +11,16 @@ export interface SearchSource<T> {
 }
 
 export interface SourceSearchResult<T> {
-    state: "loading" | "ready" | "finished" | "error";
+    state: "queued" | "loading" | "ready" | "finished" | "error" | "deferred";
     data: T[];
     /** Last successfully loaded page. Failed requests do not advance it. */
     page: number;
     requestedPage: number;
     /** Replacement generation; append pages preserve it. */
     dataVersion: number;
+    error?: SearchFailure;
+    waitMs?: number;
+    elapsedMs?: number;
 }
 
 export type SearchOperation = "ensure" | "next" | "retry" | "refresh";
@@ -33,13 +38,14 @@ export class AggregateSearch<T> {
     private queue: SearchTask[] = [];
     private active = new Set<SearchTask>();
     private dataKeys = new Map<string, Set<string>>();
+    private inFlight = new Map<string, { page: number; promise: Promise<SearchPage<T>> }>();
 
     constructor(
         private onChange: () => void,
         private getKey: (item: T) => string,
         private concurrency = 3,
         private timeoutMs = 10_000,
-        private requestBudgetMs = 15_000,
+        private requestBudgetMs = 45_000,
     ) {}
 
     reset(query = "") {
@@ -50,6 +56,7 @@ export class AggregateSearch<T> {
         this.active.clear();
         this.results = {};
         this.dataKeys.clear();
+        this.inFlight.clear();
         this.onChange();
     }
 
@@ -60,14 +67,14 @@ export class AggregateSearch<T> {
         const requests: Promise<void>[] = [];
         for (const source of sources) {
             const previous = this.results[source.key];
-            if (previous?.state === "loading") continue;
+            if (previous?.state === "loading" || previous?.state === "queued") continue;
             if (operation === "ensure" && previous) continue;
-            if (operation === "retry" && previous?.state !== "error") continue;
-            if (operation === "next" && (previous?.state === "error" || previous?.state === "finished")) continue;
+            if (operation === "retry" && previous?.state !== "error" && previous?.state !== "deferred") continue;
+            if (operation === "next" && (previous?.state === "error" || previous?.state === "deferred" || previous?.state === "finished")) continue;
             const page = explicitPage ?? (operation === "retry" ? previous!.requestedPage
                 : operation === "refresh" ? 1 : (previous?.page ?? 0) + 1);
             const result: SourceSearchResult<T> = {
-                state: "loading",
+                state: "queued",
                 data: previous?.data ?? [],
                 page: previous?.page ?? 0,
                 requestedPage: page,
@@ -77,6 +84,7 @@ export class AggregateSearch<T> {
             let finish!: () => void;
             let cancelWait: (() => void) | undefined;
             let cancelled = false;
+            const queuedAt = Date.now();
             requests.push(new Promise<void>(resolve => {
                 finish = resolve;
             }));
@@ -87,14 +95,36 @@ export class AggregateSearch<T> {
                     finish();
                 },
                 run: async () => {
+                    let startedAt: number | undefined;
                     try {
-                        if (Date.now() >= deadline) throw new Error("Search budget exhausted");
+                        // Only admit work with a full execution window remaining. Queue time
+                        // never shortens a source's timeout or becomes a source failure.
+                        if (Date.now() + this.timeoutMs > deadline) {
+                            this.results = { ...this.results, [source.key]: { ...result, state: "deferred", waitMs: Date.now() - queuedAt } };
+                            return;
+                        }
+                        startedAt = Date.now();
+                        this.results = { ...this.results, [source.key]: { ...result, state: "loading", waitMs: startedAt - queuedAt } };
+                        this.onChange();
                         const response = await new Promise<SearchPage<T> | null>((resolve, reject) => {
-                            const timer = setTimeout(() => reject(new Error("Search timed out")), Math.min(this.timeoutMs, deadline - Date.now()));
+                            const timer = setTimeout(() => reject(new SearchRequestError({ kind: "timeout", retryable: true })), this.timeoutMs);
                             cancelWait = () => {
                                 clearTimeout(timer); resolve(null);
                             };
-                            Promise.resolve().then(() => cancelled ? null : source.search(query, page)).then(
+                            // A timeout stops host waiting, not plugin I/O. Retrying the
+                            // same page observes the existing call instead of duplicating it.
+                            let flight = this.inFlight.get(source.key);
+                            if (!flight || flight.page !== page) {
+                                const promise = Promise.resolve().then(() => cancelled || session !== this.session ? { data: [], isEnd: true } : source.search(query, page));
+                                flight = { page, promise };
+                                this.inFlight.set(source.key, flight);
+                                const current = flight;
+                                const clear = () => {
+                                    if (this.inFlight.get(source.key) === current) this.inFlight.delete(source.key);
+                                };
+                                promise.then(clear, clear);
+                            }
+                            flight.promise.then(
                                 value => {
                                     clearTimeout(timer); resolve(value);
                                 },
@@ -104,7 +134,7 @@ export class AggregateSearch<T> {
                             );
                         });
                         if (cancelled || session !== this.session) return;
-                        if (!response || !Array.isArray(response.data)) throw new Error("Invalid search response");
+                        if (!response || !Array.isArray(response.data)) throw new SearchRequestError({ kind: "invalidResponse", retryable: false });
                         const existing = page === 1 ? [] : result.data;
                         const keys = page === 1 ? new Set<string>() : this.dataKeys.get(source.key) ?? new Set(existing.map(this.getKey));
                         const incoming = new Set<string>();
@@ -124,11 +154,17 @@ export class AggregateSearch<T> {
                                 page,
                                 requestedPage: page,
                                 dataVersion: result.dataVersion + (page === 1 ? 1 : 0),
+                                waitMs: startedAt - queuedAt,
+                                elapsedMs: Date.now() - startedAt,
                             },
                         };
-                    } catch {
+                    } catch (error) {
                         if (cancelled || session !== this.session) return;
-                        this.results = { ...this.results, [source.key]: { ...result, state: "error" } };
+                        this.results = { ...this.results, [source.key]: {
+                            ...result, state: "error", error: classifySearchError(error),
+                            waitMs: (startedAt ?? Date.now()) - queuedAt,
+                            elapsedMs: startedAt === undefined ? 0 : Date.now() - startedAt,
+                        } };
                     } finally {
                         if (!cancelled && session === this.session) this.onChange();
                         finish();

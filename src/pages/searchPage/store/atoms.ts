@@ -1,5 +1,6 @@
 import { RequestStateCode } from "@/constants/commonConst";
 import { atom } from "jotai";
+import { SourceSearchResult } from "@/core/aggregateSearch";
 
 /** 搜索状态 */
 
@@ -8,6 +9,10 @@ export interface ISearchResult<T extends ICommon.SupportMediaType> {
     page?: number;
     requestedPage?: number;
     dataVersion?: number;
+    phase?: SourceSearchResult<unknown>["state"];
+    error?: SourceSearchResult<unknown>["error"];
+    waitMs?: number;
+    elapsedMs?: number;
     /** 搜索词 */
     query?: string;
     /** 搜索状态 */

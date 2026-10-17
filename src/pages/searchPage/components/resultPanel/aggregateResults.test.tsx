@@ -4,7 +4,7 @@ import TestRenderer, { act } from "react-test-renderer";
 import { getDefaultStore } from "jotai";
 import AggregateResults from "./aggregateResults";
 import GroupedMusicList from "@/components/musicList/groupedMusicList";
-import Button from "@/components/base/textButton";
+import { PageAction } from "@/components/base/pageSection";
 import { pageStatusAtom, PageStatus, queryAtom } from "../../store/atoms";
 import { resetSearch } from "../../store/searchController";
 import TrackPlayer from "@/core/trackPlayer";
@@ -21,7 +21,9 @@ jest.mock("@/core/pluginManager", () => ({
     useSearchablePlugins: () => [mockA, mockB],
     usePluginDisplayNameResolver: () => (plugin: { name: string }) => plugin.name,
 }));
-jest.mock("@/core/router", () => ({ useParams: () => ({ pluginHash: mockSource }) }));
+jest.mock("@/core/router", () => ({ useParams: () => ({ pluginHash: mockSource }), useNavigate: () => jest.fn() }));
+jest.mock("@/components/dialogs/useDialog", () => ({ showDialog: jest.fn(), hideDialog: jest.fn() }));
+jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
 jest.mock("@/core/appConfig", () => ({ __esModule: true, default: { getConfig: () => mockBehavior } }));
 jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { play: jest.fn(), playWithReplacePlayList: jest.fn() } }));
 jest.mock("@/components/musicList/groupedMusicList", () => {
@@ -29,7 +31,7 @@ jest.mock("@/components/musicList/groupedMusicList", () => {
     return props => R.createElement("GroupedMusicList", props, props.renderHeader?.([]));
 });
 jest.mock("@/components/base/themeText", () => "ThemeText");
-jest.mock("@/components/base/textButton", () => "Button");
+jest.mock("@/components/base/pageSection", () => ({ PageAction: "PageAction", PageState: "PageState" }));
 jest.mock("./searchPending", () => "SearchPending");
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/constants/commonConst", () => ({ RequestStateCode: { IDLE: 0, PENDING_FIRST_PAGE: 2, PENDING_REST_PAGE: 3, PARTLY_DONE: 4, FINISHED: 8, ERROR: 128 } }));
@@ -70,10 +72,10 @@ describe("aggregate search view integration", () => {
         mockB.methods.search.mockRejectedValueOnce(new Error("offline"));
         await render();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
-        await act(async () => renderer.root.findByType(Button).props.onPress());
+        await act(async () => renderer.root.findAllByType(PageAction).find(button => button.props.title === "aggregate.retryIncomplete")!.props.onPress());
         expect(mockA.methods.search).toHaveBeenCalledTimes(1);
         expect(mockB.methods.search).toHaveBeenCalledTimes(2);
-        expect(renderer.root.findAllByType(Button)).toHaveLength(0);
+        expect(renderer.root.findAllByType(PageAction).find(button => button.props.title === "aggregate.retryIncomplete")!.props.disabled).toBe(true);
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toHaveLength(2);
     });
     it("maintains the source scope even when rendering an aggregate view", async () => {
@@ -95,7 +97,7 @@ describe("aggregate search view integration", () => {
         await act(async () => finish({ data: [], isEnd: true }));
         const ready = renderer.root.findByType(GroupedMusicList).props;
         expect(ready.footerComponent.type).not.toBe(SearchPending);
-        expect(ready.emptyComponent).toBeUndefined();
+        expect(ready.emptyComponent.props.title).toBe("common.emptyList");
     });
 });
 

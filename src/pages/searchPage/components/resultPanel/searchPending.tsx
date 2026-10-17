@@ -31,7 +31,7 @@ export default function SearchPending({ active, hasResults, session }: { active:
                 <View accessible accessibilityLiveRegion="polite" accessibilityRole="progressbar" accessibilityState={{ busy: true }}
                     accessibilityLabel={t(slow ? "aggregate.slowSources" : hasResults ? "aggregate.searchingMore" : "aggregate.searching")} style={styles.status}>
                     {!reduceMotion ? <ActivityIndicator color={colors.primaryText} size="small" accessible={false} /> : null}
-                    <ThemeText fontColor="textSecondary" style={styles.text}>
+                    <ThemeText allowFontScaling fontColor="textSecondary" style={styles.text}>
                         {t(slow ? "aggregate.slowSources" : hasResults ? "aggregate.searchingMore" : "aggregate.searching")}
                     </ThemeText>
                 </View>

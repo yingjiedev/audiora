@@ -10,6 +10,8 @@ import React, { memo, useCallback, useEffect } from "react";
 import useSearch from "../../hooks/useSearch";
 import { ISearchResult, queryAtom } from "../../store/atoms";
 import { renderMap } from "./results";
+import { SourceIssue } from "./sourceFeedback";
+import { useNavigate } from "@/core/router";
 
 interface IResultWrapperProps<
     T extends ICommon.SupportMediaType = ICommon.SupportMediaType,
@@ -23,6 +25,9 @@ interface IResultWrapperProps<
 function ResultWrapper(props: IResultWrapperProps) {
     const { tab, pluginHash, searchResult, pluginSearchResultRef } = props;
     const search = useSearch();
+    const navigate = useNavigate();
+    const issue = searchResult?.state === RequestStateCode.ERROR ? <SourceIssue standalone pluginHash={pluginHash} type={tab} result={searchResult}
+        search={search} onManage={() => navigate("setting", { type: "plugin" })} /> : null;
     const searchState = searchResult?.state ?? RequestStateCode.IDLE;
     const columns = useMediaGrid();
     const query = useAtomValue(queryAtom);
@@ -58,10 +63,10 @@ function ResultWrapper(props: IResultWrapperProps) {
             key={tab === "sheet" ? columns : 1}
             contentContainerStyle={tab === "sheet" ? { paddingHorizontal: spacing.xxxl - spacing.xs, paddingBottom: spacing.xxxl } : { paddingBottom: spacing.xxxl }}
             extraData={searchState}
-            ListEmptyComponent={<ListEmpty state={searchState} onRetry={() => {
+            ListEmptyComponent={issue ?? <ListEmpty state={searchState} onRetry={() => {
                 search(undefined, undefined, tab, pluginHash, "retry");
             }} />}
-            ListFooterComponent={data?.length ? <ListFooter state={searchState} onRetry={() => {
+            ListFooterComponent={data?.length ? issue ?? <ListFooter state={searchState} onRetry={() => {
                 search(undefined, undefined, tab, pluginHash, "retry");
             }} /> : null}
             data={data}
