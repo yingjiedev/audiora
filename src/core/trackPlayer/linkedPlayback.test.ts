@@ -4,6 +4,7 @@ import NativePlayer from "react-native-track-player";
 
 const mockListeners: Record<string, (event: any) => Promise<void>> = {};
 let mockTracks: any[] = [];
+let mockPlaybackState = "playing";
 let mockRetry = true;
 let mockEnabled = ["A", "B", "C"];
 const a = { id: "1", platform: "A", title: "Song A", artist: "Artist", album: "Album A", artwork: "cover-a", duration: 200 };
@@ -30,19 +31,26 @@ jest.mock("react-native-track-player", () => ({
             mockTracks = [];
         }),
         getTrack: jest.fn(async () => mockTracks[0]), getActiveTrack: jest.fn(async () => mockTracks[0]),
-        getActiveTrackIndex: jest.fn(async () => 0), getPlaybackState: jest.fn(async () => ({ state: "playing" })),
+        getActiveTrackIndex: jest.fn(async () => 0), getPlaybackState: jest.fn(async () => ({ state: mockPlaybackState })),
         setQueue: jest.fn(async tracks => {
             mockTracks = tracks;
         }),
-        play: jest.fn(async () => {}), pause: jest.fn(async () => {}), seekTo: jest.fn(async () => {}),
+        play: jest.fn(async () => {
+            mockPlaybackState = "playing";
+        }), pause: jest.fn(async () => {
+            mockPlaybackState = "paused";
+        }), seekTo: jest.fn(async () => {}),
         getProgress: jest.fn(async () => ({ position: 73, duration: 200 })),
         getRate: jest.fn(), setRate: jest.fn(), updateMetadataForTrack: jest.fn(),
         addEventListener: jest.fn((name, listener) => {
-            mockListeners[name] = listener;
+            mockListeners[name] = event => {
+                if (name === "error") mockPlaybackState = "error";
+                return listener(event);
+            };
         }),
     },
-    Event: { PlaybackError: "error", PlaybackActiveTrackChanged: "changed" },
-    State: { Playing: "playing", Paused: "paused", Stopped: "stopped" },
+    Event: { PlaybackError: "error", PlaybackActiveTrackChanged: "changed", PlaybackQueueEnded: "ended", PlaybackState: "state" },
+    State: { Playing: "playing", Paused: "paused", Stopped: "stopped", Error: "error", Ended: "ended" },
 }));
 jest.mock("@/core/musicSheet", () => ({ __esModule: true, default: { favorites: {
     groupFor: () => ({ id: "linked" }), linkedSources: () => mockSources,
@@ -73,7 +81,7 @@ const flush = async () => {
 
 describe("linked source integration with the actual player", () => {
     beforeEach(async () => {
-        jest.useFakeTimers(); jest.clearAllMocks(); mockRetry = true; mockEnabled = ["A", "B", "C"];
+        jest.useFakeTimers(); jest.clearAllMocks(); mockRetry = true; mockEnabled = ["A", "B", "C"]; mockPlaybackState = "playing";
         player.injectDependencies(mockConfig as any, mockHistory as any, mockManager as any);
         await player.clearPlayList(); await player.setupTrackPlayer();
         mockPlugins.A.methods.getMediaSource.mockResolvedValue(null);
@@ -176,5 +184,32 @@ describe("linked source integration with the actual player", () => {
         expect(player.currentMusic?.platform).toBe("C");
         expect(mockTracks[0].url).toBe("https://example.test/c");
         expect(mockHistory.addMusic.mock.calls.map(call => call[0].platform)).toEqual(["A", "C"]);
+    });
+    it("advances once after a linked source ends and ignores its old end event", async () => {
+        player.addAll([a, c]);
+        await player.play(a);
+        expect(player.currentMusic?.platform).toBe("B");
+        const ended = { index: 1, lastIndex: 0, track: mockTracks[1] };
+        await mockListeners.changed(ended);
+        await mockListeners.changed(ended);
+        expect(player.currentMusic?.platform).toBe("C");
+        expect(mockTracks[0]).toMatchObject({ platform: "C", url: "https://example.test/c" });
+        expect(mockPlugins.C.methods.getMediaSource).toHaveBeenCalledTimes(1);
+    });
+    it("ignores a late native recovery after another song is selected", async () => {
+        mockPlugins.A.methods.getMediaSource.mockResolvedValueOnce({ url: "https://example.test/a" });
+        await player.play(a);
+        let finish!: (source: { url: string }) => void;
+        mockPlugins.B.methods.getMediaSource.mockImplementationOnce(() => new Promise(yes => {
+            finish = yes;
+        }));
+        const pending = mockListeners.error({ message: "network stream failed", code: "network" });
+        await flush();
+        await player.play(c);
+        finish({ url: "https://example.test/late-b" });
+        await pending;
+        expect(player.currentMusic?.platform).toBe("C");
+        expect(mockTracks[0].url).toBe("https://example.test/c");
+        expect(NativePlayer.play).toHaveBeenCalledTimes(2);
     });
 });

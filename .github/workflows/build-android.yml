@@ -4,9 +4,9 @@ on:
     workflow_dispatch:
         inputs:
             version:
-                description: 'Version to build (e.g., v0.3.0)'
+                description: 'Version to build (e.g., v0.3.1)'
                 required: true
-                default: 'v0.3.0'
+                default: 'v0.3.1'
                 type: string
             release_tag:
                 description: 'Existing tag to rebuild and publish (leave empty for a verification build)'
