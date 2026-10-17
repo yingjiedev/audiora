@@ -318,6 +318,8 @@ export interface ILanguageData {
     "aggregate.unfavoriteGroup": string;
     "aggregate.groupHeartHint": string;
     "aggregate.allSources": string;
+    "aggregate.all": string;
+    "aggregate.moreSources": string;
     "aggregate.bySong": string;
     "aggregate.bySource": string;
     "aggregate.currentSource": string;

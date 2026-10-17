@@ -19,7 +19,6 @@ import rpx from "@/utils/rpx";
 import { scopeSearchPlugins } from "../../common/searchScope";
 import useSearch from "../../hooks/useSearch";
 import { musicSearchResultsAtom, queryAtom, searchSessionAtom } from "../../store/atoms";
-import SourceFeedback from "./sourceFeedback";
 
 export default function AggregateResults() {
     const params = useParams<"search-page">();
@@ -71,7 +70,6 @@ export default function AggregateResults() {
             footerComponent={!groups.length ? null : pending ? <SearchPending active hasResults session={session} />
                 : ready ? <View style={styles.summary}><ThemeText fontColor="textSecondary">{t("aggregate.loadMore")}</ThemeText></View>
                     : <ListFooter state={state} />}
-            renderHeader={() => <SourceFeedback plugins={plugins} results={results} type="music" session={session} />}
             onPlay={onPlay}
             onLoadMore={() => {
                 search(undefined, undefined, "music", undefined, "next");

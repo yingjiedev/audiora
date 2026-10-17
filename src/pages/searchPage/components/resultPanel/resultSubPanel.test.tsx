@@ -1,7 +1,6 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
 import { TabView } from "react-native-tab-view";
-import { Text } from "react-native";
 import ResultSubPanel from "./resultSubPanel";
 
 const mockPlugins = [
@@ -20,6 +19,7 @@ jest.mock("react-native-tab-view", () => ({
 }));
 jest.mock("./resultWrapper", () => "MockResult");
 jest.mock("./aggregateResults", () => "MockAggregate");
+jest.mock("./sourceFeedback", () => "MockSourceFeedback");
 jest.mock("./results", () => ({ renderMap: { music: true } }));
 jest.mock("@/core/router", () => ({ useParams: () => ({}) }));
 jest.mock("@/hooks/useColors", () => () => ({ primary: "blue", active: "navy", text: "black", textSecondary: "gray", onPrimary: "white" }));
@@ -38,8 +38,9 @@ describe("Search source selection", () => {
         });
         const findTab = (label: string) => renderer!.root.findAllByProps({ accessibilityLabel: label }).find(node => typeof node.props.onPress === "function")!;
         const tabs = [findTab("Source: ʔ"), findTab("Source: My source")];
-        expect(renderer!.root.findByType("ThemeText" as any).props.children).toBe("Sources");
-        expect(tabs.map(tab => tab.findByType(Text).props.children)).toEqual(["ʔ", "My source"]);
+        expect(renderer!.root.findAllByType("ThemeText" as any).map(node => node.props.children)).not.toContain("Sources");
+        expect(renderer!.root.findAllByType("MockSourceFeedback" as any)).toHaveLength(1);
+        expect(tabs.map(tab => tab.findByType("ThemeText" as any).props.children)).toEqual(["ʔ", "My source"]);
         expect(tabs.map(tab => tab.props.accessibilityLabel)).toEqual(["Source: ʔ", "Source: My source"]);
         expect(renderer!.root.findByType(TabView).props.navigationState.routes.map((route: { key: string }) => route.key)).toEqual(["aggregate-all", "source-1", "source-2"]);
         act(() => tabs[1].props.onPress());

@@ -226,6 +226,8 @@
     "aggregate.unfavoriteGroup": "取消整组收藏",
     "aggregate.groupHeartHint": "爱心管理整组收藏，也可单独移除当前来源。",
     "aggregate.allSources": "全部音源",
+    "aggregate.all": "全部",
+    "aggregate.moreSources": "滚动查看更多音源",
     "aggregate.bySong": "按歌曲",
     "aggregate.bySource": "按来源",
     "aggregate.currentSource": "当前来源：{name}",

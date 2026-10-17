@@ -4,7 +4,6 @@ import TestRenderer, { act } from "react-test-renderer";
 import { getDefaultStore } from "jotai";
 import AggregateResults from "./aggregateResults";
 import GroupedMusicList from "@/components/musicList/groupedMusicList";
-import { PageAction } from "@/components/base/pageSection";
 import { pageStatusAtom, PageStatus, queryAtom } from "../../store/atoms";
 import { resetSearch } from "../../store/searchController";
 import TrackPlayer from "@/core/trackPlayer";
@@ -72,10 +71,10 @@ describe("aggregate search view integration", () => {
         mockB.methods.search.mockRejectedValueOnce(new Error("offline"));
         await render();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
-        await act(async () => renderer.root.findAllByType(PageAction).find(button => button.props.title === "aggregate.retryIncomplete")!.props.onPress());
+        expect(renderer.root.findByType(GroupedMusicList).props.renderHeader).toBeUndefined();
+        await act(async () => renderer.root.findByType(GroupedMusicList).props.onRetry());
         expect(mockA.methods.search).toHaveBeenCalledTimes(1);
         expect(mockB.methods.search).toHaveBeenCalledTimes(2);
-        expect(renderer.root.findAllByType(PageAction).find(button => button.props.title === "aggregate.retryIncomplete")!.props.disabled).toBe(true);
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toHaveLength(2);
     });
     it("maintains the source scope even when rendering an aggregate view", async () => {

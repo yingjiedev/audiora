@@ -1,5 +1,4 @@
 import Empty from "@/components/base/empty";
-import PillTabBar from "@/components/base/pillTabBar";
 import { usePluginDisplayNameResolver, useSearchablePlugins } from "@/core/pluginManager";
 import { useI18N } from "@/core/i18n";
 import AggregateResults from "./aggregateResults";
@@ -15,7 +14,8 @@ import { useParams } from "@/core/router";
 import { scopeSearchPlugins } from "../../common/searchScope";
 import { spacing } from "@/constants/designSystem";
 import { StyleSheet, View } from "react-native";
-import ThemeText from "@/components/base/themeText";
+import SourceTabs from "./sourceTabs";
+import SourceFeedback from "./sourceFeedback";
 
 interface IResultSubPanelProps {
     tab: ICommon.SupportMediaType;
@@ -73,14 +73,15 @@ function ResultSubPanel(props: IResultSubPanelProps) {
     const getDisplayName = usePluginDisplayNameResolver();
     const { t } = useI18N();
     // Do not over-memoize: plugins can load/enable after mount.
-    const routes = scopeSearchPlugins(useSearchablePlugins(props.tab), params?.pluginHash).map(
+    const plugins = scopeSearchPlugins(useSearchablePlugins(props.tab), params?.pluginHash);
+    const routes = plugins.map(
         _ => ({
             key: _.hash,
             title: getDisplayName(_),
         }),
     );
     if (props.tab === "music" && !params?.pluginHash && routes.length) {
-        routes.unshift({ key: aggregateKey, title: t("aggregate.allSources") });
+        routes.unshift({ key: aggregateKey, title: t("aggregate.all") });
     }
     // 标题参与 memo key：插件改名后场景随之重建，避免残留旧名字
     const routeKey = routes.map(r => `${r.key}:${r.title}`).join("|");
@@ -107,15 +108,12 @@ function ResultSubPanel(props: IResultSubPanelProps) {
             }}
             renderTabBar={() => (
                 <View style={styles.sourceRow}>
-                    <ThemeText fontSize="description" fontColor="textSecondary" style={styles.sourceLabel}>{t("searchPage.sourceTitle")}</ThemeText>
-                    <PillTabBar
+                    <SourceTabs
                         routes={routes}
                         index={safeIndex}
                         onIndexChange={setIndex}
-                        variant="compact"
-                        style={styles.sourceTabs}
-                        getAccessibilityLabel={route => t("searchPage.sourceLabel", { source: route.title ?? route.key })}
                     />
+                    {props.tab === "music" && !params?.pluginHash ? <SourceFeedback plugins={plugins} type={props.tab} /> : null}
                 </View>
             )}
             renderScene={renderScene}
@@ -126,9 +124,7 @@ function ResultSubPanel(props: IResultSubPanelProps) {
 }
 
 const styles = StyleSheet.create({
-    sourceRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.xxxl, paddingVertical: spacing.xxs, gap: spacing.md },
-    sourceLabel: { flexShrink: 0 },
-    sourceTabs: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
+    sourceRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.xl, gap: spacing.xs },
 });
 
 // 不然会一直重新渲染

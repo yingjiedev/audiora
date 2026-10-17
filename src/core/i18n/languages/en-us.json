@@ -226,6 +226,8 @@
     "aggregate.unfavoriteGroup": "Remove this entire favorite",
     "aggregate.groupHeartHint": "The heart applies to the entire favorite. You can also remove only the selected source.",
     "aggregate.allSources": "All sources",
+    "aggregate.all": "All",
+    "aggregate.moreSources": "Scroll to more sources",
     "aggregate.bySong": "By song",
     "aggregate.bySource": "By source",
     "aggregate.currentSource": "Source: {name}",
