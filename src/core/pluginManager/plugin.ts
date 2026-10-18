@@ -50,6 +50,7 @@ import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
 import { readCompanionText } from "@/utils/mediaCompanion";
 import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
 import { readCachedMediaSource } from "./mediaSourceCache";
+import { createPluginStorage } from "@/core/pluginManager/storage";
 
 
 const sha256 = CryptoJs.SHA256;
@@ -1271,6 +1272,7 @@ export class Plugin {
     private lazyProps: ILazyProps | null = null;
     /** Dedup concurrent ensureMounted() so callers wait for the same load. */
     private mountPromise: Promise<void> | null = null;
+    private storageDisposed = false;
     /** Per-plugin sandbox env (userVariables etc.), rebound before method calls. */
     private sandboxEnv: {
         getUserVariables: () => Record<string, string>;
@@ -1358,6 +1360,11 @@ export class Plugin {
         return this.mountPromise;
     }
 
+    /** Prevent an unloaded plugin's pending calls from recreating its data. */
+    disposeStorage() {
+        this.storageDisposed = true;
+    }
+
     /**
      * Bind this plugin's sandbox env/process to global free identifiers.
      * Plugin code resolves bare `env` / `process` via globalThis, so every
@@ -1406,6 +1413,13 @@ export class Plugin {
         const _module: any = { exports: {} };
         try {
             if (typeof funcCode === "string") {
+                const storage = createPluginStorage(() =>
+                    !this.storageDisposed && this.state === PluginState.Mounted
+                        ? this.name
+                        : "",
+                );
+                const pluginRequire = (packageName: string) =>
+                    packageName === "musicfree/storage" ? storage : _require(packageName);
                 // 插件的环境变量
                 const env = {
                     getUserVariables: () => {
@@ -1489,8 +1503,8 @@ export class Plugin {
                 );
 
                 pluginRunner(
-                    _require,
-                    _require,
+                    pluginRequire,
+                    pluginRequire,
                     _module,
                     _module.exports,
                     _console,

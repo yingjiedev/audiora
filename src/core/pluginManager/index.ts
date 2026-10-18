@@ -29,6 +29,7 @@ import { safeParse } from "@/utils/jsonUtil";
 import { IInjectable } from "@/types/infra";
 import { IAppConfig } from "@/types/core/config";
 import delay from "@/utils/delay";
+import { clearAllPluginStorage, clearPluginStorage } from "@/core/pluginManager/storage";
 
 const pluginsAtom = atom<Plugin[]>([]);
 /** 插件显示名（本地自定义）：platform -> 显示名。未自定义的插件不在其中。 */
@@ -380,6 +381,7 @@ class PluginManager implements IPluginManager, IInjectable {
                 await copyFile(pluginPath, _pluginPath);
                 plugin.path = _pluginPath;
                 allPlugins = allPlugins.concat(plugin);
+                oldVersionPlugin?.disposeStorage();
                 this.setPlugins(allPlugins);
 
                 return {
@@ -480,6 +482,7 @@ class PluginManager implements IPluginManager, IInjectable {
                     plugin.path = _pluginPath;
                     allPlugins = allPlugins.concat(plugin);
                     if (oldVersionPlugin) {
+                        oldVersionPlugin.disposeStorage();
                         allPlugins = allPlugins.filter(
                             _ => _.hash !== oldVersionPlugin.hash,
                         );
@@ -537,8 +540,10 @@ class PluginManager implements IPluginManager, IInjectable {
         const targetIndex = plugins.findIndex(_ => _.hash === hash);
         devLog("info", "📤[插件管理器] 卸载插件", { targetIndex, hash });
         if (targetIndex !== -1) {
+            const targetPlugin = plugins[targetIndex];
             const pluginName = plugins[targetIndex].name;
             const pluginPath = plugins[targetIndex].path;
+            targetPlugin.disposeStorage();
             try {
                 await unlink(pluginPath);
             } catch (e: any) {
@@ -552,6 +557,7 @@ class PluginManager implements IPluginManager, IInjectable {
             this.setPlugins(plugins);
             // 防止其他重名
             if (plugins.every(_ => _.name !== pluginName)) {
+                clearPluginStorage(pluginName);
                 removeAllMediaExtra(pluginName);
                 pluginMeta.setDisplayName(pluginName, null);
                 this.syncPluginDisplayNames();
@@ -566,6 +572,7 @@ class PluginManager implements IPluginManager, IInjectable {
     async uninstallAllPlugins() {
         await Promise.all(
             this.getPlugins().map(async plugin => {
+                plugin.disposeStorage();
                 try {
                     const pluginName = plugin.name;
                     await unlink(plugin.path);
@@ -573,6 +580,7 @@ class PluginManager implements IPluginManager, IInjectable {
                 } catch {}
             }),
         );
+        clearAllPluginStorage();
         this.setPlugins([]);
         pluginMeta.clearDisplayNames();
         this.syncPluginDisplayNames();
@@ -760,6 +768,10 @@ class PluginManager implements IPluginManager, IInjectable {
 
     getUserVariables(plugin: Plugin) {
         return pluginMeta.getUserVariables(plugin.name);
+    }
+
+    resetPluginStorage(plugin: Plugin) {
+        clearPluginStorage(plugin.name);
     }
 
     /**

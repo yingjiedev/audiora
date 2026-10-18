@@ -4,6 +4,7 @@
 #   npm run build-preview -- -Abi all
 #   npm run build-preview -- -PreviewApp
 #   npm run build-preview -- -InstallDependencies
+#   npm run build-preview -- -TestApp
 
 [CmdletBinding()]
 param(
@@ -12,6 +13,9 @@ param(
     [string]$PreviewVersion,
     [long]$VersionCode = 0,
     [switch]$PreviewApp,
+    [switch]$TestApp,
+    [ValidatePattern('^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$')]
+    [string]$TestAppIdSuffix = "test",
     [switch]$InstallDependencies,
     [switch]$SkipBuildInfo,
     [switch]$SkipVerification,
@@ -23,6 +27,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($PreviewApp -and $TestApp) {
+    throw "PreviewApp and TestApp cannot be enabled together."
+}
 
 function Invoke-RequiredCommand {
     param(
@@ -231,6 +239,13 @@ try {
         "--no-daemon"
     )
 
+    if ($TestApp) {
+        $gradleArguments += @(
+            "-PtestApp=true",
+            "-PtestAppIdSuffix=$TestAppIdSuffix"
+        )
+    }
+
     if ($Abi -ne "all") {
         $gradleArguments += @(
             "-PbuildAbi=$Abi",
@@ -323,10 +338,11 @@ gradle.allprojects { project ->
     Invoke-RequiredCommand -FilePath ".\gradlew.bat" -Arguments $gradleArguments -WorkingDirectory $androidRoot `
         -LogPath (Join-Path $logDirectory "gradle.log") -ErrorTailLines $ErrorTailLines
 
+    $apkNamePrefix = if ($TestApp) { "Audiora-test" } else { "Audiora" }
     $apkPattern = if ($Abi -eq "all") {
-        "Audiora-v$PreviewVersion-*-release.apk"
+        "$apkNamePrefix-v$PreviewVersion-*-release.apk"
     } else {
-        "Audiora-v$PreviewVersion-$Abi-release.apk"
+        "$apkNamePrefix-v$PreviewVersion-$Abi-release.apk"
     }
     $apkFiles = @(Get-ChildItem -LiteralPath $releaseDirectory -Filter $apkPattern -File)
     if ($apkFiles.Count -eq 0) {
