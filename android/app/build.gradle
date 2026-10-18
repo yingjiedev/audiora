@@ -50,7 +50,7 @@ static def getVersion() {
 }
 
 def appVersion = findProperty("appVersion") ?: getVersion()
-def appVersionCode = (findProperty("appVersionCode") ?: 1792240687).toInteger()
+def appVersionCode = (findProperty("appVersionCode") ?: 1792314750).toInteger()
 def previewApp = (findProperty("previewApp") ?: "false").toBoolean()
 
 android {
