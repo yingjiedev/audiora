@@ -82,6 +82,11 @@ export default function ThemeSwitch(props: ISwitchProps) {
 
     return (
         <TouchableWithoutFeedback
+            accessible
+            accessibilityRole="switch"
+            accessibilityLabel={props.accessibilityLabel}
+            accessibilityState={{ checked: !!value, disabled: !!disabled }}
+            disabled={disabled}
             onPress={() => {
                 if (!disabled) {
                     onValueChange?.(!value);

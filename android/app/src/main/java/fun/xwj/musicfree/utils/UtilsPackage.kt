@@ -19,5 +19,6 @@ class UtilsPackage : ReactPackage {
         listOf(
             UtilsModule(reactContext),
             DebugFloatModule(reactContext),
+            DynamicColorsModule(reactContext),
         ).toMutableList()
 }

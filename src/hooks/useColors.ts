@@ -63,6 +63,14 @@ export interface CustomizedColors extends IColors {
      * 2.9:1，这里按对比度自动取白或近黑。
      */
     onPrimary?: string;
+    /** 系统动态色提供的容器色及前景，缺省时由主色派生 */
+    tonalSurface?: string;
+    onTonal?: string;
+    /** 深色媒体材质；浅色模式的夜色卡也使用同一系统色板 */
+    darkSurface?: string;
+    darkCard?: string;
+    darkSurfaceElevated?: string;
+    darkTextSecondary?: string;
     /**
      * 沉浸层（播放页）上的主前景色。底图恒为压暗后的封面，不随深浅主题变化，
      * 因此这里给的是一组固定的中性色，页面侧只按语义取用。
