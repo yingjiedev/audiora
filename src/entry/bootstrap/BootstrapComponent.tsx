@@ -19,6 +19,8 @@ export function BootstrapComponent() {
 
     const colorScheme = useColorScheme();
 
+    useEffect(() => Theme.observeSystemColors(), []);
+
     useEffect(() => {
         if (followSystem) {
             if (colorScheme === "dark") {
@@ -34,7 +36,7 @@ export function BootstrapComponent() {
 
         const reinitializeTrackPlayerWithDialog = () => {
             showDialog("LoadingDialog", {
-                title: i18n.t("dialog.loading.reinitializeTrackPlayer"), 
+                title: i18n.t("dialog.loading.reinitializeTrackPlayer"),
                 promise: initTrackPlayer(),
                 onResolve(data, hideDialog) {
                     hideDialog();

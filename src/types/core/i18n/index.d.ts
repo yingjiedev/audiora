@@ -534,6 +534,10 @@ export interface ILanguageData {
     // 主题设置相关
     "themeSettings.displayStyle": string; // 显示风格
     "themeSettings.followSystemTheme": string; // 跟随系统主题
+    "themeSettings.dynamicColors": string;
+    "themeSettings.dynamicColorsDescription": string;
+    "themeSettings.dynamicColorsUnavailable": string;
+    "themeSettings.dynamicColorsCustom": string;
     "themeSettings.setTheme": string; // 设置主题
     "themeSettings.lightMode": string; // 明亮模式
     "themeSettings.darkMode": string; // 黑暗模式
