@@ -7,6 +7,7 @@ import { RequestStateCode } from "@/constants/commonConst";
 import { groupTracks } from "@/utils/trackGroup";
 import { trackSourceKey } from "@/utils/trackGroup";
 import { showPanel } from "@/components/panels/usePanel";
+import { getMediaUniqueKey } from "@/utils/mediaUtils";
 
 let mockCurrent: IMusic.IMusicItem | null = null;
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
@@ -34,6 +35,24 @@ describe("grouped song rows", () => {
     let renderer: TestRenderer.ReactTestRenderer;
     const onPlay = jest.fn();
     const onLoadMore = jest.fn();
+    it("keeps the grouped row in place, reports partial selection and toggles its candidates instead of playing", () => {
+        const onToggleGroup = jest.fn();
+        const selection = { selectedKeys: new Set([getMediaUniqueKey(a)]), onToggle: jest.fn(), onToggleGroup };
+        const groups = groupTracks([a, b, other]);
+        act(() => {
+            renderer = TestRenderer.create(<GroupedMusicList groups={groups} state={RequestStateCode.FINISHED} onPlay={onPlay} />);
+        });
+        const original = renderer.root.findByType("FlashList" as any);
+        act(() => renderer.update(<GroupedMusicList groups={groups} state={RequestStateCode.FINISHED} onPlay={onPlay} selection={selection} />));
+        expect(renderer.root.findByType("FlashList" as any)).toBe(original);
+        const row = renderer.root.findAllByType(MusicItem)[0];
+        expect(row.props.checked).toBe("mixed");
+        expect(row.props.actions).toEqual([]);
+        expect(row.props.source.onPress).toBeUndefined();
+        act(() => row.props.onItemPress());
+        expect(onToggleGroup).toHaveBeenCalledWith([a, b]);
+        expect(onPlay).not.toHaveBeenCalled();
+    });
     function render(items = [a, b, other], state = RequestStateCode.FINISHED) {
         act(() => {
             renderer = TestRenderer.create(<GroupedMusicList groups={groupTracks(items)} state={state} onPlay={onPlay} onLoadMore={onLoadMore} />);

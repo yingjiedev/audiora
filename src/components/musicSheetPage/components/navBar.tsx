@@ -3,23 +3,26 @@ import React from "react";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import AppBar from "@/components/base/appBar";
 import { useI18N } from "@/core/i18n";
-import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
+import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 
 interface INavBarProps {
-    sourceId: string;
+    onEdit: () => void;
     navTitle: string;
     musicList: IMusic.IMusicItem[] | null;
 }
 
 export default function (props: INavBarProps) {
     const navigate = useNavigate();
-    const openEditor = useOpenMusicListEditor();
+    const editor = useActiveMusicSelection();
     const { t } = useI18N();
-    const { navTitle, musicList = [], sourceId } = props;
+    const { navTitle, musicList = [], onEdit } = props;
 
     return (
         <AppBar
-            actions={[
+            onBackPress={editor?.finish}
+            actionComponent={editor ? <SelectionDoneAction onPress={editor.finish} /> : undefined}
+            actions={editor ? [] : [
                 {
                     icon: "magnifying-glass",
                     onPress() {
@@ -29,19 +32,11 @@ export default function (props: INavBarProps) {
                     },
                 },
             ]}
-            menu={[
+            menu={editor ? [] : [
                 {
                     icon: "pencil-square",
                     title: t("common.batchEdit"),
-                    onPress() {
-                        openEditor({
-                            sourceId,
-                            musicList: musicList,
-                            musicSheet: {
-                                title: navTitle,
-                            },
-                        });
-                    },
+                    onPress: onEdit,
                 },
             ]}>
             {navTitle}

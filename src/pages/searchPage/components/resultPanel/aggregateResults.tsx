@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { getDefaultStore, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import GroupedMusicList from "@/components/musicList/groupedMusicList";
 import useFavoriteGroupActions from "@/components/musicList/useFavoriteGroupActions";
 import { FavoriteGroupDecorator } from "@/core/favoriteGroupsModel";
@@ -20,7 +20,8 @@ import { scopeSearchPlugins } from "../../common/searchScope";
 import useSearch from "../../hooks/useSearch";
 import { musicSearchResultsAtom, queryAtom, searchSessionAtom } from "../../store/atoms";
 import BatchEditAction from "@/components/musicList/batchEditAction";
-import useMusicListSource from "@/hooks/useMusicListSource";
+import useInlineMusicSelection from "@/components/musicList/useInlineMusicSelection";
+import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
 
 export default function AggregateResults() {
     const params = useParams<"search-page">();
@@ -57,21 +58,7 @@ export default function AggregateResults() {
             : failed.length === plugins.length && !groups.length ? RequestStateCode.ERROR : RequestStateCode.FINISHED;
     // Bulk actions retain every original source, including candidates folded into a row.
     const batchMusicList = useMemo(() => groups.flatMap(group => group.candidates), [groups]);
-    const { sourceId } = useMusicListSource(
-        { musicList: batchMusicList, state: !pending && !ready && failed.length ? RequestStateCode.ERROR : state },
-        async retry => {
-            await search(undefined, undefined, "music", undefined, retry ? "retry" : "next");
-            // A configuration error can make retry a no-op; publish the actual state.
-            const current = getDefaultStore().get(musicSearchResultsAtom);
-            const currentStates = plugins.map(plugin => current[plugin.hash]?.state);
-            const musicList = plugins.flatMap(plugin => (current[plugin.hash]?.data ?? []) as IMusic.IMusicItem[]);
-            const loading = currentStates.some(value => value === RequestStateCode.PENDING_FIRST_PAGE || value === RequestStateCode.PENDING_REST_PAGE);
-            const nextState = loading ? (musicList.length ? RequestStateCode.PENDING_REST_PAGE : RequestStateCode.PENDING_FIRST_PAGE)
-                : currentStates.includes(RequestStateCode.PARTLY_DONE) ? RequestStateCode.PARTLY_DONE
-                    : currentStates.includes(RequestStateCode.ERROR) ? RequestStateCode.ERROR : RequestStateCode.FINISHED;
-            return { musicList, state: nextState };
-        },
-    );
+    const editor = useInlineMusicSelection(`aggregate:${session}:${sourceKey}`, batchMusicList);
     const onPlay = useCallback((item: IMusic.IMusicItem, list: IMusic.IMusicItem[]) => {
         if (Config.getConfig("basic.clickMusicInSearch") === "playMusicAndReplace") TrackPlayer.playWithReplacePlayList(item, list);
         else TrackPlayer.play(item);
@@ -80,7 +67,9 @@ export default function AggregateResults() {
         <GroupedMusicList
             key={session}
             groups={groups}
-            renderHeader={() => <BatchEditAction musicList={batchMusicList} sourceId={sourceId} title={`${query} · ${t("aggregate.all")}`} />}
+            renderHeader={() => editor.editing ? <InlineSelectionBar editor={editor} count={batchMusicList.length} paginated />
+                : batchMusicList.length ? <BatchEditAction onPress={editor.start} /> : <View />}
+            selection={editor.selection}
             favoriteActions={actions}
             query={query}
             state={state}
@@ -91,13 +80,10 @@ export default function AggregateResults() {
                 : ready ? <View style={styles.summary}><ThemeText fontColor="textSecondary">{t("aggregate.loadMore")}</ThemeText></View>
                     : <ListFooter state={state} />}
             onPlay={onPlay}
-            onLoadMore={() => {
-                search(undefined, undefined, "music", undefined, "next");
-            }}
-            onRetry={() => {
-                search(undefined, undefined, "music", undefined, "retry");
-            }}
+            onLoadMore={() => search(undefined, undefined, "music", undefined, "next")}
+            onRetry={() => search(undefined, undefined, "music", undefined, "retry")}
             onRefresh={() => {
+                editor.finish();
                 search(undefined, 1, "music", undefined, "refresh");
             }}
         />

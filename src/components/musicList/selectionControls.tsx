@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { PageAction } from "@/components/base/pageSection";
 import ThemeText from "@/components/base/themeText";
 import Icon, { IIconName } from "@/components/base/icon";
 import { spacing } from "@/constants/designSystem";
@@ -13,6 +12,8 @@ import downloader from "@/core/downloader";
 import { showPanel } from "@/components/panels/usePanel";
 import { showDialog } from "@/components/dialogs/useDialog";
 import Toast from "@/utils/toast";
+
+export { SelectionBar, SelectionDoneAction } from "./selectionHeader";
 
 function SelectionAction({ title, accessibilityLabel = title, icon, disabled, danger, onPress }: {
     title: string;
@@ -33,36 +34,7 @@ function SelectionAction({ title, accessibilityLabel = title, icon, disabled, da
     );
 }
 
-export function SelectionDoneAction({ onPress, disabled = false }: { onPress: () => void; disabled?: boolean }) {
-    const { t } = useI18N();
-    const colors = useColors();
-    return <PageAction title={t("common.done")} variant="text" textColor={colors.appBarText ?? colors.text} disabled={disabled} onPress={onPress} />;
-}
-
-export function SelectionBar({ count, allSelected, disabled, onToggleAll, description, extraAction }: {
-    count: number;
-    allSelected: boolean;
-    disabled: boolean;
-    onToggleAll: () => void;
-    description?: string;
-    extraAction?: React.ReactNode;
-}) {
-    const { t } = useI18N();
-    return (
-        <View>
-            <View style={styles.selectionBar}>
-                <ThemeText fontSize="description" fontColor="textSecondary">{t("musicListEditor.selectMusicCount", { count })}</ThemeText>
-                <View style={styles.selectionButtons}>
-                    <PageAction title={t(allSelected ? "common.unselectAll" : "common.selectAll")} variant="text" disabled={disabled} onPress={onToggleAll} />
-                    {extraAction}
-                </View>
-            </View>
-            {description ? <ThemeText style={styles.description} fontSize="description" fontColor="textSecondary">{description}</ThemeText> : null}
-        </View>
-    );
-}
-
-interface SelectionRemoval {
+export interface MusicSelectionRemoval {
     onRemove: (items: IMusic.IMusicItem[]) => void | Promise<void>;
     /** Staged changes can remind the user to save instead of claiming persistence. */
     successMessage?: string;
@@ -73,7 +45,7 @@ export function SelectionActions({ selectedItems, onClear, actions = {}, removal
     selectedItems: IMusic.IMusicItem[];
     onClear: (items: IMusic.IMusicItem[]) => void;
     actions?: MusicSelectionActions;
-    removal?: SelectionRemoval;
+    removal?: MusicSelectionRemoval;
 }) {
     const { t } = useI18N();
     const colors = useColors();
@@ -131,9 +103,6 @@ export function SelectionActions({ selectedItems, onClear, actions = {}, removal
 }
 
 const styles = StyleSheet.create({
-    selectionBar: { minHeight: 44, paddingVertical: spacing.sm, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
-    selectionButtons: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-    description: { paddingBottom: spacing.sm },
     actions: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row" },
     action: { flex: 1, minWidth: 44, minHeight: 44, paddingHorizontal: spacing.xxs, paddingVertical: spacing.xs, alignItems: "center", justifyContent: "center", gap: spacing.xxs },
     actionText: { maxWidth: "100%", textAlign: "center" },

@@ -9,7 +9,6 @@ import { resetSearch } from "../../store/searchController";
 import TrackPlayer from "@/core/trackPlayer";
 import SearchPending from "./searchPending";
 import BatchEditAction from "@/components/musicList/batchEditAction";
-import { getMusicListSource } from "@/core/musicListSource";
 import { SearchRequestError } from "@/core/searchError";
 import { RequestStateCode } from "@/constants/commonConst";
 
@@ -78,8 +77,8 @@ describe("aggregate search view integration", () => {
         await render();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
         const batchAction = renderer.root.findByType(BatchEditAction);
-        expect(batchAction.props.musicList).toEqual([song]);
-        await act(async () => getMusicListSource(batchAction.props.sourceId)!.loadMore(true));
+        act(() => batchAction.props.onPress());
+        await act(async () => renderer.root.findByType(GroupedMusicList).props.onRetry());
         expect(mockA.methods.search).toHaveBeenCalledTimes(1);
         expect(mockB.methods.search).toHaveBeenCalledTimes(2);
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toHaveLength(2);
@@ -89,35 +88,39 @@ describe("aggregate search view integration", () => {
         expect(mockB.methods.search).not.toHaveBeenCalled();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
     });
-    it("preserves configuration failures without leaving the editor stuck loading", async () => {
+    it("preserves configuration failures without leaving the inline list stuck loading", async () => {
         mockA.methods.search.mockResolvedValue({ data: [song], isEnd: true });
         mockB.methods.search.mockRejectedValueOnce(new SearchRequestError({ kind: "configuration", retryable: false }));
         await render();
-        const source = getMusicListSource(renderer.root.findByType(BatchEditAction).props.sourceId)!;
+        act(() => renderer.root.findByType(BatchEditAction).props.onPress());
         await act(async () => {
-            await source.loadMore(true);
+            await renderer.root.findByType(GroupedMusicList).props.onRetry();
         });
-        expect(getDefaultStore().get(source.snapshotAtom)).toMatchObject({ musicList: [song], state: RequestStateCode.ERROR });
+        expect(renderer.root.findByType(GroupedMusicList).props.state).toBe(RequestStateCode.FINISHED);
+        expect(renderer.root.findByType(GroupedMusicList).props.selection).toBeDefined();
         expect(mockB.methods.search).toHaveBeenCalledTimes(1);
     });
-    it("opens batch selection with all original sources and only paginates unfinished sources", async () => {
+    it("selects all original sources in the mounted list and preserves checks while paging unfinished sources", async () => {
         await render();
         const batchAction = renderer.root.findByType(BatchEditAction);
-        const sourceId = batchAction.props.sourceId;
-        act(() => renderer.root.findByType("PageAction" as any).props.onPress());
-        expect(mockNavigate).toHaveBeenCalledWith("music-list-editor", expect.objectContaining({
-            sourceId,
-            selectionOnly: true,
-            musicList: [song, { ...song, platform: "B" }],
-        }));
+        const originalList = renderer.root.findByType(GroupedMusicList);
+        act(() => batchAction.props.onPress());
+        const editing = renderer.root.findByType(GroupedMusicList).props;
+        act(() => editing.selection.onToggleGroup(editing.groups[0].candidates));
+        expect(renderer.root.findByType(GroupedMusicList).props.selection.selectedKeys.size).toBe(2);
+        expect(mockNavigate).not.toHaveBeenCalled();
         const nextSong = { ...song, id: "next", title: "Next song" };
         mockA.methods.search.mockResolvedValueOnce({ data: [nextSong], isEnd: true });
         await act(async () => {
-            await getMusicListSource(sourceId)!.loadMore();
+            await renderer.root.findByType(GroupedMusicList).props.onLoadMore();
         });
         expect(mockA.methods.search).toHaveBeenLastCalledWith("song", 2, "music");
         expect(mockB.methods.search).toHaveBeenCalledTimes(1);
-        expect(getDefaultStore().get(getMusicListSource(sourceId)!.snapshotAtom).musicList).toEqual(expect.arrayContaining([song, nextSong, { ...song, platform: "B" }]));
+        const currentList = renderer.root.findByType(GroupedMusicList);
+        expect(currentList).toBe(originalList);
+        expect(currentList.props.groups.flatMap((group: any) => group.candidates)).toEqual(expect.arrayContaining([song, nextSong, { ...song, platform: "B" }]));
+        expect(currentList.props.selection.selectedKeys.size).toBe(2);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
     });
     it("keeps early results usable during a slow source and stops waiting when only pagination remains", async () => {
         let finish!: (value: { data: IMusic.IMusicItem[]; isEnd: boolean }) => void;

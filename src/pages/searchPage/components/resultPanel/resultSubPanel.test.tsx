@@ -2,6 +2,7 @@ import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
 import { TabView } from "react-native-tab-view";
 import ResultSubPanel from "./resultSubPanel";
+import { MusicSelectionContext } from "@/components/musicList/selectionContext";
 
 const mockPlugins = [
     { hash: "source-1", name: "Symbol source", displayName: "ʔ" },
@@ -31,6 +32,20 @@ jest.mock("react-native/Libraries/Components/ScrollView/ScrollView", () => {
 });
 
 describe("Search source selection", () => {
+    it("finishes inline selection before changing source and disables swipe while editing", () => {
+        const finish = jest.fn();
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<MusicSelectionContext.Provider value={{ scope: "aggregate", editor: { finish } as any }}>
+                <ResultSubPanel tab="music" />
+            </MusicSelectionContext.Provider>);
+        });
+        expect(renderer!.root.findByType(TabView).props.swipeEnabled).toBe(false);
+        act(() => renderer!.root.findByType(TabView).props.onIndexChange(1));
+        expect(finish).toHaveBeenCalledTimes(1);
+        expect(renderer!.root.findByType(TabView).props.navigationState.index).toBe(1);
+        act(() => renderer!.unmount());
+    });
     it("labels symbolic and renamed sources without changing identity or navigation", () => {
         let renderer: TestRenderer.ReactTestRenderer;
         act(() => {

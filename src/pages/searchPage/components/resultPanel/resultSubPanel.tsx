@@ -16,6 +16,7 @@ import { spacing } from "@/constants/designSystem";
 import { StyleSheet, View } from "react-native";
 import SourceTabs from "./sourceTabs";
 import SourceFeedback from "./sourceFeedback";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
 
 interface IResultSubPanelProps {
     tab: ICommon.SupportMediaType;
@@ -70,6 +71,11 @@ function getSubRouterScene(
 function ResultSubPanel(props: IResultSubPanelProps) {
     const params = useParams<"search-page">();
     const [index, setIndex] = useState(0);
+    const editor = useActiveMusicSelection();
+    const changeSource = (next: number) => {
+        if (next === index) return;
+        editor?.finish(); setIndex(next);
+    };
     const getDisplayName = usePluginDisplayNameResolver();
     const { t } = useI18N();
     // Do not over-memoize: plugins can load/enable after mount.
@@ -111,13 +117,14 @@ function ResultSubPanel(props: IResultSubPanelProps) {
                     <SourceTabs
                         routes={routes}
                         index={safeIndex}
-                        onIndexChange={setIndex}
+                        onIndexChange={changeSource}
                     />
                     {props.tab === "music" && !params?.pluginHash ? <SourceFeedback plugins={plugins} type={props.tab} /> : null}
                 </View>
             )}
             renderScene={renderScene}
-            onIndexChange={setIndex}
+            onIndexChange={changeSource}
+            swipeEnabled={!editor}
             initialLayout={{ width: vw(100) }}
         />
     );

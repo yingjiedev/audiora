@@ -35,7 +35,7 @@ interface IMusicItemProps {
     itemPaddingLeft?: number;
     left?: React.ReactNode;
     /** Defined only when the row selects music instead of playing it. */
-    checked?: boolean;
+    checked?: boolean | "mixed";
     containerStyle?: StyleProp<ViewStyle>;
     highlight?: boolean;
     highlightText?: string;

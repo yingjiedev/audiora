@@ -74,4 +74,19 @@ describe("inline music selection", () => {
         expect(result!.selection).toBeUndefined();
         expect(result!.selectedItems).toEqual([]);
     });
+
+    it("toggles every source of a grouped song and leaves newly appended sources unselected", () => {
+        render();
+        act(() => result.start());
+        act(() => result.selection!.onToggleGroup!([one, otherSource]));
+        expect(result!.selectedItems).toEqual([one, otherSource]);
+        const extraSource = { ...one, platform: "c" };
+        act(() => renderer.update(<Probe scope="favorite" songs={[one, otherSource, extraSource]} />));
+        expect(result!.selectedItems).toEqual([one, otherSource]);
+        expect(result!.allSelected).toBe(false);
+        act(() => result.selection!.onToggleGroup!([one, otherSource, extraSource]));
+        expect(result!.selectedItems).toEqual([one, otherSource, extraSource]);
+        act(() => result.selection!.onToggleGroup!([one, otherSource, extraSource]));
+        expect(result!.selectedItems).toEqual([]);
+    });
 });

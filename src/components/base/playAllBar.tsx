@@ -2,8 +2,6 @@ import { buttonHeight, spacing, controlSize } from "@/constants/designSystem";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { iconSizeConst } from "@/constants/uiConst";
-import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
-import type { MusicSelectionActions } from "@/core/musicListEditor";
 import ThemeText from "./themeText";
 import useColors from "@/hooks/useColors";
 import { showPanel } from "../panels/usePanel";
@@ -19,14 +17,12 @@ import RoundActionButton from "./roundActionButton";
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
 
 interface IProps {
-    sourceId?: string;
     musicList: IMusic.IMusicItem[] | null;
     /** Display grouping must not hide sources from editing/export actions. */
     actionMusicList?: IMusic.IMusicItem[];
     canStar?: boolean;
     musicSheet?: IMusic.IMusicSheetItem | null;
     onEdit?: () => void;
-    selectionActions?: MusicSelectionActions;
 }
 
 function ToolbarAction({ name, label, accessibilityLabel = label, color, selected, onPress }: {
@@ -54,12 +50,11 @@ function ToolbarAction({ name, label, accessibilityLabel = label, color, selecte
 
 export default function PlayAllBar(props: IProps) {
     const route = useRoute();
-    const { musicList, canStar, musicSheet, onEdit, sourceId } = props;
+    const { musicList, canStar, musicSheet, onEdit } = props;
     const actionMusicList = props.actionMusicList ?? musicList;
 
     const sheetName = musicSheet?.title;
     const colors = useColors();
-    const openEditor = useOpenMusicListEditor();
     const { t } = useI18N();
 
     const starred = useSheetIsStarred(musicSheet);
@@ -128,21 +123,11 @@ export default function PlayAllBar(props: IProps) {
                         });
                     }}
                 />
-                <ToolbarAction
+                {onEdit ? <ToolbarAction
                     name="pencil-outline"
                     label={t("common.edit")}
-                    onPress={async () => {
-                        openEditor({
-                            ...(sourceId ? { sourceId } : {}),
-                            musicList: actionMusicList,
-                            musicSheet: {
-                                title: sheetName,
-                                id: musicSheet?.id,
-                            },
-                            ...(props.selectionActions ? { actions: props.selectionActions } : {}),
-                        }, onEdit);
-                    }}
-                />
+                    onPress={onEdit}
+                /> : null}
             </View>
         </View>
     );

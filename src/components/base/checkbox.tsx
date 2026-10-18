@@ -13,6 +13,7 @@ import { radius } from "@/constants/designSystem";
 
 interface ICheckboxProps {
     checked?: boolean;
+    indeterminate?: boolean;
     onPress?: () => void;
     style?: StyleProp<ViewProps>;
 }
@@ -20,14 +21,14 @@ interface ICheckboxProps {
 const slop = rpx(24);
 
 export default function Checkbox(props: ICheckboxProps) {
-    const { checked, onPress, style } = props;
+    const { checked, indeterminate, onPress, style } = props;
     const colors = useColors();
 
     const innerNode = (
         <View
             style={[
                 styles.container,
-                checked
+                checked || indeterminate
                     ? {
                         backgroundColor: colors.primary,
                         borderColor: colors.primary,
@@ -37,8 +38,8 @@ export default function Checkbox(props: ICheckboxProps) {
                     },
                 style,
             ]}>
-            {checked ? (
-                <Icon name="check" color={colors.onPrimary} size={rpx(34)} />
+            {checked || indeterminate ? (
+                <Icon name={indeterminate ? "minus" : "check"} color={colors.onPrimary} size={rpx(34)} />
             ) : null}
         </View>
     );

@@ -25,6 +25,10 @@ it.each([
     const check = renderer!.root.findByType("Icon" as any);
     expect(check.props.color).toBe(mockColors.onPrimary);
     expect(contrastRatio(check.props.color, fill)).toBeGreaterThanOrEqual(4.5);
+    act(() => renderer!.update(<Checkbox indeterminate />));
+    const mixed = renderer!.root.findByType("Icon" as any);
+    expect(mixed.props.name).toBe("minus");
+    expect(contrastRatio(mixed.props.color, StyleSheet.flatten(renderer!.root.findAllByType(View)[0].props.style).backgroundColor as string)).toBeGreaterThanOrEqual(4.5);
     act(() => renderer!.update(<Checkbox checked={false} />));
     expect(renderer!.root.findAllByType("Icon" as any)).toHaveLength(0);
     const border = StyleSheet.flatten(renderer!.root.findAllByType(View)[0].props.style).borderColor as string;

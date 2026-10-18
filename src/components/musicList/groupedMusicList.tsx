@@ -9,6 +9,9 @@ import { useCurrentMusic } from "@/core/trackPlayer";
 import { showPanel } from "@/components/panels/usePanel";
 import timeformat from "@/utils/timeformat";
 import { TrackGroup, trackSourceKey } from "@/utils/trackGroup";
+import type { MusicListSelection } from "./useMusicSelection";
+import SelectionCheckbox from "./selectionCheckbox";
+import { getMediaUniqueKey } from "@/utils/mediaUtils";
 
 interface GroupedMusicListProps {
     groups: TrackGroup[];
@@ -23,6 +26,7 @@ interface GroupedMusicListProps {
     emptyComponent?: React.ReactElement;
     footerComponent?: React.ReactElement | null;
     favoriteActions?: FavoriteGroupActions;
+    selection?: MusicListSelection;
 }
 
 export interface FavoriteGroupActions {
@@ -32,7 +36,7 @@ export interface FavoriteGroupActions {
     prefer(item: IMusic.IMusicItem): Promise<unknown>;
 }
 
-const GroupRow = memo(function TrackGroupRow({ group, selected, onSelect, onPlay, musicSheet, query, favoriteActions }: {
+const GroupRow = memo(function TrackGroupRow({ group, selected, onSelect, onPlay, musicSheet, query, favoriteActions, selection }: {
     group: TrackGroup;
     selected: IMusic.IMusicItem;
     onSelect: (group: TrackGroup, key: string) => void;
@@ -40,22 +44,27 @@ const GroupRow = memo(function TrackGroupRow({ group, selected, onSelect, onPlay
     musicSheet?: IMusic.IMusicSheetItem;
     query?: string;
     favoriteActions?: GroupedMusicListProps["favoriteActions"];
+    selection?: MusicListSelection;
 }) {
     const getDisplayName = usePluginDisplayNameResolver();
     const current = useCurrentMusic();
     const playing = current && group.candidates.some(candidate => trackSourceKey(candidate) === trackSourceKey(current));
+    const selectedCount = selection ? group.candidates.filter(item => selection.selectedKeys.has(getMediaUniqueKey(item))).length : 0;
+    const checked = selection ? selectedCount === group.candidates.length ? true : selectedCount ? "mixed" as const : false : undefined;
     return (
         <MusicItem
             musicItem={selected}
             musicSheet={musicSheet}
             highlightText={query}
             highlight={!!playing}
-            actions={["favorite", "addNext", "more"]}
+            checked={checked}
+            left={checked !== undefined ? <SelectionCheckbox checked={checked} /> : undefined}
+            actions={selection ? [] : ["favorite", "addNext", "more"]}
             source={{
                 name: getDisplayName(playing && current ? current.platform : selected.platform),
                 count: group.candidates.length,
                 playing: !!playing,
-                onPress: group.candidates.length > 1 ? () => showPanel("TrackGroupSources", {
+                onPress: !selection && group.candidates.length > 1 ? () => showPanel("TrackGroupSources", {
                     group,
                     selected,
                     onSelect: key => onSelect(group, key),
@@ -63,7 +72,12 @@ const GroupRow = memo(function TrackGroupRow({ group, selected, onSelect, onPlay
                 }) : undefined,
             }}
             titleTagSubText={Number.isFinite(selected.duration) && selected.duration > 0 ? timeformat(selected.duration) : undefined}
-            onItemPress={() => onPlay(selected)}
+            onItemPress={() => {
+                if (selection) {
+                    if (selection.onToggleGroup) selection.onToggleGroup(group.candidates);
+                    else selection.onToggle(selected);
+                } else onPlay(selected);
+            }}
         />
     );
 });
@@ -103,12 +117,14 @@ export default function GroupedMusicList(props: GroupedMusicListProps) {
             musicSheet={props.musicSheet}
             query={props.query}
             favoriteActions={props.favoriteActions}
+            selection={props.selection}
         />
-    ), [selected, onSelect, onPlay, props.musicSheet, props.query, props.favoriteActions]);
+    ), [selected, onSelect, onPlay, props.musicSheet, props.query, props.favoriteActions, props.selection]);
+    const extraData = useMemo(() => ({ selection, musicSelection: props.selection }), [selection, props.selection]);
     return (
         <FlashList
             data={props.groups}
-            extraData={selection}
+            extraData={extraData}
             keyExtractor={group => group.key}
             ListHeaderComponent={props.renderHeader?.(selected)}
             ListEmptyComponent={props.emptyComponent ?? <ListEmpty state={props.state} onRetry={props.onRetry} />}

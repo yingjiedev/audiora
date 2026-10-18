@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import type { MusicListEditorOptions } from "@/core/musicListEditor";
 
-/** Every entry shares the same routing rules, including pages that edit inline. */
+/** Opens the separate manual sorting screen. Batch actions use useInlineMusicSelection. */
 export default function useOpenMusicListEditor() {
     const navigate = useNavigate();
     return useCallback((options: MusicListEditorOptions, onEdit?: () => void) => {

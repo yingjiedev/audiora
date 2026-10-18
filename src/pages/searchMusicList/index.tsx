@@ -9,29 +9,36 @@ import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
 import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
-import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
+import useInlineMusicSelection from "@/components/musicList/useInlineMusicSelection";
+import MusicSelectionProvider from "@/components/musicList/musicSelectionProvider";
+import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
+import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 import PluginManager from "@/core/pluginManager";
 import SearchResult from "./searchResult";
 export default function SearchMusicList() {
+    return <VerticalSafeAreaView style={globalStyle.fwflex1}>
+        <MusicSelectionProvider><SearchMusicListContent /></MusicSelectionProvider>
+    </VerticalSafeAreaView>;
+}
+
+function SearchMusicListContent() {
     const { musicList, musicSheet } = useParams<"search-music-list">();
-    const openEditor = useOpenMusicListEditor();
     const [query, setQuery] = useState("");
     const { t } = useI18N();
     const result = useMemo(() => filterMusic(query, musicList ?? [], platform => PluginManager.getPluginDisplayName(platform)), [musicList, query]);
-    return <VerticalSafeAreaView style={globalStyle.fwflex1}>
+    const editor = useInlineMusicSelection(`filtered:${musicSheet?.id}:${query}`, result);
+    return <>
         <StatusBar />
-        <AppBar menu={result.length ? [{
-            icon: "pencil-square",
-            title: t("common.batchEdit"),
-            onPress: () => openEditor({
-                musicList: result,
-                musicSheet: { title: musicSheet?.title ?? query },
-                selectionOnly: true,
-            }),
-        }] : []}><SearchField autoFocus value={query} placeholder={t("searchMusicList.searchPlaceHolder")} accessibilityLabel={t("searchMusicList.searchLabel.a11y")} onChangeText={setQuery} onClear={() => setQuery("")} /></AppBar>
+        <AppBar onBackPress={editor.editing ? editor.finish : undefined}
+            actionComponent={editor.editing ? <SelectionDoneAction onPress={editor.finish} /> : undefined} menu={!editor.editing && result.length ? [{
+                icon: "pencil-square",
+                title: t("common.batchEdit"),
+                onPress: editor.start,
+            }] : []}><SearchField autoFocus value={query} placeholder={t("searchMusicList.searchPlaceHolder")} accessibilityLabel={t("searchMusicList.searchLabel.a11y")} onChangeText={setQuery} onClear={() => setQuery("")} /></AppBar>
         <HorizontalSafeAreaView style={globalStyle.flex1}>
             <PageSummary title={musicSheet?.title || t("home.localMusic")} description={t("home.songCount", { count: result.length })} />
-            <SearchResult result={result} musicSheet={musicSheet} />
+            <InlineSelectionBar editor={editor} count={result.length} />
+            <SearchResult result={result} musicSheet={musicSheet} selection={editor.selection} />
         </HorizontalSafeAreaView>
-    </VerticalSafeAreaView>;
+    </>;
 }

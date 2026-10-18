@@ -16,6 +16,7 @@ jest.mock("@/components/base/listFooter", () => "MockFooter");
 jest.mock("./results", () => ({ renderMap: { music: () => null } }));
 jest.mock("./sourceFeedback", () => ({ SourceIssue: "MockSourceIssue" }));
 jest.mock("@/core/router", () => ({ useNavigate: () => jest.fn() }));
+jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 
 it("leaves the loading state when new search results arrive and updates retry/pagination state", () => {
     let renderer!: TestRenderer.ReactTestRenderer;
@@ -39,7 +40,7 @@ it("leaves the loading state when new search results arrive and updates retry/pa
     let list = renderer.root.findByType("MockList" as any);
     expect(list.props.data).toBe(songs);
     act(() => list.props.onEndReached());
-    expect(mockSearch).toHaveBeenCalledWith(undefined, undefined, "music", "source");
+    expect(mockSearch).toHaveBeenCalledWith(undefined, undefined, "music", "source", "next");
 
     mockSearch.mockClear();
     act(() => {
