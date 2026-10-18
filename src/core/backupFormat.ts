@@ -1,5 +1,6 @@
 import { FavoriteGroupsState, parseFavoriteGroups } from "@/core/favoriteGroupsModel";
 import { trackSourceKey } from "@/utils/trackGroup";
+import { AudioEffectsSettings, parseAudioEffectsSettings } from "./audioEffects/model";
 
 export const BACKUP_SCHEMA = "bakamusic.music-sheet-backup";
 export const BACKUP_VERSION = 3;
@@ -19,15 +20,17 @@ export interface IBackupPlugin {
 export interface IParsedBackupPayload {
     musicSheets: IMusic.IMusicSheetItem[];
     plugins: IBackupPlugin[];
-    audiora?: { favoriteGroups: FavoriteGroupsState };
+    audiora?: { favoriteGroups?: FavoriteGroupsState; audioEffects?: AudioEffectsSettings };
 }
 
 function parseAudiora(value: unknown, sheets: IMusic.IMusicSheetItem[]) {
     if (value === undefined) return undefined;
     if (!isRecord(value)) throw new Error("Invalid Audiora backup extension");
-    if (value.favoriteGroups === undefined) return undefined;
     const keys = new Set((sheets.find(sheet => sheet.id === "favorite")?.musicList ?? []).map(trackSourceKey));
-    return { favoriteGroups: parseFavoriteGroups(value.favoriteGroups, keys) };
+    const favoriteGroups = value.favoriteGroups === undefined ? undefined : parseFavoriteGroups(value.favoriteGroups, keys);
+    const audioEffects = value.audioEffects === undefined ? undefined : parseAudioEffectsSettings(value.audioEffects);
+    if (!favoriteGroups && !audioEffects) return undefined;
+    return { ...(favoriteGroups ? { favoriteGroups } : {}), ...(audioEffects ? { audioEffects } : {}) };
 }
 
 interface IBackupEnvelope {
@@ -259,6 +262,7 @@ export function createBackupPayload(
     plugins: IBackupPlugin[] = [],
     createdAt = Date.now(),
     favoriteGroups?: FavoriteGroupsState,
+    audioEffects?: AudioEffectsSettings,
 ) {
     const validatedSheets = validateMusicSheetList(musicSheets);
     const envelope: IBackupEnvelope = {
@@ -268,7 +272,7 @@ export function createBackupPayload(
         data: {
             musicSheets: validatedSheets,
             plugins: validatePluginList(plugins),
-            ...(favoriteGroups ? { audiora: parseAudiora({ favoriteGroups }, validatedSheets) } : {}),
+            ...(favoriteGroups || audioEffects ? { audiora: parseAudiora({ favoriteGroups, audioEffects }, validatedSheets) } : {}),
         },
     };
     const serialized = JSON.stringify(envelope);

@@ -14,6 +14,53 @@ function deferred<T>() {
 }
 
 describe("AudioEffectsStore", () => {
+    it("backs up native preferences before the screen is opened and surfaces read failures", async () => {
+        const settings = { ...initialState(true).settings, enabled: true, preampDb: -4 };
+        const bridge = { getState: jest.fn().mockResolvedValue(snapshot(settings)), setSettings: jest.fn() };
+        const store = new AudioEffectsStore(bridge);
+        expect(await store.backupSettings()).toEqual(settings);
+        expect(bridge.setSettings).not.toHaveBeenCalled();
+        bridge.getState.mockRejectedValue(new Error("unavailable"));
+        await expect(store.backupSettings()).rejects.toThrow("Unable to read");
+    });
+
+    it("waits for queued slider persistence before exporting the tuning", async () => {
+        const write = deferred<string>();
+        const bridge = { getState: jest.fn().mockResolvedValue(snapshot()), setSettings: jest.fn().mockReturnValue(write.promise) };
+        const store = new AudioEffectsStore(bridge);
+        await store.refresh();
+        const settings = { ...store.getSnapshot().settings, preampDb: -3 };
+        const update = store.update(settings);
+        const backup = store.backupSettings();
+        expect(bridge.getState).toHaveBeenCalledTimes(1);
+        bridge.getState.mockResolvedValue(snapshot(settings, 2));
+        write.resolve(snapshot(settings, 2));
+        await update;
+        expect(await backup).toEqual(settings);
+    });
+
+    it("restores and persists without a player session and reports native write failures", async () => {
+        const settings = { ...initialState(true).settings, enabled: true, preampDb: -4 };
+        const bridge = { getState: jest.fn().mockResolvedValue(snapshot()), setSettings: jest.fn().mockResolvedValue(snapshot(settings, 2)) };
+        const store = new AudioEffectsStore(bridge);
+        await store.restoreSettings(settings);
+        expect(JSON.parse(bridge.setSettings.mock.calls[0][0])).toEqual(settings);
+        expect(bridge.setSettings.mock.calls[0][1]).toBe(true);
+        bridge.setSettings.mockRejectedValue(new Error("disk failure"));
+        await expect(store.restoreSettings(settings)).rejects.toThrow("Unable to restore");
+    });
+
+    it("preserves portable sound settings on platforms without an audio bridge", async () => {
+        const settings = { ...initialState(true).settings, enabled: true };
+        const archive = { read: jest.fn().mockReturnValue(settings), write: jest.fn() };
+        const store = new AudioEffectsStore(undefined, archive);
+        await store.restoreSettings(settings);
+        expect(archive.write).toHaveBeenCalledWith(settings);
+        expect(await store.backupSettings()).toEqual(settings);
+        expect(store.getSnapshot().active).toBe(false);
+        expect(store.getSnapshot().status).toBe("unsupported");
+        await expect(new AudioEffectsStore().backupSettings()).resolves.toBeUndefined();
+    });
     it("does not overwrite native preferences before initial load or call absent native modules", async () => {
         const bridge = { getState: jest.fn(), setSettings: jest.fn() };
         const store = new AudioEffectsStore(bridge);

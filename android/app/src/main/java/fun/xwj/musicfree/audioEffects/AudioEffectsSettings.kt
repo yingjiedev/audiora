@@ -37,7 +37,7 @@ data class AudioEffectsSettings(
         fun fromJson(json: JSONObject) = AudioEffectsSettings(
             enabled = json.optBoolean("enabled", false),
             preset = json.optString("preset", "flat").takeIf {
-                it in setOf("flat", "vocal", "bass", "bright", "soft", "custom")
+                it in setOf("flat", "vocal", "bass", "bright", "soft", "pop", "rock", "jazz", "classical", "electronic", "custom")
             } ?: "custom",
             tuning = AudioEffectsTuning.fromJson(json),
             savedCustom = json.optJSONObject("savedCustom")?.let { AudioEffectsTuning.fromJson(it) },

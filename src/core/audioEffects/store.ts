@@ -1,8 +1,13 @@
-import { AudioEffectsSettings, AudioEffectsState, initialState, parseNativeState } from "./model";
+import { AudioEffectsSettings, AudioEffectsState, initialState, parseAudioEffectsSettings, parseNativeState } from "./model";
 
 export interface AudioEffectsBridge {
     getState(): Promise<string>;
     setSettings(settings: string, persist: boolean): Promise<string>;
+}
+
+export interface AudioEffectsArchive {
+    read(): unknown;
+    write(settings: AudioEffectsSettings): void;
 }
 
 /** Serializes writes, coalesces slider moves, and keeps delayed native replies from undoing a newer gesture. */
@@ -11,9 +16,10 @@ export class AudioEffectsStore {
     private listeners = new Set<() => void>();
     private revision = 0;
     private writing = false;
+    private idleListeners = new Set<() => void>();
     private pending: { settings: AudioEffectsSettings; persist: boolean; complete: ((success: boolean) => void)[] } | null = null;
 
-    constructor(private bridge?: AudioEffectsBridge) {
+    constructor(private bridge?: AudioEffectsBridge, private archive?: AudioEffectsArchive) {
         this.state = initialState(!!bridge);
     }
 
@@ -51,14 +57,45 @@ export class AudioEffectsStore {
 
     refresh = async () => {
         if (!this.bridge) {
-            return;
+            return false;
         }
         const revision = this.revision;
         try {
             const raw = await this.bridge.getState();
-            this.receive(raw, this.writing || revision !== this.revision);
+            return this.receive(raw, this.writing || revision !== this.revision);
         } catch {
             this.fail();
+            return false;
+        }
+    };
+
+    /** Read preferences even when the settings screen has never been opened. */
+    backupSettings = async (): Promise<AudioEffectsSettings | undefined> => {
+        if (!this.bridge) {
+            const archived = this.archive?.read();
+            return archived === undefined ? undefined : parseAudioEffectsSettings(archived);
+        }
+        if (this.writing) {
+            await new Promise<void>(resolve => this.idleListeners.add(resolve));
+        }
+        if (!await this.refresh()) {
+            throw new Error("Unable to read audio effects settings");
+        }
+        return parseAudioEffectsSettings(this.state.settings);
+    };
+
+    restoreSettings = async (value: AudioEffectsSettings) => {
+        const settings = parseAudioEffectsSettings(value);
+        // iOS can still restore the shared playlist/plugin envelope.
+        if (!this.bridge) {
+            this.archive?.write(settings);
+            return;
+        }
+        if (!this.state.loaded && !await this.refresh()) {
+            throw new Error("Unable to load audio effects settings");
+        }
+        if (!await this.update(settings)) {
+            throw new Error("Unable to restore audio effects settings");
         }
     };
 
@@ -97,6 +134,8 @@ export class AudioEffectsStore {
             }
         } finally {
             this.writing = false;
+            this.idleListeners.forEach(resolve => resolve());
+            this.idleListeners.clear();
         }
     }
 }

@@ -8,7 +8,7 @@ export interface AudioEffectsTuning {
     preampDb: number;
 }
 
-export const PRESET_IDS = ["flat", "vocal", "bass", "bright", "soft"] as const;
+export const PRESET_IDS = ["flat", "vocal", "bass", "bright", "soft", "pop", "rock", "jazz", "classical", "electronic"] as const;
 export type AudioEffectsPreset = typeof PRESET_IDS[number] | "custom";
 
 export interface AudioEffectsSettings extends AudioEffectsTuning {
@@ -37,6 +37,11 @@ const CURVES: Record<typeof PRESET_IDS[number], number[]> = {
     bass: [4, 4, 3, 1, 0, -1, -1, 0, 0, 0],
     bright: [-1, -1, 0, 0, 0, 1, 2, 3, 3, 2],
     soft: [1, 1, 1, 0, 0, 0, -1, -2, -3, -3],
+    pop: [1, 2, 2, 0, -1, 1, 2, 2, 1, 0],
+    rock: [3, 3, 2, 0, -1, -1, 1, 2, 3, 2],
+    jazz: [2, 1, 0, 1, 1, 1, 2, 1, 2, 1],
+    classical: [1, 1, 0, 0, -1, 0, 0, 1, 2, 2],
+    electronic: [4, 3, 1, 0, -2, 0, 1, 2, 3, 3],
 };
 
 export function presetBands(preset: typeof PRESET_IDS[number]): EqualizerBand[] {
@@ -45,6 +50,42 @@ export function presetBands(preset: typeof PRESET_IDS[number]): EqualizerBand[] 
 
 export function defaultSettings(): AudioEffectsSettings {
     return { enabled: false, preset: "flat", bands: presetBands("flat"), preampDb: 0, savedCustom: null };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Validate portable tuning before restoring anything; never import device/session state. */
+function parseTuning(value: unknown): AudioEffectsTuning {
+    if (!isRecord(value) || !Array.isArray(value.bands) || value.bands.length === 0 || value.bands.length > 32 ||
+        typeof value.preampDb !== "number" || !Number.isFinite(value.preampDb) || value.preampDb < -12 || value.preampDb > 0) {
+        throw new Error("Invalid audio effects tuning");
+    }
+    let previousFrequency = 0;
+    const bands = value.bands.map(band => {
+        if (!isRecord(band) || typeof band.frequencyHz !== "number" || !Number.isFinite(band.frequencyHz) ||
+            band.frequencyHz < 20 || band.frequencyHz > 24000 || band.frequencyHz <= previousFrequency ||
+            typeof band.gainDb !== "number" || !Number.isFinite(band.gainDb) || Math.abs(band.gainDb) > 6) {
+            throw new Error("Invalid audio effects bands");
+        }
+        previousFrequency = band.frequencyHz;
+        return { frequencyHz: band.frequencyHz, gainDb: band.gainDb };
+    });
+    return { bands, preampDb: value.preampDb };
+}
+
+export function parseAudioEffectsSettings(value: unknown): AudioEffectsSettings {
+    if (!isRecord(value) || typeof value.enabled !== "boolean" ||
+        ![...PRESET_IDS, "custom"].includes(value.preset as AudioEffectsPreset)) {
+        throw new Error("Invalid audio effects settings");
+    }
+    return {
+        ...parseTuning(value),
+        enabled: value.enabled,
+        preset: value.preset as AudioEffectsPreset,
+        savedCustom: value.savedCustom === null ? null : parseTuning(value.savedCustom),
+    };
 }
 
 export function sameTuning(left: AudioEffectsTuning, right: AudioEffectsTuning | null): boolean {
@@ -101,17 +142,9 @@ export function editBand(state: AudioEffectsState, frequencyHz: number, gainDb: 
 
 export function parseNativeState(raw: string): AudioEffectsState {
     const state = JSON.parse(raw) as AudioEffectsState;
-    const validBands = (bands: EqualizerBand[]) => Array.isArray(bands) && bands.length > 0 && bands.length <= 32 &&
-        bands.every((band, index) => Number.isFinite(band.frequencyHz) && band.frequencyHz >= 20 && band.frequencyHz <= 24000 &&
-            Number.isFinite(band.gainDb) && Math.abs(band.gainDb) <= 6 &&
-            (index === 0 || band.frequencyHz > bands[index - 1].frequencyHz));
-    const validTuning = (tuning: AudioEffectsTuning) => tuning && validBands(tuning.bands) &&
-        Number.isFinite(tuning.preampDb) && tuning.preampDb >= -12 && tuning.preampDb <= 0;
     if (!state || !Number.isSafeInteger(state.version) || state.version < 0 ||
         !["waiting", "ready", "unsupported", "error"].includes(state.status) ||
-        typeof state.active !== "boolean" || !state.settings || typeof state.settings.enabled !== "boolean" ||
-        ![...PRESET_IDS, "custom"].includes(state.settings.preset) || !validTuning(state.settings) ||
-        (state.settings.savedCustom !== null && !validTuning(state.settings.savedCustom)) ||
+        typeof state.active !== "boolean" ||
         !Array.isArray(state.frequencies) || state.frequencies.length > 32 ||
         !state.frequencies.every(frequency => Number.isFinite(frequency) && frequency > 0) ||
         !Number.isFinite(state.minimumGain) || !Number.isFinite(state.maximumGain) ||
@@ -119,7 +152,7 @@ export function parseNativeState(raw: string): AudioEffectsState {
         typeof state.supportsPreamp !== "boolean" || typeof state.supportsLimiter !== "boolean") {
         throw new Error("Invalid audio effects state");
     }
-    return { ...state, loaded: true };
+    return { ...state, settings: parseAudioEffectsSettings(state.settings), loaded: true };
 }
 
 export function formatFrequency(frequencyHz: number): string {

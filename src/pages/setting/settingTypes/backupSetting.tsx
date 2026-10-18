@@ -42,7 +42,7 @@ export default function BackupSetting() {
             try {
                 const result = await saveJsonToSelectedAndroidDirectory(
                     Backup.createBackupFileName(),
-                    Backup.backup(),
+                    await Backup.backup(),
                 );
                 if (result) {
                     Toast.success(t("toast.backupSuccess"));
@@ -61,17 +61,16 @@ export default function BackupSetting() {
             multi: false,
             actionText: t("backupAndResume.beginBackup"),
             async onAction(selectedFiles) {
-                const raw = Backup.backup();
                 const folder = selectedFiles[0]?.path;
                 return new Promise(resolve => {
                     showDialog("LoadingDialog", {
                         title: t("backupAndResume.backupDialogTitle"),
                         loadingText: t("backupAndResume.backuping"),
-                        promise: writeInChunks(
+                        promise: Backup.backup().then(raw => writeInChunks(
                             `${folder}${folder?.endsWith("/") ? "" : "/"
                             }${Backup.createBackupFileName()}`,
                             raw,
-                        ),
+                        )),
                         onResolve(_, hideDialog) {
                             Toast.success(t("toast.backupSuccess"));
                             hideDialog();
@@ -219,7 +218,7 @@ export default function BackupSetting() {
                 password: password,
             });
 
-            const raw = Backup.backup();
+            const raw = await Backup.backup();
             if (!(await client.exists(AUDIORA_WEBDAV_BACKUP_DIR))) {
                 await client.createDirectory(AUDIORA_WEBDAV_BACKUP_DIR);
             }
@@ -242,7 +241,7 @@ export default function BackupSetting() {
             style={style.wrapper}
             contentContainerStyle={style.content}
             showsVerticalScrollIndicator={false}>
-            <SettingSection title={t("sidebar.backupAndResume")}>
+            <SettingSection title={t("sidebar.backupAndResume")} description={t("backupAndResume.scope")}>
                 <SettingRow
                     title={t("backupAndResume.resumeMode")}
                     value={t(

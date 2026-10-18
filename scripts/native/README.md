@@ -27,6 +27,21 @@ selecting a preset, saving a custom preset, and toggling effects persist native
 preferences. The JS store serializes/coalesces writes and ignores old native
 versions. Preferences are read before editing is enabled.
 
+The presets page provides ten Audiora EQ curves with descriptions and previews.
+The custom editor shows a logarithmic view of configured gains and groups the
+device's actual bands into lows, mids and highs. It does not render a live
+spectrum or claim a measured frequency response. Advanced sound-effect research
+and scope are documented in `docs/audio-effects-research.md`.
+
+Shared v3 backups include portable sound settings under
+`data.audiora.audioEffects`. Backup reads native preferences even if the page
+was never opened, and waits for queued writes. Restore validates before any
+mutations and persists the curve, preamp, enabled state and saved custom slot;
+device/session capabilities are rediscovered locally. An older backup with no
+sound settings leaves the current tuning unchanged. Unsupported platforms keep
+imported settings in an archive for future backup without activating playback
+effects.
+
 Entry points: Settings → Sound effects & equalizer; current-player song menu
 → Sound effects & equalizer. Scope is the main Android music player. MV uses
 another player, and iOS has no effects entry in this implementation.
