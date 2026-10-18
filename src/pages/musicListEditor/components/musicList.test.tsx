@@ -8,6 +8,10 @@ import MusicItem from "@/components/mediaItem/musicItem";
 import SortableFlatList from "@/components/base/SortableFlatList";
 import TrackPlayer from "@/core/trackPlayer";
 import { editingMusicListAtom, musicListChangedAtom } from "../store/atom";
+import { RequestStateCode } from "@/constants/commonConst";
+
+jest.mock("@/utils/motion", () => ({ motionDuration: jest.fn(), motionEasing: {} }));
+jest.mock("@react-navigation/native", () => ({ useRoute: () => ({ name: "music-list-editor" }) }));
 
 jest.mock("@shopify/flash-list", () => {
     const ReactModule = require("react");
@@ -38,7 +42,7 @@ jest.mock("@/hooks/useTextColor", () => () => "black");
 jest.mock("@/hooks/useColors", () => () => ({ text: "black", textSecondary: "gray", placeholder: "lightgray" }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: () => undefined }));
 jest.mock("@/utils/musicVideo", () => ({ canPlayMusicVideo: () => false }));
-jest.mock("@/utils/mediaUtils", () => ({ isSameMediaItem: () => false }));
+jest.mock("@/utils/mediaUtils", () => ({ isSameMediaItem: () => false, getMediaUniqueKey: (item: IMusic.IMusicItem) => `${item.platform}@${item.id}` }));
 
 const songs = [
     { id: "one", platform: "plugin", title: "First song", artist: "First artist" },
@@ -53,7 +57,7 @@ describe("music list editor rows", () => {
         store = createStore();
         store.set(editingMusicListAtom, songs.map(musicItem => ({ musicItem, checked: false })));
         act(() => {
-            renderer = TestRenderer.create(<Provider store={store}><MusicList /></Provider>, {
+            renderer = TestRenderer.create(<Provider store={store}><MusicList canEdit state={RequestStateCode.FINISHED} /></Provider>, {
                 createNodeMock: () => ({ setNativeProps: jest.fn() }),
             });
         });

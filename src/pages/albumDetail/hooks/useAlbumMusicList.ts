@@ -7,6 +7,7 @@ export default function useAlbumDetail(
     originalAlbumItem: IAlbum.IAlbumItem | null,
 ) {
     const currentPageRef = useRef(1);
+    const loadingRef = useRef(false);
 
     const [requestState, setRequestState] = useState<RequestStateCode>(RequestStateCode.IDLE);
     const [albumItem, setAlbumItem] = useState<IAlbum.IAlbumItemBase | null>(
@@ -19,14 +20,16 @@ export default function useAlbumDetail(
     const getAlbumDetail = useCallback(
         async function () {
             // 加载中：直接退出
-            if (originalAlbumItem === null ||
+            if (loadingRef.current || originalAlbumItem === null ||
                 requestState === RequestStateCode.FINISHED ||
                 requestState === RequestStateCode.PENDING_FIRST_PAGE ||
                 requestState === RequestStateCode.PENDING_REST_PAGE) {
                 return;
             }
 
+            loadingRef.current = true;
             try {
+                const requestedPage = currentPageRef.current;
                 if (currentPageRef.current === 1) {
                     setRequestState(RequestStateCode.PENDING_FIRST_PAGE);
                 } else {
@@ -50,14 +53,14 @@ export default function useAlbumDetail(
                 }
                 if (result?.musicList) {
                     setMusicList(prev => {
-                        if (currentPageRef.current === 1) {
+                        if (requestedPage === 1) {
                             return result?.musicList ?? prev;
                         } else {
                             return [...prev, ...(result.musicList ?? [])];
                         }
                     });
                 }
-                if (result.isEnd) {
+                if (result.isEnd !== false || !result.musicList?.length) {
                     setRequestState(RequestStateCode.FINISHED);
                 } else {
                     setRequestState(RequestStateCode.PARTLY_DONE);
@@ -65,18 +68,22 @@ export default function useAlbumDetail(
                 currentPageRef.current += 1;
             } catch {
                 setRequestState(RequestStateCode.ERROR);
+            } finally {
+                loadingRef.current = false;
             }
         },
         [originalAlbumItem, requestState],
     );
+    const loadInitialRef = useRef(getAlbumDetail);
+    loadInitialRef.current = getAlbumDetail;
 
     useEffect(() => {
         // 转场动画期间跑插件 JS 会卡掉新页首帧，进入动画会丢
         const task = InteractionManager.runAfterInteractions(() => {
-            getAlbumDetail();
+            loadInitialRef.current();
         });
         return () => task.cancel();
-    }, [getAlbumDetail]);
+    }, []);
 
     return [requestState, albumItem, musicList, getAlbumDetail] as const;
 }

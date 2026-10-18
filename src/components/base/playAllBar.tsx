@@ -2,7 +2,6 @@ import { buttonHeight, spacing, controlSize } from "@/constants/designSystem";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { iconSizeConst } from "@/constants/uiConst";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
 import ThemeText from "./themeText";
 import useColors from "@/hooks/useColors";
 import { showPanel } from "../panels/usePanel";
@@ -55,10 +54,7 @@ export default function PlayAllBar(props: IProps) {
     const actionMusicList = props.actionMusicList ?? musicList;
 
     const sheetName = musicSheet?.title;
-    const sheetId = musicSheet?.id;
-
     const colors = useColors();
-    const navigate = useNavigate();
     const { t } = useI18N();
 
     const starred = useSheetIsStarred(musicSheet);
@@ -127,23 +123,11 @@ export default function PlayAllBar(props: IProps) {
                         });
                     }}
                 />
-                <ToolbarAction
+                {onEdit ? <ToolbarAction
                     name="pencil-outline"
                     label={t("common.edit")}
-                    onPress={async () => {
-                        if (onEdit) {
-                            onEdit();
-                            return;
-                        }
-                        navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
-                            musicList: actionMusicList,
-                            musicSheet: {
-                                title: sheetName,
-                                id: sheetId,
-                            },
-                        });
-                    }}
-                />
+                    onPress={onEdit}
+                /> : null}
             </View>
         </View>
     );

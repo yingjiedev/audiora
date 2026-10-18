@@ -10,6 +10,7 @@ import results from "./results";
 import PillTabBar from "@/components/base/pillTabBar";
 import { spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
 
 const routes = results;
 
@@ -28,10 +29,15 @@ const renderScene = getRouterScene(routes);
 function ResultPanel() {
     const [index, setIndex] = useState(0);
     const { t } = useI18N();
+    const editor = useActiveMusicSelection();
+    const changeTab = (next: number) => {
+        if (next === index) return;
+        editor?.finish(); setIndex(next);
+    };
 
     return (
         <View style={styles.container}>
-            <PillTabBar routes={routes} index={index} variant="underline" onIndexChange={setIndex}
+            <PillTabBar routes={routes} index={index} variant="underline" onIndexChange={changeTab}
                 contentContainerStyle={{ paddingHorizontal: spacing.xxl }} getTitle={route => {
                     const item = routes.find(value => value.key === route.key)!; return item.i18nKey ? t(item.i18nKey as any) : item.title;
                 }} />
@@ -43,7 +49,8 @@ function ResultPanel() {
                 }}
                 renderTabBar={() => null}
                 renderScene={renderScene}
-                onIndexChange={setIndex}
+                onIndexChange={changeTab}
+                swipeEnabled={!editor}
                 initialLayout={{ width: vw(100) }}
             />
         </View>

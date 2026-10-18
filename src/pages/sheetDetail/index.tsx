@@ -8,10 +8,10 @@ import globalStyle from "@/constants/globalStyle";
 import CustomBackground from "@/components/base/customBackground";
 import { LocalBackgroundContext } from "@/hooks/useHasCustomBackground";
 import useColors from "@/hooks/useColors";
-import { useSheetItem } from "@/core/musicSheet";
+import MusicSheet, { useSheetItem } from "@/core/musicSheet";
 import { useParams } from "@/core/router";
 import useMusicSelection from "@/components/musicList/useMusicSelection";
-import { SelectionActions, SelectionBar } from "./components/selectionControls";
+import { SelectionActions, SelectionBar } from "@/components/musicList/selectionControls";
 import { useFocusEffect } from "@react-navigation/native";
 import { isPlayerOpen } from "@/core/playerOverlay";
 
@@ -56,7 +56,8 @@ export default function SheetDetail() {
                     <SheetMusicList onEdit={editor.start} selection={editor.selection} editingControls={editor.editing ? (
                         <SelectionBar count={editor.selectedItems.length} allSelected={editor.allSelected} disabled={!musicList.length} onToggleAll={editor.toggleAll} />
                     ) : undefined} />
-                    {editor.editing ? <SelectionActions key={id} sheetId={id} selectedItems={editor.selectedItems} onClear={editor.clear} /> : null}
+                    {editor.editing ? <SelectionActions key={id} selectedItems={editor.selectedItems} onClear={editor.clear}
+                        removal={{ onRemove: items => MusicSheet.removeMusic(id, items) }} /> : null}
                 </VerticalSafeAreaView>
             </View>
         </LocalBackgroundContext.Provider>

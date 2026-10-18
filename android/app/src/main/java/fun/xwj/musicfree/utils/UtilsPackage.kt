@@ -21,5 +21,6 @@ class UtilsPackage : ReactPackage {
             UtilsModule(reactContext),
             DebugFloatModule(reactContext),
             AudioEffectsModule(reactContext),
+            DynamicColorsModule(reactContext),
         ).toMutableList()
 }

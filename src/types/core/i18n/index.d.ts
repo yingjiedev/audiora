@@ -382,6 +382,8 @@ export interface ILanguageData {
 
     // 音乐列表编辑器相关
     "musicListEditor.selectMusicCount": string; // 选择的音乐数量
+    "musicListEditor.loadedCount": string;
+    "musicListEditor.loadMore": string;
     "musicListEditor.addToNextPlay": string; // 添加到下一曲
     "musicListEditor.addToSheet": string; // 添加到歌单
 
@@ -632,6 +634,10 @@ export interface ILanguageData {
     // 主题设置相关
     "themeSettings.displayStyle": string; // 显示风格
     "themeSettings.followSystemTheme": string; // 跟随系统主题
+    "themeSettings.dynamicColors": string;
+    "themeSettings.dynamicColorsDescription": string;
+    "themeSettings.dynamicColorsUnavailable": string;
+    "themeSettings.dynamicColorsCustom": string;
     "themeSettings.setTheme": string; // 设置主题
     "themeSettings.lightMode": string; // 明亮模式
     "themeSettings.darkMode": string; // 黑暗模式
@@ -1142,6 +1148,9 @@ export interface ILanguageData {
     "checkUpdate.newVersion": string;
     "checkUpdate.currentVersion": string;
     "checkUpdate.download": string;
+    "checkUpdate.checking": string;
+    "checkUpdate.selectingDownload": string;
+    "checkUpdate.error.downloadFailed": string;
     "announcement.view": string;
     "announcement.description": string;
     "announcement.error": string;

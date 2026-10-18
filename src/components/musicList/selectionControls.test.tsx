@@ -26,7 +26,7 @@ it.each([
     mockColors = resolveThemeColors({ ...palette, background: palette.pageBackground }, dark);
     let renderer: TestRenderer.ReactTestRenderer;
     act(() => {
-        renderer = TestRenderer.create(<SelectionActions sheetId="favorite" selectedItems={[{ id: "one", platform: "source", title: "Song", artist: "Artist", album: "Album", duration: 180, artwork: "" }]} onClear={jest.fn()} />);
+        renderer = TestRenderer.create(<SelectionActions removal={{ onRemove: jest.fn() }} selectedItems={[{ id: "one", platform: "source", title: "Song", artist: "Artist", album: "Album", duration: 180, artwork: "" }]} onClear={jest.fn()} />);
     });
     const page = blendOver(mockColors.pageBackground!, dark ? darkColors.pageBackground : lightColors.pageBackground);
     const fill = blendOver(StyleSheet.flatten(renderer!.root.findAllByType(View)[0].props.style).backgroundColor as string, page);
@@ -40,5 +40,15 @@ it.each([
         expect(text.props.allowFontScaling).toBe(true);
         expect(text.props.numberOfLines).toBeUndefined();
     }
+    act(() => renderer!.unmount());
+});
+
+it("does not render an empty toolbar when every action is switched off", () => {
+    let renderer: TestRenderer.ReactTestRenderer;
+    act(() => {
+        renderer = TestRenderer.create(<SelectionActions selectedItems={[]} onClear={jest.fn()} removal={{ onRemove: jest.fn() }}
+            actions={{ addNext: false, addToSheet: false, download: false, remove: false }} />);
+    });
+    expect(renderer!.toJSON()).toBeNull();
     act(() => renderer!.unmount());
 });

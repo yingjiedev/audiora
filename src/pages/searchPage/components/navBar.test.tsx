@@ -5,6 +5,7 @@ import { getDefaultStore } from "jotai";
 import { addHistory } from "../common/historySearch";
 import { PageStatus, pageStatusAtom, queryAtom } from "../store/atoms";
 import NavBar from "./navBar";
+import { MusicSelectionContext } from "@/components/musicList/selectionContext";
 
 const mockSearch = jest.fn(async () => {});
 jest.mock("../hooks/useSearch", () => () => mockSearch);
@@ -33,6 +34,18 @@ describe("search submission from the navigation bar", () => {
     afterEach(() => {
         act(() => renderer.unmount());
         jest.restoreAllMocks();
+    });
+
+    it("uses Done and Back to finish selection within the search page", () => {
+        const finish = jest.fn();
+        act(() => {
+            renderer = TestRenderer.create(<MusicSelectionContext.Provider value={{ scope: "music", editor: { finish } as any }}><NavBar /></MusicSelectionContext.Provider>);
+        });
+        const bar = renderer.root.findByType("MockAppBar" as any);
+        act(() => bar.props.actionComponent.props.onPress());
+        act(() => bar.props.onBackPress());
+        expect(finish).toHaveBeenCalledTimes(2);
+        expect(mockSearch).not.toHaveBeenCalled();
     });
 
     it.each(["button", "keyboard"])("trims and submits from %s while dismissing the keyboard", async trigger => {

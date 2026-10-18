@@ -12,11 +12,12 @@ export default function useTopListDetail(
         );
 
     const pageRef = useRef(1);
+    const loadingRef = useRef(false);
 
     const [requestState, setRequestState] = useState(RequestStateCode.IDLE);
 
     async function loadMore() {
-        if (!topListItem) {
+        if (!topListItem || loadingRef.current) {
             return;
         }
         try {
@@ -27,6 +28,7 @@ export default function useTopListDetail(
             ) {
                 return;
             }
+            loadingRef.current = true;
             if (pageRef.current === 1) {
                 setRequestState(RequestStateCode.PENDING_FIRST_PAGE);
             } else {
@@ -54,7 +56,7 @@ export default function useTopListDetail(
                     } as IMusic.IMusicSheetItem),
             );
 
-            if (result.isEnd === false) {
+            if (result.isEnd === false && result.musicList?.length) {
                 setRequestState(RequestStateCode.PARTLY_DONE);
             } else {
                 setRequestState(RequestStateCode.FINISHED);
@@ -62,6 +64,8 @@ export default function useTopListDetail(
             pageRef.current++;
         } catch {
             setRequestState(RequestStateCode.ERROR);
+        } finally {
+            loadingRef.current = false;
         }
     }
 

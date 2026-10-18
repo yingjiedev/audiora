@@ -2,6 +2,7 @@ import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
 import { RequestStateCode } from "@/constants/commonConst";
 import ResultWrapper from "./resultWrapper";
+import type { SearchSelectionEntry } from "./useSearchSelection";
 
 const mockSearch = jest.fn();
 jest.mock("@/utils/motion", () => ({ motionDuration: () => 0, motionEasing: {} }));
@@ -16,14 +17,19 @@ jest.mock("@/components/base/listFooter", () => "MockFooter");
 jest.mock("./results", () => ({ renderMap: { music: () => null } }));
 jest.mock("./sourceFeedback", () => ({ SourceIssue: "MockSourceIssue" }));
 jest.mock("@/core/router", () => ({ useNavigate: () => jest.fn() }));
+jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 
 it("leaves the loading state when new search results arrive and updates retry/pagination state", () => {
     let renderer!: TestRenderer.ReactTestRenderer;
+    let selectionEntry: SearchSelectionEntry | undefined;
     const props = {
         tab: "music" as const,
         pluginHash: "source",
         pluginName: "Source",
         pluginSearchResultRef: { current: {} } as any,
+        onSelectionChange: (entry?: SearchSelectionEntry) => {
+            selectionEntry = entry; 
+        },
     };
     const result = { data: [], state: RequestStateCode.PENDING_FIRST_PAGE } as any;
     act(() => {
@@ -37,9 +43,18 @@ it("leaves the loading state when new search results arrive and updates retry/pa
     });
     expect(renderer.root.findAllByType("MockLoading" as any)).toHaveLength(0);
     let list = renderer.root.findByType("MockList" as any);
+    const originalList = list;
+    expect(list.props.ListHeaderComponent).toBeUndefined();
+    expect(selectionEntry?.count).toBe(1);
+    act(() => selectionEntry!.editor.start());
+    act(() => list.props.extraData.onToggle(songs[0]));
+    expect(selectionEntry?.editor.selectedItems).toEqual(songs);
+    expect(renderer.root.findByType("MockList" as any)).toBe(originalList);
     expect(list.props.data).toBe(songs);
+    expect(list.props.ListHeaderComponent).toBeUndefined();
+    expect(selectionEntry?.editor.selectedItems).toEqual(songs);
     act(() => list.props.onEndReached());
-    expect(mockSearch).toHaveBeenCalledWith(undefined, undefined, "music", "source");
+    expect(mockSearch).toHaveBeenCalledWith(undefined, undefined, "music", "source", "next");
 
     mockSearch.mockClear();
     act(() => {
@@ -52,4 +67,5 @@ it("leaves the loading state when new search results arrive and updates retry/pa
     act(() => list.props.onEndReached());
     expect(mockSearch).not.toHaveBeenCalled();
     act(() => renderer.unmount());
+    expect(selectionEntry).toBeUndefined();
 });

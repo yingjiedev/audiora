@@ -19,8 +19,9 @@ import rpx from "@/utils/rpx";
 import { scopeSearchPlugins } from "../../common/searchScope";
 import useSearch from "../../hooks/useSearch";
 import { musicSearchResultsAtom, queryAtom, searchSessionAtom } from "../../store/atoms";
+import useSearchSelection, { SearchSelectionListener } from "./useSearchSelection";
 
-export default function AggregateResults() {
+export default function AggregateResults({ onSelectionChange }: { onSelectionChange?: SearchSelectionListener }) {
     const params = useParams<"search-page">();
     const plugins = scopeSearchPlugins(useSearchablePlugins("music"), params?.pluginHash);
     const sourceKey = plugins.map(plugin => plugin.hash).join("|");
@@ -53,6 +54,9 @@ export default function AggregateResults() {
     const state = pending ? (groups.length ? RequestStateCode.PENDING_REST_PAGE : RequestStateCode.PENDING_FIRST_PAGE)
         : ready ? RequestStateCode.PARTLY_DONE
             : failed.length === plugins.length && !groups.length ? RequestStateCode.ERROR : RequestStateCode.FINISHED;
+    // Bulk actions retain every original source, including candidates folded into a row.
+    const batchMusicList = useMemo(() => groups.flatMap(group => group.candidates), [groups]);
+    const editor = useSearchSelection(`aggregate:${session}:${sourceKey}`, batchMusicList, onSelectionChange);
     const onPlay = useCallback((item: IMusic.IMusicItem, list: IMusic.IMusicItem[]) => {
         if (Config.getConfig("basic.clickMusicInSearch") === "playMusicAndReplace") TrackPlayer.playWithReplacePlayList(item, list);
         else TrackPlayer.play(item);
@@ -61,6 +65,7 @@ export default function AggregateResults() {
         <GroupedMusicList
             key={session}
             groups={groups}
+            selection={editor.selection}
             favoriteActions={actions}
             query={query}
             state={state}
@@ -71,13 +76,10 @@ export default function AggregateResults() {
                 : ready ? <View style={styles.summary}><ThemeText fontColor="textSecondary">{t("aggregate.loadMore")}</ThemeText></View>
                     : <ListFooter state={state} />}
             onPlay={onPlay}
-            onLoadMore={() => {
-                search(undefined, undefined, "music", undefined, "next");
-            }}
-            onRetry={() => {
-                search(undefined, undefined, "music", undefined, "retry");
-            }}
+            onLoadMore={() => search(undefined, undefined, "music", undefined, "next")}
+            onRetry={() => search(undefined, undefined, "music", undefined, "retry")}
             onRefresh={() => {
+                editor.finish();
                 search(undefined, 1, "music", undefined, "refresh");
             }}
         />
