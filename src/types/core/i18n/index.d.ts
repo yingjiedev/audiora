@@ -104,6 +104,8 @@ export interface ILanguageData {
     "audioEffects.deletePresetHint": string;
     "audioEffects.deleteNamedPreset": string;
     "audioEffects.applyNamedPreset": string;
+    "audioEffects.editNamedPreset": string;
+    "audioEffects.manageNamedPreset": string;
     "audioEffects.applyPreset": string;
     "audioEffects.inUse": string;
     "audioEffects.created": string;

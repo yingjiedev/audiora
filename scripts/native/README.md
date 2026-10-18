@@ -52,6 +52,12 @@ preset cannot resurrect the old slot. Editing current tuning leaves the saved
 copy unchanged until Save changes; deleting the selected preset keeps playback
 tuning and clears only its selected ID.
 
+The gallery and saved presets share one equalizer editor. Tap a saved preset's
+name or curve to edit it without enabling effects; Use applies it for playback.
+Editing or enabling the currently selected preset preserves unsaved tuning.
+The compact saved-preset rows keep rename and delete in a More menu; the page
+does not duplicate the editor as a separate manual-equalizer card.
+
 Entry points: Settings → Sound effects & equalizer; current-player song menu
 → Sound effects & equalizer. Scope is the main Android music player. MV uses
 another player, and iOS has no effects entry in this implementation.
