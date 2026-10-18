@@ -12,6 +12,7 @@ import { ISearchResult, queryAtom } from "../../store/atoms";
 import { renderMap } from "./results";
 import { SourceIssue } from "./sourceFeedback";
 import { useNavigate } from "@/core/router";
+import useSearchSelection, { SearchSelectionListener } from "./useSearchSelection";
 
 interface IResultWrapperProps<
     T extends ICommon.SupportMediaType = ICommon.SupportMediaType,
@@ -21,6 +22,7 @@ interface IResultWrapperProps<
     pluginName: string;
     searchResult: ISearchResult<T>;
     pluginSearchResultRef: React.MutableRefObject<ISearchResult<T>>;
+    onSelectionChange?: SearchSelectionListener;
 }
 function ResultWrapper(props: IResultWrapperProps) {
     const { tab, pluginHash, searchResult, pluginSearchResultRef } = props;
@@ -34,6 +36,7 @@ function ResultWrapper(props: IResultWrapperProps) {
 
     const ResultComponent = renderMap[tab]!;
     const data: any = searchResult?.data ?? [];
+    const editor = useSearchSelection(`${tab}:${pluginHash}:${searchResult?.query ?? query}`, data, tab === "music" ? props.onSelectionChange : undefined);
 
     const keyExtractor = useCallback(
         (item: any, i: number) => `${i}-${item.platform}-${item.id}`,
@@ -53,6 +56,7 @@ function ResultWrapper(props: IResultWrapperProps) {
             pluginHash={pluginHash}
             pluginSearchResultRef={pluginSearchResultRef}
             query={searchResult?.query ?? query}
+            selection={tab === "music" ? editor.selection : undefined}
         />
     );
 
@@ -62,7 +66,7 @@ function ResultWrapper(props: IResultWrapperProps) {
         <FlashList
             key={tab === "sheet" ? columns : 1}
             contentContainerStyle={tab === "sheet" ? { paddingHorizontal: spacing.xxxl - spacing.xs, paddingBottom: spacing.xxxl } : { paddingBottom: spacing.xxxl }}
-            extraData={searchState}
+            extraData={editor.selection ?? searchState}
             ListEmptyComponent={issue ?? <ListEmpty state={searchState} onRetry={() => {
                 search(undefined, undefined, tab, pluginHash, "retry");
             }} />}
@@ -72,12 +76,13 @@ function ResultWrapper(props: IResultWrapperProps) {
             data={data}
             refreshing={false}
             onRefresh={() => {
+                editor.finish();
                 search(undefined, 1, tab, pluginHash, "refresh");
             }}
             onEndReached={() => {
                 (searchState === RequestStateCode.PARTLY_DONE ||
                     searchState === RequestStateCode.IDLE) &&
-                    search(undefined, undefined, tab, pluginHash);
+                    search(undefined, undefined, tab, pluginHash, "next");
             }}
             numColumns={
                 tab === "sheet" ? columns : 1

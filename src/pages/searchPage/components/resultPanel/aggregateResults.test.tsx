@@ -8,19 +8,28 @@ import { pageStatusAtom, PageStatus, queryAtom } from "../../store/atoms";
 import { resetSearch } from "../../store/searchController";
 import TrackPlayer from "@/core/trackPlayer";
 import SearchPending from "./searchPending";
+import type { SearchSelectionEntry } from "./useSearchSelection";
+import { SearchRequestError } from "@/core/searchError";
+import { RequestStateCode } from "@/constants/commonConst";
 
 const song = { id: "1", platform: "A", title: "Song", artist: "Artist", duration: 200 } as IMusic.IMusicItem;
 const mockA = { hash: "a", name: "A", instance: { platform: "A" }, methods: { search: jest.fn() } };
 const mockB = { hash: "b", name: "B", instance: { platform: "B" }, methods: { search: jest.fn() } };
 let mockSource: string | undefined;
 let mockBehavior = "playMusicAndReplace";
+let selectionEntry: SearchSelectionEntry | undefined;
+const onSelectionChange = (entry?: SearchSelectionEntry) => {
+    selectionEntry = entry; 
+};
+const mockNavigate = jest.fn();
 jest.mock("@/core/pluginManager", () => ({
     __esModule: true,
     default: { getSearchablePlugins: () => [mockA, mockB], getSortedSearchablePlugins: () => [mockA, mockB] },
     useSearchablePlugins: () => [mockA, mockB],
     usePluginDisplayNameResolver: () => (plugin: { name: string }) => plugin.name,
 }));
-jest.mock("@/core/router", () => ({ useParams: () => ({ pluginHash: mockSource }), useNavigate: () => jest.fn() }));
+jest.mock("@/core/router", () => ({ ROUTE_PATH: { MUSIC_LIST_EDITOR: "music-list-editor" }, useParams: () => ({ pluginHash: mockSource }), useNavigate: () => mockNavigate }));
+jest.mock("@react-navigation/native", () => ({ useNavigation: () => ({ setOptions: jest.fn() }) }));
 jest.mock("@/components/dialogs/useDialog", () => ({ showDialog: jest.fn(), hideDialog: jest.fn() }));
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
 jest.mock("@/core/appConfig", () => ({ __esModule: true, default: { getConfig: () => mockBehavior } }));
@@ -38,7 +47,7 @@ jest.mock("@/constants/commonConst", () => ({ RequestStateCode: { IDLE: 0, PENDI
 describe("aggregate search view integration", () => {
     let renderer: TestRenderer.ReactTestRenderer;
     beforeEach(() => {
-        jest.clearAllMocks(); mockSource = undefined; mockBehavior = "playMusicAndReplace";
+        jest.clearAllMocks(); mockSource = undefined; mockBehavior = "playMusicAndReplace"; selectionEntry = undefined;
         resetSearch();
         getDefaultStore().set(queryAtom, "song");
         getDefaultStore().set(pageStatusAtom, PageStatus.SEARCHING);
@@ -50,7 +59,7 @@ describe("aggregate search view integration", () => {
     }));
     async function render() {
         await act(async () => {
-            renderer = TestRenderer.create(<AggregateResults />);
+            renderer = TestRenderer.create(<AggregateResults onSelectionChange={onSelectionChange} />);
         });
     }
     it("groups sources without duplicate first-page calls and retains actual playback objects", async () => {
@@ -71,7 +80,7 @@ describe("aggregate search view integration", () => {
         mockB.methods.search.mockRejectedValueOnce(new Error("offline"));
         await render();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
-        expect(renderer.root.findByType(GroupedMusicList).props.renderHeader).toBeUndefined();
+        act(() => selectionEntry!.editor.start());
         await act(async () => renderer.root.findByType(GroupedMusicList).props.onRetry());
         expect(mockA.methods.search).toHaveBeenCalledTimes(1);
         expect(mockB.methods.search).toHaveBeenCalledTimes(2);
@@ -81,6 +90,43 @@ describe("aggregate search view integration", () => {
         mockSource = "a"; await render();
         expect(mockB.methods.search).not.toHaveBeenCalled();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
+    });
+    it("preserves configuration failures without leaving the inline list stuck loading", async () => {
+        mockA.methods.search.mockResolvedValue({ data: [song], isEnd: true });
+        mockB.methods.search.mockRejectedValueOnce(new SearchRequestError({ kind: "configuration", retryable: false }));
+        await render();
+        act(() => selectionEntry!.editor.start());
+        await act(async () => {
+            await renderer.root.findByType(GroupedMusicList).props.onRetry();
+        });
+        expect(renderer.root.findByType(GroupedMusicList).props.state).toBe(RequestStateCode.FINISHED);
+        expect(renderer.root.findByType(GroupedMusicList).props.selection).toBeDefined();
+        expect(mockB.methods.search).toHaveBeenCalledTimes(1);
+    });
+    it("selects all original sources in the mounted list and preserves checks while paging unfinished sources", async () => {
+        await render();
+        const originalList = renderer.root.findByType(GroupedMusicList);
+        expect(originalList.props.renderHeader).toBeUndefined();
+        expect(selectionEntry?.count).toBe(2);
+        act(() => selectionEntry!.editor.start());
+        const editing = renderer.root.findByType(GroupedMusicList).props;
+        act(() => editing.selection.onToggleGroup(editing.groups[0].candidates));
+        expect(renderer.root.findByType(GroupedMusicList).props.selection.selectedKeys.size).toBe(2);
+        expect(mockNavigate).not.toHaveBeenCalled();
+        const nextSong = { ...song, id: "next", title: "Next song" };
+        mockA.methods.search.mockResolvedValueOnce({ data: [nextSong], isEnd: true });
+        await act(async () => {
+            await renderer.root.findByType(GroupedMusicList).props.onLoadMore();
+        });
+        expect(mockA.methods.search).toHaveBeenLastCalledWith("song", 2, "music");
+        expect(mockB.methods.search).toHaveBeenCalledTimes(1);
+        const currentList = renderer.root.findByType(GroupedMusicList);
+        expect(currentList).toBe(originalList);
+        expect(currentList.props.groups.flatMap((group: any) => group.candidates)).toEqual(expect.arrayContaining([song, nextSong, { ...song, platform: "B" }]));
+        expect(currentList.props.selection.selectedKeys.size).toBe(2);
+        expect(currentList.props.renderHeader).toBeUndefined();
+        expect(selectionEntry?.count).toBe(3);
+        expect(TrackPlayer.play).not.toHaveBeenCalled();
     });
     it("keeps early results usable during a slow source and stops waiting when only pagination remains", async () => {
         let finish!: (value: { data: IMusic.IMusicItem[]; isEnd: boolean }) => void;

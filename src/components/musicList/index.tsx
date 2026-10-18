@@ -14,12 +14,13 @@ import Icon from "../base/icon";
 import { iconSizeConst } from "@/constants/uiConst";
 import useColors from "@/hooks/useColors";
 import { useRoute } from "@react-navigation/native";
-import Checkbox from "../base/checkbox";
+import SelectionCheckbox from "./selectionCheckbox";
 import type { MusicListSelection } from "./useMusicSelection";
 
 interface IMusicListProps {
     /** 顶部 */
     Header?: FlatListProps<IMusic.IMusicItem>["ListHeaderComponent"];
+    Footer?: FlatListProps<IMusic.IMusicItem>["ListFooterComponent"];
     /** 音乐列表 */
     musicList?: IMusic.IMusicItem[];
     /** 所在歌单 */
@@ -49,6 +50,7 @@ export default function MusicList(props: IMusicListProps) {
     const route = useRoute();
     const {
         Header,
+        Footer,
         musicList,
         musicSheet,
         showIndex,
@@ -126,7 +128,7 @@ export default function MusicList(props: IMusicListProps) {
                 ListHeaderComponent={Header}
                 ListEmptyComponent={<ListEmpty state={state} onRetry={onRetry} />}
                 ListFooterComponent={
-                    musicList?.length ? <ListFooter state={state} onRetry={onRetry} /> : null
+                    Footer !== undefined ? Footer : musicList?.length ? <ListFooter state={state} onRetry={onRetry} /> : null
                 }
                 extraData={extraData}
                 data={musicList ?? []}
@@ -142,7 +144,7 @@ export default function MusicList(props: IMusicListProps) {
                             itemPaddingRight={spacing.xxxl}
                             index={showIndex ? index + 1 : undefined}
                             checked={selection ? selection.selectedKeys.has(getMediaUniqueKey(musicItem)) : undefined}
-                            left={selection ? <View style={styles.selection}><Checkbox checked={selection.selectedKeys.has(getMediaUniqueKey(musicItem))} /></View> : undefined}
+                            left={selection ? <SelectionCheckbox checked={selection.selectedKeys.has(getMediaUniqueKey(musicItem))} /> : undefined}
                             titleTagSubText={
                                 typeof musicItem.duration === "number"
                                     ? timeformat(musicItem.duration)
@@ -196,10 +198,6 @@ export default function MusicList(props: IMusicListProps) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    selection: {
-        flexShrink: 0,
-        marginRight: spacing.xs,
     },
     badge: {
         position: "absolute",

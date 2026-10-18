@@ -4,6 +4,7 @@ import { getMediaUniqueKey } from "@/utils/mediaUtils";
 export interface MusicListSelection {
     selectedKeys: ReadonlySet<string>;
     onToggle: (musicItem: IMusic.IMusicItem) => void;
+    onToggleGroup?: (musicItems: IMusic.IMusicItem[]) => void;
 }
 
 export default function useMusicSelection(scope: string, musicList: IMusic.IMusicItem[]) {
@@ -46,11 +47,22 @@ export default function useMusicSelection(scope: string, musicList: IMusic.IMusi
         });
     }, []);
     const selectedItems = useMemo(() => selectedKeys.size ? musicList.filter(item => selectedKeys.has(getMediaUniqueKey(item))) : [], [musicList, selectedKeys]);
+    const onToggleGroup = useCallback((items: IMusic.IMusicItem[]) => {
+        const keys = items.map(getMediaUniqueKey);
+        setSelectedKeys(previous => {
+            const next = new Set(previous);
+            const remove = keys.every(key => previous.has(key));
+            keys.forEach(key => remove ? next.delete(key) : next.add(key));
+            return next;
+        });
+    }, []);
     const allSelected = musicList.length > 0 && selectedItems.length === musicList.length;
     const toggleAll = useCallback(() => {
         setSelectedKeys(allSelected ? new Set() : new Set(musicList.map(getMediaUniqueKey)));
     }, [allSelected, musicList]);
-    const selection = useMemo<MusicListSelection | undefined>(() => editing ? { selectedKeys, onToggle } : undefined, [editing, selectedKeys, onToggle]);
+    const selection = useMemo<MusicListSelection | undefined>(() => editing ? { selectedKeys, onToggle, onToggleGroup } : undefined, [editing, selectedKeys, onToggle, onToggleGroup]);
 
-    return { editing, selection, selectedItems, allSelected, start, finish, clear, toggleAll };
+    return useMemo(() => ({ editing, selection, selectedItems, allSelected, start, finish, clear, toggleAll }), [editing, selection, selectedItems, allSelected, start, finish, clear, toggleAll]);
 }
+
+export type MusicSelectionController = ReturnType<typeof useMusicSelection>;

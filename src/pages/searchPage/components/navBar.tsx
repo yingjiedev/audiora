@@ -11,6 +11,8 @@ import { addHistory } from "../common/historySearch";
 import useSearch from "../hooks/useSearch";
 import { PageStatus, initSearchResults, pageStatusAtom, queryAtom, searchResultsAtom } from "../store/atoms";
 import useColors from "@/hooks/useColors";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
+import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 export default function NavBar() {
     const params = useParams<"search-page">();
     const getDisplayName = usePluginDisplayNameResolver();
@@ -21,8 +23,10 @@ export default function NavBar() {
     const setSearchResultsState = useSetAtom(searchResultsAtom);
     const { t } = useI18N();
     const colors = useColors();
+    const editor = useActiveMusicSelection();
     const placeholder = source ? t("musicLibrary.searchSourcePlaceholder", { name: getDisplayName(source) }) : t("searchPage.searchPlaceHolder");
     const onSearchSubmit = async () => {
+        editor?.finish();
         const keyword = query.trim();
         if (!keyword) return;
         Keyboard.dismiss();
@@ -34,13 +38,18 @@ export default function NavBar() {
         void search(keyword, 1);
         void addHistory(keyword).catch(() => {});
     };
-    return <AppBar actionComponent={<PageAction title={t("common.search")} variant="text" textColor={colors.appBarText} onPress={onSearchSubmit} disabled={!query.trim()} />}>
+    return <AppBar onBackPress={editor?.finish} actionComponent={editor ? <SelectionDoneAction onPress={editor.finish} />
+        : <PageAction title={t("common.search")} variant="text" textColor={colors.appBarText} onPress={onSearchSubmit} disabled={!query.trim()} />}>
         <SearchField autoFocus value={query} placeholder={placeholder} accessibilityLabel={t("searchPage.searchLabel.a11y")} accessibilityHint={placeholder}
-            onFocus={() => setPageStatus(PageStatus.EDITING)} onSubmitEditing={onSearchSubmit}
+            onFocus={() => {
+                editor?.finish(); setPageStatus(PageStatus.EDITING);
+            }} onSubmitEditing={onSearchSubmit}
             onClear={() => {
+                editor?.finish();
                 setQuery(""); setPageStatus(PageStatus.EDITING);
             }}
             onChangeText={text => {
+                editor?.finish();
                 if (!text) setPageStatus(PageStatus.EDITING); setQuery(text);
             }} />
     </AppBar>;

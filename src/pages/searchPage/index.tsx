@@ -19,6 +19,7 @@ import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
 import { resetSearch, updateSearchSources } from "./store/searchController";
 import { useSearchablePlugins } from "@/core/pluginManager";
+import MusicSelectionProvider from "@/components/musicList/musicSelectionProvider";
 
 export default function () {
     const params = useParams<"search-page">();
@@ -49,18 +50,20 @@ export default function () {
         <SafeAreaView
             edges={["bottom", "top"]}
             style={style.wrapper}>
-            <StatusBar />
-            <NavBar />
-            <SafeAreaView edges={["left", "right"]} style={style.wrapper}>
-                <View style={style.flex1}>
-                    {pageStatus === PageStatus.EDITING && <HistoryPanel />}
-                    {pageStatus === PageStatus.SEARCHING && <Loading />}
-                    {pageStatus === PageStatus.RESULT && <ResultPanel />}
-                    {pageStatus === PageStatus.NO_PLUGIN && (
-                        <NoPlugin notSupportType={t("common.search")} />
-                    )}
-                </View>
-            </SafeAreaView>
+            <MusicSelectionProvider>
+                <StatusBar />
+                <NavBar />
+                <SafeAreaView edges={["left", "right"]} style={style.wrapper}>
+                    <View style={style.flex1}>
+                        {pageStatus === PageStatus.EDITING && <HistoryPanel />}
+                        {pageStatus === PageStatus.SEARCHING && <Loading />}
+                        {pageStatus === PageStatus.RESULT && <ResultPanel />}
+                        {pageStatus === PageStatus.NO_PLUGIN && (
+                            <NoPlugin notSupportType={t("common.search")} />
+                        )}
+                    </View>
+                </SafeAreaView>
+            </MusicSelectionProvider>
         </SafeAreaView>
     );
 }

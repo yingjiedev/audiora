@@ -37,9 +37,10 @@ describe("PlayAllBar touch targets and behavior", () => {
     });
 
     it("uses a small round play control and visible secondary labels without stretching", async () => {
+        const onEdit = jest.fn();
         let renderer: TestRenderer.ReactTestRenderer;
         act(() => {
-            renderer = TestRenderer.create(<PlayAllBar musicList={[music]} musicSheet={{ id: "sheet", title: "List" } as IMusic.IMusicSheetItem} />);
+            renderer = TestRenderer.create(<PlayAllBar musicList={[music]} musicSheet={{ id: "sheet", title: "List" } as IMusic.IMusicSheetItem} onEdit={onEdit} />);
         });
         const findButton = (label: string) => renderer!.root.findAllByProps({ accessibilityLabel: label }).find(node => typeof node.props.onPress === "function")!;
         const add = findButton("musicListEditor.addToSheet");
@@ -71,7 +72,8 @@ describe("PlayAllBar touch targets and behavior", () => {
         await act(async () => {
             await edit.props.onPress();
         });
-        expect(mockNavigate).toHaveBeenCalledWith("editor", { musicList: [music], musicSheet: { title: "List", id: "sheet" } });
+        expect(onEdit).toHaveBeenCalledTimes(1);
+        expect(mockNavigate).not.toHaveBeenCalled();
         act(() => findButton("playAllBar.title").props.onPress());
         expect(TrackPlayer.playWithReplacePlayList).toHaveBeenCalledWith(music, [music], { sheet: { id: "sheet", title: "List" }, routeName: "sheet" });
         act(() => renderer!.unmount());
