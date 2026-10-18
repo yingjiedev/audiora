@@ -1048,6 +1048,9 @@ export interface ILanguageData {
     "checkUpdate.newVersion": string;
     "checkUpdate.currentVersion": string;
     "checkUpdate.download": string;
+    "checkUpdate.checking": string;
+    "checkUpdate.selectingDownload": string;
+    "checkUpdate.error.downloadFailed": string;
     "announcement.view": string;
     "announcement.description": string;
     "announcement.error": string;
