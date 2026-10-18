@@ -6,6 +6,7 @@ import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
+import `fun`.xwj.musicfree.audioEffects.AudioEffectsModule
 
 class UtilsPackage : ReactPackage {
 
@@ -19,5 +20,6 @@ class UtilsPackage : ReactPackage {
         listOf(
             UtilsModule(reactContext),
             DebugFloatModule(reactContext),
+            AudioEffectsModule(reactContext),
         ).toMutableList()
 }
