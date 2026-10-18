@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import deviceInfoModule from "react-native-device-info";
+import i18n from "@/core/i18n";
 import AboutSetting from "./aboutSetting";
 import BackupSetting from "./backupSetting";
 import BasicSetting from "./basicSetting";
@@ -28,7 +29,9 @@ const settingTypes: Record<
         component: BasicSetting,
     },
     audioEffects: {
-        title: "音效与均衡器",
+        get title() {
+            return i18n.t("audioEffects.title");
+        },
         i18nKey: "audioEffects.title",
         component: AudioEffectsSetting,
         showNav: false,

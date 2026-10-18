@@ -24,7 +24,7 @@ jest.mock("@/core/musicHistory", () => ({}));
 jest.mock("@/core/musicSheet", () => ({}));
 jest.mock("@/core/downloader", () => ({}));
 jest.mock("@/core/lyricManager", () => ({}));
-jest.mock("@/core/router", () => ({ ROUTE_PATH: { MUSIC_DETAIL: "detail" } }));
+jest.mock("@/core/router", () => ({ ROUTE_PATH: { MUSIC_DETAIL: "detail" }, usePush: () => jest.fn() }));
 jest.mock("@/utils/mediaUtils", () => ({ getPlatformMediaId: (item: IMusic.IMusicItem) => item.id }));
 jest.mock("@/utils/mediaExtra", () => ({ getMediaExtraProperty: () => undefined }));
 jest.mock("@/utils/artwork", () => ({ hasAssociatedArtwork: () => false, resolveArtwork: () => "" }));
