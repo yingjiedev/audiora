@@ -53,7 +53,8 @@ copy unchanged until Save changes; deleting the selected preset keeps playback
 tuning and clears only its selected ID.
 
 The gallery and saved presets share one equalizer editor. Tap a saved preset's
-name or curve to edit it without enabling effects; Use applies it for playback.
+name or curve to select and apply it, keeping the gallery open. A separate Edit
+button opens the editor; editing an unselected preset does not enable effects.
 Editing or enabling the currently selected preset preserves unsaved tuning.
 The compact saved-preset rows keep rename and delete in a More menu; the page
 does not duplicate the editor as a separate manual-equalizer card.

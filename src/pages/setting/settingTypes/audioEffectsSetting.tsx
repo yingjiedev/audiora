@@ -105,6 +105,15 @@ export default function AudioEffectsSetting() {
         }
     };
 
+    const selectPreset = async (preset: AudioEffectsUserPreset) => {
+        const current = audioEffects.getSnapshot().settings;
+        try {
+            await commit({ ...(current.activeCustomId === preset.id ? current : applyUserPreset(current, preset.id)), enabled: true });
+        } catch (error) {
+            Toast.warn(t(error instanceof AudioPresetError ? `audioEffects.${error.reason}` : "audioEffects.saveFailed"));
+        }
+    };
+
     const managePreset = (preset: AudioEffectsUserPreset) => showPanel("SimpleSelect", {
         header: presetName(preset),
         candidates: [
@@ -159,7 +168,7 @@ export default function AudioEffectsSetting() {
                                 <View style={styles.heroCopy}>
                                     <ThemeText fontSize="section" fontWeight="semibold">{currentName}</ThemeText>
                                     <ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>{t("audioEffects.heroHint")}</ThemeText>
-                                    <PageAction title={t("audioEffects.editSound")} icon="pencil-square" variant="primary" size="standard"
+                                    <PageAction title={t("common.edit")} icon="pencil-square" variant="primary" size="standard"
                                         disabled={!canConfigure} onPress={() => setEditing(true)} />
                                 </View>
                             </View>
@@ -193,23 +202,21 @@ export default function AudioEffectsSetting() {
                                                 const selected = settings.activeCustomId === preset.id;
                                                 return (
                                                     <View key={preset.id} style={[styles.userRow, { backgroundColor: colors.card, borderColor: selected ? colors.active : colors.card }]}>
-                                                        <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.editNamedPreset", { name: presetName(preset) })}
-                                                            accessibilityState={{ selected }} style={styles.userBody} onPress={() => editPreset(preset)}>
+                                                        <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.applyNamedPreset", { name: presetName(preset) })}
+                                                            accessibilityState={{ selected }} style={styles.userBody} onPress={() => selectPreset(preset)}>
                                                             <View style={[styles.userCurve, { backgroundColor: colors.cardInset }]}><EqualizerCurve compact bands={preset.bands} /></View>
                                                             <View style={styles.flex}>
                                                                 <ThemeText fontSize="subTitle" fontWeight="semibold" numberOfLines={2}>{presetName(preset)}</ThemeText>
                                                                 <ThemeText fontSize="description" fontColor={selected ? "primary" : "textSecondary"} style={styles.status}>
-                                                                    {selected ? `${t("audioEffects.selected")} · ${t("audioEffects.editSound")}` : t("audioEffects.editSound")}
+                                                                    {t(selected ? settings.enabled ? "audioEffects.inUse" : "audioEffects.selected" : "audioEffects.applyPreset")}
                                                                 </ThemeText>
                                                             </View>
                                                         </Pressable>
-                                                        <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.applyNamedPreset", { name: presetName(preset) })}
-                                                            style={styles.applyTarget} onPress={() => {
-                                                                const current = audioEffects.getSnapshot().settings;
-                                                                commit({ ...(current.activeCustomId === preset.id ? current : applyUserPreset(current, preset.id)), enabled: true });
-                                                            }}>
+                                                        <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.editNamedPreset", { name: presetName(preset) })}
+                                                            style={styles.editTarget} onPress={() => editPreset(preset)}>
                                                             <View style={[styles.usePill, { backgroundColor: colors.tonalSurface }]}>
-                                                                <ThemeText fontSize="description" color={colors.onTonal}>{t(selected && settings.enabled ? "audioEffects.inUse" : "audioEffects.applyPreset")}</ThemeText>
+                                                                <Icon name="pencil-square" size={rpx(24)} color={colors.onTonal} />
+                                                                <ThemeText fontSize="description" color={colors.onTonal}>{t("common.edit")}</ThemeText>
                                                             </View>
                                                         </Pressable>
                                                         <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.manageNamedPreset", { name: presetName(preset) })}
@@ -277,7 +284,7 @@ const styles = StyleSheet.create({
     userRow: { borderRadius: rpx(24), flexDirection: "row", alignItems: "center", paddingHorizontal: rpx(12), borderWidth: 1.5 },
     userBody: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: rpx(16), paddingVertical: rpx(16), paddingRight: rpx(12) },
     userCurve: { width: rpx(112), padding: rpx(8), borderRadius: rpx(16) },
-    applyTarget: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+    editTarget: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
     iconButton: { minWidth: Math.max(44, rpx(88)), minHeight: Math.max(44, rpx(88)), alignItems: "center", justifyContent: "center" },
     emptyLibrary: { marginHorizontal: rpx(32), borderRadius: rpx(28), padding: rpx(24), flexDirection: "row", alignItems: "center", gap: rpx(20) },
     emptyArt: { width: rpx(164), height: rpx(164) },

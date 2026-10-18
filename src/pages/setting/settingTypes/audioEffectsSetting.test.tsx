@@ -65,7 +65,7 @@ describe("illustrated sound presets and editing", () => {
 
     it("groups actual device bands and separates live previews from persistence", async () => {
         const renderer = render();
-        await press(renderer, "audioEffects.editSound");
+        await press(renderer, "common.edit");
         const sliders = renderer.root.findAllByType("Slider" as any);
         expect(sliders).toHaveLength(2);
         act(() => {
@@ -83,7 +83,7 @@ describe("illustrated sound presets and editing", () => {
         mockState.frequencies = [];
         mockState.status = "waiting";
         const renderer = render();
-        await press(renderer, "audioEffects.editSound");
+        await press(renderer, "common.edit");
         const sliders = renderer.root.findAllByType("Slider" as any);
         expect(sliders).toHaveLength(3);
         expect(sliders.every(slider => !slider.props.disabled)).toBe(true);
@@ -130,7 +130,7 @@ describe("illustrated sound presets and editing", () => {
         mockState.settings = { ...mockState.settings, preampDb: -3 };
         mockState.supportsPreamp = true;
         const renderer = render();
-        await press(renderer, "audioEffects.editSound");
+        await press(renderer, "common.edit");
         expect(renderer.root.findAllByProps({ accessibilityLabel: "audioEffects.saveAsNew" })).not.toHaveLength(0);
         await press(renderer, "audioEffects.saveChanges");
         expect(mockState.settings.customPresets[0].preampDb).toBe(-3);
@@ -174,6 +174,22 @@ describe("illustrated sound presets and editing", () => {
         expect(mockState.settings.activeCustomId).toBe("one");
         expect(mockState.settings.bands).toEqual(presetBands("bass"));
         expect(mockState.settings.customPresets[1].bands).toEqual(presetBands("vocal"));
+        expect(renderer.root.findAllByType("Slider" as any)).toHaveLength(2);
+    });
+
+    it("selects a saved preset from its name or curve and only opens the editor from Edit", async () => {
+        mockState.settings = createUserPreset({ ...mockState.settings, bands: presetBands("bass") }, "one", "One");
+        mockState.settings = createUserPreset({ ...mockState.settings, bands: presetBands("vocal") }, "two", "Two");
+        const renderer = render();
+        await press(renderer, "audioEffects.applyNamedPreset:One");
+        expect(mockState.settings.activeCustomId).toBe("one");
+        expect(mockState.settings.bands).toEqual(presetBands("bass"));
+        expect(renderer.root.findAllByType("Slider" as any)).toHaveLength(0);
+        act(() => {
+            renderer.update(<AudioEffectsSetting />);
+        });
+        expect(renderer.root.findAllByProps({ accessibilityLabel: "audioEffects.applyNamedPreset:One" })[0].props.accessibilityState.selected).toBe(true);
+        await press(renderer, "audioEffects.editNamedPreset:One");
         expect(renderer.root.findAllByType("Slider" as any)).toHaveLength(2);
     });
 
