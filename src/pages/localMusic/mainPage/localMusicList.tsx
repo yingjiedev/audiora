@@ -11,6 +11,7 @@ import { useNavigate } from "@/core/router";
 import type { MusicSelectionController } from "@/components/musicList/useMusicSelection";
 import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
 import { View } from "react-native";
+import { spacing } from "@/constants/designSystem";
 
 export default function LocalMusicList({ musicList, editor }: { musicList: IMusic.IMusicItem[]; editor: MusicSelectionController }) {
     const { t } = useI18N();
@@ -24,7 +25,7 @@ export default function LocalMusicList({ musicList, editor }: { musicList: IMusi
         <HorizontalSafeAreaView style={globalStyle.flex1}>
             <MusicList
                 Header={<View><PageSummary title={t("home.songCount", { count: musicList.length })} description={t("subpage.manageLocal")} action={!editor.editing ? <PageAction title={t("localMusic.scanLocalMusic")} icon="magnifying-glass" onPress={() => openLocalMusicScanner(navigate)} /> : undefined} />
-                    <InlineSelectionBar editor={editor} count={musicList.length} /></View>}
+                    <InlineSelectionBar style={{ paddingHorizontal: spacing.xxxl }} editor={editor} count={musicList.length} /></View>}
                 selection={editor.selection}
                 musicList={musicList}
                 showIndex

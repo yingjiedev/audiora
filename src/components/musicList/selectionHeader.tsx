@@ -34,7 +34,7 @@ export function SelectionBar({ count, allSelected, disabled, onToggleAll, descri
 }
 
 const styles = StyleSheet.create({
-    selectionBar: { minHeight: 44, paddingVertical: spacing.sm, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+    selectionBar: { minHeight: 44, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
     selectionButtons: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     description: { paddingBottom: spacing.sm },
 });

@@ -15,6 +15,7 @@ import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
 import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 import PluginManager from "@/core/pluginManager";
 import SearchResult from "./searchResult";
+import { spacing } from "@/constants/designSystem";
 export default function SearchMusicList() {
     return <VerticalSafeAreaView style={globalStyle.fwflex1}>
         <MusicSelectionProvider><SearchMusicListContent /></MusicSelectionProvider>
@@ -37,7 +38,7 @@ function SearchMusicListContent() {
             }] : []}><SearchField autoFocus value={query} placeholder={t("searchMusicList.searchPlaceHolder")} accessibilityLabel={t("searchMusicList.searchLabel.a11y")} onChangeText={setQuery} onClear={() => setQuery("")} /></AppBar>
         <HorizontalSafeAreaView style={globalStyle.flex1}>
             <PageSummary title={musicSheet?.title || t("home.localMusic")} description={t("home.songCount", { count: result.length })} />
-            <InlineSelectionBar editor={editor} count={result.length} />
+            <InlineSelectionBar style={{ paddingHorizontal: spacing.xxxl }} editor={editor} count={result.length} />
             <SearchResult result={result} musicSheet={musicSheet} selection={editor.selection} />
         </HorizontalSafeAreaView>
     </>;

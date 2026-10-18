@@ -16,6 +16,7 @@ import useInlineMusicSelection from "@/components/musicList/useInlineMusicSelect
 import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
 import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 import { getMediaUniqueKey } from "@/utils/mediaUtils";
+import { spacing } from "@/constants/designSystem";
 
 export default function History() {
     return <VerticalSafeAreaView style={globalStyle.fwflex1}>
@@ -77,7 +78,7 @@ function HistoryContent() {
             {listReady ? (
                 <MusicList
                     Header={<View><PageSummary title={t("home.songCount", { count: musicHistoryList.length })} description={t("myMusic.historyHint")} />
-                        <InlineSelectionBar editor={editor} count={musicHistoryList.length} /></View>}
+                        <InlineSelectionBar style={{ paddingHorizontal: spacing.xxxl }} editor={editor} count={musicHistoryList.length} /></View>}
                     selection={editor.selection}
                     musicList={musicHistoryList}
                     showIndex

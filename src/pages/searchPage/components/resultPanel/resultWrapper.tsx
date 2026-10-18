@@ -12,9 +12,7 @@ import { ISearchResult, queryAtom } from "../../store/atoms";
 import { renderMap } from "./results";
 import { SourceIssue } from "./sourceFeedback";
 import { useNavigate } from "@/core/router";
-import BatchEditAction from "@/components/musicList/batchEditAction";
-import useInlineMusicSelection from "@/components/musicList/useInlineMusicSelection";
-import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
+import useSearchSelection, { SearchSelectionListener } from "./useSearchSelection";
 
 interface IResultWrapperProps<
     T extends ICommon.SupportMediaType = ICommon.SupportMediaType,
@@ -24,6 +22,7 @@ interface IResultWrapperProps<
     pluginName: string;
     searchResult: ISearchResult<T>;
     pluginSearchResultRef: React.MutableRefObject<ISearchResult<T>>;
+    onSelectionChange?: SearchSelectionListener;
 }
 function ResultWrapper(props: IResultWrapperProps) {
     const { tab, pluginHash, searchResult, pluginSearchResultRef } = props;
@@ -37,7 +36,7 @@ function ResultWrapper(props: IResultWrapperProps) {
 
     const ResultComponent = renderMap[tab]!;
     const data: any = searchResult?.data ?? [];
-    const editor = useInlineMusicSelection(`${tab}:${pluginHash}:${searchResult?.query ?? query}`, data);
+    const editor = useSearchSelection(`${tab}:${pluginHash}:${searchResult?.query ?? query}`, data, tab === "music" ? props.onSelectionChange : undefined);
 
     const keyExtractor = useCallback(
         (item: any, i: number) => `${i}-${item.platform}-${item.id}`,
@@ -65,8 +64,6 @@ function ResultWrapper(props: IResultWrapperProps) {
         <Loading />
     ) : (
         <FlashList
-            ListHeaderComponent={tab === "music" ? editor.editing ? <InlineSelectionBar editor={editor} count={data.length} paginated />
-                : data.length ? <BatchEditAction onPress={editor.start} /> : null : null}
             key={tab === "sheet" ? columns : 1}
             contentContainerStyle={tab === "sheet" ? { paddingHorizontal: spacing.xxxl - spacing.xs, paddingBottom: spacing.xxxl } : { paddingBottom: spacing.xxxl }}
             extraData={editor.selection ?? searchState}

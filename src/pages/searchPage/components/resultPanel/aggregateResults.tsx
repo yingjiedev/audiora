@@ -19,11 +19,9 @@ import rpx from "@/utils/rpx";
 import { scopeSearchPlugins } from "../../common/searchScope";
 import useSearch from "../../hooks/useSearch";
 import { musicSearchResultsAtom, queryAtom, searchSessionAtom } from "../../store/atoms";
-import BatchEditAction from "@/components/musicList/batchEditAction";
-import useInlineMusicSelection from "@/components/musicList/useInlineMusicSelection";
-import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
+import useSearchSelection, { SearchSelectionListener } from "./useSearchSelection";
 
-export default function AggregateResults() {
+export default function AggregateResults({ onSelectionChange }: { onSelectionChange?: SearchSelectionListener }) {
     const params = useParams<"search-page">();
     const plugins = scopeSearchPlugins(useSearchablePlugins("music"), params?.pluginHash);
     const sourceKey = plugins.map(plugin => plugin.hash).join("|");
@@ -58,7 +56,7 @@ export default function AggregateResults() {
             : failed.length === plugins.length && !groups.length ? RequestStateCode.ERROR : RequestStateCode.FINISHED;
     // Bulk actions retain every original source, including candidates folded into a row.
     const batchMusicList = useMemo(() => groups.flatMap(group => group.candidates), [groups]);
-    const editor = useInlineMusicSelection(`aggregate:${session}:${sourceKey}`, batchMusicList);
+    const editor = useSearchSelection(`aggregate:${session}:${sourceKey}`, batchMusicList, onSelectionChange);
     const onPlay = useCallback((item: IMusic.IMusicItem, list: IMusic.IMusicItem[]) => {
         if (Config.getConfig("basic.clickMusicInSearch") === "playMusicAndReplace") TrackPlayer.playWithReplacePlayList(item, list);
         else TrackPlayer.play(item);
@@ -67,8 +65,6 @@ export default function AggregateResults() {
         <GroupedMusicList
             key={session}
             groups={groups}
-            renderHeader={() => editor.editing ? <InlineSelectionBar editor={editor} count={batchMusicList.length} paginated />
-                : batchMusicList.length ? <BatchEditAction onPress={editor.start} /> : <View />}
             selection={editor.selection}
             favoriteActions={actions}
             query={query}

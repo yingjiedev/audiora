@@ -8,7 +8,7 @@ import { pageStatusAtom, PageStatus, queryAtom } from "../../store/atoms";
 import { resetSearch } from "../../store/searchController";
 import TrackPlayer from "@/core/trackPlayer";
 import SearchPending from "./searchPending";
-import BatchEditAction from "@/components/musicList/batchEditAction";
+import type { SearchSelectionEntry } from "./useSearchSelection";
 import { SearchRequestError } from "@/core/searchError";
 import { RequestStateCode } from "@/constants/commonConst";
 
@@ -17,6 +17,10 @@ const mockA = { hash: "a", name: "A", instance: { platform: "A" }, methods: { se
 const mockB = { hash: "b", name: "B", instance: { platform: "B" }, methods: { search: jest.fn() } };
 let mockSource: string | undefined;
 let mockBehavior = "playMusicAndReplace";
+let selectionEntry: SearchSelectionEntry | undefined;
+const onSelectionChange = (entry?: SearchSelectionEntry) => {
+    selectionEntry = entry; 
+};
 const mockNavigate = jest.fn();
 jest.mock("@/core/pluginManager", () => ({
     __esModule: true,
@@ -43,7 +47,7 @@ jest.mock("@/constants/commonConst", () => ({ RequestStateCode: { IDLE: 0, PENDI
 describe("aggregate search view integration", () => {
     let renderer: TestRenderer.ReactTestRenderer;
     beforeEach(() => {
-        jest.clearAllMocks(); mockSource = undefined; mockBehavior = "playMusicAndReplace";
+        jest.clearAllMocks(); mockSource = undefined; mockBehavior = "playMusicAndReplace"; selectionEntry = undefined;
         resetSearch();
         getDefaultStore().set(queryAtom, "song");
         getDefaultStore().set(pageStatusAtom, PageStatus.SEARCHING);
@@ -55,7 +59,7 @@ describe("aggregate search view integration", () => {
     }));
     async function render() {
         await act(async () => {
-            renderer = TestRenderer.create(<AggregateResults />);
+            renderer = TestRenderer.create(<AggregateResults onSelectionChange={onSelectionChange} />);
         });
     }
     it("groups sources without duplicate first-page calls and retains actual playback objects", async () => {
@@ -76,8 +80,7 @@ describe("aggregate search view integration", () => {
         mockB.methods.search.mockRejectedValueOnce(new Error("offline"));
         await render();
         expect(renderer.root.findByType(GroupedMusicList).props.groups[0].candidates).toEqual([song]);
-        const batchAction = renderer.root.findByType(BatchEditAction);
-        act(() => batchAction.props.onPress());
+        act(() => selectionEntry!.editor.start());
         await act(async () => renderer.root.findByType(GroupedMusicList).props.onRetry());
         expect(mockA.methods.search).toHaveBeenCalledTimes(1);
         expect(mockB.methods.search).toHaveBeenCalledTimes(2);
@@ -92,7 +95,7 @@ describe("aggregate search view integration", () => {
         mockA.methods.search.mockResolvedValue({ data: [song], isEnd: true });
         mockB.methods.search.mockRejectedValueOnce(new SearchRequestError({ kind: "configuration", retryable: false }));
         await render();
-        act(() => renderer.root.findByType(BatchEditAction).props.onPress());
+        act(() => selectionEntry!.editor.start());
         await act(async () => {
             await renderer.root.findByType(GroupedMusicList).props.onRetry();
         });
@@ -102,9 +105,10 @@ describe("aggregate search view integration", () => {
     });
     it("selects all original sources in the mounted list and preserves checks while paging unfinished sources", async () => {
         await render();
-        const batchAction = renderer.root.findByType(BatchEditAction);
         const originalList = renderer.root.findByType(GroupedMusicList);
-        act(() => batchAction.props.onPress());
+        expect(originalList.props.renderHeader).toBeUndefined();
+        expect(selectionEntry?.count).toBe(2);
+        act(() => selectionEntry!.editor.start());
         const editing = renderer.root.findByType(GroupedMusicList).props;
         act(() => editing.selection.onToggleGroup(editing.groups[0].candidates));
         expect(renderer.root.findByType(GroupedMusicList).props.selection.selectedKeys.size).toBe(2);
@@ -120,6 +124,8 @@ describe("aggregate search view integration", () => {
         expect(currentList).toBe(originalList);
         expect(currentList.props.groups.flatMap((group: any) => group.candidates)).toEqual(expect.arrayContaining([song, nextSong, { ...song, platform: "B" }]));
         expect(currentList.props.selection.selectedKeys.size).toBe(2);
+        expect(currentList.props.renderHeader).toBeUndefined();
+        expect(selectionEntry?.count).toBe(3);
         expect(TrackPlayer.play).not.toHaveBeenCalled();
     });
     it("keeps early results usable during a slow source and stops waiting when only pagination remains", async () => {

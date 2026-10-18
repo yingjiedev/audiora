@@ -25,7 +25,7 @@ export default function Header({ musicSheet, musicList, canStar, typeLabel, onEd
             <MediaDetailHeader title={musicSheet?.title ?? t("common.unknownName")} artwork={musicSheet?.artwork ?? musicSheet?.coverImg}
                 typeLabel={typeLabel ?? t("common.sheet")} source={platform ? getDisplayName(platform) : null}
                 subtitle={subtitle} description={musicSheet?.description} />
-            {editingControls ?? <View style={styles.actions}><PlayAllBar onEdit={onEdit} canStar={canStar} musicList={musicList} musicSheet={musicSheet} /></View>}
+            <View style={styles.actions}>{editingControls ?? <PlayAllBar onEdit={onEdit} canStar={canStar} musicList={musicList} musicSheet={musicSheet} />}</View>
         </>
     );
 }

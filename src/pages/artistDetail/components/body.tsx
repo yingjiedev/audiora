@@ -10,6 +10,7 @@ import { useI18N } from "@/core/i18n";
 import PillTabBar from "@/components/base/pillTabBar";
 import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
 import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
+import { spacing } from "@/constants/designSystem";
 
 const sceneMap: Record<string, React.FC> = {
     album: BodyContentWrapper,
@@ -84,11 +85,12 @@ export function BodyContentWrapper(props: any) {
 
     return (
         <ResultList tab={tab} data={queryResult[tab]} renderItem={renderItem} extraData={selection}
-            Header={tab === "music" && editor ? <InlineSelectionBar editor={editor} count={queryResult.music.data?.length ?? 0} paginated /> : undefined} />
+            Header={tab === "music" && editor ? <InlineSelectionBar style={style.selectionControls} editor={editor} count={queryResult.music.data?.length ?? 0} paginated /> : undefined} />
     );
 }
 
 const style = StyleSheet.create({
+    selectionControls: { paddingHorizontal: spacing.xxxl },
     wrapper: {
         zIndex: 100,
     },

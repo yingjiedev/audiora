@@ -21,10 +21,12 @@ function PageContent() {
                 onBackPress={editor.editing ? editor.finish : undefined}
                 actionComponent={editor.editing ? <SelectionDoneAction onPress={editor.finish} /> : undefined}
             />
-            <MusicList
-                Header={editor.editing
+            <View style={styles.toolbar}>
+                {editor.editing
                     ? <InlineSelectionBar editor={editor} count={musicList.length} paginated />
                     : <BatchEditAction onPress={editor.start} />}
+            </View>
+            <MusicList
                 musicList={musicList}
                 selection={editor.selection}
                 state={state}
@@ -36,6 +38,8 @@ function PageContent() {
 ```
 
 底部工具栏和 Android 返回退出由 Provider 统一处理。导航栏位于其他组件时，使用 `useActiveMusicSelection()` 取得当前多选控制器。切换来源或分类前调用 `finish()`；分页追加保留已有勾选，新歌曲默认不选中。
+
+`BatchEditAction` 仅提供带无障碍名称的编辑图标，`InlineSelectionBar` 仅提供选择控件，通过 `style` 接收页面间距。两者不自带全宽工具栏，页面决定所在容器。歌曲选框统一在左侧，整行可选择。搜索页将编辑图标放在来源栏右侧，与来源状态同一行；选择数量和全选固定在来源栏下方，原列表不增删头部，滚动位置和分页继续保留。
 
 ## 操作开关
 
