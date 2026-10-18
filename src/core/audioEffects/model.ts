@@ -11,10 +11,20 @@ export interface AudioEffectsTuning {
 export const PRESET_IDS = ["flat", "vocal", "bass", "bright", "soft", "pop", "rock", "jazz", "classical", "electronic"] as const;
 export type AudioEffectsPreset = typeof PRESET_IDS[number] | "custom";
 
+export const MAX_CUSTOM_PRESETS = 32;
+export const MAX_PRESET_NAME_LENGTH = 40;
+export const LEGACY_CUSTOM_PRESET_ID = "legacy-custom";
+
+export interface AudioEffectsUserPreset extends AudioEffectsTuning {
+    id: string;
+    name: string;
+}
+
 export interface AudioEffectsSettings extends AudioEffectsTuning {
     enabled: boolean;
     preset: AudioEffectsPreset;
-    savedCustom: AudioEffectsTuning | null;
+    customPresets: AudioEffectsUserPreset[];
+    activeCustomId: string | null;
 }
 
 export interface AudioEffectsState {
@@ -49,7 +59,7 @@ export function presetBands(preset: typeof PRESET_IDS[number]): EqualizerBand[] 
 }
 
 export function defaultSettings(): AudioEffectsSettings {
-    return { enabled: false, preset: "flat", bands: presetBands("flat"), preampDb: 0, savedCustom: null };
+    return { enabled: false, preset: "flat", bands: presetBands("flat"), preampDb: 0, customPresets: [], activeCustomId: null };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -80,12 +90,96 @@ export function parseAudioEffectsSettings(value: unknown): AudioEffectsSettings 
         ![...PRESET_IDS, "custom"].includes(value.preset as AudioEffectsPreset)) {
         throw new Error("Invalid audio effects settings");
     }
+    const legacy = value.savedCustom == null ? null : parseTuning(value.savedCustom);
+    const presets: AudioEffectsUserPreset[] = [];
+    if (value.customPresets === undefined) {
+        if (legacy) presets.push({ ...legacy, id: LEGACY_CUSTOM_PRESET_ID, name: "My preset" });
+    } else {
+        if (!Array.isArray(value.customPresets) || value.customPresets.length > MAX_CUSTOM_PRESETS) {
+            throw new Error("Invalid custom audio presets");
+        }
+        const ids = new Set<string>();
+        const names = new Set<string>();
+        for (const entry of value.customPresets) {
+            if (!isRecord(entry) || typeof entry.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(entry.id) ||
+                typeof entry.name !== "string" || !entry.name.trim() || entry.name.length > MAX_PRESET_NAME_LENGTH ||
+                ids.has(entry.id) || names.has(normalizePresetName(entry.name).toLowerCase())) {
+                throw new Error("Invalid custom audio preset");
+            }
+            ids.add(entry.id);
+            const name = normalizePresetName(entry.name);
+            names.add(name.toLowerCase());
+            presets.push({ ...parseTuning(entry), id: entry.id, name });
+        }
+    }
+    const activeCustomId = value.activeCustomId === undefined
+        ? value.preset === "custom" && legacy && sameTuning(parseTuning(value), legacy) ? LEGACY_CUSTOM_PRESET_ID : null
+        : value.activeCustomId;
+    if (activeCustomId !== null && (typeof activeCustomId !== "string" || value.preset !== "custom" || !presets.some(preset => preset.id === activeCustomId))) {
+        throw new Error("Invalid active custom audio preset");
+    }
     return {
         ...parseTuning(value),
         enabled: value.enabled,
         preset: value.preset as AudioEffectsPreset,
-        savedCustom: value.savedCustom === null ? null : parseTuning(value.savedCustom),
+        customPresets: presets,
+        activeCustomId,
     };
+}
+
+export class AudioPresetError extends Error {
+    constructor(readonly reason: "nameRequired" | "duplicateName" | "presetLimit" | "presetMissing") {
+        super(reason);
+    }
+}
+
+function normalizePresetName(name: string): string {
+    const normalized = name.trim().replace(/\s+/g, " ");
+    if (!normalized || normalized.length > MAX_PRESET_NAME_LENGTH) throw new AudioPresetError("nameRequired");
+    return normalized;
+}
+
+function uniquePresetName(settings: AudioEffectsSettings, name: string, exceptId?: string) {
+    const normalized = normalizePresetName(name);
+    if (settings.customPresets.some(preset => preset.id !== exceptId && preset.name.toLowerCase() === normalized.toLowerCase())) {
+        throw new AudioPresetError("duplicateName");
+    }
+    return normalized;
+}
+
+function copyTuning(tuning: AudioEffectsTuning): AudioEffectsTuning {
+    return { bands: tuning.bands.map(band => ({ ...band })), preampDb: tuning.preampDb };
+}
+
+export function createUserPreset(settings: AudioEffectsSettings, id: string, name: string): AudioEffectsSettings {
+    if (settings.customPresets.length >= MAX_CUSTOM_PRESETS) throw new AudioPresetError("presetLimit");
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id) || settings.customPresets.some(preset => preset.id === id)) throw new Error("Invalid preset ID");
+    const preset = { ...copyTuning(settings), id, name: uniquePresetName(settings, name) };
+    return { ...settings, preset: "custom", activeCustomId: id, customPresets: [...settings.customPresets, preset] };
+}
+
+export function applyUserPreset(settings: AudioEffectsSettings, id: string): AudioEffectsSettings {
+    const preset = settings.customPresets.find(entry => entry.id === id);
+    if (!preset) throw new AudioPresetError("presetMissing");
+    return { ...settings, ...copyTuning(preset), preset: "custom", activeCustomId: id };
+}
+
+export function saveUserPreset(settings: AudioEffectsSettings, id: string): AudioEffectsSettings {
+    if (!settings.customPresets.some(entry => entry.id === id)) throw new AudioPresetError("presetMissing");
+    return {
+        ...settings, preset: "custom", activeCustomId: id,
+        customPresets: settings.customPresets.map(entry => entry.id === id ? { ...entry, ...copyTuning(settings) } : entry),
+    };
+}
+
+export function renameUserPreset(settings: AudioEffectsSettings, id: string, name: string): AudioEffectsSettings {
+    if (!settings.customPresets.some(entry => entry.id === id)) throw new AudioPresetError("presetMissing");
+    const normalized = uniquePresetName(settings, name, id);
+    return { ...settings, customPresets: settings.customPresets.map(entry => entry.id === id ? { ...entry, name: normalized } : entry) };
+}
+
+export function deleteUserPreset(settings: AudioEffectsSettings, id: string): AudioEffectsSettings {
+    return { ...settings, activeCustomId: settings.activeCustomId === id ? null : settings.activeCustomId, customPresets: settings.customPresets.filter(entry => entry.id !== id) };
 }
 
 export function sameTuning(left: AudioEffectsTuning, right: AudioEffectsTuning | null): boolean {
@@ -125,7 +219,7 @@ export function gainAt(bands: EqualizerBand[], frequencyHz: number): number {
 }
 
 export function editBand(state: AudioEffectsState, frequencyHz: number, gainDb: number): AudioEffectsSettings {
-    const frequencies = state.frequencies;
+    const frequencies = state.frequencies.length ? state.frequencies : FREQUENCIES;
     if (!frequencies.includes(frequencyHz) || !Number.isFinite(gainDb)) {
         return state.settings;
     }

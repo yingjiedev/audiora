@@ -1,7 +1,7 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
 import AudioEffectsSetting from "./audioEffectsSetting";
-import { AudioEffectsState, defaultSettings, initialState } from "@/core/audioEffects/model";
+import { AudioEffectsSettings, AudioEffectsState, createUserPreset, defaultSettings, initialState, presetBands } from "@/core/audioEffects/model";
 
 let mockState: AudioEffectsState;
 const mockUpdate = jest.fn();
@@ -10,14 +10,18 @@ jest.mock("@/core/audioEffects", () => ({
     useAudioEffects: () => mockState,
     audioEffects: { getSnapshot: () => mockState, update: (...args: any[]) => mockUpdate(...args), refresh: () => mockRefresh() },
 }));
-jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
+jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string, values?: any) => values?.name ? `${key}:${values.name}` : key }) }));
 jest.mock("@/hooks/useColors", () => () => ({ card: "#FFFFFF", surface: "#EEEEEE", text: "#111111", textSecondary: "#555555", primary: "#3867F4", active: "#3867F4", onPrimary: "#FFFFFF" }));
-jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value }));
+jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value, fontRpx: (value: number) => value }));
+jest.mock("@/utils/nanoid", () => ({ nanoid: () => "created-preset" }));
+jest.mock("@/components/base/appBar", () => "AppBar");
 jest.mock("@/components/base/switch", () => "ThemeSwitch");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@react-native-community/slider", () => "Slider");
 jest.mock("../components/equalizerCurve", () => "EqualizerCurve");
+jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
+jest.mock("@/components/dialogs/useDialog", () => ({ showDialog: jest.fn() }));
 jest.mock("@/utils/toast", () => ({ __esModule: true, default: { success: jest.fn(), warn: jest.fn() } }));
 
 function render() {
@@ -28,24 +32,36 @@ function render() {
     return renderer;
 }
 
-function press(renderer: TestRenderer.ReactTestRenderer, label: string) {
-    act(() => {
-        renderer.root.findAllByProps({ accessibilityLabel: label })[0].props.onPress();
+async function press(renderer: TestRenderer.ReactTestRenderer, label: string) {
+    await act(async () => {
+        await renderer.root.findAllByProps({ accessibilityLabel: label })[0].props.onPress();
     });
 }
 
-describe("audio effects settings", () => {
+const input = () => jest.requireMock("@/components/panels/usePanel").showPanel.mock.calls.slice(-1)[0][1];
+const toast = () => jest.requireMock("@/utils/toast").default;
+
+describe("illustrated sound presets and editing", () => {
     beforeEach(() => {
-        mockState = { ...initialState(true), loaded: true, version: 1, status: "ready", frequencies: [60, 230, 910, 3600, 14000] };
+        jest.clearAllMocks();
+        mockState = { ...initialState(true), loaded: true, version: 1, status: "ready", active: true, frequencies: [60, 230, 910, 3600, 14000] };
         mockState.settings = { ...defaultSettings(), enabled: true };
-        mockState.active = true;
-        mockUpdate.mockReset().mockResolvedValue(true);
-        jest.requireMock("@/utils/toast").default.success.mockReset();
+        mockUpdate.mockImplementation(async (settings: AudioEffectsSettings) => {
+            mockState = { ...mockState, settings }; return true;
+        });
     });
 
-    it("groups actual device bands and sends live previews separately from persistence", () => {
+    it("renders an illustrated gallery with the switch outside the scrolling content", async () => {
         const renderer = render();
-        press(renderer, "audioEffects.custom");
+        expect(renderer.root.findAllByProps({ testID: "audio-effects-hero" })).not.toHaveLength(0);
+        expect(renderer.root.findAllByType("Slider" as any)).toHaveLength(0);
+        await press(renderer, "audioEffects.preset.rock");
+        expect(mockUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: true, preset: "rock", activeCustomId: null }));
+    });
+
+    it("groups actual device bands and separates live previews from persistence", async () => {
+        const renderer = render();
+        await press(renderer, "audioEffects.custom");
         const sliders = renderer.root.findAllByType("Slider" as any);
         expect(sliders).toHaveLength(2);
         act(() => {
@@ -53,63 +69,88 @@ describe("audio effects settings", () => {
         });
         expect(mockUpdate).toHaveBeenNthCalledWith(1, expect.objectContaining({ preset: "custom" }), false);
         expect(mockUpdate).toHaveBeenNthCalledWith(2, expect.objectContaining({ preset: "custom" }), true);
-        press(renderer, "audioEffects.range.mid");
-        expect(renderer.root.findAllByType("Slider" as any).map(slider => slider.props.accessibilityLabel)).toEqual([
-            "audioEffects.bandLabel", "audioEffects.bandLabel",
-        ]);
-        press(renderer, "audioEffects.range.high");
+        await press(renderer, "audioEffects.range.high");
         expect(renderer.root.findAllByType("Slider" as any)).toHaveLength(1);
         expect(renderer.root.findByType("EqualizerCurve" as any).props.bands.map((band: any) => band.frequencyHz)).toEqual(mockState.frequencies);
     });
 
-    it("disables sliders when bypassed and hides tuning when unsupported", () => {
+    it("can configure a new preset while effects are off and no track has been played", async () => {
         mockState.settings.enabled = false;
+        mockState.frequencies = [];
+        mockState.status = "waiting";
         const renderer = render();
-        press(renderer, "audioEffects.custom");
-        expect(renderer.root.findAllByType("Slider" as any).every(slider => slider.props.disabled)).toBe(true);
-        mockState.status = "unsupported";
-        expect(render().root.findAllByType("Slider" as any)).toHaveLength(0);
-    });
-
-    it("does not announce a saved preset if persistence failed", async () => {
-        mockUpdate.mockResolvedValue(false);
-        const renderer = render();
-        press(renderer, "audioEffects.custom");
-        const row = renderer.root.findAllByProps({ accessibilityLabel: "audioEffects.saveCustom" })[0];
-        await act(async () => {
-            await row.props.onPress();
-        });
-        expect(jest.requireMock("@/utils/toast").default.success).not.toHaveBeenCalled();
-        expect(jest.requireMock("@/utils/toast").default.warn).toHaveBeenCalledWith("audioEffects.saveFailed");
-    });
-
-    it("applies genre presets while keeping a saved custom tuning", () => {
-        mockState.settings.savedCustom = { bands: mockState.settings.bands, preampDb: -3 };
-        const renderer = render();
-        press(renderer, "audioEffects.preset.rock");
-        expect(mockUpdate).toHaveBeenLastCalledWith(expect.objectContaining({
-            preset: "rock", preampDb: 0, savedCustom: mockState.settings.savedCustom,
-        }));
-    });
-
-    it("keeps preamp available across band groups and saves the whole tuning", async () => {
-        mockState.supportsPreamp = true;
-        mockState.frequencies = [63, 250, 4000];
-        const renderer = render();
-        press(renderer, "audioEffects.custom");
-        press(renderer, "audioEffects.range.mid");
-        const preamp = renderer.root.findAllByType("Slider" as any).find(slider => slider.props.accessibilityLabel === "audioEffects.preamp")!;
+        await press(renderer, "audioEffects.custom");
+        const sliders = renderer.root.findAllByType("Slider" as any);
+        expect(sliders).toHaveLength(3);
+        expect(sliders.every(slider => !slider.props.disabled)).toBe(true);
         act(() => {
-            preamp.props.onSlidingComplete(-3);
+            sliders[0].props.onSlidingComplete(2);
         });
-        expect(mockUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ preampDb: -3, preset: "custom" }), true);
-        const save = renderer.root.findAllByProps({ accessibilityLabel: "audioEffects.saveCustom" })[0];
+        expect(mockUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false, preset: "custom" }), true);
+    });
+
+    it("creates a named preset without replacing the existing collection", async () => {
+        mockState.settings = createUserPreset(mockState.settings, "old", "Old");
+        const renderer = render();
+        await press(renderer, "audioEffects.createPreset");
+        const close = jest.fn();
         await act(async () => {
-            await save.props.onPress();
+            await input().onOk("Commute", close);
         });
-        expect(mockUpdate).toHaveBeenLastCalledWith(expect.objectContaining({
-            savedCustom: { bands: mockState.settings.bands, preampDb: mockState.settings.preampDb },
-        }));
-        expect(jest.requireMock("@/utils/toast").default.success).toHaveBeenCalledWith("audioEffects.saved");
+        expect(mockState.settings.customPresets.map(preset => preset.name)).toEqual(["Old", "Commute"]);
+        expect(mockState.settings.activeCustomId).toBe("created-preset");
+        expect(close).toHaveBeenCalled();
+        expect(toast().success).toHaveBeenCalledWith("audioEffects.created");
+    });
+
+    it("keeps invalid names and failed writes from claiming successful creation", async () => {
+        const renderer = render();
+        await press(renderer, "audioEffects.createPreset");
+        const close = jest.fn();
+        await act(async () => {
+            await input().onOk("   ", close);
+        });
+        expect(mockUpdate).not.toHaveBeenCalled();
+        expect(toast().warn).toHaveBeenCalledWith("audioEffects.nameRequired");
+        mockUpdate.mockResolvedValue(false);
+        await act(async () => {
+            await input().onOk("Night", close);
+        });
+        expect(close).not.toHaveBeenCalled();
+        expect(toast().success).not.toHaveBeenCalled();
+        expect(mockRefresh).toHaveBeenCalled();
+    });
+
+    it("saves modifications to the selected preset while retaining a separate save-as action", async () => {
+        mockState.settings = createUserPreset(mockState.settings, "one", "One");
+        mockState.settings = { ...mockState.settings, preampDb: -3 };
+        mockState.supportsPreamp = true;
+        const renderer = render();
+        await press(renderer, "audioEffects.custom");
+        expect(renderer.root.findAllByProps({ accessibilityLabel: "audioEffects.saveAsNew" })).not.toHaveLength(0);
+        await press(renderer, "audioEffects.saveChanges");
+        expect(mockState.settings.customPresets[0].preampDb).toBe(-3);
+        expect(toast().success).toHaveBeenCalledWith("audioEffects.saved");
+    });
+
+    it("renames and deletes saved presets without resetting the current tuning", async () => {
+        mockState.settings = createUserPreset({ ...mockState.settings, bands: presetBands("bass") }, "one", "One");
+        const renderer = render();
+        await press(renderer, "audioEffects.renamePreset");
+        await act(async () => {
+            await input().onOk("Commute", jest.fn());
+        });
+        expect(mockState.settings.customPresets[0].name).toBe("Commute");
+        act(() => {
+            renderer.update(<AudioEffectsSetting />);
+        });
+        await press(renderer, "audioEffects.deleteNamedPreset:Commute");
+        const dialog = jest.requireMock("@/components/dialogs/useDialog").showDialog.mock.calls[0][1];
+        await act(async () => {
+            await dialog.onOk();
+        });
+        expect(mockState.settings.customPresets).toEqual([]);
+        expect(mockState.settings.activeCustomId).toBeNull();
+        expect(mockState.settings.bands).toEqual(presetBands("bass"));
     });
 });

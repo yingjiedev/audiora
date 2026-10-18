@@ -1,252 +1,261 @@
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Slider from "@react-native-community/slider";
+import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import AppBar from "@/components/base/appBar";
 import Icon from "@/components/base/icon";
+import { PageAction } from "@/components/base/pageSection";
 import ThemeSwitch from "@/components/base/switch";
 import ThemeText from "@/components/base/themeText";
+import { showDialog } from "@/components/dialogs/useDialog";
+import { showPanel } from "@/components/panels/usePanel";
 import { audioEffects, useAudioEffects } from "@/core/audioEffects";
-import { editBand, formatFrequency, formatGain, gainAt, PRESET_IDS, presetBands, sameTuning } from "@/core/audioEffects/model";
+import {
+    applyUserPreset, AudioEffectsSettings, AudioEffectsUserPreset, AudioPresetError, createUserPreset, deleteUserPreset,
+    LEGACY_CUSTOM_PRESET_ID, MAX_CUSTOM_PRESETS, MAX_PRESET_NAME_LENGTH, PRESET_IDS, presetBands, renameUserPreset, saveUserPreset,
+} from "@/core/audioEffects/model";
 import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
+import { nanoid } from "@/utils/nanoid";
 import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
+import AudioEffectsEditor from "../components/audioEffectsEditor";
 import EqualizerCurve from "../components/equalizerCurve";
-import SettingRow from "../components/settingRow";
-import SettingSection from "../components/settingSection";
-import { settingsLayout } from "../components/settingsLayout";
 
-const BAND_GROUPS = ["low", "mid", "high"] as const;
-type BandGroup = typeof BAND_GROUPS[number];
-const bandGroup = (frequency: number): BandGroup => frequency < 250 ? "low" : frequency < 4000 ? "mid" : "high";
+const illustrations = {
+    stage: require("@/assets/images/audioEffects/stage.png"),
+    bass: require("@/assets/images/audioEffects/bass.png"),
+    vocal: require("@/assets/images/audioEffects/vocal.png"),
+    record: require("@/assets/images/audioEffects/record.png"),
+};
 
 export default function AudioEffectsSetting() {
     const state = useAudioEffects();
     const { settings, status } = state;
-    const [selectedTab, setTab] = useState<"presets" | "custom" | null>(null);
-    const tab = selectedTab ?? (settings.preset === "custom" ? "custom" : "presets");
-    const [group, setGroup] = useState<BandGroup>("low");
-    const [saving, setSaving] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [showAll, setShowAll] = useState(false);
     const colors = useColors();
     const { t } = useI18N();
+    const { width } = useWindowDimensions();
     const unavailable = status === "unsupported";
-    const switchDisabled = !state.loaded || (unavailable && !settings.enabled);
-    const savedSelected = settings.preset === "custom" && sameTuning(settings, settings.savedCustom);
-    const disabled = !settings.enabled || status !== "ready" || !state.loaded;
+    const canConfigure = state.loaded && !unavailable;
+    const presetName = (preset: AudioEffectsUserPreset) => preset.id === LEGACY_CUSTOM_PRESET_ID && preset.name === "My preset" ? t("audioEffects.savedPreset") : preset.name;
+    const activePreset = settings.customPresets.find(preset => preset.id === settings.activeCustomId);
+    const currentName = settings.preset === "custom" ? activePreset ? presetName(activePreset) : t("audioEffects.custom") : t(`audioEffects.preset.${settings.preset}`);
     const statusText = !state.loaded && !unavailable && status !== "error" ? t("audioEffects.loading") : unavailable ? t("audioEffects.unsupported") :
-        status === "error" ? t("audioEffects.error") :
-            status === "waiting" ? t("audioEffects.waiting") :
-                settings.enabled && state.active ? t("audioEffects.active", { count: state.frequencies.length }) :
-                    settings.enabled ? t("audioEffects.inactive") : t("audioEffects.off");
-    const currentName = settings.preset === "custom" ? t("audioEffects.custom") : t(`audioEffects.preset.${settings.preset}`);
-    const visibleFrequencies = state.frequencies.filter(frequency => bandGroup(frequency) === group);
-    const deviceBands = state.frequencies.map(frequencyHz => ({
-        frequencyHz,
-        gainDb: Math.max(state.minimumGain, Math.min(state.maximumGain, gainAt(settings.bands, frequencyHz))),
-    }));
+        status === "error" ? t("audioEffects.error") : !settings.enabled ? t("audioEffects.off") :
+            state.active ? t("audioEffects.active", { count: state.frequencies.length }) : t("audioEffects.waiting");
 
-    const setBand = (frequency: number, gain: number, persist: boolean) => {
-        audioEffects.update(editBand(audioEffects.getSnapshot(), frequency, gain), persist);
+    const commit = async (next: AudioEffectsSettings): Promise<boolean> => {
+        if (await audioEffects.update(next)) return true;
+        Toast.warn(t("audioEffects.saveFailed"));
+        await audioEffects.refresh();
+        return false;
     };
-    const setPreamp = (preampDb: number, persist: boolean) => {
-        audioEffects.update({ ...audioEffects.getSnapshot().settings, preampDb, preset: "custom" }, persist);
-    };
-    const saveCustom = async () => {
-        setSaving(true);
-        try {
-            const current = audioEffects.getSnapshot().settings;
-            const success = await audioEffects.update({ ...current, preset: "custom", savedCustom: { bands: current.bands, preampDb: current.preampDb } });
-            if (success) {
-                Toast.success(t("audioEffects.saved"));
-            } else {
-                Toast.warn(t("audioEffects.saveFailed"));
-            }
-        } finally {
-            setSaving(false);
+
+    const namePreset = (existing?: AudioEffectsUserPreset) => {
+        if (!existing && audioEffects.getSnapshot().settings.customPresets.length >= MAX_CUSTOM_PRESETS) {
+            Toast.warn(t("audioEffects.presetLimit"));
+            return;
         }
+        let number = 1;
+        const names = new Set(audioEffects.getSnapshot().settings.customPresets.map(preset => preset.name.toLowerCase()));
+        while (names.has(t("audioEffects.defaultPresetName", { number }).toLowerCase())) number += 1;
+        let submitting = false;
+        showPanel("SimpleInput", {
+            title: t(existing ? "audioEffects.renamePreset" : "audioEffects.createPreset"),
+            placeholder: t("audioEffects.presetNamePlaceholder"),
+            defaultValue: existing ? presetName(existing) : t("audioEffects.defaultPresetName", { number }),
+            maxLength: MAX_PRESET_NAME_LENGTH,
+            hints: [t(existing ? "audioEffects.renameHint" : "audioEffects.createHint")],
+            async onOk(text, closePanel) {
+                if (submitting) return;
+                submitting = true;
+                try {
+                    const current = audioEffects.getSnapshot().settings;
+                    const next = existing ? renameUserPreset(current, existing.id, text) : createUserPreset(current, nanoid(), text);
+                    if (await commit(next)) {
+                        closePanel();
+                        if (!existing) setEditing(true);
+                        Toast.success(t(existing ? "audioEffects.renamed" : "audioEffects.created"));
+                    }
+                } catch (error) {
+                    Toast.warn(t(error instanceof AudioPresetError ? `audioEffects.${error.reason}` : "audioEffects.saveFailed"));
+                } finally {
+                    submitting = false;
+                }
+            },
+        });
     };
+
+    const removePreset = (preset: AudioEffectsUserPreset) => showDialog("SimpleDialog", {
+        title: t("audioEffects.deletePreset"),
+        content: t("audioEffects.deletePresetHint", { name: presetName(preset) }),
+        async onOk() {
+            if (await commit(deleteUserPreset(audioEffects.getSnapshot().settings, preset.id))) Toast.success(t("audioEffects.deleted"));
+        },
+    });
+
+    const heading = (title: string, action?: React.ReactNode) => (
+        <View style={styles.heading}>
+            <ThemeText fontSize="title" fontWeight="semibold" style={styles.flex}>{title}</ThemeText>
+            {action}
+        </View>
+    );
 
     return (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <SettingSection>
-                <SettingRow title={t("audioEffects.enabled")} description={statusText} descriptionLines={3}
-                    right={(
-                        <Pressable accessibilityRole="switch" accessibilityLabel={t("audioEffects.enabled")}
-                            style={styles.switch} accessibilityState={{ checked: settings.enabled, disabled: switchDisabled }}
-                            disabled={switchDisabled} onPress={() => {
-                                audioEffects.update({ ...audioEffects.getSnapshot().settings, enabled: !settings.enabled });
-                            }}>
-                            <View pointerEvents="none"><ThemeSwitch value={settings.enabled} disabled={switchDisabled} /></View>
-                        </Pressable>
-                    )} />
-                <View style={[styles.summary, { backgroundColor: colors.cardInset }]}>
-                    <Icon name="musical-note" size={rpx(32)} color={colors.onCardInset} />
-                    <ThemeText color={colors.onCardInset} style={styles.flex}>{currentName}</ThemeText>
-                    <ThemeText fontSize="caption" color={colors.onCardInsetSecondary}>{t("audioEffects.musicOnly")}</ThemeText>
-                </View>
-                {status === "error" || (unavailable && state.loaded) ? (
-                    <SettingRow title={t("audioEffects.retry")} onPress={() => {
-                        if (state.loaded) {
-                            audioEffects.update(audioEffects.getSnapshot().settings);
-                        } else {
-                            audioEffects.refresh();
+        <>
+            <AppBar onBackPress={editing ? () => setEditing(false) : undefined}
+                actionComponent={canConfigure ? <PageAction title={t("audioEffects.createPreset")} icon="plus" variant="text" onPress={() => namePreset()} /> : undefined}>
+                {t(editing ? "audioEffects.equalizer" : "audioEffects.title")}
+            </AppBar>
+            <View style={styles.flex}>
+                {editing && canConfigure ? (
+                    <AudioEffectsEditor state={state} title={currentName} onCreate={() => namePreset()} onSave={async () => {
+                        const current = audioEffects.getSnapshot().settings;
+                        if (!current.activeCustomId) return false;
+                        try {
+                            const success = await commit(saveUserPreset(current, current.activeCustomId));
+                            if (success) Toast.success(t("audioEffects.saved"));
+                            return success;
+                        } catch {
+                            Toast.warn(t("audioEffects.saveFailed"));
+                            return false;
                         }
                     }} />
-                ) : null}
-            </SettingSection>
-            {!unavailable && state.loaded ? (
-                <>
-                    <View accessibilityRole="tablist" style={[styles.tabs, { backgroundColor: colors.card }]}>
-                        {(["presets", "custom"] as const).map(value => (
-                            <Pressable key={value} accessibilityRole="tab" accessibilityLabel={t(`audioEffects.${value}`)} accessibilityState={{ selected: tab === value }}
-                                onPress={() => setTab(value)} style={[styles.tab, { backgroundColor: tab === value ? colors.primary : colors.card }]}>
-                                <ThemeText color={tab === value ? colors.onPrimary : colors.textSecondary} fontWeight="semibold">
-                                    {t(`audioEffects.${value}`)}
-                                </ThemeText>
-                            </Pressable>
-                        ))}
-                    </View>
-                    {tab === "presets" ? (
-                        <>
-                            <ThemeText fontSize="description" fontColor="textSecondary" style={styles.hint}>{t("audioEffects.previewHint")}</ThemeText>
-                            <View style={styles.presets}>
-                                {PRESET_IDS.map(preset => {
-                                    const selected = settings.preset === preset;
-                                    return (
-                                        <Pressable key={preset} accessibilityRole="button" accessibilityLabel={t(`audioEffects.preset.${preset}`)}
-                                            accessibilityState={{ selected }} onPress={() => {
-                                                audioEffects.update({ ...audioEffects.getSnapshot().settings, preset, bands: presetBands(preset), preampDb: 0 });
-                                            }} style={[styles.preset, { backgroundColor: colors.card, borderColor: selected ? colors.active : colors.divider }]}>
-                                            <View style={styles.readout}>
-                                                <ThemeText fontWeight="semibold" fontColor={selected ? "primary" : "text"} style={styles.flex}>
-                                                    {t(`audioEffects.preset.${preset}`)}
-                                                </ThemeText>
-                                                {selected ? <Icon name="check-circle" size={rpx(32)} color={colors.active} /> : null}
-                                            </View>
-                                            <EqualizerCurve compact bands={presetBands(preset)} />
-                                            <ThemeText fontSize="description" fontColor="textSecondary">{t(`audioEffects.presetHint.${preset}`)}</ThemeText>
-                                        </Pressable>
-                                    );
-                                })}
+                ) : (
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+                        {heading(t("audioEffects.featured"))}
+                        <View testID="audio-effects-hero" style={[styles.hero, { backgroundColor: colors.card }]}>
+                            <View style={[styles.heroArt, { backgroundColor: colors.cardInset }]}>
+                                <View style={[styles.heroBadge, { backgroundColor: colors.card }]}>
+                                    <Icon name="musical-note" size={rpx(24)} color={colors.primaryText} />
+                                    <ThemeText fontSize="tag" fontColor="primary">{t("audioEffects.heroTag")}</ThemeText>
+                                </View>
+                                <Image source={illustrations.stage} resizeMode="contain" accessible={false} style={styles.heroImage} />
                             </View>
-                            {settings.savedCustom ? (
-                                <SettingSection title={t("audioEffects.savedPreset")}>
-                                    <SettingRow title={t("audioEffects.savedPreset")} description={t("audioEffects.savedPresetHint")}
-                                        value={savedSelected ? t("audioEffects.selected") : undefined} showChevron onPress={() => {
-                                            const current = audioEffects.getSnapshot().settings;
-                                            if (current.savedCustom) {
-                                                audioEffects.update({ ...current, ...current.savedCustom, preset: "custom" });
-                                                setTab("custom");
-                                            }
-                                        }} />
-                                </SettingSection>
-                            ) : null}
-                            <SettingSection>
-                                <SettingRow title={t("audioEffects.custom")} description={t("audioEffects.customHint")} showChevron onPress={() => setTab("custom")} />
-                            </SettingSection>
-                        </>
-                    ) : (
-                        <SettingSection title={t("audioEffects.equalizer")} description={t("audioEffects.curveHint")}>
-                            <View style={styles.editor}>
-                                <View style={styles.readout}>
-                                    <ThemeText fontWeight="semibold" style={styles.flex}>{currentName}</ThemeText>
-                                    <ThemeText fontSize="caption" fontColor={savedSelected ? "primary" : "textSecondary"}>
-                                        {t(savedSelected ? "audioEffects.savedState" : "audioEffects.editingState")}
-                                    </ThemeText>
-                                </View>
-                                <EqualizerCurve bands={deviceBands.length ? deviceBands : settings.bands}
-                                    minimumGain={state.minimumGain} maximumGain={state.maximumGain} />
-                                <View accessibilityRole="tablist" style={[styles.bandGroups, { backgroundColor: colors.surface }]}>
-                                    {BAND_GROUPS.map(value => (
-                                        <Pressable key={value} accessibilityRole="tab" accessibilityLabel={t(`audioEffects.range.${value}`)}
-                                            accessibilityState={{ selected: group === value }} onPress={() => setGroup(value)}
-                                            style={[styles.tab, { backgroundColor: group === value ? colors.primary : colors.surface }]}>
-                                            <ThemeText color={group === value ? colors.onPrimary : colors.textSecondary} fontSize="description">
-                                                {t(`audioEffects.range.${value}`)}
-                                            </ThemeText>
-                                        </Pressable>
-                                    ))}
-                                </View>
-                                <ThemeText fontSize="caption" fontColor="textSecondary" style={styles.rangeHint}>{t(`audioEffects.rangeHint.${group}`)}</ThemeText>
-                                {visibleFrequencies.map(frequency => {
-                                    const gain = deviceBands.find(band => band.frequencyHz === frequency)!.gainDb;
-                                    return (
-                                        <View key={frequency} style={styles.band}>
-                                            <View style={styles.readout}>
-                                                <ThemeText>{formatFrequency(frequency)}</ThemeText>
-                                                <ThemeText fontSize="description" fontColor="primary">{formatGain(gain)}</ThemeText>
+                            <View style={styles.heroCopy}>
+                                <ThemeText fontSize="section" fontWeight="semibold">{currentName}</ThemeText>
+                                <ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>{t("audioEffects.heroHint")}</ThemeText>
+                                <PageAction title={t("audioEffects.custom")} icon="pencil-square" variant="primary" size="standard"
+                                    disabled={!canConfigure} onPress={() => setEditing(true)} />
+                            </View>
+                        </View>
+                        {canConfigure ? (
+                            <>
+                                {heading(t("audioEffects.presets"), <ThemeText fontSize="description" fontColor="textSecondary">{t("audioEffects.presetCount", { count: PRESET_IDS.length })}</ThemeText>)}
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}
+                                    decelerationRate="fast" snapToInterval={Math.min(width * 0.29, 152) + rpx(20)}>
+                                    {PRESET_IDS.map(preset => {
+                                        const selected = settings.preset === preset;
+                                        const art = preset === "vocal" || preset === "bright" ? illustrations.vocal : preset === "bass" || preset === "electronic" || preset === "rock" ? illustrations.bass : illustrations.record;
+                                        return (
+                                            <Pressable key={preset} accessibilityRole="button" accessibilityLabel={t(`audioEffects.preset.${preset}`)}
+                                                accessibilityState={{ selected }} onPress={() => commit({ ...audioEffects.getSnapshot().settings, enabled: true, preset, activeCustomId: null, bands: presetBands(preset), preampDb: 0 })}
+                                                style={[styles.presetCard, { width: Math.min(width * 0.29, 152), backgroundColor: colors.card, borderColor: selected ? colors.active : colors.card }]}>
+                                                <Image source={art} resizeMode="contain" accessible={false} style={styles.presetArt} />
+                                                <ThemeText fontSize="subTitle" fontWeight="semibold" style={styles.center}>{t(`audioEffects.preset.${preset}`)}</ThemeText>
+                                                <ThemeText fontSize="description" fontColor="textSecondary" style={styles.presetHint}>{t(`audioEffects.presetHint.${preset}`)}</ThemeText>
+                                                <View style={[styles.usePill, { backgroundColor: selected && settings.enabled ? colors.primary : colors.tonalSurface }]}>
+                                                    {selected && settings.enabled ? <Icon name="check" color={colors.onPrimary} size={rpx(24)} /> : null}
+                                                    <ThemeText fontSize="description" color={selected && settings.enabled ? colors.onPrimary : colors.onTonal}>{t(selected && settings.enabled ? "audioEffects.inUse" : "audioEffects.applyPreset")}</ThemeText>
+                                                </View>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </ScrollView>
+                                {heading(t("audioEffects.myPresets"), <PageAction title={t("audioEffects.createPreset")} icon="plus" variant="text" onPress={() => namePreset()} />)}
+                                {settings.customPresets.length ? (
+                                    <View style={styles.library}>
+                                        {(showAll ? settings.customPresets : settings.customPresets.slice(0, 4)).map(preset => (
+                                            <View key={preset.id} style={[styles.userCard, { width: (width - rpx(84)) / 2, backgroundColor: colors.card }]}>
+                                                <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.applyNamedPreset", { name: presetName(preset) })}
+                                                    accessibilityState={{ selected: settings.activeCustomId === preset.id }} style={styles.userBody}
+                                                    onPress={() => commit({ ...applyUserPreset(audioEffects.getSnapshot().settings, preset.id), enabled: true })}>
+                                                    <ThemeText fontWeight="semibold" numberOfLines={2}>{presetName(preset)}</ThemeText>
+                                                    <EqualizerCurve compact bands={preset.bands} />
+                                                    <View style={styles.userStatus}>
+                                                        <ThemeText fontSize="description" fontColor={settings.activeCustomId === preset.id ? "primary" : "textSecondary"}>
+                                                            {t(settings.activeCustomId === preset.id ? "audioEffects.selected" : "audioEffects.applyPreset")}
+                                                        </ThemeText>
+                                                        <Icon name="chevron-right" size={rpx(24)} color={colors.textSecondary} />
+                                                    </View>
+                                                </Pressable>
+                                                <View style={[styles.userActions, { borderTopColor: colors.divider }]}>
+                                                    <PageAction title={t("audioEffects.renamePreset")} variant="text" onPress={() => namePreset(preset)} />
+                                                    <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.deleteNamedPreset", { name: presetName(preset) })}
+                                                        style={styles.iconButton} onPress={() => removePreset(preset)}><Icon name="trash-outline" size={rpx(30)} color={colors.danger} /></Pressable>
+                                                </View>
                                             </View>
-                                            <Slider accessibilityLabel={t("audioEffects.bandLabel", { frequency: formatFrequency(frequency) })}
-                                                disabled={disabled} minimumValue={state.minimumGain} maximumValue={state.maximumGain} step={0.5} value={gain}
-                                                minimumTrackTintColor={colors.active} maximumTrackTintColor={colors.textSecondary} thumbTintColor={colors.active}
-                                                style={styles.slider} onValueChange={value => setBand(frequency, value, false)}
-                                                onSlidingComplete={value => setBand(frequency, value, true)} />
-                                        </View>
-                                    );
-                                })}
-                                {state.frequencies.length === 0 || visibleFrequencies.length === 0 ? (
-                                    <ThemeText fontSize="description" fontColor="textSecondary" style={styles.rangeHint}>
-                                        {t(state.frequencies.length ? "audioEffects.noBands" : "audioEffects.waiting")}
-                                    </ThemeText>
-                                ) : null}
-                                {!settings.enabled ? <ThemeText fontSize="description" fontColor="textSecondary">{t("audioEffects.enableToEdit")}</ThemeText> : null}
-                                {state.supportsPreamp ? (
-                                    <View style={[styles.preamp, { borderTopColor: colors.divider }]}>
-                                        <View style={styles.readout}>
-                                            <ThemeText>{t("audioEffects.preamp")}</ThemeText>
-                                            <ThemeText fontSize="description" fontColor="primary">{formatGain(settings.preampDb)}</ThemeText>
-                                        </View>
-                                        <Slider accessibilityLabel={t("audioEffects.preamp")} disabled={disabled}
-                                            minimumValue={-12} maximumValue={0} step={0.5} value={settings.preampDb}
-                                            minimumTrackTintColor={colors.active} maximumTrackTintColor={colors.textSecondary} thumbTintColor={colors.active}
-                                            style={styles.slider} onValueChange={value => setPreamp(value, false)} onSlidingComplete={value => setPreamp(value, true)} />
-                                        <ThemeText fontSize="caption" fontColor="textSecondary">{t("audioEffects.preampHint")}</ThemeText>
+                                        ))}
                                     </View>
-                                ) : null}
-                                <View style={styles.actions}>
-                                    <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.reset")} onPress={() => {
-                                        audioEffects.update({ ...audioEffects.getSnapshot().settings, preset: "flat", bands: presetBands("flat"), preampDb: 0 });
-                                    }} style={[styles.action, { backgroundColor: colors.surface }]}>
-                                        <Icon name="arrow-path" size={rpx(28)} color={colors.text} />
-                                        <ThemeText fontSize="description">{t("audioEffects.resetShort")}</ThemeText>
+                                ) : (
+                                    <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.createFirstPreset")} onPress={() => namePreset()}
+                                        style={[styles.emptyLibrary, { backgroundColor: colors.card }]}>
+                                        <Image source={illustrations.record} resizeMode="contain" accessible={false} style={styles.emptyArt} />
+                                        <View style={styles.flex}>
+                                            <ThemeText fontSize="subTitle" fontWeight="semibold">{t("audioEffects.createFirstPreset")}</ThemeText>
+                                            <ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>{t("audioEffects.createHint")}</ThemeText>
+                                            <View style={styles.emptyAction}><Icon name="plus" size={rpx(28)} color={colors.primaryText} /><ThemeText fontSize="description" fontColor="primary">{t("audioEffects.createPreset")}</ThemeText></View>
+                                        </View>
                                     </Pressable>
-                                    <Pressable accessibilityRole="button" accessibilityLabel={t("audioEffects.saveCustom")}
-                                        accessibilityState={{ disabled: saving }} disabled={saving} onPress={saveCustom}
-                                        style={[styles.action, styles.flex, { backgroundColor: colors.primary }]}>
-                                        <ThemeText fontSize="description" color={colors.onPrimary}>{t("audioEffects.saveCustom")}</ThemeText>
-                                    </Pressable>
+                                )}
+                                {settings.customPresets.length > 4 ? <PageAction title={t(showAll ? "audioEffects.showLess" : "audioEffects.showAll")} variant="text" onPress={() => setShowAll(!showAll)} /> : null}
+                                <View style={[styles.editEntry, { backgroundColor: colors.card }]}>
+                                    <View style={[styles.editIcon, { backgroundColor: colors.tonalSurface }]}><Icon name="pencil-square" size={rpx(40)} color={colors.onTonal} /></View>
+                                    <View style={styles.flex}><ThemeText fontWeight="semibold">{t("audioEffects.equalizer")}</ThemeText><ThemeText fontSize="description" fontColor="textSecondary" style={styles.heroDescription}>{t("audioEffects.customHint")}</ThemeText></View>
+                                    <PageAction title={t("audioEffects.editSound")} variant="tonal" onPress={() => setEditing(true)} />
                                 </View>
-                                <ThemeText fontSize="caption" fontColor="textSecondary">{t("audioEffects.saveHint")}</ThemeText>
-                            </View>
-                        </SettingSection>
-                    )}
-                    <SettingSection>
-                        <SettingRow title={t("audioEffects.headroomTitle")} description={t("audioEffects.headroomHint")} descriptionLines={3}
-                            right={<Icon name="shield-keyhole-outline" size={rpx(36)} color={colors.textSecondary} />} />
-                        {state.supportsLimiter ? <SettingRow title={t("audioEffects.limiter")} value={t("audioEffects.automatic")} /> : null}
-                    </SettingSection>
-                </>
-            ) : null}
-        </ScrollView>
+                                <ThemeText fontSize="description" fontColor="textSecondary" style={styles.note}>{t("audioEffects.libraryHint")}</ThemeText>
+                            </>
+                        ) : <ThemeText fontSize="description" fontColor="textSecondary" style={styles.note}>{statusText}</ThemeText>}
+                        {status === "error" || unavailable && state.loaded ? <PageAction title={t("audioEffects.retry")} variant="text" onPress={() => {
+                            if (state.loaded) audioEffects.update(audioEffects.getSnapshot().settings);
+                            else audioEffects.refresh();
+                        }} /> : null}
+                    </ScrollView>
+                )}
+                <View testID="audio-effects-switch-bar" style={[styles.switchBar, { backgroundColor: colors.card, borderTopColor: colors.divider }]}>
+                    <View style={styles.flex}>
+                        <ThemeText fontWeight="medium">{t("audioEffects.enabled")}</ThemeText>
+                        <ThemeText fontSize="description" fontColor="textSecondary" numberOfLines={2} style={styles.status}>{statusText}</ThemeText>
+                    </View>
+                    <Pressable accessibilityRole="switch" accessibilityLabel={t("audioEffects.enabled")} accessibilityState={{ checked: settings.enabled, disabled: !state.loaded || unavailable && !settings.enabled }}
+                        disabled={!state.loaded || unavailable && !settings.enabled} style={styles.iconButton} onPress={() => commit({ ...audioEffects.getSnapshot().settings, enabled: !settings.enabled })}>
+                        <View pointerEvents="none"><ThemeSwitch value={settings.enabled} disabled={!state.loaded || unavailable && !settings.enabled} /></View>
+                    </Pressable>
+                </View>
+            </View>
+        </>
     );
 }
 
 const styles = StyleSheet.create({
-    switch: { minWidth: rpx(88), minHeight: rpx(88), alignItems: "center", justifyContent: "center" },
-    content: { paddingBottom: rpx(60) },
     flex: { flex: 1, minWidth: 0 },
-    summary: { flexDirection: "row", alignItems: "center", gap: rpx(12), margin: rpx(20), marginTop: 0, padding: rpx(20), borderRadius: rpx(16) },
-    tabs: { flexDirection: "row", margin: settingsLayout.groupMargin, marginBottom: 0, padding: rpx(8), borderRadius: rpx(24) },
-    tab: { flex: 1, minHeight: rpx(88), alignItems: "center", justifyContent: "center", borderRadius: rpx(18) },
-    hint: { marginHorizontal: settingsLayout.groupMargin, marginTop: rpx(20), marginBottom: rpx(20) },
-    presets: { flexDirection: "row", flexWrap: "wrap", gap: rpx(16), marginHorizontal: settingsLayout.groupMargin },
-    preset: { width: "47%", flexGrow: 1, padding: rpx(24), borderRadius: settingsLayout.cardRadius, borderWidth: 1.5, gap: rpx(12) },
-    readout: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: rpx(12) },
-    editor: { padding: settingsLayout.rowPadding, gap: rpx(20) },
-    bandGroups: { flexDirection: "row", padding: rpx(6), borderRadius: rpx(22) },
-    rangeHint: { paddingVertical: rpx(8) },
-    band: { paddingTop: rpx(4) },
-    slider: { width: "100%", minHeight: rpx(88) },
-    preamp: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: rpx(24) },
-    actions: { flexDirection: "row", flexWrap: "wrap", gap: rpx(16), marginTop: rpx(8) },
-    action: { minHeight: rpx(88), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: rpx(12), paddingHorizontal: rpx(24), borderRadius: rpx(18) },
+    content: { paddingTop: rpx(12), paddingBottom: rpx(36) },
+    heading: { flexDirection: "row", alignItems: "center", gap: rpx(12), paddingHorizontal: rpx(32), marginTop: rpx(24), marginBottom: rpx(24), minHeight: rpx(56) },
+    hero: { marginHorizontal: rpx(32), borderRadius: rpx(36), overflow: "hidden" },
+    heroArt: { height: rpx(280), alignItems: "center", justifyContent: "center" },
+    heroImage: { width: "85%", height: "100%" },
+    heroBadge: { position: "absolute", left: rpx(22), top: rpx(20), flexDirection: "row", alignItems: "center", gap: rpx(8), paddingHorizontal: rpx(14), paddingVertical: rpx(8), borderRadius: rpx(18), zIndex: 1 },
+    heroCopy: { padding: rpx(24), alignItems: "center", gap: rpx(6) },
+    heroDescription: { marginTop: rpx(6), marginBottom: rpx(12) },
+    rail: { paddingHorizontal: rpx(32), gap: rpx(20), paddingBottom: rpx(8) },
+    presetCard: { borderRadius: rpx(28), padding: rpx(20), alignItems: "center", borderWidth: 1.5 },
+    presetArt: { width: "100%", height: rpx(140) },
+    center: { textAlign: "center" },
+    presetHint: { textAlign: "center", minHeight: rpx(66), marginTop: rpx(12), marginBottom: rpx(14) },
+    usePill: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: rpx(6), paddingHorizontal: rpx(20), minHeight: rpx(64), borderRadius: rpx(44) },
+    library: { flexDirection: "row", flexWrap: "wrap", gap: rpx(20), marginHorizontal: rpx(32) },
+    userCard: { borderRadius: rpx(28), overflow: "hidden" },
+    userBody: { padding: rpx(24), gap: rpx(14), minHeight: rpx(200) },
+    userStatus: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    userActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: rpx(16), borderTopWidth: StyleSheet.hairlineWidth },
+    iconButton: { minWidth: Math.max(44, rpx(88)), minHeight: Math.max(44, rpx(88)), alignItems: "center", justifyContent: "center" },
+    emptyLibrary: { marginHorizontal: rpx(32), borderRadius: rpx(28), padding: rpx(24), flexDirection: "row", alignItems: "center", gap: rpx(20) },
+    emptyArt: { width: rpx(164), height: rpx(164) },
+    emptyAction: { flexDirection: "row", alignItems: "center", gap: rpx(8), minHeight: Math.max(44, rpx(88)) },
+    editEntry: { marginHorizontal: rpx(32), marginTop: rpx(28), borderRadius: rpx(28), flexDirection: "row", alignItems: "center", padding: rpx(24), gap: rpx(20) },
+    editIcon: { width: rpx(84), height: rpx(84), alignItems: "center", justifyContent: "center", borderRadius: rpx(24) },
+    note: { paddingHorizontal: rpx(40), marginTop: rpx(24) },
+    switchBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: rpx(32), paddingVertical: rpx(22), gap: rpx(24), borderTopWidth: StyleSheet.hairlineWidth },
+    status: { marginTop: rpx(6) },
 });

@@ -7,7 +7,7 @@ import {
 } from "./backupFormat.ts";
 import { emptyFavoriteGroups, linkFavoriteGroups } from "./favoriteGroupsModel";
 import { trackSourceKey } from "@/utils/trackGroup";
-import { defaultSettings, presetBands } from "./audioEffects/model";
+import { createUserPreset, defaultSettings, presetBands } from "./audioEffects/model";
 
 function fixtureMusic(id: string | number) {
     return {
@@ -32,10 +32,7 @@ function fixtureSheet(musicList = [fixtureMusic("one")]) {
 
 describe("backup format", () => {
     it("round-trips sound settings independently of favorite groups and excludes session metadata", () => {
-        const effects = {
-            ...defaultSettings(), enabled: true, preset: "rock" as const, bands: presetBands("rock"), preampDb: -2,
-            savedCustom: { bands: presetBands("vocal"), preampDb: -3 },
-        };
+        const effects = createUserPreset(createUserPreset({ ...defaultSettings(), enabled: true, bands: presetBands("vocal"), preampDb: -3 }, "voice", "Vocals"), "night", "Night");
         const raw = createBackupPayload([fixtureSheet()], [], 1234, undefined, effects);
         expect(JSON.parse(raw).version).toBe(BACKUP_VERSION);
         expect(parseBackupPayload(raw).audiora).toEqual({ audioEffects: effects });

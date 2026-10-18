@@ -31,6 +31,7 @@ const settingTypes: Record<
         title: "音效与均衡器",
         i18nKey: "audioEffects.title",
         component: AudioEffectsSetting,
+        showNav: false,
     },
     plugin: {
         title: "插件管理",

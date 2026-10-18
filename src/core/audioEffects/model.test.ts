@@ -32,7 +32,7 @@ describe("audio effects curves", () => {
 
     it("rejects corrupt or unsafe native curves and accepts a restored custom preset", () => {
         const state = { ...initialState(true), version: 1 };
-        state.settings.savedCustom = { bands: presetBands("vocal"), preampDb: -3 };
+        state.settings.customPresets = [{ id: "voice", name: "Vocals", bands: presetBands("vocal"), preampDb: -3 }];
         expect(parseNativeState(JSON.stringify(state)).loaded).toBe(true);
         for (const bands of [[], [{ frequencyHz: 0, gainDb: 0 }], [{ frequencyHz: 60, gainDb: 100 }],
             [{ frequencyHz: 200, gainDb: 0 }, { frequencyHz: 60, gainDb: 0 }]]) {
