@@ -18,7 +18,8 @@ export default function Setting() {
 
     return (
         <SafeAreaView
-            edges={["bottom", "top"]}
+            // The audio effects dock paints the bottom inset itself.
+            edges={type === "audioEffects" ? ["top"] : ["bottom", "top"]}
             style={[style.wrapper, { backgroundColor: colors.pageBackground }]}>
             <StatusBar />
             {settingItem.showNav === false ? null : (

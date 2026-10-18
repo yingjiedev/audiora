@@ -15,6 +15,7 @@ jest.mock("@/hooks/useColors", () => () => ({ card: "#FFFFFF", surface: "#EEEEEE
 jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => value, fontRpx: (value: number) => value }));
 jest.mock("@/utils/nanoid", () => ({ nanoid: () => "created-preset" }));
 jest.mock("@/components/base/appBar", () => "AppBar");
+jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: "SafeAreaView" }));
 jest.mock("@/components/base/switch", () => "ThemeSwitch");
 jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/themeText", () => "ThemeText");

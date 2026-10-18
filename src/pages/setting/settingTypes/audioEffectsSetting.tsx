@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AppBar from "@/components/base/appBar";
 import Icon from "@/components/base/icon";
 import { PageAction } from "@/components/base/pageSection";
@@ -216,8 +217,8 @@ export default function AudioEffectsSetting() {
                         </ScrollView>
                     )}
                 </View>
-                <View testID="audio-effects-switch-bar" onLayout={event => setSwitchBarHeight(event.nativeEvent.layout.height)}
-                    style={[styles.switchBar, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+                <SafeAreaView edges={["bottom"]} testID="audio-effects-switch-bar" onLayout={event => setSwitchBarHeight(event.nativeEvent.layout.height)}
+                    style={[styles.switchBar, { backgroundColor: colors.card }]}>
                     <View style={styles.flex}>
                         <ThemeText fontWeight="medium">{t("audioEffects.enabled")}</ThemeText>
                         <ThemeText fontSize="description" fontColor="textSecondary" numberOfLines={2} style={styles.status}>{statusText}</ThemeText>
@@ -226,7 +227,7 @@ export default function AudioEffectsSetting() {
                         disabled={!state.loaded || unavailable && !settings.enabled} style={styles.iconButton} onPress={() => commit({ ...audioEffects.getSnapshot().settings, enabled: !settings.enabled })}>
                         <View pointerEvents="none"><ThemeSwitch value={settings.enabled} disabled={!state.loaded || unavailable && !settings.enabled} /></View>
                     </Pressable>
-                </View>
+                </SafeAreaView>
             </View>
         </View>
     );
@@ -261,6 +262,6 @@ const styles = StyleSheet.create({
     editEntry: { marginHorizontal: rpx(32), marginTop: rpx(28), borderRadius: rpx(28), flexDirection: "row", alignItems: "center", padding: rpx(24), gap: rpx(20) },
     editIcon: { width: rpx(84), height: rpx(84), alignItems: "center", justifyContent: "center", borderRadius: rpx(24) },
     note: { paddingHorizontal: rpx(40), marginTop: rpx(24) },
-    switchBar: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", alignItems: "center", paddingHorizontal: rpx(32), paddingVertical: rpx(12), gap: rpx(24), borderTopLeftRadius: rpx(28), borderTopRightRadius: rpx(28), elevation: 8, shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 12 },
+    switchBar: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", alignItems: "center", paddingHorizontal: rpx(32), paddingVertical: rpx(12), gap: rpx(24), borderTopLeftRadius: rpx(28), borderTopRightRadius: rpx(28) },
     status: { marginTop: rpx(6) },
 });
