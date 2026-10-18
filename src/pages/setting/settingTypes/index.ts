@@ -6,6 +6,7 @@ import BasicSetting from "./basicSetting";
 import PluginSetting from "./pluginSetting";
 import ThemeSetting from "./themeSetting";
 import SettingsOverview from "./settingsOverview";
+import AudioEffectsSetting from "./audioEffectsSetting";
 
 const settingTypes: Record<
     string,
@@ -25,6 +26,12 @@ const settingTypes: Record<
         title: "基本设置",
         i18nKey: "sidebar.basicSettings",
         component: BasicSetting,
+    },
+    audioEffects: {
+        title: "音效与均衡器",
+        i18nKey: "audioEffects.title",
+        component: AudioEffectsSetting,
+        showNav: false,
     },
     plugin: {
         title: "插件管理",

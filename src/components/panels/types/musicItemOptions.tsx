@@ -16,7 +16,7 @@ import Toast from "@/utils/toast";
 import { devLog } from "@/utils/log";
 import LocalMusicSheet from "@/core/localMusicSheet";
 import { localMusicSheetId, musicHistorySheetId } from "@/constants/commonConst";
-import { ROUTE_PATH } from "@/core/router";
+import { ROUTE_PATH, usePush } from "@/core/router";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PanelBase from "../base/panelBase";
@@ -118,6 +118,8 @@ const isShareDismissError = (e: unknown) => {
 export default function MusicItemOptions(props: IMusicItemOptionsProps) {
     const { musicItem: propseMusicItem, musicSheet, from } = props ?? {};
     const { t } = useI18N();
+
+    const push = usePush();
 
     // If this is the currently playing music, use the latest state from TrackPlayer
     const currentMusic = useCurrentMusic();
@@ -495,6 +497,15 @@ export default function MusicItemOptions(props: IMusicItemOptionsProps) {
             show: from === ROUTE_PATH.MUSIC_DETAIL,
             onPress: () => {
                 showPanel("TimingClose");
+            },
+        },
+        {
+            icon: "musical-note",
+            title: t("audioEffects.title"),
+            show: Platform.OS === "android" && from === ROUTE_PATH.MUSIC_DETAIL,
+            onPress: () => {
+                hidePanel();
+                push(ROUTE_PATH.SETTING, { type: "audioEffects" });
             },
         },
         {

@@ -7,6 +7,7 @@ import {
 } from "./backupFormat.ts";
 import { emptyFavoriteGroups, linkFavoriteGroups } from "./favoriteGroupsModel";
 import { trackSourceKey } from "@/utils/trackGroup";
+import { createUserPreset, defaultSettings, presetBands } from "./audioEffects/model";
 
 function fixtureMusic(id: string | number) {
     return {
@@ -30,6 +31,29 @@ function fixtureSheet(musicList = [fixtureMusic("one")]) {
 }
 
 describe("backup format", () => {
+    it("round-trips sound settings independently of favorite groups and excludes session metadata", () => {
+        const effects = createUserPreset(createUserPreset({ ...defaultSettings(), enabled: true, bands: presetBands("vocal"), preampDb: -3 }, "voice", "Vocals"), "night", "Night");
+        const raw = createBackupPayload([fixtureSheet()], [], 1234, undefined, effects);
+        expect(JSON.parse(raw).version).toBe(BACKUP_VERSION);
+        expect(parseBackupPayload(raw).audiora).toEqual({ audioEffects: effects });
+        const imported = JSON.parse(raw);
+        imported.data.audiora.audioEffects.active = true;
+        imported.data.audiora.audioEffects.frequencies = [999];
+        expect(parseBackupPayload(imported).audiora?.audioEffects).toEqual(effects);
+    });
+
+    it("rejects damaged sound settings and saved curves before restore", () => {
+        const raw = JSON.parse(createBackupPayload([fixtureSheet()], [], 1, undefined, defaultSettings()));
+        for (const patch of [
+            { enabled: 1 }, { preset: "fake-surround" }, { preampDb: 1 }, { preampDb: null },
+            { bands: [] }, { bands: [null] }, { bands: [{ frequencyHz: 60, gainDb: 7 }] },
+            { bands: [{ frequencyHz: 60, gainDb: 0 }, { frequencyHz: 60, gainDb: 0 }] },
+            { savedCustom: { bands: presetBands("flat"), preampDb: -13 } },
+        ]) {
+            expect(() => parseBackupPayload({ ...raw, data: { ...raw.data, audiora: { audioEffects: { ...defaultSettings(), ...patch } } } })).toThrow();
+        }
+        expect(parseBackupPayload(createBackupPayload([fixtureSheet()])).audiora).toBeUndefined();
+    });
     it("round-trips a namespaced favorite extension without changing the shared version", () => {
         const a = fixtureMusic(12), b = { ...fixtureMusic("0012"), platform: "other" };
         const sheet = { ...fixtureSheet([a, b]), id: "favorite" };

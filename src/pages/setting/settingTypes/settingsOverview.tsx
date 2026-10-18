@@ -70,6 +70,11 @@ export default function SettingsOverview() {
             title: t("settingsEntry.playback"),
             onPress: () => navigateToSetting("basic", "playback"),
         },
+        ...(Platform.OS === "android" ? [{
+            key: "audio-effects",
+            title: t("audioEffects.title"),
+            onPress: () => navigateToSetting("audioEffects"),
+        }] : []),
         {
             key: "network",
             title: t("settingsEntry.network"),
