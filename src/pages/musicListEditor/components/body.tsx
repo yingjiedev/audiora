@@ -1,55 +1,39 @@
 import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { PageAction } from "@/components/base/pageSection";
-import ThemeText from "@/components/base/themeText";
+import { SelectionBar } from "@/components/musicList/selectionControls";
 import { spacing } from "@/constants/designSystem";
 import { useAtom } from "jotai";
-import { editingMusicListAtom, musicListChangedAtom } from "../store/atom";
-import Toast from "@/utils/toast";
+import { editingMusicListAtom } from "../store/atom";
 import MusicList from "./musicList";
-import { useParams } from "@/core/router";
-import { localMusicSheetId, musicHistorySheetId } from "@/constants/commonConst";
-import LocalMusicSheet from "@/core/localMusicSheet";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
-import musicHistory from "@/core/musicHistory";
-import MusicSheet from "@/core/musicSheet";
 import { useI18N } from "@/core/i18n";
 import { MusicListSource } from "@/core/musicListSource";
 import { RequestStateCode } from "@/constants/commonConst";
-export default function Body(props: { source?: MusicListSource; state: RequestStateCode }) {
-    const { musicSheet, sourceId, selectionOnly } = useParams<"music-list-editor">();
-    const canEdit = !!musicSheet?.id && !sourceId && !selectionOnly;
+
+export default function Body({ source, state, canEdit, canSave, onSave }: {
+    source?: MusicListSource;
+    state: RequestStateCode;
+    canEdit: boolean;
+    canSave: boolean;
+    onSave: () => void;
+}) {
     const { t } = useI18N();
     const [editingMusicList, setEditingMusicList] = useAtom(editingMusicListAtom);
-    const [musicListChanged, setMusicListChanged] = useAtom(musicListChangedAtom);
-    const selectedItems = useMemo(() => editingMusicList.filter(item => item.checked), [editingMusicList]);
-    const allSelected = editingMusicList.length > 0 && selectedItems.length === editingMusicList.length;
-    const save = async () => {
-        if (!canEdit || !musicListChanged || !musicSheet?.id) return;
-        const tracks = editingMusicList.map(item => item.musicItem);
-        if (musicSheet.id === localMusicSheetId) await LocalMusicSheet.updateMusicList(tracks);
-        else if (musicSheet.id === musicHistorySheetId) await musicHistory.setHistory(tracks);
-        else await MusicSheet.manualSort(musicSheet.id, tracks);
-        Toast.success(t("toast.saveSuccess")); setMusicListChanged(false);
-    };
+    const selectedCount = useMemo(() => editingMusicList.filter(item => item.checked).length, [editingMusicList]);
+    const allSelected = editingMusicList.length > 0 && selectedCount === editingMusicList.length;
     return <HorizontalSafeAreaView style={globalStyle.flex1}>
-        <View style={styles.header}>
-            <ThemeText fontSize="description" fontColor="textSecondary">{t("musicListEditor.selectMusicCount", { count: selectedItems.length })}</ThemeText>
-            <View style={styles.actions}>
-                <PageAction title={t(allSelected ? "common.unselectAll" : "common.selectAll")} disabled={!editingMusicList.length}
-                    onPress={() => setEditingMusicList(editingMusicList.map(item => ({ ...item, checked: !allSelected })))} />
-                {canEdit ? <PageAction title={t("common.save")} variant="primary" disabled={!musicListChanged} onPress={save} /> : null}
-            </View>
+        <View style={styles.controls}>
+            <SelectionBar count={selectedCount} allSelected={allSelected} disabled={!editingMusicList.length}
+                onToggleAll={() => setEditingMusicList(previous => previous.map(item => ({ ...item, checked: !allSelected })))}
+                description={source ? t("musicListEditor.loadedCount", { count: editingMusicList.length }) : undefined}
+                extraAction={canEdit ? <PageAction title={t("common.save")} variant="text" disabled={!canSave} onPress={onSave} /> : undefined} />
         </View>
-        {sourceId ? <ThemeText style={styles.summary} fontSize="description" fontColor="textSecondary">
-            {t("musicListEditor.loadedCount", { count: editingMusicList.length })}
-        </ThemeText> : null}
-        <MusicList source={props.source} state={props.state} canEdit={canEdit} />
+        <MusicList source={source} state={state} canEdit={canEdit} />
     </HorizontalSafeAreaView>;
 }
+
 const styles = StyleSheet.create({
-    summary: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.md },
-    header: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.md, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
-    actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs },
+    controls: { paddingHorizontal: spacing.xxxl },
 });

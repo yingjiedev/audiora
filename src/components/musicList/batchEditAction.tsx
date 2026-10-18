@@ -3,22 +3,24 @@ import { StyleSheet, View } from "react-native";
 import { PageAction } from "@/components/base/pageSection";
 import { spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import useOpenMusicListEditor from "./useOpenMusicListEditor";
+import type { MusicSelectionActions } from "@/core/musicListEditor";
 
-export default function BatchEditAction({ musicList, sourceId, title }: {
+export default function BatchEditAction({ musicList, sourceId, title, actions }: {
     musicList: IMusic.IMusicItem[];
     sourceId: string;
     title: string;
+    actions?: MusicSelectionActions;
 }) {
-    const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const { t } = useI18N();
     if (!musicList.length) return null;
     return <View style={styles.toolbar}>
-        <PageAction title={t("common.batchEdit")} icon="pencil-square" onPress={() => navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+        <PageAction title={t("common.batchEdit")} icon="pencil-square" onPress={() => openEditor({
             musicList,
             musicSheet: { title },
             sourceId,
-            selectionOnly: true,
+            actions,
         })} />
     </View>;
 }

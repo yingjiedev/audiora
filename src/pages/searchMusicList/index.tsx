@@ -8,12 +8,13 @@ import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
 import { useI18N } from "@/core/i18n";
-import { ROUTE_PATH, useNavigate, useParams } from "@/core/router";
+import { useParams } from "@/core/router";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
 import PluginManager from "@/core/pluginManager";
 import SearchResult from "./searchResult";
 export default function SearchMusicList() {
     const { musicList, musicSheet } = useParams<"search-music-list">();
-    const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const [query, setQuery] = useState("");
     const { t } = useI18N();
     const result = useMemo(() => filterMusic(query, musicList ?? [], platform => PluginManager.getPluginDisplayName(platform)), [musicList, query]);
@@ -22,7 +23,7 @@ export default function SearchMusicList() {
         <AppBar menu={result.length ? [{
             icon: "pencil-square",
             title: t("common.batchEdit"),
-            onPress: () => navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+            onPress: () => openEditor({
                 musicList: result,
                 musicSheet: { title: musicSheet?.title ?? query },
                 selectionOnly: true,

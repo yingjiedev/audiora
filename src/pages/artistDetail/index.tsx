@@ -4,7 +4,8 @@ import Header from "./components/header";
 import Body from "./components/body";
 import { useAtom, useSetAtom } from "jotai";
 import { initQueryResult, queryResultAtom, scrollToTopAtom } from "./store/atoms";
-import { ROUTE_PATH, useNavigate, useParams } from "@/core/router";
+import { useParams } from "@/core/router";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
 import useOrientation from "@/hooks/useOrientation";
@@ -23,7 +24,7 @@ export default function ArtistDetail() {
         () => queryArtist(artistItem),
     );
     const setScrollToTopState = useSetAtom(scrollToTopAtom);
-    const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const orientation = useOrientation();
     const { t } = useI18N();
 
@@ -43,9 +44,8 @@ export default function ArtistDetail() {
                         title: t("artistDetail.menu.batchEditMusic"),
                         icon: "pencil-square",
                         onPress() {
-                            navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                            openEditor({
                                 sourceId,
-                                selectionOnly: true,
                                 musicList: queryResult?.music?.data ?? [],
                                 musicSheet: {
                                     title: t("artistDetail.musicSheet", {

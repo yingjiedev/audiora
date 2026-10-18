@@ -3,6 +3,7 @@ import React from "react";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import AppBar from "@/components/base/appBar";
 import { useI18N } from "@/core/i18n";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
 
 interface INavBarProps {
     sourceId: string;
@@ -12,6 +13,7 @@ interface INavBarProps {
 
 export default function (props: INavBarProps) {
     const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const { t } = useI18N();
     const { navTitle, musicList = [], sourceId } = props;
 
@@ -32,9 +34,8 @@ export default function (props: INavBarProps) {
                     icon: "pencil-square",
                     title: t("common.batchEdit"),
                     onPress() {
-                        navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                        openEditor({
                             sourceId,
-                            selectionOnly: true,
                             musicList: musicList,
                             musicSheet: {
                                 title: navTitle,

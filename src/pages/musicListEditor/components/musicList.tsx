@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import MusicItem, { MUSIC_ITEM_HEIGHT } from "@/components/mediaItem/musicItem";
@@ -7,11 +7,10 @@ import { useAtom, useSetAtom } from "jotai";
 import { IEditorMusicItem, editingMusicListAtom, musicListChangedAtom } from "../store/atom";
 import SortableFlatList from "@/components/base/SortableFlatList";
 
-import CheckBox from "@/components/base/checkbox";
+import SelectionCheckbox from "@/components/musicList/selectionCheckbox";
+import SharedMusicList from "@/components/musicList";
 import useColors from "@/hooks/useColors";
 import Empty from "@/components/base/empty";
-import { FlashList } from "@shopify/flash-list";
-import ListEmpty from "@/components/base/listEmpty";
 import ListFooter from "@/components/base/listFooter";
 import { PageAction } from "@/components/base/pageSection";
 import { spacing } from "@/constants/designSystem";
@@ -19,6 +18,7 @@ import { MusicListSource } from "@/core/musicListSource";
 import { RequestStateCode } from "@/constants/commonConst";
 import { getMediaUniqueKey } from "@/utils/mediaUtils";
 import { useI18N } from "@/core/i18n";
+import timeformat from "@/utils/timeformat";
 
 interface IMusicEditorItemProps {
     index: number;
@@ -26,7 +26,7 @@ interface IMusicEditorItemProps {
     canEdit?: boolean;
 }
 function MusicEditorItemView(props: IMusicEditorItemProps) {
-    const { editorMusicItem, canEdit } = props;
+    const { editorMusicItem, canEdit, index } = props;
     const setEditingMusicList = useSetAtom(editingMusicListAtom);
 
     const onPress = useCallback(() => {
@@ -41,13 +41,13 @@ function MusicEditorItemView(props: IMusicEditorItemProps) {
     return (
         <MusicItem
             musicItem={editorMusicItem.musicItem}
-            left={
-                <View style={style.checkBox} accessibilityRole="checkbox" accessibilityState={{ checked: !!editorMusicItem.checked }}>
-                    <CheckBox checked={editorMusicItem.checked} />
-                </View>
-            }
+            index={index + 1}
+            checked={!!editorMusicItem.checked}
+            titleTagSubText={typeof editorMusicItem.musicItem.duration === "number" ? timeformat(editorMusicItem.musicItem.duration) : undefined}
+            left={<SelectionCheckbox checked={!!editorMusicItem.checked} />}
             actions={[]}
             containerStyle={style.musicItem}
+            itemPaddingLeft={spacing.xxxl}
             itemPaddingRight={canEdit ? rpx(100) : undefined}
             onItemPress={onPress}
         />
@@ -76,18 +76,25 @@ export default function MusicList(props: { source?: MusicListSource; state: Requ
         [canEdit],
     );
     const colors = useColors();
+    const musicList = useMemo(() => editingMusicList.map(item => item.musicItem), [editingMusicList]);
+    const selectedKeys = useMemo(() => new Set(editingMusicList.filter(item => item.checked).map(item => getMediaUniqueKey(item.musicItem))), [editingMusicList]);
+    const onToggle = useCallback((musicItem: IMusic.IMusicItem) => {
+        const key = getMediaUniqueKey(musicItem);
+        setEditingMusicList(previous => previous.map(item => getMediaUniqueKey(item.musicItem) === key ? { ...item, checked: !item.checked } : item));
+    }, [setEditingMusicList]);
+    const selection = useMemo(() => ({ selectedKeys, onToggle }), [selectedKeys, onToggle]);
 
     if (!canEdit) {
         const listState = source ? state : RequestStateCode.FINISHED;
-        return <FlashList
-            data={editingMusicList}
-            renderItem={renderItem}
-            keyExtractor={item => getMediaUniqueKey(item.musicItem)}
-            onEndReached={() => source?.loadMore()}
-            onEndReachedThreshold={0.1}
-            ListEmptyComponent={<ListEmpty state={listState} onRetry={() => source?.loadMore(true)} />}
-            ListFooterComponent={source && editingMusicList.length ? <View style={style.footer}>
-                {listState === RequestStateCode.PARTLY_DONE ? <PageAction title={t("musicListEditor.loadMore")} onPress={() => source.loadMore()} />
+        return <SharedMusicList
+            musicList={musicList}
+            showIndex
+            selection={selection}
+            state={listState}
+            onLoadMore={() => source?.loadMore()}
+            onRetry={() => source?.loadMore(true)}
+            Footer={source && editingMusicList.length ? <View style={style.footer}>
+                {listState === RequestStateCode.PARTLY_DONE ? <PageAction title={t("musicListEditor.loadMore")} variant="text" onPress={() => source.loadMore()} />
                     : <ListFooter state={listState} onRetry={() => source.loadMore(true)} />}
             </View> : null}
         />;
@@ -115,10 +122,5 @@ const style = StyleSheet.create({
     musicItem: {
         flex: 1,
         minWidth: 0,
-    },
-    checkBox: {
-        height: "100%",
-        justifyContent: "center",
-        marginRight: rpx(16),
     },
 });

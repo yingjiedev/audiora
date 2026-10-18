@@ -9,9 +9,11 @@ import { useI18N } from "@/core/i18n";
 import globalStyle from "@/constants/globalStyle";
 import useEnterTransitionEnd from "@/hooks/useEnterTransitionEnd";
 import { openLocalMusicScanner } from "../scanMusic";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
 
 export default function MainPage() {
     const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const { t } = useI18N();
     const listReady = useEnterTransitionEnd();
 
@@ -41,7 +43,7 @@ export default function MainPage() {
                         icon: "pencil-square",
                         title: t("common.batchEdit"),
                         async onPress() {
-                            navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                            openEditor({
                                 musicList: LocalMusicSheet.getMusicList(),
                                 musicSheet: {
                                     id: localMusicSheetId,

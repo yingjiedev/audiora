@@ -9,13 +9,13 @@ import musicHistory, { useMusicHistory } from "@/core/musicHistory";
 import MusicList from "@/components/musicList";
 import { musicHistorySheetId, RequestStateCode } from "@/constants/commonConst";
 import AppBar from "@/components/base/appBar";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
 import { useI18N } from "@/core/i18n";
 
 export default function History() {
     const musicHistoryList = useMusicHistory();
 
-    const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const { t } = useI18N();
 
     // 历史列表可能很长，首帧全量渲染会卡掉进入动画，等转场结束再挂
@@ -39,7 +39,7 @@ export default function History() {
                         icon: "pencil-square",
                         title: t("common.edit"),
                         onPress() {
-                            navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                            openEditor({
                                 musicList: musicHistoryList,
                                 musicSheet: {
                                     id: musicHistorySheetId,

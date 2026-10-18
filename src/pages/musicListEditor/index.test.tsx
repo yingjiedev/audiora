@@ -11,8 +11,11 @@ import { RequestStateCode } from "@/constants/commonConst";
 import { editingMusicListAtom } from "./store/atom";
 import MusicSheet from "@/core/musicSheet";
 import TrackPlayer from "@/core/trackPlayer";
+import Toast from "@/utils/toast";
 
 let mockParams: any;
+const mockGoBack = jest.fn();
+jest.mock("@react-navigation/native", () => ({ useNavigation: () => ({ goBack: mockGoBack }), useRoute: () => ({ name: "music-list-editor" }) }));
 jest.mock("@/core/router", () => ({ useParams: () => mockParams }));
 jest.mock("@/hooks/useEnterTransitionEnd", () => () => true);
 jest.mock("@/hooks/useColors", () => () => ({ appBar: "black", appBarText: "white" }));
@@ -29,7 +32,7 @@ jest.mock("@/core/musicSheet", () => ({ __esModule: true, default: { manualSort:
 jest.mock("@/core/trackPlayer", () => ({ __esModule: true, default: { addNext: jest.fn() } }));
 jest.mock("@/core/downloader", () => ({ __esModule: true, default: { download: jest.fn() } }));
 jest.mock("@/components/panels/usePanel", () => ({ showPanel: jest.fn() }));
-jest.mock("@/components/base/appBar", () => "AppBar");
+jest.mock("@/components/base/appBar", () => (props: any) => require("react").createElement("AppBar", props, props.children, props.actionComponent));
 jest.mock("@/components/base/statusBar", () => "StatusBar");
 jest.mock("@/components/base/verticalSafeAreaView", () => "VerticalSafeAreaView");
 jest.mock("@/components/base/horizontalSafeAreaView", () => "HorizontalSafeAreaView");
@@ -80,8 +83,8 @@ describe("music list editor paging and local editing", () => {
         });
         expect(renderer.root.findAllByType(SortableFlatList)).toHaveLength(0);
         expect(renderer.root.findAllByType(PageAction).some(button => button.props.title === "common.save")).toBe(false);
-        expect(renderer.root.findAllByProps({ title: "common.delete" })).toHaveLength(0);
-        const nextPlay = () => renderer.root.findAllByProps({ title: "musicListEditor.addToNextPlay" })[0];
+        expect(renderer.root.findAllByProps({ accessibilityLabel: "sheetDetail.removeFromSheet" })).toHaveLength(0);
+        const nextPlay = () => renderer.root.findAllByProps({ accessibilityLabel: "musicListEditor.addToNextPlay" }).find(node => typeof node.props.style === "function")!;
         expect(nextPlay().props.disabled).toBe(true);
         act(() => renderer.root.findByType(MusicItem).props.onItemPress(song));
         await act(async () => {
@@ -110,5 +113,93 @@ describe("music list editor paging and local editing", () => {
             await renderer.root.findAllByType(PageAction).find(button => button.props.title === "common.save")!.props.onPress();
         });
         expect(MusicSheet.manualSort).toHaveBeenCalledWith("favorite", [second, song]);
+    });
+
+    it("uses the shared action switches and never exposes removal for filtered results", () => {
+        mockParams = { musicList: [song], musicSheet: { id: "favorite" }, selectionOnly: true, actions: { addNext: false, download: false, remove: true } };
+        act(() => {
+            renderer = TestRenderer.create(<MusicListEditor />);
+        });
+        expect(renderer.root.findAllByType(SortableFlatList)).toHaveLength(0);
+        const labels = renderer.root.findAll(node => node.props.accessibilityRole === "button" && typeof node.props.style === "function").map(node => node.props.accessibilityLabel);
+        expect(labels).toEqual(["musicListEditor.addToSheet"]);
+        expect(renderer.root.findByType(MusicItem).props.index).toBe(1);
+        expect(renderer.root.findByType(MusicItem).props.checked).toBe(false);
+    });
+
+    it("saves changed local lists before Done returns to the original page", async () => {
+        const second = { ...song, id: "two" };
+        mockParams = { musicList: [song, second], musicSheet: { id: "favorite" } };
+        act(() => {
+            renderer = TestRenderer.create(<MusicListEditor />);
+        });
+        act(() => renderer.root.findByType(SortableFlatList).props.onSortEnd(store.get(editingMusicListAtom).slice().reverse()));
+        await act(async () => {
+            await renderer.root.findAllByType(PageAction).find(button => button.props.title === "common.done")!.props.onPress();
+        });
+        expect(MusicSheet.manualSort).toHaveBeenCalledWith("favorite", [second, song]);
+        expect(mockGoBack).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the editor open and retains unsaved changes when saving fails", async () => {
+        mockParams = { musicList: [song], musicSheet: { id: "favorite" } };
+        (MusicSheet.manualSort as jest.Mock).mockRejectedValueOnce(new Error("storage"));
+        act(() => {
+            renderer = TestRenderer.create(<MusicListEditor />);
+        });
+        act(() => renderer.root.findByType(SortableFlatList).props.onSortEnd(store.get(editingMusicListAtom).slice()));
+        await act(async () => {
+            await renderer.root.findAllByType(PageAction).find(button => button.props.title === "common.done")!.props.onPress();
+        });
+        expect(mockGoBack).not.toHaveBeenCalled();
+        expect(Toast.warn).toHaveBeenCalledWith("musicListEditor.actionFailed");
+        expect(renderer.root.findAllByType(PageAction).find(button => button.props.title === "common.save")!.props.disabled).toBe(false);
+    });
+
+    it("retains newly selected paginated songs while a batch operation is in flight", async () => {
+        const second = { ...song, id: "two" };
+        let complete!: () => void;
+        (TrackPlayer.addNext as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => {
+            complete = resolve;
+        }));
+        const source = new MusicListSource({ musicList: [song], state: RequestStateCode.PARTLY_DONE }, async () => ({ musicList: [song, second], state: RequestStateCode.FINISHED }));
+        sourceId = registerMusicListSource(source);
+        mockParams = { musicList: [song], sourceId };
+        act(() => {
+            renderer = TestRenderer.create(<MusicListEditor />);
+        });
+        act(() => renderer.root.findByType(MusicItem).props.onItemPress(song));
+        act(() => {
+            renderer.root.findAllByProps({ accessibilityLabel: "musicListEditor.addToNextPlay" }).find(node => typeof node.props.style === "function")!.props.onPress();
+        });
+        await act(async () => {
+            await source.loadMore();
+        });
+        act(() => renderer.root.findAllByType(MusicItem)[1].props.onItemPress(second));
+        await act(async () => complete());
+        expect(TrackPlayer.addNext).toHaveBeenCalledWith([song]);
+        expect(store.get(editingMusicListAtom).map(item => item.checked)).toEqual([false, true]);
+    });
+
+    it("does not close or discard a newer sort made during saving", async () => {
+        const second = { ...song, id: "two" };
+        let complete!: () => void;
+        (MusicSheet.manualSort as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => {
+            complete = resolve;
+        }));
+        mockParams = { musicList: [song, second], musicSheet: { id: "favorite" } };
+        act(() => {
+            renderer = TestRenderer.create(<MusicListEditor />);
+        });
+        const original = store.get(editingMusicListAtom).slice();
+        act(() => renderer.root.findByType(SortableFlatList).props.onSortEnd(original.slice().reverse()));
+        act(() => {
+            renderer.root.findAllByType(PageAction).find(button => button.props.title === "common.done")!.props.onPress();
+        });
+        act(() => renderer.root.findByType(SortableFlatList).props.onSortEnd(original));
+        await act(async () => complete());
+        expect(mockGoBack).not.toHaveBeenCalled();
+        expect(store.get(editingMusicListAtom).map(item => item.musicItem.id)).toEqual(["one", "two"]);
+        expect(renderer.root.findAllByType(PageAction).find(button => button.props.title === "common.save")!.props.disabled).toBe(false);
     });
 });

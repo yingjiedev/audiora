@@ -2,7 +2,8 @@ import { buttonHeight, spacing, controlSize } from "@/constants/designSystem";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { iconSizeConst } from "@/constants/uiConst";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
+import type { MusicSelectionActions } from "@/core/musicListEditor";
 import ThemeText from "./themeText";
 import useColors from "@/hooks/useColors";
 import { showPanel } from "../panels/usePanel";
@@ -25,6 +26,7 @@ interface IProps {
     canStar?: boolean;
     musicSheet?: IMusic.IMusicSheetItem | null;
     onEdit?: () => void;
+    selectionActions?: MusicSelectionActions;
 }
 
 function ToolbarAction({ name, label, accessibilityLabel = label, color, selected, onPress }: {
@@ -56,10 +58,8 @@ export default function PlayAllBar(props: IProps) {
     const actionMusicList = props.actionMusicList ?? musicList;
 
     const sheetName = musicSheet?.title;
-    const sheetId = musicSheet?.id;
-
     const colors = useColors();
-    const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const { t } = useI18N();
 
     const starred = useSheetIsStarred(musicSheet);
@@ -132,18 +132,15 @@ export default function PlayAllBar(props: IProps) {
                     name="pencil-outline"
                     label={t("common.edit")}
                     onPress={async () => {
-                        if (onEdit) {
-                            onEdit();
-                            return;
-                        }
-                        navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
-                            ...(sourceId ? { sourceId, selectionOnly: true } : {}),
+                        openEditor({
+                            ...(sourceId ? { sourceId } : {}),
                             musicList: actionMusicList,
                             musicSheet: {
                                 title: sheetName,
-                                id: sheetId,
+                                id: musicSheet?.id,
                             },
-                        });
+                            ...(props.selectionActions ? { actions: props.selectionActions } : {}),
+                        }, onEdit);
                     }}
                 />
             </View>
