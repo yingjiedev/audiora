@@ -1273,6 +1273,8 @@ export class Plugin {
     /** Dedup concurrent ensureMounted() so callers wait for the same load. */
     private mountPromise: Promise<void> | null = null;
     private storageDisposed = false;
+    private readonly storageReady: Promise<void>;
+    private resolveStorageReady!: () => void;
     /** Per-plugin sandbox env (userVariables etc.), rebound before method calls. */
     private sandboxEnv: {
         getUserVariables: () => Record<string, string>;
@@ -1298,8 +1300,15 @@ export class Plugin {
     constructor(
         funcCode: string | (() => IPlugin.IPluginDefine) | null,
         pluginPath: string,
-        lazyProps: ILazyProps | null = null
+        lazyProps: ILazyProps | null = null,
+        deferStorage = false,
     ) {
+        this.storageReady = new Promise(resolve => {
+            this.resolveStorageReady = resolve;
+        });
+        if (!deferStorage) {
+            this.activateStorage();
+        }
         this.lazyProps = lazyProps;
         if (!lazyProps) {
             // 如果没有懒加载，直接挂载并初始化
@@ -1360,9 +1369,15 @@ export class Plugin {
         return this.mountPromise;
     }
 
-    /** Prevent an unloaded plugin's pending calls from recreating its data. */
+    /** Release top-level calls only after the candidate has been installed. */
+    activateStorage() {
+        this.resolveStorageReady();
+    }
+
+    /** Reject pending and future calls, including discarded install candidates. */
     disposeStorage() {
         this.storageDisposed = true;
+        this.resolveStorageReady();
     }
 
     /**
@@ -1413,10 +1428,11 @@ export class Plugin {
         const _module: any = { exports: {} };
         try {
             if (typeof funcCode === "string") {
-                const storage = createPluginStorage(() =>
-                    !this.storageDisposed && this.state === PluginState.Mounted
+                const storage = createPluginStorage(
+                    () => !this.storageDisposed && this.state === PluginState.Mounted
                         ? this.name
                         : "",
+                    this.storageReady,
                 );
                 const pluginRequire = (packageName: string) =>
                     packageName === "musicfree/storage" ? storage : _require(packageName);

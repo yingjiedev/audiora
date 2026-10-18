@@ -61,17 +61,20 @@ function removeEntry(key: string) {
 }
 
 /** Each sandbox receives its own facade; never infer identity from global env. */
-export function createPluginStorage(resolvePlatform: () => string): PluginStorage & { default: PluginStorage } {
+export function createPluginStorage(
+    resolvePlatform: () => string,
+    ready: Promise<void> = Promise.resolve(),
+): PluginStorage & { default: PluginStorage } {
     const storage: PluginStorage = {
         async getItem(key) {
             // Top-level plugin calls can precede module.exports.platform. The
-            // synchronous mount must finish before we resolve the namespace.
-            await Promise.resolve();
+            // mount and any installation must finish before accessing the store.
+            await ready;
             const storageKey = getStorageKey(resolvePlatform(), key);
             return getStore().getString(storageKey) ?? null;
         },
         async setItem(key, value) {
-            await Promise.resolve();
+            await ready;
             const storageKey = getStorageKey(resolvePlatform(), key);
             // Match desktop string conversion, including nullish values removing
             // an existing entry. Objects require explicit JSON.stringify().
@@ -99,7 +102,7 @@ export function createPluginStorage(resolvePlatform: () => string): PluginStorag
             totalBytes = newTotal;
         },
         async removeItem(key) {
-            await Promise.resolve();
+            await ready;
             removeEntry(getStorageKey(resolvePlatform(), key));
         },
     };

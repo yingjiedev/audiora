@@ -21,6 +21,7 @@ jest.mock("./plugin", () => {
         }
 
         disposeStorage() {}
+        activateStorage() {}
     }
 
     return {
