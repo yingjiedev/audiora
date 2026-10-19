@@ -35,6 +35,14 @@
       android:networkSecurityConfig="@xml/network_security_config"
       android:extractNativeLibs="true"
       >
+      <meta-data android:name="com.google.android.gms.car.application"
+        android:resource="@xml/automotive_app_desc" />
+      <service android:name="fun.xwj.musicfree.auto.AutoMediaBrowserService"
+        android:exported="true">
+        <intent-filter>
+          <action android:name="android.media.browse.MediaBrowserService" />
+        </intent-filter>
+      </service>
       <provider
         android:name="androidx.core.content.FileProvider"
         android:authorities="${applicationId}.fileprovider"

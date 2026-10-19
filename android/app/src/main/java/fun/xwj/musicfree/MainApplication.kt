@@ -32,6 +32,7 @@ class MainApplication : Application(), ReactApplication {
           add(Mp3UtilPackage())
           add(LyricUtilPackage())
           add(CencPackage())
+          add(`fun`.xwj.musicfree.auto.AndroidAutoPackage())
         }
     )
   }

@@ -44,6 +44,7 @@ import { Platform } from "react-native";
 import LocalMusicSheet from "../localMusicSheet";
 
 import { TrackPlayerEvents } from "@/core.defination/trackPlayer";
+import { publishAndroidAutoCatalog } from "@/utils/androidAutoCatalog";
 import type { IAppConfig } from "@/types/core/config";
 import type { IMusicHistory } from "@/types/core/musicHistory";
 import { ITrackPlayer } from "@/types/core/trackPlayer/index";
@@ -201,7 +202,9 @@ class TrackPlayer extends EventEmitter<{
     }
 
 
-    async setupTrackPlayer() {
+    async setupTrackPlayer(options: { backgroundRestore?: boolean } = {}) {
+        let restoreTask: Promise<void> | undefined;
+        const restoreRequestRevision = this.playRequestRevision;
         const rate = PersistStatus.get("music.rate");
         const musicQueue = PersistStatus.get("music.playList");
         const repeatMode = PersistStatus.get("music.repeatMode");
@@ -246,7 +249,7 @@ class TrackPlayer extends EventEmitter<{
         }
 
         if (track && this.isInPlayList(track)) {
-            const shouldAutoPlayOnStartup = !!this.configService.getConfig("basic.autoPlayWhenAppStart");
+            const shouldAutoPlayOnStartup = !options.backgroundRestore && !!this.configService.getConfig("basic.autoPlayWhenAppStart");
             void appendStartupBreadcrumb("trackplayer-restore-found", {
                 title: track.title,
                 hasUrl: !!track.url,
@@ -281,7 +284,7 @@ class TrackPlayer extends EventEmitter<{
                 title: track.title,
             });
 
-            if (Platform.OS === "ios" && !shouldAutoPlayOnStartup) {
+            if (Platform.OS === "ios" && !shouldAutoPlayOnStartup && !options.backgroundRestore) {
                 void appendStartupBreadcrumb("trackplayer-restore-skip-preload-ios", {
                     title: track.title,
                 });
@@ -292,7 +295,7 @@ class TrackPlayer extends EventEmitter<{
                 void appendStartupBreadcrumb("trackplayer-restore-fetch-source", {
                     title: track.title,
                 });
-                this.pluginManagerService.getByMedia(track)
+                restoreTask = this.pluginManagerService.getByMedia(track)
                     ?.methods.getMediaSource(track, quality)
                     .then(async newSource => {
                         if (!newSource?.url) {
@@ -301,13 +304,13 @@ class TrackPlayer extends EventEmitter<{
                         const adapted = await adaptMediaSourceForPlayback(newSource);
                         track = this.mergeTrackSource(track, adapted) as IMusic.IMusicItem;
 
-                        if (isSameMediaItem(this.currentMusic, track)) {
+                        if (isSameMediaItem(this.currentMusic, track) && this.playRequestRevision === restoreRequestRevision) {
                             void appendStartupBreadcrumb("trackplayer-restore-apply-source", {
                                 title: track.title,
                                 hasSourceUrl: !!newSource?.url,
                             });
                             await this.setTrackSource(track as Track, false);
-                            if (progress) {
+                            if (progress && this.playRequestRevision === restoreRequestRevision) {
                                 void appendStartupBreadcrumb("trackplayer-restore-seek", {
                                     title: track.title,
                                     progress: Number(progress) || 0,
@@ -467,6 +470,19 @@ class TrackPlayer extends EventEmitter<{
             );
 
             this.serviceInited = true;
+        }
+        if (options.backgroundRestore && restoreTask) {
+            let restoreTimeout: ReturnType<typeof setTimeout> | undefined;
+            try {
+                await Promise.race([
+                    restoreTask,
+                    new Promise<void>(resolve => {
+                        restoreTimeout = setTimeout(resolve, 10000);
+                    }),
+                ]);
+            } finally {
+                clearTimeout(restoreTimeout);
+            }
         }
     }
 
@@ -668,6 +684,12 @@ class TrackPlayer extends EventEmitter<{
                 await ReactNativeTrackPlayer.reset();
                 throw new Error(PlayFailReason.FORBID_CELLUAR_NETWORK_PLAY);
             }
+
+            // A headless cold start may need a fresh source before its saved
+            // position can be restored. Explicit song selection still starts at 0.
+            const savedProgress = !forcePlay && musicItem.isInit && this.isCurrentMusic(musicItem)
+                ? Number(PersistStatus.get("music.progress")) : 0;
+            const resumePosition = Number.isFinite(savedProgress) && savedProgress > 0 ? savedProgress : 0;
 
             // 2. 如果是当前正在播放的音频
             if (this.isCurrentMusic(musicItem)) {
@@ -1012,8 +1034,20 @@ class TrackPlayer extends EventEmitter<{
             trace("获取音源成功", track);
 
             // 9. 设置音源并立即开始播放 - CRITICAL: 不等待任何其他操作
-            await this.setTrackSource(track as Track, true, () => isCurrentRequest() && pauseRevision === this.pauseRevision);
-            if (!isCurrentRequest()) return;
+            const canAutoPlay = () => isCurrentRequest() && pauseRevision === this.pauseRevision;
+            await this.setTrackSource(track as Track, resumePosition === 0, canAutoPlay);
+            if (!isCurrentRequest()) {
+                return;
+            }
+            if (resumePosition > 0) {
+                await this.seekTo(resumePosition);
+                if (!isCurrentRequest()) {
+                    return;
+                }
+                if (canAutoPlay()) {
+                    await ReactNativeTrackPlayer.play();
+                }
+            }
 
             devLog("info", "[TrackPlayer] Playback started successfully", {
                 timestamp: Date.now(),
@@ -1046,6 +1080,7 @@ class TrackPlayer extends EventEmitter<{
                                     0,
                                     mergedTrack as TrackMetadataBase,
                                 );
+                                publishAndroidAutoCatalog(this.playList, mergedTrack as IMusic.IMusicItem);
                             }
                         }
                     } catch (err) {
@@ -1361,6 +1396,8 @@ class TrackPlayer extends EventEmitter<{
             PersistStatus.set("music.musicItem", undefined);
             PersistStatus.set("music.progress", 0);
 
+            publishAndroidAutoCatalog(this.playList, null);
+
             this.emit(TrackPlayerEvents.CurrentMusicChanged, null);
             return;
         }
@@ -1369,6 +1406,8 @@ class TrackPlayer extends EventEmitter<{
         }
         this.currentIndex = this.getMusicIndexInPlayList(musicItem);
         getDefaultStore().set(currentMusicAtom, musicItem);
+
+        publishAndroidAutoCatalog(this.playList, musicItem);
 
         this.emit(TrackPlayerEvents.CurrentMusicChanged, musicItem);
     }
@@ -1472,6 +1511,7 @@ class TrackPlayer extends EventEmitter<{
         }
 
         this.currentIndex = this.getMusicIndexInPlayList(this.currentMusic);
+        publishAndroidAutoCatalog(newPlayList, this.currentMusic);
     }
 
 

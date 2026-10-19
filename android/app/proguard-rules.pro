@@ -26,3 +26,14 @@
 -dontwarn sun.security.**
 -dontwarn java.nio.file.**
 -dontwarn org.codehaus.mojo.animal_sniffer.**
+
+# KotlinAudio 2.1.0 exposes no session getter. The scoped RNTP adapter resolves
+# these two fields for Android Auto and the existing compact notification.
+-keepclassmembers class com.doublesymmetry.kotlinaudio.players.BaseAudioPlayer {
+    *** mediaSession;
+    *** mediaSessionConnector;
+}
+-keepclassmembers class com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector {
+    *** queueNavigator;
+    *** enabledPlaybackActions;
+}

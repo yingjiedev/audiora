@@ -21,11 +21,14 @@ import PersistStatus from "@/utils/persistStatus";
 import { restoreScheduleClose } from "@/utils/scheduleClose";
 import Toast from "@/utils/toast";
 import * as SplashScreen from "expo-splash-screen";
-import { Linking, Platform } from "react-native";
+import { Linking, NativeModules, Platform } from "react-native";
 import RNTrackPlayer, { AppKilledPlaybackBehavior, Capability } from "react-native-track-player";
 import i18n from "@/core/i18n";
 import bootstrapAtom from "./bootstrap.atom";
 import { getDefaultStore } from "jotai";
+
+// Keep the launch origin stable if the car disconnects during initialization.
+const startedFromAndroidAuto = Platform.OS === "android" && !!NativeModules.AndroidAuto?.isConnected();
 
 // Request this at module load, before the first React commit. Calling it only
 // after the async bootstrap starts can let Expo auto-hide the native splash
@@ -227,12 +230,26 @@ async function setupFolder() {
     ]);
 }
 
-export async function initTrackPlayer(logger?: IPerfLogger) {
+let trackPlayerInitPromise: Promise<void> | null = null;
+
+export function initTrackPlayer(logger?: IPerfLogger): Promise<void> {
+    if (!trackPlayerInitPromise) {
+        trackPlayerInitPromise = initTrackPlayerImpl(logger);
+        trackPlayerInitPromise.catch(() => {
+            trackPlayerInitPromise = null;
+        });
+    }
+    return trackPlayerInitPromise;
+}
+
+async function initTrackPlayerImpl(logger?: IPerfLogger) {
     await setupNativePlayer();
     logger?.mark("播放器初始化完成");
     trace("播放器初始化完成");
 
-    await TrackPlayer.setupTrackPlayer();
+    await TrackPlayer.setupTrackPlayer({
+        backgroundRestore: startedFromAndroidAuto,
+    });
     trace("播放列表初始化完成");
     logger?.mark("播放列表初始化完成");
 
@@ -241,6 +258,9 @@ export async function initTrackPlayer(logger?: IPerfLogger) {
     await lyricManager.setup();
 
     logger?.mark("歌词初始化完成");
+    if (getDefaultStore().get(bootstrapAtom).state === "TrackPlayerError") {
+        getDefaultStore().set(bootstrapAtom, { state: "Done" });
+    }
 }
 
 let nativePlayerSetupPromise: Promise<void> | null = null;
@@ -398,7 +418,8 @@ async function extraMakeup() {
         handleLinkingUrl(initUrl);
     }
 
-    if (Config.getConfig("basic.autoPlayWhenAppStart")) {
+    if (Config.getConfig("basic.autoPlayWhenAppStart") &&
+        !startedFromAndroidAuto) {
         TrackPlayer.play();
     }
 }
@@ -428,7 +449,16 @@ function bindEvents() {
     });
 }
 
-export default async function () {
+let bootstrapTask: Promise<void> | null = null;
+
+export default function bootstrap(): Promise<void> {
+    if (!bootstrapTask) {
+        bootstrapTask = runBootstrap();
+    }
+    return bootstrapTask;
+}
+
+async function runBootstrap() {
     void markStartupSession("bootstrap-entry");
 
     try {
@@ -438,9 +468,9 @@ export default async function () {
         await bootstrapImpl();
         bindEvents();
         void appendStartupBreadcrumb("bootstrap-bind-events");
-        getDefaultStore().set(bootstrapAtom, {
-            "state": "Done",
-        });
+        if (getDefaultStore().get(bootstrapAtom).state === "Loading") {
+            getDefaultStore().set(bootstrapAtom, { state: "Done" });
+        }
         void appendStartupBreadcrumb("bootstrap-done");
     } catch (e: any) {
         void appendStartupBreadcrumb("bootstrap-fatal", {
@@ -459,5 +489,5 @@ export default async function () {
     // 隐藏开屏动画
     devLog("info", "🎯[Bootstrap] 隐藏启动屏幕");
     void appendStartupBreadcrumb("splashscreen-hide");
-    await SplashScreen.hideAsync();
+    await SplashScreen.hideAsync().catch(emptyFunction);
 }
