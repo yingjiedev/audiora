@@ -32,6 +32,11 @@ if ($PreviewApp -and $TestApp) {
     throw "PreviewApp and TestApp cannot be enabled together."
 }
 
+# Local handoffs default to the independent test identity; keep explicit preview-channel builds.
+if (-not $PreviewApp -and -not $TestApp) {
+    $TestApp = $true
+}
+
 function Invoke-RequiredCommand {
     param(
         [Parameter(Mandatory = $true)]
@@ -357,7 +362,15 @@ gradle.allprojects { project ->
             foreach ($apk in $apkFiles) {
                 Write-Host "`nAPK: $($apk.FullName)" -ForegroundColor Green
                 Write-Host "SHA-256: $(Get-Sha256Hash -Path $apk.FullName)"
-                & $aapt2Candidates[0].FullName dump badging $apk.FullName | Select-String "package:|native-code:"
+                $badging = & $aapt2Candidates[0].FullName dump badging $apk.FullName
+                $expectedPackage = if ($TestApp) { "io.github.yingjiedev.audiora.$TestAppIdSuffix" } elseif ($PreviewApp) { "io.github.yingjiedev.audiora.preview" } else { "io.github.yingjiedev.audiora" }
+                $expectedLabel = if ($TestApp) { "audiora-test" } elseif ($PreviewApp) { "Audiora 预览" } else { "Audiora" }
+                if ($LASTEXITCODE -ne 0 -or
+                    -not ($badging -match ("package: name='" + [regex]::Escape($expectedPackage) + "'")) -or
+                    -not ($badging -match ("application-label:'" + [regex]::Escape($expectedLabel) + "'"))) {
+                    throw "APK identity mismatch: expected package $expectedPackage and label $expectedLabel."
+                }
+                $badging | Select-String "package:|application-label:|native-code:"
 
                 $apksignerPath = Join-Path $aapt2Candidates[0].Directory.FullName "apksigner.bat"
                 if (Test-Path -LiteralPath $apksignerPath) {

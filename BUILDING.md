@@ -2,6 +2,8 @@
 
 本页用于构建可安装的 Android Release 测试 APK。推荐使用仓库自带的 PowerShell 脚本自动完成版本号、构建、校验和清理。
 
+预览交付须提前编译。`build-preview` 默认使用显示名称 `audiora-test` 和独立包名 `io.github.yingjiedev.audiora.test`，可与既有 Audiora 安装共存。只改名称不能防止覆盖；脚本会校验实际 APK 的名称和包名。禁止为安装测试包卸载已有 Audiora 或清空其数据。连接实体设备后安装测试包并核对版本，由用户完成桌面小部件的手动验收。显式的 `-PreviewApp` 选项保留上游预览渠道身份，日常预览交付使用默认测试包。
+
 ## 构建前准备
 
 - 使用 JDK 17、Android SDK（项目当前使用 Build Tools 36.0.0、NDK 27.1.12297006）和 Node.js。
@@ -45,6 +47,7 @@ npm run build-preview
 默认生成 `arm64-v8a` APK。脚本会自动：
 
 - 按当前 `package.json` 版本生成唯一的预览 `versionName` 和 Android `versionCode`。
+- 默认传入 `-PtestApp=true`，使用独立测试包身份；常规 Release 构建保持 Audiora 名称与正式包名。
 - 在依赖缺失时执行 `npm ci`（也可以显式传入 `-InstallDependencies`）。
 - 生成构建信息并调用 Gradle Release 构建。
 - 在 Windows 上临时处理 NDK 文件属性问题。
@@ -127,7 +130,7 @@ $apksigner = "$env:ANDROID_SDK_ROOT\build-tools\36.0.0\apksigner.bat"
 Get-FileHash -LiteralPath $apk -Algorithm SHA256
 ```
 
-至少记录并报告：APK 绝对路径、`applicationId`、`versionName`、`versionCode`、ABI、SHA-256、签名类型，以及是否有真机/模拟器验证。Release 构建不再使用 `debug.keystore` 签名（缺失签名配置会直接构建失败）；本地自签测试包与 CI 发版包签名不同，若设备已有不同签名的同包名应用，应先卸载旧应用再安装。
+至少记录并报告：APK 绝对路径、`applicationId`、`versionName`、`versionCode`、ABI、SHA-256、签名类型，以及是否有真机/模拟器验证。Release 构建不再使用 `debug.keystore` 签名（缺失签名配置会直接构建失败）；本地自签测试包与 CI 发版包签名不同。若设备已有不同签名的同包名测试应用，应使用原有预览签名重新构建，不能通过卸载或清空数据绕过签名检查。
 
 ## 常见问题
 

@@ -199,6 +199,20 @@ android {
     }
 }
 
+// Native widget defaults and glyphs come from the same palette/assets as React Native.
+def widgetResources = layout.buildDirectory.dir("generated/res/musicWidget")
+android.sourceSets.main.res.srcDir(widgetResources)
+tasks.register("generateMusicWidgetResources", Exec) {
+    inputs.file("../../src/constants/colorPalette.ts")
+    inputs.files(fileTree("../../src/assets/icons") { include "play.svg", "pause.svg", "skip-left.svg", "skip-right.svg" })
+    inputs.files("../../src/assets/imgs/widget-cloud-light-v1.png", "../../src/assets/imgs/widget-cloud-dark-v1.png", "../../src/assets/imgs/album-default.png")
+    inputs.files("src/main/res/layout/music_widget.xml", "src/main/res/layout/music_widget_compact.xml")
+    inputs.file("../../scripts/generate-widget-resources.mjs")
+    outputs.dir(widgetResources)
+    commandLine "node", "../../scripts/generate-widget-resources.mjs", widgetResources.get().asFile.absolutePath
+}
+tasks.named("preBuild").configure { dependsOn("generateMusicWidgetResources") }
+
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
 ["pickFirsts", "excludes", "merges", "doNotStrip"].each { prop ->
     def options = (findProperty("android.packagingOptions.$prop") ?: "").split(",");

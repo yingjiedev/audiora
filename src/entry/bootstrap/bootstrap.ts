@@ -1,34 +1,32 @@
 import "react-native-get-random-values";
 
 import { getCurrentDialog, showDialog } from "@/components/dialogs/useDialog.ts";
-import { ImgAsset } from "@/constants/assetsConst";
 import { emptyFunction, localPluginHash, supportLocalMediaType } from "@/constants/commonConst";
-import pathConst from "@/constants/pathConst";
 import Config from "@/core/appConfig";
 import downloader, { DownloadFailReason, DownloaderEvent } from "@/core/downloader";
 import downloadNotificationManager from "@/core/downloadNotificationManager";
 import LocalMusicSheet from "@/core/localMusicSheet";
-import lyricManager from "@/core/lyricManager";
-import musicHistory from "@/core/musicHistory";
-import MusicSheet from "@/core/musicSheet";
 import PluginManager from "@/core/pluginManager";
 import Theme from "@/core/theme";
 import TrackPlayer from "@/core/trackPlayer";
-import { checkAndCreateDir } from "@/utils/fileUtils";
 import { appendStartupBreadcrumb, crashLog, errorLog, flushStartupBreadcrumbs, markStartupSession, trace, devLog } from "@/utils/log";
 import { IPerfLogger, perfLogger } from "@/utils/perfLogger";
 import PersistStatus from "@/utils/persistStatus";
-import { restoreScheduleClose } from "@/utils/scheduleClose";
 import Toast from "@/utils/toast";
 import * as SplashScreen from "expo-splash-screen";
-import { Linking, NativeModules, Platform } from "react-native";
-import RNTrackPlayer, { AppKilledPlaybackBehavior, Capability } from "react-native-track-player";
+import { Linking, Platform } from "react-native";
 import i18n from "@/core/i18n";
 import bootstrapAtom from "./bootstrap.atom";
 import { getDefaultStore } from "jotai";
+import { handleMusicWidgetLink } from "@/service/musicWidget";
+import { initTrackPlayer as initPlaybackRuntime, setupNativePlayer, setupPlaybackData, setupPlaybackPlugins, startedFromAndroidAuto } from "@/service/playbackRuntime";
 
-// Keep the launch origin stable if the car disconnects during initialization.
-const startedFromAndroidAuto = Platform.OS === "android" && !!NativeModules.AndroidAuto?.isConnected();
+export async function initTrackPlayer(logger?: IPerfLogger) {
+    await initPlaybackRuntime(logger);
+    if (getDefaultStore().get(bootstrapAtom).state === "TrackPlayerError") {
+        getDefaultStore().set(bootstrapAtom, { state: "Done" });
+    }
+}
 
 // Request this at module load, before the first React commit. Calling it only
 // after the async bootstrap starts can let Expo auto-hide the native splash
@@ -42,16 +40,6 @@ const splashScreenPreventPromise = SplashScreen.preventAutoHideAsync()
         devLog("warn", "⚠️[Bootstrap] SplashScreen防自动隐藏失败", error);
         return false;
     });
-
-// 依赖管理
-PluginManager.injectDependencies(Config);
-musicHistory.injectDependencies(Config);
-TrackPlayer.injectDependencies(Config, musicHistory, PluginManager);
-downloader.injectDependencies(Config, PluginManager);
-lyricManager.injectDependencies(TrackPlayer, Config, PluginManager);
-MusicSheet.injectDependencies(Config);
-
-devLog("info", "🚀[Bootstrap] 所有依赖注入完成");
 
 function registerEarlyGlobalErrorHandlers() {
     try {
@@ -90,21 +78,8 @@ async function bootstrapImpl() {
     // 2. 数据初始化
     // 目录创建走文件系统，Config / MusicSheet / musicHistory 全是 MMKV，
     // 互不依赖，一起并行。真正需要目录就绪的是下面的 PluginManager.setup（readDir）。
-    await Promise.all([
-        setupFolder().then(() => {
-            trace("文件夹初始化完成");
-            logger.mark("文件夹初始化完成");
-        }),
-        Config.setup().then(() => {
-            logger.mark("Config");
-        }),
-        MusicSheet.setup().then(() => {
-            logger.mark("MusicSheet");
-        }),
-        musicHistory.setup().then(() => {
-            logger.mark("musicHistory");
-        }),
-    ]);
+    await setupPlaybackData();
+    logger.mark("播放数据初始化完成");
     void appendStartupBreadcrumb("config-loaded");
     trace("配置初始化完成");
     logger.mark("配置初始化完成");
@@ -127,7 +102,7 @@ async function bootstrapImpl() {
     nativePlayerPromise.catch(emptyFunction);
 
     // 加载插件（默认懒加载：有缓存时不编译沙箱，启动显著更快）
-    await PluginManager.setup();
+    await setupPlaybackPlugins();
     void appendStartupBreadcrumb("plugins-ready");
     logger.mark("插件初始化完成");
     trace("插件初始化完成");
@@ -214,126 +189,6 @@ async function schedulePostBootstrapWork(logger: IPerfLogger) {
     // 二次开发版：不再拉取上游仓库的在线公告，原启动公告弹窗移除
 }
 
-/** 初始化 */
-async function setupFolder() {
-    await Promise.all([
-        checkAndCreateDir(pathConst.dataPath),
-        checkAndCreateDir(pathConst.logPath),
-        checkAndCreateDir(pathConst.cachePath),
-        checkAndCreateDir(pathConst.pluginPath),
-        checkAndCreateDir(pathConst.lrcCachePath),
-        checkAndCreateDir(pathConst.downloadCachePath),
-        checkAndCreateDir(pathConst.localLrcPath),
-        checkAndCreateDir(pathConst.downloadPath).then(() => {
-            checkAndCreateDir(pathConst.downloadMusicPath);
-        }),
-    ]);
-}
-
-let trackPlayerInitPromise: Promise<void> | null = null;
-
-export function initTrackPlayer(logger?: IPerfLogger): Promise<void> {
-    if (!trackPlayerInitPromise) {
-        trackPlayerInitPromise = initTrackPlayerImpl(logger);
-        trackPlayerInitPromise.catch(() => {
-            trackPlayerInitPromise = null;
-        });
-    }
-    return trackPlayerInitPromise;
-}
-
-async function initTrackPlayerImpl(logger?: IPerfLogger) {
-    await setupNativePlayer();
-    logger?.mark("播放器初始化完成");
-    trace("播放器初始化完成");
-
-    await TrackPlayer.setupTrackPlayer({
-        backgroundRestore: startedFromAndroidAuto,
-    });
-    trace("播放列表初始化完成");
-    logger?.mark("播放列表初始化完成");
-
-    restoreScheduleClose();
-
-    await lyricManager.setup();
-
-    logger?.mark("歌词初始化完成");
-    if (getDefaultStore().get(bootstrapAtom).state === "TrackPlayerError") {
-        getDefaultStore().set(bootstrapAtom, { state: "Done" });
-    }
-}
-
-let nativePlayerSetupPromise: Promise<void> | null = null;
-
-/**
- * 原生播放器 + 通知栏配置。只依赖 Config，与插件加载无关，
- * 所以启动时可以和 PluginManager.setup 并行跑，把这段原生耗时重叠掉。
- * 结果缓存起来，重复调用不会真的初始化两次。
- */
-function setupNativePlayer() {
-    if (!nativePlayerSetupPromise) {
-        nativePlayerSetupPromise = initNativePlayerImpl();
-        // 失败后清空缓存，让 BootstrapComponent 的重试还能再来一次。
-        // 原 promise 仍是 rejected，await 它的地方照样会抛。
-        nativePlayerSetupPromise.catch(() => {
-            nativePlayerSetupPromise = null;
-        });
-    }
-    return nativePlayerSetupPromise;
-}
-
-async function initNativePlayerImpl() {
-    try {
-        await RNTrackPlayer.setupPlayer({
-            maxCacheSize:
-                Config.getConfig("basic.maxCacheSize") ?? 1024 * 1024 * 512,
-        });
-    } catch (e: any) {
-        if (
-            e?.message !==
-            "The player has already been initialized via setupPlayer."
-        ) {
-            throw e;
-        }
-    }
-
-    const capabilities = Config.getConfig("basic.showExitOnNotification")
-        ? [
-            Capability.Play,
-            Capability.Pause,
-            Capability.SkipToNext,
-            Capability.SkipToPrevious,
-            Capability.Stop,
-        ]
-        : [
-            Capability.Play,
-            Capability.Pause,
-            Capability.SkipToNext,
-            Capability.SkipToPrevious,
-        ];
-    await RNTrackPlayer.updateOptions({
-        icon: ImgAsset.logoTransparent,
-        // Frequent updates for smooth word-by-word lyric animation (100ms interval)
-        progressUpdateEventInterval: 0.1,
-        android: {
-            alwaysPauseOnInterruption: true,
-            appKilledPlaybackBehavior:
-                AppKilledPlaybackBehavior.ContinuePlayback,
-        },
-        capabilities: capabilities,
-        // 通知栏按钮收窄到 上一首/播放/下一首（+可选停止），不带 SeekTo，
-        // 否则通知会多出一条拖动进度条、整体变得又高又大（对齐 QQ 音乐那种紧凑样式）
-        notificationCapabilities: capabilities,
-        compactCapabilities: [
-            Capability.Play,
-            Capability.Pause,
-            Capability.SkipToNext,
-            Capability.SkipToPrevious,
-        ],
-    });
-}
-
-
 /** 不需要阻塞的 */
 async function extraMakeup() {
     // 自动更新
@@ -362,6 +217,7 @@ async function extraMakeup() {
     async function handleLinkingUrl(url: string) {
         // 插件
         try {
+            if (await handleMusicWidgetLink(url)) return;
             if (url.startsWith("audiora://install/")) {
                 const plugins = url
                     .slice("audiora://install/".length)

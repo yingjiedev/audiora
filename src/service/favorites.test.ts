@@ -21,6 +21,7 @@ jest.mock("@/utils/toast", () => ({ __esModule: true, default: { success: jest.f
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: () => false }));
 jest.mock("@/utils/persistStatus", () => ({ __esModule: true, default: { get: jest.fn() } }));
 jest.mock("./listeningStatsRecorder", () => ({ setupListeningStatsRecorder: jest.fn() }));
+jest.mock("./androidAuto", () => ({ setupAndroidAutoService: jest.fn() }));
 const service = require("./index");
 
 describe("native favorite action synchronization", () => {

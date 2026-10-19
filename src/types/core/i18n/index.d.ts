@@ -1127,6 +1127,8 @@ export interface ILanguageData {
     "toast.artistNotSupported": string;
     "toast.albumNotSupported": string;
     "toast.shiyinStarted": string;
+    "toast.widgetStartupFailed": string;
+    "toast.widgetQueueEmpty": string;
     "toast.shiyinNoSource": string;
     "toast.shiyinNoMusic": string;
     "toast.shiyinPoolEmpty": string;

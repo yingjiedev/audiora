@@ -23,6 +23,7 @@ import { ReduceMotion, ReducedMotionConfig } from "react-native-reanimated";
 import { routes } from "@/core/router/routes.tsx";
 import ErrorBoundary from "@/components/errorBoundary";
 import { NotificationLifecycleManager } from "@/core/notificationLifecycleManager";
+import MusicWidgetThemeSync from "@/components/musicWidgetThemeSync";
 import { appendStartupBreadcrumb } from "@/utils/log";
 import { useAtomValue } from "jotai";
 import bootstrapAtom from "./bootstrap/bootstrap.atom";
@@ -96,6 +97,7 @@ export default function Pages() {
                         <ErrorBoundary>
                             <BootstrapComponent />
                             <NotificationLifecycleManager />
+                            <MusicWidgetThemeSync />
                             {/*
                               Follow the OS "reduce motion" setting. Never
                               forced animations off — the app ships motion that
