@@ -126,6 +126,7 @@ describe("TrackPlayer playback lifecycle", () => {
     let toast: { warn: jest.Mock };
     let adaptSource: jest.Mock;
     let autoStopWhenError: boolean;
+    let persist: { get: jest.Mock; set: jest.Mock };
     let sheetHistory: typeof import("@/core/sheetPlaybackHistory");
 
     beforeEach(async () => {
@@ -139,6 +140,7 @@ describe("TrackPlayer playback lifecycle", () => {
             adaptSource = require("./mediaSourceAdapter").adaptMediaSourceForPlayback;
             player = require("./index").default;
             sheetHistory = require("@/core/sheetPlaybackHistory");
+            persist = require("@/utils/persistStatus");
         });
         queue = [];
         activeIndex = 0;
@@ -211,6 +213,72 @@ describe("TrackPlayer playback lifecycle", () => {
         playbackState = state.Ended;
         return { index: 1, lastIndex: 0, track: queue[1] };
     }
+
+    function restoreSession(position: number, source?: Promise<IPlugin.IMediaSourceResult>) {
+        persist.get.mockImplementation(key => ({
+            "music.musicItem": items[0], "music.playList": items, "music.progress": position,
+        }[key as string]));
+        player.injectDependencies(
+            { getConfig: (key: string) => key === "basic.autoPlayWhenAppStart" ? true : key === "basic.defaultPlayQuality" ? "320k" : false } as any,
+            { addMusic: jest.fn() } as any,
+            {
+                getByName: () => ({ instance: {}, methods: { getMediaSource } }),
+                getByMedia: () => source ? { instance: {}, methods: { getMediaSource: () => source } } : undefined,
+            } as any,
+        );
+    }
+
+    it("waits for headless restore without auto-playing and keeps the saved progress", async () => {
+        const source = deferred<IPlugin.IMediaSourceResult>();
+        restoreSession(67.5, source.promise);
+        let ready = false;
+        const setup = player.setupTrackPlayer({ backgroundRestore: true }).then(() => {
+            ready = true;
+        });
+        await flushPromises();
+        expect(ready).toBe(false);
+        source.resolve({ url: "https://restored/song.mp3" });
+        await setup;
+        expect(native.seekTo).toHaveBeenCalledWith(67.5);
+        expect(native.play).not.toHaveBeenCalled();
+        expect(player.currentMusic?.isInit).toBe(true);
+    });
+
+    it("discards a late startup source after a new play request for the same song", async () => {
+        const source = deferred<IPlugin.IMediaSourceResult>();
+        restoreSession(67.5, source.promise);
+        await player.setupTrackPlayer();
+        await player.play(items[0], true);
+        const queueWrites = native.setQueue.mock.calls.length;
+        source.resolve({ url: "https://stale/song.mp3" });
+        await flushPromises();
+        expect(native.setQueue).toHaveBeenCalledTimes(queueWrites);
+        expect(queue[0].url).toBe("https://source/0.mp3");
+        expect(native.seekTo).not.toHaveBeenCalledWith(67.5);
+    });
+
+    it("bounds cold restore so a stalled plugin cannot block car controls indefinitely", async () => {
+        const source = deferred<IPlugin.IMediaSourceResult>();
+        restoreSession(42.25, source.promise);
+        const setup = player.setupTrackPlayer({ backgroundRestore: true });
+        await jest.advanceTimersByTimeAsync(10000);
+        await setup;
+        await player.play();
+        const queueWrites = native.setQueue.mock.calls.length;
+        source.resolve({ url: "https://stale/song.mp3" });
+        await flushPromises();
+        expect(native.setQueue).toHaveBeenCalledTimes(queueWrites);
+        expect(native.seekTo).toHaveBeenCalledWith(42.25);
+    });
+
+    it("restores progress before playing when a cold-start source must be fetched again", async () => {
+        restoreSession(42.25);
+        await player.setupTrackPlayer({ backgroundRestore: true });
+        await player.play();
+        expect(native.seekTo).toHaveBeenCalledWith(42.25);
+        expect(native.play).toHaveBeenCalledTimes(1);
+        expect(native.seekTo.mock.invocationCallOrder[0]).toBeLessThan(native.play.mock.invocationCallOrder[0]);
+    });
 
     it("ignores a late rejection after the user selects another track", async () => {
         const source = deferred<IPlugin.IMediaSourceResult>();

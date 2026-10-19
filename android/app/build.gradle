@@ -228,6 +228,12 @@ dependencies {
     implementation 'net.jthink:jaudiotagger:2.2.5'
     implementation 'androidx.core:core-splashscreen:1.0.0'
     implementation 'androidx.documentfile:documentfile:1.1.0'
+    implementation 'androidx.media:media:1.7.0'
+    // Same version used by RNTrackPlayer/KotlinAudio; only the existing session is shared.
+    implementation 'com.google.android.exoplayer:extension-mediasession:2.19.0'
+    implementation 'com.google.android.exoplayer:exoplayer-common:2.19.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
     // Streaming mflac proxy
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'

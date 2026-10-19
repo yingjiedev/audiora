@@ -645,4 +645,5 @@ patchBundleNullability();
 patchTurboModuleVoidReturn();
 writeCompactNotificationRes();
 patchCompactNotification();
+require("./patch-android-auto").patchAndroidAuto(servicePath, modulePath);
 cleanTrackPlayerAndroidBuild();
