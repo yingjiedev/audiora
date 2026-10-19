@@ -117,6 +117,8 @@ export interface IAppConfigProperties {
 
     // Backup
     "backup.resumeMode": ResumeMode;
+    "backup.webdavAutoEnabled": boolean;
+    "backup.webdavAutoInterval": "daily" | "weekly";
 
     // Plugin
     "plugin.subscribeUrl": string;

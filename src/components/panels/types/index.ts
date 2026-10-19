@@ -28,6 +28,7 @@ import DownloadTaskOptions from "./downloadTaskOptions";
 import QualityTranslation from "./qualityTranslation";
 import MusicMetadataSettings from "./musicMetadataSettings";
 import TrackGroupSources from "./trackGroupSources";
+import WebdavBackupInfo from "./webdavBackupInfo";
 
 export default {
     TrackGroupSources,
@@ -87,4 +88,6 @@ export default {
     MusicMetadataSettingsPanel: MusicMetadataSettings,
     /** 下载任务单条操作 */
     DownloadTaskOptions,
+    /** WebDAV 备份说明与失败详情 */
+    WebdavBackupInfo,
 };

@@ -719,6 +719,20 @@ export interface ILanguageData {
     "backupAndResume.webdavUrl": string; // WebDAV URL
     "backupAndResume.backupToWebdav": string; // 备份到WebDAV
     "backupAndResume.resumeFromWebdav": string; // 从WebDAV恢复
+    "backupAndResume.webdavAutoBackup": string;
+    "backupAndResume.webdavAutoSummary": string;
+    "backupAndResume.webdavAutoDescription": string;
+    "backupAndResume.webdavAutoInterval": string;
+    "backupAndResume.webdavAutoInterval.daily": string;
+    "backupAndResume.webdavAutoInterval.weekly": string;
+    "backupAndResume.webdavLastBackup": string;
+    "backupAndResume.webdavNeverBackedUp": string;
+    "backupAndResume.webdavBackupFailed": string;
+    "backupAndResume.webdavBackupContents": string;
+    "backupAndResume.webdavBackupSummary": string;
+    "backupAndResume.webdavBackupFailure": string;
+    "backupAndResume.webdavBackupHelp": string;
+    "backupAndResume.webdavBackupScope": string;
     "backupAndResume.resumeMode.append": string; // 附加
     "backupAndResume.resumeMode.overwrite-default": string; // 覆盖（默认）
     "backupAndResume.resumeMode.overwrite": string; // 覆盖
