@@ -93,6 +93,26 @@ function PluginItemBase(props: IPluginItemProps) {
             },
         },
         {
+            title: t("pluginSetting.pluginItem.options.resetStorage"),
+            icon: "arrow-path",
+            onPress() {
+                showDialog("SimpleDialog", {
+                    title: t("pluginSetting.pluginItem.options.resetStorage"),
+                    content: t("pluginSetting.pluginItem.options.resetStorageContent", {
+                        name: displayName,
+                    }),
+                    onOk() {
+                        try {
+                            pluginManager.resetPluginStorage(plugin);
+                            Toast.success(t("pluginSetting.pluginItem.options.resetStorageSuccess"));
+                        } catch {
+                            Toast.warn(t("pluginSetting.pluginItem.options.resetStorageFailed"));
+                        }
+                    },
+                });
+            },
+        },
+        {
             title: t("pluginSetting.pluginItem.options.alternativePlugin"),
             icon: "strategy",
             show: true,

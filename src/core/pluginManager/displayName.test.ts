@@ -19,6 +19,9 @@ jest.mock("./plugin", () => {
             this.hash = `hash-${this.name}-${define?.version ?? ""}`;
             this.instance = define ?? {};
         }
+
+        disposeStorage() {}
+        activateStorage() {}
     }
 
     return {

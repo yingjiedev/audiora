@@ -63,6 +63,15 @@ npm run build-preview -- -Abi all
 npm run build-preview -- -PreviewApp
 ```
 
+构建可与正式版并存的测试包：
+
+```powershell
+npm run build-preview -- -TestApp
+```
+
+测试包使用 `io.github.yingjiedev.audiora.test` 作为 `applicationId`，桌面名称为 `audiora-test`，APK 文件名以 `Audiora-test` 开头。它与正式版使用独立应用数据目录。
+
+需要在同一设备安装多个测试包时，可以指定不同的 ID 后缀，例如 `npm run build-preview -- -TestApp -TestAppIdSuffix test.codex` 会生成 `io.github.yingjiedev.audiora.test.codex`；桌面名称仍为 `audiora-test`。
 强制重新安装依赖：
 
 ```powershell

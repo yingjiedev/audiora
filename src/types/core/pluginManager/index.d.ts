@@ -76,6 +76,9 @@ export interface IPluginManager {
      */
     uninstallAllPlugins(): Promise<void>;
 
+    /** Clear only the plugin's own persistent runtime data. */
+    resetPluginStorage(plugin: Plugin): void;
+
     /**
      * 使用插件的源URL更新插件
      * @param plugin - 要更新的插件实例

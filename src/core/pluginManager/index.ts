@@ -29,6 +29,7 @@ import { safeParse } from "@/utils/jsonUtil";
 import { IInjectable } from "@/types/infra";
 import { IAppConfig } from "@/types/core/config";
 import delay from "@/utils/delay";
+import { clearAllPluginStorage, clearPluginStorage } from "@/core/pluginManager/storage";
 
 const pluginsAtom = atom<Plugin[]>([]);
 /** 插件显示名（本地自定义）：platform -> 显示名。未自定义的插件不在其中。 */
@@ -331,67 +332,77 @@ class PluginManager implements IPluginManager, IInjectable {
         }
 
         if (funcCode) {
-            const plugin = new Plugin(funcCode, pluginPath);
-            let allPlugins = [...this.getPlugins()];
+            const plugin = new Plugin(funcCode, pluginPath, null, true);
+            let installed = false;
+            try {
+                let allPlugins = [...this.getPlugins()];
 
-            const _pluginIndex = allPlugins.findIndex(
-                p => p.hash === plugin.hash,
-            );
-            if (_pluginIndex !== -1) {
-                // 静默忽略
-                return {
-                    success: true,
-                    message: "插件已安装",
-                    pluginName: plugin.name,
-                    pluginHash: plugin.hash,
-                };
-            }
-            const oldVersionPlugin = allPlugins.find(
-                p => p.name === plugin.name,
-            );
-            if (oldVersionPlugin && !config?.notCheckVersion) {
-                if (
-                    compare(
-                        oldVersionPlugin.instance.version ?? "",
-                        plugin.instance.version ?? "",
-                        ">",
-                    )
-                ) {
+                const _pluginIndex = allPlugins.findIndex(
+                    p => p.hash === plugin.hash,
+                );
+                if (_pluginIndex !== -1) {
+                    // 静默忽略
                     return {
-                        success: false,
-                        message: "已安装更新版本的插件",
+                        success: true,
+                        message: "插件已安装",
                         pluginName: plugin.name,
                         pluginHash: plugin.hash,
                     };
                 }
-            }
-
-            if (plugin.state === PluginState.Mounted) {
-                const fn = nanoid();
-                if (oldVersionPlugin) {
-                    allPlugins = allPlugins.filter(
-                        _ => _.hash !== oldVersionPlugin.hash,
-                    );
-                    try {
-                        await unlink(oldVersionPlugin.path);
-                    } catch {}
+                const oldVersionPlugin = allPlugins.find(
+                    p => p.name === plugin.name,
+                );
+                if (oldVersionPlugin && !config?.notCheckVersion) {
+                    if (
+                        compare(
+                            oldVersionPlugin.instance.version ?? "",
+                            plugin.instance.version ?? "",
+                            ">",
+                        )
+                    ) {
+                        return {
+                            success: false,
+                            message: "已安装更新版本的插件",
+                            pluginName: plugin.name,
+                            pluginHash: plugin.hash,
+                        };
+                    }
                 }
-                const _pluginPath = `${pathConst.pluginPath}${fn}.js`;
-                await copyFile(pluginPath, _pluginPath);
-                plugin.path = _pluginPath;
-                allPlugins = allPlugins.concat(plugin);
-                this.setPlugins(allPlugins);
 
+                if (plugin.state === PluginState.Mounted) {
+                    const fn = nanoid();
+                    const _pluginPath = `${pathConst.pluginPath}${fn}.js`;
+                    await copyFile(pluginPath, _pluginPath);
+                    plugin.path = _pluginPath;
+                    if (oldVersionPlugin) {
+                        allPlugins = allPlugins.filter(
+                            _ => _.hash !== oldVersionPlugin.hash,
+                        );
+                        try {
+                            await unlink(oldVersionPlugin.path);
+                        } catch {}
+                    }
+                    allPlugins = allPlugins.concat(plugin);
+                    oldVersionPlugin?.disposeStorage();
+                    this.setPlugins(allPlugins);
+                    installed = true;
+                    plugin.activateStorage();
+
+                    return {
+                        success: true,
+                        pluginName: plugin.name,
+                        pluginHash: plugin.hash,
+                    };
+                }
                 return {
-                    success: true,
-                    pluginName: plugin.name,
-                    pluginHash: plugin.hash,
+                    success: false,
+                    message: "插件无法解析",
                 };
+            } finally {
+                if (!installed) {
+                    plugin.disposeStorage();
+                }
             }
-            return {
-                success: false,
-                message: "插件无法解析",
-            };
         }
         return {
             success: false,
@@ -434,9 +445,12 @@ class PluginManager implements IPluginManager, IInjectable {
     }
 
     private async installPluginCode(funcCode: string, url: string, config?: IInstallPluginConfig): Promise<IInstallPluginResult> {
+        let candidate: Plugin | undefined;
+        let installed = false;
         try {
             if (funcCode) {
-                const plugin = new Plugin(funcCode, "");
+                const plugin = new Plugin(funcCode, "", null, true);
+                candidate = plugin;
                 let allPlugins = [...this.getPlugins()];
                 const pluginIndex = allPlugins.findIndex(
                     p => p.hash === plugin.hash,
@@ -480,6 +494,7 @@ class PluginManager implements IPluginManager, IInjectable {
                     plugin.path = _pluginPath;
                     allPlugins = allPlugins.concat(plugin);
                     if (oldVersionPlugin) {
+                        oldVersionPlugin.disposeStorage();
                         allPlugins = allPlugins.filter(
                             _ => _.hash !== oldVersionPlugin.hash,
                         );
@@ -488,6 +503,8 @@ class PluginManager implements IPluginManager, IInjectable {
                         } catch {}
                     }
                     this.setPlugins(allPlugins);
+                    installed = true;
+                    plugin.activateStorage();
                     return {
                         success: true,
                         status: oldVersionPlugin ? "updated" : "installed",
@@ -525,6 +542,10 @@ class PluginManager implements IPluginManager, IInjectable {
                     pluginUrl: url,
                 };
             }
+        } finally {
+            if (!installed) {
+                candidate?.disposeStorage();
+            }
         }
     }
 
@@ -537,8 +558,10 @@ class PluginManager implements IPluginManager, IInjectable {
         const targetIndex = plugins.findIndex(_ => _.hash === hash);
         devLog("info", "📤[插件管理器] 卸载插件", { targetIndex, hash });
         if (targetIndex !== -1) {
+            const targetPlugin = plugins[targetIndex];
             const pluginName = plugins[targetIndex].name;
             const pluginPath = plugins[targetIndex].path;
+            targetPlugin.disposeStorage();
             try {
                 await unlink(pluginPath);
             } catch (e: any) {
@@ -552,6 +575,7 @@ class PluginManager implements IPluginManager, IInjectable {
             this.setPlugins(plugins);
             // 防止其他重名
             if (plugins.every(_ => _.name !== pluginName)) {
+                clearPluginStorage(pluginName);
                 removeAllMediaExtra(pluginName);
                 pluginMeta.setDisplayName(pluginName, null);
                 this.syncPluginDisplayNames();
@@ -566,6 +590,7 @@ class PluginManager implements IPluginManager, IInjectable {
     async uninstallAllPlugins() {
         await Promise.all(
             this.getPlugins().map(async plugin => {
+                plugin.disposeStorage();
                 try {
                     const pluginName = plugin.name;
                     await unlink(plugin.path);
@@ -573,6 +598,7 @@ class PluginManager implements IPluginManager, IInjectable {
                 } catch {}
             }),
         );
+        clearAllPluginStorage();
         this.setPlugins([]);
         pluginMeta.clearDisplayNames();
         this.syncPluginDisplayNames();
@@ -760,6 +786,10 @@ class PluginManager implements IPluginManager, IInjectable {
 
     getUserVariables(plugin: Plugin) {
         return pluginMeta.getUserVariables(plugin.name);
+    }
+
+    resetPluginStorage(plugin: Plugin) {
+        clearPluginStorage(plugin.name);
     }
 
     /**

@@ -575,6 +575,10 @@ export interface ILanguageData {
     "pluginSetting.pluginItem.options.sharePlugin": string; // 分享插件
     "pluginSetting.pluginItem.options.uninstallPlugin": string; // 卸载插件
     "pluginSetting.pluginItem.options.uninstallPluginContent": string; // 确定卸载该插件吗？
+    "pluginSetting.pluginItem.options.resetStorage": string;
+    "pluginSetting.pluginItem.options.resetStorageContent": string;
+    "pluginSetting.pluginItem.options.resetStorageSuccess": string;
+    "pluginSetting.pluginItem.options.resetStorageFailed": string;
     "pluginSetting.pluginItem.options.alternativePlugin": string; // 替代插件
     "pluginSetting.pluginItem.alternativePlugin": string; // 该插件实际使用的插件
     "pluginSetting.pluginItem.dialog.setAlternativePluginTitle": string; // 设置替代插件
