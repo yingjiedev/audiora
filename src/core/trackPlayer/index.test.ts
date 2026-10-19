@@ -127,6 +127,7 @@ describe("TrackPlayer playback lifecycle", () => {
     let adaptSource: jest.Mock;
     let autoStopWhenError: boolean;
     let sheetHistory: typeof import("@/core/sheetPlaybackHistory");
+    let persist: { get: jest.Mock };
 
     beforeEach(async () => {
         jest.useFakeTimers();
@@ -139,6 +140,7 @@ describe("TrackPlayer playback lifecycle", () => {
             adaptSource = require("./mediaSourceAdapter").adaptMediaSourceForPlayback;
             player = require("./index").default;
             sheetHistory = require("@/core/sheetPlaybackHistory");
+            persist = require("@/utils/persistStatus");
         });
         queue = [];
         activeIndex = 0;
@@ -195,6 +197,27 @@ describe("TrackPlayer playback lifecycle", () => {
     function emit(name: string, payload: any = {}) {
         return listeners.get(name)!(payload);
     }
+
+    it("restores widget queue metadata without preloading an old source or applying startup autoplay", async () => {
+        persist.get.mockImplementation((key: string) => ({
+            "music.playList": items,
+            "music.musicItem": items[0],
+        }[key]));
+        player.injectDependencies(
+            { getConfig: (key: string) => key === "basic.autoPlayWhenAppStart" ? true : undefined } as any,
+            { addMusic: jest.fn() } as any,
+            { getByName: () => ({ instance: {}, methods: { getMediaSource } }), getByMedia: () => ({ instance: {}, methods: { getMediaSource } }) } as any,
+        );
+        await player.setupTrackPlayer({ background: true });
+        expect(player.currentMusic?.id).toBe(items[0].id);
+        expect(player.currentMusic).toEqual(expect.objectContaining({ isInit: true }));
+        expect(getMediaSource).not.toHaveBeenCalled();
+        expect(native.play).not.toHaveBeenCalled();
+        expect(native.setQueue).not.toHaveBeenCalled();
+        await player.play();
+        expect(getMediaSource).toHaveBeenCalledTimes(1);
+        expect(native.play).toHaveBeenCalled();
+    });
 
     async function failNative() {
         playbackState = state.Error;

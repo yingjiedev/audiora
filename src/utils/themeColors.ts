@@ -32,6 +32,27 @@ export function readableAccent(accent: string, backgrounds: readonly string[], m
     return original.hex();
 }
 
+/** Widget appearances are chosen in the launcher, independently of the app theme. */
+export function resolveWidgetAppearance(primary: string, dark: boolean) {
+    const preset = dark ? darkColors : lightColors;
+    const requested = safeColor(primary, preset.primary).alpha(1).hex();
+    const accent = [lightColors.primary, darkColors.primary].includes(requested) ? preset.primary : requested;
+    const surface = preset.card;
+    const text = preset.text;
+    const secondary = readableAccent(preset.textSecondary, [surface], colorContrastMinimum.text);
+    const action = readableAccent(accent, [surface], colorContrastMinimum.control);
+    // This foreground is exclusively a media-control glyph, so use the 3:1 icon
+    // threshold; white matches the selected dark design without changing its fill.
+    const onPrimary = contrastRatio(mediaOnDark, action) >= colorContrastMinimum.control ? mediaOnDark
+        : bestForeground(action, [mediaOnDark, lightColors.text, controlNeutralDark]);
+    const discoverySurface = dark ? surface : Color(lightColors.primary).mix(Color(mediaScrim), 0.44).hex();
+    return {
+        surface, text, secondary, primary: action, onPrimary, discoverySurface,
+        onDiscovery: mediaOnDark,
+        divider: Color(text).mix(Color(surface), 0.85).hex(),
+    };
+}
+
 /** Pure theme derivation shared by the hook, native components and contrast tests. */
 export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const preset = dark ? darkColors : lightColors;
@@ -109,8 +130,23 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const activityStrong = readableAccent(Color(primaryOpaque).lightness(dark ? 86 : 32).hex(), activityBackgrounds, colorContrastMinimum.text);
     const activityLevels = [0, 0.33, 0.66, 1].map(weight => readableAccent(Color(activityLow).mix(Color(activityStrong), weight).hex(), activityBackgrounds, colorContrastMinimum.control));
     const danger = readableAccent(safeColor(colors.danger, preset.danger).hex(), backgrounds, colorContrastMinimum.text);
+    // Desktop wallpaper is outside the app: give the widget its own opaque surface.
+    const widgetSurface = cardBackground;
+    const widgetText = readableAccent(safeColor(colors.text, preset.text).hex(), [widgetSurface], colorContrastMinimum.text);
+    const widgetSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), [widgetSurface], colorContrastMinimum.text);
+    const widgetPrimary = readableAccent(primaryOpaque, [widgetSurface], colorContrastMinimum.control);
+    const onWidgetPrimary = readableAccent(bestForeground(widgetPrimary, [mediaOnDark, lightColors.text, controlNeutralDark]), [widgetPrimary], colorContrastMinimum.text);
+    const widgetDiscoverySurface = Color(primaryOpaque).mix(Color(mediaScrim), 0.44).hex();
+    const onWidgetDiscovery = readableAccent(mediaOnDark, [widgetDiscoverySurface], colorContrastMinimum.text);
+    const widgetDivider = Color(widgetText).mix(Color(widgetSurface), 0.85).hex();
     return {
         ...colors,
+        widgetAppearances: {
+            light: resolveWidgetAppearance(primaryOpaque, false),
+            dark: resolveWidgetAppearance(primaryOpaque, true),
+        },
+        widgetSurface, widgetText, widgetSecondary, widgetPrimary, onWidgetPrimary,
+        widgetDiscoverySurface, onWidgetDiscovery, widgetDivider,
         primary,
         primaryText,
         active: primaryText,

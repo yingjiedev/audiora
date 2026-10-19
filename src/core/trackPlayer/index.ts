@@ -193,7 +193,7 @@ class TrackPlayer extends EventEmitter<{
     }
 
 
-    async setupTrackPlayer() {
+    async setupTrackPlayer(options?: { background?: boolean }) {
         const rate = PersistStatus.get("music.rate");
         const musicQueue = PersistStatus.get("music.playList");
         const repeatMode = PersistStatus.get("music.repeatMode");
@@ -238,7 +238,7 @@ class TrackPlayer extends EventEmitter<{
         }
 
         if (track && this.isInPlayList(track)) {
-            const shouldAutoPlayOnStartup = !!this.configService.getConfig("basic.autoPlayWhenAppStart");
+            const shouldAutoPlayOnStartup = !options?.background && !!this.configService.getConfig("basic.autoPlayWhenAppStart");
             void appendStartupBreadcrumb("trackplayer-restore-found", {
                 title: track.title,
                 hasUrl: !!track.url,
@@ -273,7 +273,7 @@ class TrackPlayer extends EventEmitter<{
                 title: track.title,
             });
 
-            if (Platform.OS === "ios" && !shouldAutoPlayOnStartup) {
+            if (options?.background || (Platform.OS === "ios" && !shouldAutoPlayOnStartup)) {
                 void appendStartupBreadcrumb("trackplayer-restore-skip-preload-ios", {
                     title: track.title,
                 });

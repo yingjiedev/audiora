@@ -9,13 +9,14 @@ import { DeviceEventEmitter, NativeModules } from "react-native";
 import { setupListeningStatsRecorder } from "./listeningStatsRecorder";
 
 let resumeState: State | null;
+let installed = false;
 
 /** 把当前收藏态推给紧凑通知（实心红心/空心白心） */
 function pushCompactFavoriteState(musicItem: IMusic.IMusicItem | null) {
     const isFavorite = musicItem
         ? MusicSheet.getSortedMusicListBySheetId(
-              MusicSheet.defaultSheet.id,
-          ).has(musicItem)
+            MusicSheet.defaultSheet.id,
+        ).has(musicItem)
         : false;
     NativeModules.LyricUtil?.setCompactNotificationFavorite?.(isFavorite)?.catch?.(
         () => undefined,
@@ -23,6 +24,8 @@ function pushCompactFavoriteState(musicItem: IMusic.IMusicItem | null) {
 }
 
 module.exports = async function () {
+    if (installed) return;
+    installed = true;
     setupListeningStatsRecorder();
     // 紧凑通知上的收藏按钮（原生 MusicService 补丁发出的事件）
     DeviceEventEmitter.addListener("remote-favorite", () => {

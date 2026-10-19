@@ -42,6 +42,7 @@ jest.mock("@/core/router/routes.tsx", () => ({
 jest.mock("@/core/notificationLifecycleManager", () => ({
     NotificationLifecycleManager: "NotificationLifecycleManager",
 }));
+jest.mock("@/components/musicWidgetThemeSync", () => "MusicWidgetThemeSync");
 jest.mock("@/utils/log", () => ({ appendStartupBreadcrumb: jest.fn() }));
 jest.mock("@/components/panels/usePanel", () => ({
     panelInfoStore: new (require("@/utils/stateMapper").GlobalState)({

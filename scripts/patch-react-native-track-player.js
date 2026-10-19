@@ -645,4 +645,5 @@ patchBundleNullability();
 patchTurboModuleVoidReturn();
 writeCompactNotificationRes();
 patchCompactNotification();
+require("./patch-track-player-widget")(servicePath, modulePath);
 cleanTrackPlayerAndroidBuild();

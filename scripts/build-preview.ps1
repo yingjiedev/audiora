@@ -226,6 +226,7 @@ try {
         "assembleRelease",
         "-PappVersion=$PreviewVersion",
         "-PappVersionCode=$VersionCode",
+        "-PaudioraPreview=true",
         "--no-daemon"
     )
 
@@ -335,7 +336,13 @@ gradle.allprojects { project ->
             foreach ($apk in $apkFiles) {
                 Write-Host "`nAPK: $($apk.FullName)" -ForegroundColor Green
                 Write-Host "SHA-256: $(Get-Sha256Hash -Path $apk.FullName)"
-                & $aapt2Candidates[0].FullName dump badging $apk.FullName | Select-String "package:|native-code:"
+                $badging = & $aapt2Candidates[0].FullName dump badging $apk.FullName
+                if ($LASTEXITCODE -ne 0 -or
+                    -not ($badging -match "package: name='io\.github\.yingjiedev\.audiora\.test'") -or
+                    -not ($badging -match "application-label:'audiora-test'")) {
+                    throw "Preview APK must use package io.github.yingjiedev.audiora.test and label audiora-test."
+                }
+                $badging | Select-String "package:|application-label:|native-code:"
 
                 $apksignerPath = Join-Path $aapt2Candidates[0].Directory.FullName "apksigner.bat"
                 if (Test-Path -LiteralPath $apksignerPath) {

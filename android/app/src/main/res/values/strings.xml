@@ -1,5 +1,25 @@
 <resources>
-    <string name="app_name">Audiora</string>
+    <string name="widget_name">Audiora · 云光浅色</string>
+    <string name="widget_dark_name">Audiora · 沉浸深蓝</string>
+    <string name="widget_description">左侧拾音发现热歌，右侧查看歌曲、暂停和切歌；可缩放为紧凑播放器。</string>
+    <string name="widget_discovery_title">拾音</string>
+    <string name="widget_discovery_subtitle">从热歌里\n遇见惊喜</string>
+    <string name="widget_discovery_loading">正在拾音…</string>
+    <string name="widget_starting">正在准备播放…</string>
+    <string name="widget_start_failed">后台播放启动失败，请稍后重试</string>
+    <string name="widget_discovery_action">拾音，从榜单热歌中挑选歌曲并播放</string>
+    <string name="widget_empty_title">让音乐陪着你</string>
+    <string name="widget_empty_artist">打开 Audiora，开始听歌</string>
+    <string name="widget_unknown_artist">未知歌手</string>
+    <string name="widget_playing">正在播放</string>
+    <string name="widget_paused">已暂停</string>
+    <string name="widget_loading">正在加载</string>
+    <string name="widget_resume">继续聆听</string>
+    <string name="widget_open">打开 Audiora</string>
+    <string name="widget_previous">上一首</string>
+    <string name="widget_play">播放</string>
+    <string name="widget_pause">暂停</string>
+    <string name="widget_next">下一首</string>
     <string name="expo_splash_screen_status_bar_translucent">true</string>
     <!-- rtnp channel id -->
     <string name="rntp_temporary_channel_id">audiora_temporary_channel</string>

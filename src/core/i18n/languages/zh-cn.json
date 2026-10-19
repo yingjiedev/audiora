@@ -789,6 +789,8 @@
     "panel.artistSelect.description": "这首歌有多位歌手，请选择要查看的歌手",
     "toast.artistNotSupported": "请通过搜索功能查找歌手详情",
     "toast.albumNotSupported": "当前插件不支持查看专辑详情",
+    "toast.widgetQueueEmpty": "暂无播放队列，请先点击拾音",
+    "toast.widgetStartupFailed": "后台播放启动失败，请稍后重试",
     "toast.shiyinStarted": "拾音 · 已播放 {count} 首热门",
     "toast.shiyinNoSource": "还没有可用的榜单音源",
     "toast.shiyinNoMusic": "暂时没能挑出歌曲，稍后再试试",
