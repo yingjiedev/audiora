@@ -24,6 +24,9 @@ import { routes } from "@/core/router/routes.tsx";
 import ErrorBoundary from "@/components/errorBoundary";
 import { NotificationLifecycleManager } from "@/core/notificationLifecycleManager";
 import { appendStartupBreadcrumb } from "@/utils/log";
+import { useAtomValue } from "jotai";
+import bootstrapAtom from "./bootstrap/bootstrap.atom";
+import { startWebdavAutoBackup } from "@/core/webdavAutoBackup";
 
 StatusBar.setBackgroundColor("transparent");
 StatusBar.setTranslucent(true);
@@ -44,6 +47,12 @@ bootstrap();
 const Stack = createNativeStackNavigator<any>();
 
 export default function Pages() {
+    const bootstrapState = useAtomValue(bootstrapAtom).state;
+    React.useEffect(() => {
+        if (bootstrapState === "Done") {
+            return startWebdavAutoBackup();
+        }
+    }, [bootstrapState]);
     const theme = Theme.useTheme();
     const panelInfo = panelInfoStore.useValue();
     const { open: playerOpen } = playerOverlayStore.useValue();
