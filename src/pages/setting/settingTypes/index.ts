@@ -1,11 +1,13 @@
 import type { ComponentType } from "react";
 import deviceInfoModule from "react-native-device-info";
+import i18n from "@/core/i18n";
 import AboutSetting from "./aboutSetting";
 import BackupSetting from "./backupSetting";
 import BasicSetting from "./basicSetting";
 import PluginSetting from "./pluginSetting";
 import ThemeSetting from "./themeSetting";
 import SettingsOverview from "./settingsOverview";
+import AudioEffectsSetting from "./audioEffectsSetting";
 
 const settingTypes: Record<
     string,
@@ -25,6 +27,14 @@ const settingTypes: Record<
         title: "基本设置",
         i18nKey: "sidebar.basicSettings",
         component: BasicSetting,
+    },
+    audioEffects: {
+        get title() {
+            return i18n.t("audioEffects.title");
+        },
+        i18nKey: "audioEffects.title",
+        component: AudioEffectsSetting,
+        showNav: false,
     },
     plugin: {
         title: "插件管理",

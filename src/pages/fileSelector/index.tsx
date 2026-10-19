@@ -1,5 +1,8 @@
 import Empty from "@/components/base/empty";
-import IconButton from "@/components/base/iconButton";
+import AppBar from "@/components/base/appBar";
+import { PageAction, PageState } from "@/components/base/pageSection";
+import { spacing } from "@/constants/designSystem";
+
 import Loading from "@/components/base/loading";
 import StatusBar from "@/components/base/statusBar";
 import Button from "@/components/base/textButton.tsx";
@@ -8,18 +11,12 @@ import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
 import i18n from "@/core/i18n";
 import { useParams } from "@/core/router";
-import useColors from "@/hooks/useColors";
 import useHardwareBack from "@/hooks/useHardwareBack";
 import rpx from "@/utils/rpx";
 import { useNavigation } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
-import {
-    ExternalStorageDirectoryPath,
-    exists,
-    getAllExternalFilesDirs,
-    readDir,
-} from "react-native-fs";
+import { Platform, StyleSheet, View } from "react-native";
+import { ExternalStorageDirectoryPath, exists, getAllExternalFilesDirs, readDir } from "react-native-fs";
 import { FlatList } from "react-native-gesture-handler";
 import { getDocumentAsync } from "expo-document-picker";
 import FileItem from "./fileItem";
@@ -61,8 +58,8 @@ export default function FileSelector() {
         [checkedItems],
     );
     const navigation = useNavigation();
-    const colors = useColors();
     const [loading, setLoading] = useState(false);
+    const [readError, setReadError] = useState(false);
     const systemPickerStarted = useRef(false);
 
     useEffect(() => {
@@ -118,6 +115,7 @@ export default function FileSelector() {
         (async () => {
             // 路径变化时，重新读取
             setLoading(true);
+            setReadError(false);
             try {
                 if (currentPath.path === "/") {
                     try {
@@ -186,6 +184,7 @@ export default function FileSelector() {
                     setFilesData([...folders, ...files]);
                 }
             } catch {
+                setReadError(true);
                 setFilesData([]);
             }
             setLoading(false);
@@ -270,42 +269,28 @@ export default function FileSelector() {
                             selectPath(filesData, true);
                         }
                     }}>
-                    {currentPageAllChecked ? "全不选" : "全选"}
+                    {i18n.t(currentPageAllChecked ? "common.unselectAll" : "common.selectAll")}
                 </Button>
             </View>
         ) : null;
     };
 
+    if (Platform.OS === "android") return <VerticalSafeAreaView style={globalStyle.fwflex1}><StatusBar />
+        <AppBar>{i18n.t("common.open")}</AppBar><PageState title={i18n.t("subpage.systemPicker")} description={i18n.t("common.loading")}
+            action={<PageAction title={i18n.t("common.cancel")} onPress={() => navigation.goBack()} />} /></VerticalSafeAreaView>;
     return (
         <VerticalSafeAreaView style={globalStyle.fwflex1}>
             <StatusBar />
-            <View style={[style.header, { backgroundColor: colors.appBar }]}>
-                <IconButton
-                    sizeType="small"
-                    name="arrow-long-left"
-                    color={colors.appBarText}
-                    onPress={() => {
-                        // 返回上一级
-                        if (currentPath.parent !== null) {
-                            setCurrentPath(currentPath.parent);
-                        }
-                    }}
-                />
-                <ThemeText
-                    numberOfLines={2}
-                    ellipsizeMode="head"
-                    fontColor={"appBarText"}
-                    style={style.headerPath}>
-                    {currentPath.path}
-                </ThemeText>
-            </View>
+            <AppBar onBackPress={() => currentPath.parent ? setCurrentPath(currentPath.parent) : navigation.goBack()}>
+                <ThemeText numberOfLines={2} ellipsizeMode="head" fontColor="appBarText" style={style.headerPath}>{currentPath.path}</ThemeText>
+            </AppBar>
             {loading ? (
                 <Loading />
             ) : (
                 <>
                     <FlatList
                         ListHeaderComponent={renderHeader}
-                        ListEmptyComponent={Empty}
+                        ListEmptyComponent={readError ? <PageState tone="danger" title={i18n.t("toast.folderNotExistOrNoPermission")} action={<PageAction title={i18n.t("common.clickToRetry")} onPress={() => setCurrentPath({ ...currentPath })} />} /> : <Empty />}
                         style={globalStyle.fwflex1}
                         data={filesData}
                         getItemLayout={(_, index) => ({
@@ -317,37 +302,16 @@ export default function FileSelector() {
                     />
                 </>
             )}
-            <Pressable
+            <View style={style.confirm}><PageAction variant="primary" size="standard" fullWidth title={actionText + (multi ? " · " + i18n.t("subpage.selectedFiles", { count: checkedItems.length }) : "")} disabled={!checkedItems.length}
                 onPress={async () => {
-                    if (checkedItems.length) {
-                        const shouldBack = await onAction?.(checkedItems);
-                        if (shouldBack) {
-                            navigation.goBack();
-                        }
-                    }
-                }}>
-                <View
-                    style={[
-                        style.scanBtn,
-                        {
-                            backgroundColor: colors.appBar,
-                        },
-                    ]}>
-                    <ThemeText
-                        fontColor={"appBarText"}
-                        opacity={checkedItems.length > 0 ? undefined : 0.6}>
-                        {actionText}
-                        {multi && checkedItems?.length > 0
-                            ? ` (选中${checkedItems.length})`
-                            : ""}
-                    </ThemeText>
-                </View>
-            </Pressable>
+                    const shouldBack = await onAction?.(checkedItems); if (shouldBack) navigation.goBack();
+                }} /></View>
         </VerticalSafeAreaView>
     );
 }
 
 const style = StyleSheet.create({
+    confirm: { paddingHorizontal: spacing.xxxl, paddingVertical: spacing.md },
     header: {
         height: rpx(88),
         flexDirection: "row",
@@ -356,7 +320,8 @@ const style = StyleSheet.create({
         paddingHorizontal: rpx(24),
     },
     headerPath: {
-        marginLeft: rpx(28),
+        flex: 1,
+        minWidth: 0,
     },
     scanBtn: {
         width: "100%",

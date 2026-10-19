@@ -15,6 +15,7 @@ import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ExpoReactHostFactory
 
 import `fun`.xwj.musicfree.cenc.CencPackage
+import `fun`.xwj.musicfree.audioEffects.AudioEffectsController
 import `fun`.xwj.musicfree.lyricUtil.LyricUtilPackage
 import `fun`.xwj.musicfree.mp3Util.Mp3UtilPackage
 import `fun`.xwj.musicfree.utils.UtilsPackage
@@ -38,6 +39,7 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    AudioEffectsController.initialize(this)
     DefaultNewArchitectureEntryPoint.releaseLevel = try {
       ReleaseLevel.valueOf(BuildConfig.REACT_NATIVE_RELEASE_LEVEL.uppercase())
     } catch (e: IllegalArgumentException) {

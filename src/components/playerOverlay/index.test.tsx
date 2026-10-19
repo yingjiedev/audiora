@@ -5,6 +5,7 @@ import MusicDetail from "@/pages/musicDetail";
 import PlayerOverlay from "./index";
 
 jest.mock("@/pages/musicDetail", () => "MusicDetail");
+jest.mock("@/core/playerTransition", () => ({ armPlayerTransition: jest.fn() }));
 
 describe("player overlay host", () => {
     let renderer: TestRenderer.ReactTestRenderer;

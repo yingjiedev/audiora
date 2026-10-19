@@ -80,6 +80,7 @@ jest.mock("@/utils/localQuality", () => ({
 jest.mock("@/utils/fileUtils", () => ({ resolveImportedAssetOrPath: (value: unknown) => value }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: () => "cover" }));
 jest.mock("../localMusicSheet", () => ({ isLocalMusic: () => false }));
+jest.mock("@/core/musicSheet", () => ({ favorites: { groupFor: () => null } }));
 jest.mock("./localPlayback", () => ({ getLocalPlaybackSource: () => null }));
 jest.mock("@/service/mflac/songKey", () => ({
     QmcKeyError: class extends Error {},
@@ -278,6 +279,29 @@ describe("TrackPlayer playback lifecycle", () => {
         expect(native.seekTo).toHaveBeenCalledWith(42.25);
         expect(native.play).toHaveBeenCalledTimes(1);
         expect(native.seekTo.mock.invocationCallOrder[0]).toBeLessThan(native.play.mock.invocationCallOrder[0]);
+    });
+
+    it.each(["source", "seek"])("keeps a pause issued during cold resume %s acquisition", async phase => {
+        restoreSession(42.25);
+        await player.setupTrackPlayer({ backgroundRestore: true });
+        const pendingSource = deferred<IPlugin.IMediaSourceResult>();
+        const pendingSeek = deferred<void>();
+        if (phase === "source") {
+            getMediaSource.mockImplementationOnce(() => pendingSource.promise);
+        } else {
+            native.seekTo.mockImplementationOnce(() => pendingSeek.promise);
+        }
+        const resume = player.play();
+        await flushPromises();
+        await player.pause();
+        if (phase === "source") {
+            pendingSource.resolve({ url: "https://restored/song.mp3" });
+        } else {
+            pendingSeek.resolve();
+        }
+        await resume;
+        expect(native.play).not.toHaveBeenCalled();
+        expect(native.pause).toHaveBeenCalledTimes(1);
     });
 
     it("ignores a late rejection after the user selects another track", async () => {

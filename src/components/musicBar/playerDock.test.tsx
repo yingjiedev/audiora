@@ -20,8 +20,6 @@ let mockDark = false;
 let mockThemeOverrides: Record<string, string> = {};
 const mockNavigate = jest.fn();
 const mockKeyboardListeners: Record<string, () => void> = {};
-const mockOrigin = { value: null as unknown };
-let mockMeasuredFrame: { pageX: number; pageY: number; width: number; height: number } | null = null;
 let mockBackPress: (() => boolean) | undefined;
 
 jest.mock("@react-navigation/native", () => ({ useTheme: () => ({ dark: mockDark }) }));
@@ -29,6 +27,9 @@ jest.mock("@/components/base/icon", () => "Icon");
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("react-native-linear-gradient", () => "LinearGradient");
+jest.mock("@react-native-masked-view/masked-view", () => "MaskedView");
+jest.mock("react-native-svg", () => ({ __esModule: true, default: "Svg", Circle: "Circle" }));
+jest.mock("react-native-track-player", () => ({ useActiveTrack: () => mockMusic ? { ...mockMusic, url: "file:///song.mp3" } : undefined }));
 jest.mock("./musicInfo", () => "MusicInfo");
 jest.mock("./useAutoExpand", () => ({ __esModule: true, default: jest.fn() }));
 jest.mock("@/pages/musicDetail/components/bottom/seekBar", () => "SeekBar");
@@ -41,20 +42,13 @@ jest.mock("@/core/playerOverlay", () => ({
 }));
 jest.mock("@/core/playerTransition", () => ({
     armPlayerTransition: jest.fn(),
-    playerTransition: () => ({ origin: mockOrigin }),
-}));
-jest.mock("react-native-reanimated", () => ({
-    __esModule: true,
-    default: { View: "AnimatedView" },
-    useAnimatedRef: () => ({ current: null }),
-    measure: () => mockMeasuredFrame,
-    runOnUI: (callback: () => void) => callback,
 }));
 jest.mock("@/core/trackPlayer", () => ({
     __esModule: true,
     default: { play: jest.fn(), pause: jest.fn(), skipToPrevious: jest.fn(), skipToNext: jest.fn() },
     useCurrentMusic: () => mockMusic,
     useMusicState: () => mockPaused,
+    useProgress: () => ({ position: 30, duration: 180 }),
 }));
 jest.mock("@/core/musicSheet", () => ({
     __esModule: true,
@@ -70,6 +64,10 @@ jest.mock("@/utils/rpx", () => ({ __esModule: true, default: (value: number) => 
 jest.mock("@/utils/trackUtils", () => ({ musicIsPaused: (state: boolean) => state }));
 jest.mock("@/utils/artwork", () => ({ resolveArtwork: (item: typeof mockSong | null) => item?.artwork }));
 jest.mock("@/utils/mediaExtra", () => ({ useMediaExtraProperty: jest.fn() }));
+// mediaUtils pulls commonConst -> motion -> Reanimated ESM; this test only needs key generation.
+jest.mock("@/utils/mediaUtils", () => ({
+    getMediaUniqueKey: (item: { platform: string; id: string }) => `${item.platform}@${item.id}`,
+}));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 12, left: 0, right: 0 }) }));
 
 function render(collapseKey = "home", onDockHeightChange?: (height: number) => void) {
@@ -98,8 +96,6 @@ describe("PlayerDock", () => {
         mockFavorite = false;
         mockDark = false;
         mockThemeOverrides = {};
-        mockOrigin.value = null;
-        mockMeasuredFrame = null;
         mockBackPress = undefined;
         jest.spyOn(Keyboard, "addListener").mockImplementation((event, callback) => {
             mockKeyboardListeners[event] = callback as () => void;
@@ -239,24 +235,20 @@ describe("PlayerDock", () => {
     it("opens the player from the whole expanded cover including the overhang", () => {
         const renderer = render();
         expand(renderer);
-        mockMeasuredFrame = { pageX: 30, pageY: 590, width: 70, height: 70 };
         const artwork = renderer.root.findAllByProps({ testID: "player-dock-artwork" })
             .find(node => typeof node.props.onPress === "function")!;
         expect(StyleSheet.flatten(artwork.props.style).top).toBe(0);
         expect(artwork.props.pointerEvents).not.toBe("none");
         act(() => artwork.props.onPress());
-        expect(mockOrigin.value).toEqual({ x: 30, y: 590, width: 70, height: 70 });
         expect(openPlayer).toHaveBeenCalledWith(armPlayerTransition);
         expect(renderer.root.findAllByProps({ testID: "player-dock-vinyl" }).length).toBeGreaterThan(0);
     });
 
-    it("refreshes the expanded cover frame before preparing a title transition", () => {
+    it("keeps the expanded dock mounted underneath when opening the player", () => {
         const renderer = render();
         expand(renderer);
-        mockOrigin.value = { x: 10, y: 700, width: 40, height: 40 };
-        mockMeasuredFrame = { pageX: 30, pageY: 590, width: 70, height: 70 };
         (armPlayerTransition as jest.Mock).mockImplementationOnce(() => {
-            expect(mockOrigin.value).toEqual({ x: 30, y: 590, width: 70, height: 70 });
+            expect(renderer.root.findAllByProps({ testID: "player-dock-artwork" }).length).toBeGreaterThan(0);
         });
         press(renderer, "musicBar.a11y.openDetail");
         expect(armPlayerTransition).toHaveBeenCalledTimes(1);

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { controlSize, radius, spacing } from "@/constants/designSystem";
 import {
     Image,
     Linking,
@@ -17,6 +18,7 @@ import buildInfo from "@/constants/buildInfo";
 import { useI18N } from "@/core/i18n";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { checkAppRelease, getLatestAnnouncement } from "@/core/appRelease";
+import { getFastestGithubDownloadUrl } from "@/core/githubNetwork";
 import Toast from "@/utils/toast";
 import SettingSection from "../components/settingSection";
 
@@ -25,10 +27,64 @@ export default function AboutSetting() {
     const { t } = useI18N();
     const version = DeviceInfo.getVersion(); // 从 package.json 获取版本号
     const buildTime = buildInfo.buildTime; // 从构建信息文件获取构建时间
+    const [updateActivity, setUpdateActivity] = useState<"checking" | "selecting" | null>(null);
+    const updateRequestRef = useRef<AbortController | null>(null);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            updateRequestRef.current?.abort();
+        };
+    }, []);
+
+    async function handleDownload(downloadUrl: string) {
+        if (!mountedRef.current || updateRequestRef.current) {
+            return;
+        }
+        const controller = new AbortController();
+        updateRequestRef.current = controller;
+        setUpdateActivity("selecting");
+
+        try {
+            const selectedUrl = await getFastestGithubDownloadUrl(downloadUrl, controller.signal);
+            if (controller.signal.aborted) {
+                return;
+            }
+            try {
+                await Linking.openURL(selectedUrl);
+            } catch (error) {
+                if (selectedUrl === downloadUrl || controller.signal.aborted) {
+                    throw error;
+                }
+                await Linking.openURL(downloadUrl);
+            }
+        } catch {
+            if (!controller.signal.aborted) {
+                Toast.warn(t("checkUpdate.error.downloadFailed"));
+            }
+        } finally {
+            updateRequestRef.current = null;
+            if (mountedRef.current) {
+                setUpdateActivity(null);
+            }
+        }
+    }
 
     async function handleCheckUpdate() {
+        if (!mountedRef.current || updateRequestRef.current) {
+            return;
+        }
+        const controller = new AbortController();
+        updateRequestRef.current = controller;
+        setUpdateActivity("checking");
+
         try {
-            const result = await checkAppRelease();
+            const result = await checkAppRelease(controller.signal);
+            if (controller.signal.aborted) {
+                return;
+            }
             if (!result.hasUpdate) {
                 Toast.success(t("checkUpdate.error.latestVersion"));
                 return;
@@ -50,13 +106,18 @@ export default function AboutSetting() {
                 ),
                 okText: downloadUrl ? t("checkUpdate.download") : undefined,
                 onOk: downloadUrl
-                    ? () => {
-                        Linking.openURL(downloadUrl).catch(() => undefined);
-                    }
+                    ? () => handleDownload(downloadUrl)
                     : undefined,
             });
         } catch {
-            Toast.warn(t("checkUpdate.error.cannotConnectToServer"));
+            if (!controller.signal.aborted) {
+                Toast.warn(t("checkUpdate.error.cannotConnectToServer"));
+            }
+        } finally {
+            updateRequestRef.current = null;
+            if (mountedRef.current) {
+                setUpdateActivity(null);
+            }
         }
     }
 
@@ -102,17 +163,17 @@ export default function AboutSetting() {
                     orientation === "horizontal" ? style.horizontalSize : null,
                 ]}>
                 <Image
-                    source={ImgAsset.author}
+                    source={ImgAsset.logo}
                     style={style.image}
                     resizeMode="contain"
                 />
                 <ThemeText fontSize="title" style={style.appTitle}>
                     Audiora
                 </ThemeText>
-                <ThemeText style={style.versionText}>
+                <ThemeText fontColor="textSecondary" style={style.versionText}>
                     {t("about.version", { version })}
                 </ThemeText>
-                <ThemeText style={style.buildText}>
+                <ThemeText fontColor="textSecondary" style={style.buildText}>
                     {t("about.buildTime", { buildTime })}
                 </ThemeText>
             </View>
@@ -124,11 +185,17 @@ export default function AboutSetting() {
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t("sidebar.checkUpdate")}
+                        accessibilityState={{ busy: updateActivity !== null, disabled: updateActivity !== null }}
+                        disabled={updateActivity !== null}
                         style={style.actionRow}
                         onPress={handleCheckUpdate}>
                         <View style={style.actionText}>
                             <ThemeText>
-                                {t("sidebar.checkUpdate")}
+                                {t(updateActivity === "selecting"
+                                    ? "checkUpdate.selectingDownload"
+                                    : updateActivity === "checking"
+                                        ? "checkUpdate.checking"
+                                        : "sidebar.checkUpdate")}
                             </ThemeText>
                         </View>
                         <ThemeText fontColor="textSecondary">
@@ -204,7 +271,8 @@ const style = StyleSheet.create({
         // 不要写 rpx(750)：它等于整屏宽度，再叠上 HorizontalSafeAreaView
         // 的左右 inset 就会横向溢出。用 100% 让它跟着安全区收缩。
         width: "100%",
-        height: rpx(300),
+        minHeight: rpx(240),
+        paddingVertical: spacing.lg,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -213,9 +281,9 @@ const style = StyleSheet.create({
         height: "100%",
     },
     image: {
-        width: rpx(150),
-        height: rpx(150),
-        borderRadius: rpx(28),
+        width: rpx(96),
+        height: rpx(96),
+        borderRadius: radius.lg,
     },
     appTitle: {
         marginTop: rpx(24),
@@ -237,14 +305,15 @@ const style = StyleSheet.create({
         paddingBottom: rpx(96),
     },
     infoCard: {
-        padding: rpx(24),
+        padding: spacing.lg,
     },
     cardContent: {
         fontSize: fontRpx(28),
     },
     actionRow: {
-        minHeight: rpx(92),
-        paddingHorizontal: rpx(24),
+        minHeight: Math.max(44, controlSize.minimumTouch),
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.lg,
         flexDirection: "row",
         alignItems: "center",
     },

@@ -1,11 +1,18 @@
 import { RequestStateCode } from "@/constants/commonConst";
 import { atom } from "jotai";
+import { SourceSearchResult } from "@/core/aggregateSearch";
 
 /** 搜索状态 */
 
 export interface ISearchResult<T extends ICommon.SupportMediaType> {
     /** 当前页码 */
     page?: number;
+    requestedPage?: number;
+    dataVersion?: number;
+    phase?: SourceSearchResult<unknown>["state"];
+    error?: SourceSearchResult<unknown>["error"];
+    waitMs?: number;
+    elapsedMs?: number;
     /** 搜索词 */
     query?: string;
     /** 搜索状态 */
@@ -31,6 +38,7 @@ export const initSearchResults: ISearchResults = {
 
 /** key: pluginhash value: searchResult */
 const searchResultsAtom = atom(initSearchResults);
+export const musicSearchResultsAtom = atom(get => get(searchResultsAtom).music);
 
 export enum PageStatus {
     /** 编辑中 */
@@ -47,5 +55,6 @@ export enum PageStatus {
 const pageStatusAtom = atom<PageStatus>(PageStatus.EDITING);
 
 const queryAtom = atom<string>("");
+export const searchSessionAtom = atom(0);
 
 export { pageStatusAtom, searchResultsAtom, queryAtom };

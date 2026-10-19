@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import rpx from "@/utils/rpx";
-import { spacing } from "@/constants/designSystem";
+import { radius, spacing } from "@/constants/designSystem";
 import { iconSizeConst } from "@/constants/uiConst";
 import LocalMusicSheet from "@/core/localMusicSheet";
 import MusicSheet, { useFavorite } from "@/core/musicSheet";
@@ -32,17 +32,24 @@ interface IMusicItemProps {
     onItemPress?: (musicItem: IMusic.IMusicItem) => void;
     onItemLongPress?: () => void;
     itemPaddingRight?: number;
+    itemPaddingLeft?: number;
     left?: React.ReactNode;
+    /** Defined only when the row selects music instead of playing it. */
+    checked?: boolean | "mixed";
     containerStyle?: StyleProp<ViewStyle>;
     highlight?: boolean;
     highlightText?: string;
+    /** Aggregate rows keep the source inside their existing two text lines. */
+    source?: { name: string; count: number; playing?: boolean; onPress?: () => void };
     /** All scenes share this row; only leading content and actions vary. */
     actions?: readonly MusicItemAction[];
     showCover?: boolean;
     /** Compact previews keep the shared content and interactions with less spacing. */
     density?: "default" | "compact";
-    /** Home previews emphasize artwork and artist; library metadata stays on other rows. */
-    presentation?: "library" | "discovery";
+    /** Favorites add listening counts and actual metadata to the discovery layout. */
+    presentation?: "library" | "discovery" | "favorites";
+    playCount?: number;
+    sourceName?: string;
 }
 
 function RowAction(props: { icon: IIconName; label: string; onPress: () => void; color?: string; disabled?: boolean; selected?: boolean }) {
@@ -62,6 +69,7 @@ function RowAction(props: { icon: IIconName; label: string; onPress: () => void;
 
 function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
     const isFavorite = useFavorite(musicItem);
+    const grouped = !!MusicSheet.favorites.groupFor(musicItem);
     const colors = useColors();
     const { t } = useI18N();
     const pending = useRef(false);
@@ -71,11 +79,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
         pending.current = true;
         setBusy(true);
         try {
-            if (isFavorite) {
-                await MusicSheet.removeMusic(MusicSheet.defaultSheet.id, musicItem);
-            } else {
-                await MusicSheet.addMusic(MusicSheet.defaultSheet.id, musicItem);
-            }
+            await MusicSheet.favorites.toggle(musicItem);
         } catch {
             Toast.warn(t(isFavorite ? "toast.deleteFailed" : "panel.addToMusicSheet.toast.fail"));
         } finally {
@@ -86,7 +90,7 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
     return (
         <RowAction
             icon={isFavorite ? "heart" : "heart-outline"}
-            label={t(isFavorite ? "musicDetail.a11y.unfavorite" : "musicDetail.a11y.favorite")}
+            label={t(isFavorite ? (grouped ? "aggregate.unfavoriteGroup" : "musicDetail.a11y.unfavorite") : "musicDetail.a11y.favorite")}
             color={isFavorite ? colors.favorite : undefined}
             onPress={toggle}
             disabled={busy}
@@ -98,8 +102,8 @@ function FavoriteAction({ musicItem }: { musicItem: IMusic.IMusicItem }) {
 export default function MusicItem(props: IMusicItemProps) {
     const {
         musicItem, index, titleTagSubText, onItemPress, onItemLongPress,
-        musicSheet, itemPaddingRight, left, containerStyle,
-        highlight, highlightText, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library",
+        musicSheet, itemPaddingRight, itemPaddingLeft, left, checked, containerStyle,
+        highlight, highlightText, source, actions = ["addNext", "more"], showCover = false, density = "default", presentation = "library", playCount, sourceName,
     } = props;
     const colors = useColors();
     const { t } = useI18N();
@@ -113,46 +117,101 @@ export default function MusicItem(props: IMusicItemProps) {
     const album = typeof musicItem.album === "string" ? musicItem.album.trim() : "";
     const showAlbum = album && album !== String(musicItem.title ?? "").trim();
     const compact = density === "compact";
-    const discovery = presentation === "discovery";
-
-    return (
-        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }]}>
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={[musicItem.title, musicItem.artist].filter(Boolean).join(" - ")}
-                accessibilityState={{ selected: active }}
-                onLongPress={onItemLongPress}
-                onPress={() => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem)}
-                style={({ pressed }) => [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, pressed && { backgroundColor: colors.listActive }]}>
-                {left}
-                {index !== undefined ? (
-                    <ThemeText fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex]}>
-                        {index}
-                    </ThemeText>
-                ) : null}
-                {showCover ? (
-                    <FastImage style={[styles.cover, discovery && styles.discoveryCover]} source={resolveArtwork(musicItem) ?? musicItem.artwork} placeholderSource={ImgAsset.albumDefault} />
-                ) : null}
-                <View style={styles.content}>
-                    <ThemeText fontColor={active ? "primary" : "text"} fontSize={compact ? "subTitle" : "content"} numberOfLines={1}>
+    const discovery = presentation !== "library";
+    const favorites = presentation === "favorites";
+    const plays = typeof playCount === "number" && Number.isFinite(playCount) ? Math.max(0, Math.floor(playCount)) : 0;
+    const favoriteSourceName = favorites ? sourceName?.trim() : undefined;
+    const artist = [musicItem.artist?.trim(), showAlbum ? album : undefined].filter(Boolean).join(" · ");
+    const titleSize = compact && !favorites ? "subTitle" : "content";
+    const [sourceAnchor, setSourceAnchor] = useState<number | null>(null);
+    const canChooseSource = !!source?.onPress && source.count > 1;
+    const play = () => onItemPress ? onItemPress(musicItem) : TrackPlayer.play(musicItem);
+    const mainStyle = [styles.main, compact && styles.compactMain, discovery && styles.discoveryMain, favorites && styles.favoriteMain, source && styles.sourceMain];
+    const favoriteHint = favorites ? [showAlbum ? album : undefined, favoriteSourceName, t("listening.playCount", { count: plays })].filter(Boolean).join(" · ") : undefined;
+    const sourceHint = source ? t(source.playing ? "aggregate.playingSource" : "aggregate.currentSource", { name: source.name }) : undefined;
+    const playProps = {
+        accessibilityRole: checked === undefined ? "button" as const : "checkbox" as const,
+        accessibilityLabel: [musicItem.title, musicItem.artist].filter(Boolean).join(" - "),
+        accessibilityHint: [favoriteHint, sourceHint].filter(Boolean).join(" · ") || undefined,
+        accessibilityState: { selected: active, checked },
+        onLongPress: onItemLongPress,
+        onPress: play,
+    };
+    const content = (
+        <>
+            {left}
+            {index !== undefined ? (
+                <ThemeText pointerEvents={source ? "none" : undefined} fontColor={active ? "primary" : "textSecondary"} style={[styles.index, compact && styles.compactIndex, checked !== undefined && styles.selectionIndex]}>
+                    {index}
+                </ThemeText>
+            ) : null}
+            {showCover ? (
+                <View pointerEvents={source ? "none" : undefined}>
+                    <FastImage style={[styles.cover, discovery && styles.discoveryCover, favorites && styles.favoriteCover]} source={resolveArtwork(musicItem) ?? musicItem.artwork} placeholderSource={ImgAsset.albumDefault} />
+                </View>
+            ) : null}
+            <View style={[styles.content, source && styles.sourceContent]} pointerEvents={source ? "box-none" : undefined}>
+                <View style={[styles.titleLine, favorites && styles.favoriteHeading]} pointerEvents={source ? "box-none" : undefined}>
+                    <ThemeText pointerEvents={source ? "none" : undefined} style={[styles.title, favorites && styles.favoriteTitle]} fontColor={active ? "primary" : "text"} fontSize={titleSize} numberOfLines={1}>
                         {titleParts.map((part, partIndex) => (
-                            <ThemeText key={partIndex} fontSize={compact ? "subTitle" : "content"} fontColor={active || part.highlight ? "primary" : "text"}>
+                            <ThemeText key={partIndex} fontSize={titleSize} fontColor={active || part.highlight ? "primary" : "text"}>
                                 {part.text}
                             </ThemeText>
                         ))}
                     </ThemeText>
-                    <View style={[styles.metadata, compact && styles.compactMetadata]}>
-                        <ThemeText numberOfLines={1} fontSize={compact && !discovery ? "tag" : "description"} fontColor="textSecondary" style={styles.artist}>
-                            {musicItem.artist}{showAlbum && !discovery ? ` · ${album}` : ""}
-                        </ThemeText>
-                        {!discovery && isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
-                        {!discovery && qualityBadge ? <Badge type={qualityBadge.type}>{qualityBadge.text}</Badge> : null}
-                        {!discovery && musicItem.fee === 1 ? <Badge type="vip">VIP</Badge> : null}
-                        {!discovery && hasMv ? <Badge type="source">MV</Badge> : null}
-                        {titleTagSubText ? <ThemeText fontSize="description" fontColor="textSecondary" style={styles.duration}>{titleTagSubText}</ThemeText> : null}
-                    </View>
+                    {favorites && plays > 0 ? (
+                        <View testID="music-play-count" pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.playCount, { backgroundColor: colors.tonalSurface }]}>
+                            <Icon name="play" size={rpx(20)} color={colors.onTonal} />
+                            <ThemeText fontSize="description" color={colors.onTonal} style={styles.playCountText}>{plays > 99 ? "99+" : String(plays)}</ThemeText>
+                        </View>
+                    ) : null}
+                    {canChooseSource ? <View pointerEvents="none" style={styles.sourceSpace} onLayout={event => setSourceAnchor(event.nativeEvent.layout.x)} /> : null}
                 </View>
-            </Pressable>
+                <View pointerEvents={source ? "none" : undefined} style={[styles.metadata, compact && styles.compactMetadata]}>
+                    {source ? <>
+                        {source.playing ? <Icon name="speaker-wave" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
+                        <ThemeText numberOfLines={1} fontSize="description" fontColor={source.playing ? "primary" : "textSecondary"}
+                            accessibilityLabel={t(source.playing ? "aggregate.playingSource" : "aggregate.currentSource", { name: source.name })} style={styles.sourceName}>{source.name}</ThemeText>
+                        <ThemeText fontSize="description" fontColor="textSecondary" style={styles.metadataSeparator}> · </ThemeText>
+                    </> : null}
+                    <ThemeText numberOfLines={1} fontSize={compact && !discovery ? "tag" : "description"} fontColor="textSecondary" style={styles.artist}>
+                        {favorites ? artist : musicItem.artist}{showAlbum && !discovery ? ` · ${album}` : ""}
+                    </ThemeText>
+                    {favoriteSourceName ? (
+                        <ThemeText numberOfLines={1} fontSize="description" fontColor="textSecondary" style={styles.favoriteSourceName}>{artist ? ` | ${favoriteSourceName}` : favoriteSourceName}</ThemeText>
+                    ) : null}
+                    {!discovery && !source && isLocal ? <Icon name="check-circle-outline" size={rpx(24)} color={colors.primaryText} style={styles.metadataIcon} /> : null}
+                    {!discovery && !source && qualityBadge ? <Badge type={qualityBadge.type}>{qualityBadge.text}</Badge> : null}
+                    {!discovery && !source && musicItem.fee === 1 ? <Badge type="vip">VIP</Badge> : null}
+                    {!discovery && !source && hasMv ? <Badge type="source">MV</Badge> : null}
+                    {titleTagSubText ? <ThemeText fontSize="description" fontColor="textSecondary" style={styles.duration}>{titleTagSubText}</ThemeText> : null}
+                </View>
+                {canChooseSource && sourceAnchor !== null ? (
+                    <Pressable accessibilityRole="button" accessibilityLabel={t("aggregate.chooseSource", { count: source.count })}
+                        accessibilityHint={t(source.playing ? "aggregate.playingSource" : "aggregate.currentSource", { name: source.name })}
+                        onPress={source.onPress} style={[styles.sourceTarget, { left: sourceAnchor }]}>
+                        {({ pressed }) => <View pointerEvents="none" style={[styles.sourceCount, { backgroundColor: colors.tonalSurface }]}>
+                            {pressed ? <Icon name="arrows-left-right" size={rpx(24)} color={colors.onTonal} />
+                                : <ThemeText fontSize="tag" color={colors.onTonal}>{source.count}</ThemeText>}
+                        </View>}
+                    </Pressable>
+                ) : null}
+            </View>
+        </>
+    );
+
+    return (
+        <View style={[styles.row, compact && styles.compactRow, discovery && styles.discoveryRow, favorites && styles.favoriteRow, containerStyle, itemPaddingRight !== undefined && { paddingRight: itemPaddingRight }, itemPaddingLeft !== undefined && { paddingLeft: itemPaddingLeft }]}>
+            {source ? (
+                <View style={mainStyle}>
+                    {/* Sibling responders keep source selection out of the playback button. */}
+                    <Pressable {...playProps}
+                        style={({ pressed }) => [StyleSheet.absoluteFill, pressed && { backgroundColor: colors.listActive }]} />
+                    {content}
+                </View>
+            ) : (
+                <Pressable {...playProps} style={({ pressed }) => [...mainStyle, pressed && { backgroundColor: colors.listActive }]}>{content}</Pressable>
+            )}
             <View style={styles.actions}>
                 {actions.map(action => action === "favorite" ? (
                     <FavoriteAction key={action} musicItem={musicItem} />
@@ -180,9 +239,24 @@ const styles = StyleSheet.create({
     row: { flexDirection: "row", alignItems: "center", minHeight: MUSIC_ITEM_HEIGHT, paddingLeft: spacing.xxl, paddingRight: spacing.xs },
     main: { flex: 1, minWidth: 0, minHeight: MUSIC_ITEM_HEIGHT, flexDirection: "row", alignItems: "center", paddingVertical: spacing.lg },
     content: { flex: 1, minWidth: 0 },
+    favoriteHeading: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    favoriteTitle: { flexShrink: 1, minWidth: 0 },
+    playCount: { flexShrink: 0, flexDirection: "row", alignItems: "center", gap: spacing.xxs, paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs, borderRadius: radius.xs },
+    playCountText: { fontVariant: ["tabular-nums"] },
+    favoriteSourceName: { flexShrink: 1, minWidth: 0, maxWidth: "40%" },
+    sourceMain: { paddingVertical: 0 },
+    sourceContent: { minHeight: 44 },
+    titleLine: { flexDirection: "row", alignItems: "center" },
+    title: { flexShrink: 1, minWidth: 0 },
+    sourceSpace: { width: 44, height: 0, flexShrink: 0 },
+    sourceTarget: { position: "absolute", top: 0, width: 44, height: 44, alignItems: "flex-start", paddingLeft: spacing.sm, paddingTop: spacing.xxs },
+    sourceCount: { minWidth: rpx(34), minHeight: rpx(34), paddingHorizontal: spacing.xxs, borderRadius: spacing.xs, alignItems: "center", justifyContent: "center" },
+    sourceName: { maxWidth: "42%", flexShrink: 0 },
+    metadataSeparator: { flexShrink: 0 },
     metadata: { flexDirection: "row", alignItems: "center", marginTop: spacing.xs },
     artist: { flexShrink: 1, minWidth: 0, marginRight: spacing.xs },
     index: { width: rpx(64), textAlign: "center", marginRight: spacing.sm },
+    selectionIndex: { width: "auto", minWidth: rpx(40), marginRight: spacing.xs },
     cover: { width: rpx(80), height: rpx(80), borderRadius: spacing.sm, marginRight: spacing.xl },
     metadataIcon: { marginRight: spacing.xs },
     duration: { flexShrink: 0 },
@@ -196,4 +270,7 @@ const styles = StyleSheet.create({
     discoveryRow: { minHeight: Math.max(44, rpx(116)), paddingLeft: 0, paddingRight: 0 },
     discoveryMain: { minHeight: Math.max(44, rpx(116)), paddingVertical: spacing.xs },
     discoveryCover: { width: rpx(100), height: rpx(100), marginRight: spacing.lg },
+    favoriteRow: { minHeight: Math.max(44, rpx(128)) },
+    favoriteMain: { minHeight: Math.max(44, rpx(128)) },
+    favoriteCover: { width: rpx(104), height: rpx(104) },
 });

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { PageSummary } from "@/components/base/pageSection";
 import { View } from "react-native";
 import useEnterTransitionEnd from "@/hooks/useEnterTransitionEnd";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
@@ -8,23 +9,42 @@ import musicHistory, { useMusicHistory } from "@/core/musicHistory";
 import MusicList from "@/components/musicList";
 import { musicHistorySheetId, RequestStateCode } from "@/constants/commonConst";
 import AppBar from "@/components/base/appBar";
-import { ROUTE_PATH, useNavigate } from "@/core/router";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
 import { useI18N } from "@/core/i18n";
+import MusicSelectionProvider from "@/components/musicList/musicSelectionProvider";
+import useInlineMusicSelection from "@/components/musicList/useInlineMusicSelection";
+import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
+import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
+import { getMediaUniqueKey } from "@/utils/mediaUtils";
+import { spacing } from "@/constants/designSystem";
 
 export default function History() {
+    return <VerticalSafeAreaView style={globalStyle.fwflex1}>
+        <MusicSelectionProvider><HistoryContent /></MusicSelectionProvider>
+    </VerticalSafeAreaView>;
+}
+
+function HistoryContent() {
     const musicHistoryList = useMusicHistory();
 
-    const navigate = useNavigate();
+    const openEditor = useOpenMusicListEditor();
     const { t } = useI18N();
+    const removal = useMemo(() => ({ onRemove: (items: IMusic.IMusicItem[]) => {
+        const removed = new Set(items.map(getMediaUniqueKey));
+        return musicHistory.setHistory(musicHistory.history.filter(item => !removed.has(getMediaUniqueKey(item))));
+    } }), []);
+    const editor = useInlineMusicSelection("history", musicHistoryList, { removal });
 
     // 历史列表可能很长，首帧全量渲染会卡掉进入动画，等转场结束再挂
     const listReady = useEnterTransitionEnd();
 
     return (
-        <VerticalSafeAreaView style={globalStyle.fwflex1}>
+        <>
             <StatusBar />
             <AppBar
-                menu={[
+                onBackPress={editor.editing ? editor.finish : undefined}
+                actionComponent={editor.editing ? <SelectionDoneAction onPress={editor.finish} /> : undefined}
+                menu={editor.editing ? [] : [
                     {
                         icon: "trash-outline",
                         title: t("history.clearHistory"),
@@ -37,8 +57,13 @@ export default function History() {
                     {
                         icon: "pencil-square",
                         title: t("common.edit"),
+                        onPress: editor.start,
+                    },
+                    {
+                        icon: "bars-3",
+                        title: t("sheetDetail.manualSortMusic"),
                         onPress() {
-                            navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                            openEditor({
                                 musicList: musicHistoryList,
                                 musicSheet: {
                                     id: musicHistorySheetId,
@@ -52,6 +77,9 @@ export default function History() {
             </AppBar>
             {listReady ? (
                 <MusicList
+                    Header={<View><PageSummary title={t("home.songCount", { count: musicHistoryList.length })} description={t("myMusic.historyHint")} />
+                        <InlineSelectionBar style={{ paddingHorizontal: spacing.xxxl }} editor={editor} count={musicHistoryList.length} /></View>}
+                    selection={editor.selection}
                     musicList={musicHistoryList}
                     showIndex
                     state={RequestStateCode.IDLE}
@@ -64,6 +92,6 @@ export default function History() {
             ) : (
                 <View style={globalStyle.flex1} />
             )}
-        </VerticalSafeAreaView>
+        </>
     );
 }

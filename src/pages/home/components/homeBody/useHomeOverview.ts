@@ -1,7 +1,7 @@
 import { useAtomValue } from "jotai";
 
 import { useMusicHistory } from "@/core/musicHistory";
-import MusicSheet, { useSheetItem, useSheetsBase } from "@/core/musicSheet";
+import MusicSheet, { useFavoriteCount, useSheetItem, useSheetsBase } from "@/core/musicSheet";
 import PluginManager, { useSortedPlugins } from "@/core/pluginManager";
 import { getPrimaryArtist } from "@/core/randomPlay";
 import { useCurrentMusic } from "@/core/trackPlayer";
@@ -20,6 +20,7 @@ export default function useHomeOverview() {
     const history = useMusicHistory();
     const sheets = useSheetsBase();
     const favoriteContents = useSheetItem(MusicSheet.defaultSheet.id);
+    const favoriteCount = useFavoriteCount();
     const pluginsTopList = useAtomValue(pluginsTopListAtom);
 
     const enabledPlugins = useMemo(
@@ -52,9 +53,8 @@ export default function useHomeOverview() {
 
     const favoriteSheet = useMemo(
         () =>
-            sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id) ??
-            MusicSheet.defaultSheet,
-        [sheets],
+            ({ ...(sheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id) ?? MusicSheet.defaultSheet), worksNum: favoriteCount }),
+        [sheets, favoriteCount],
     );
 
     /** 供拾音复用：已缓存的榜单数据，避免重复请求 */

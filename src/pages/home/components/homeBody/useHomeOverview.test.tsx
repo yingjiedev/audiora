@@ -9,6 +9,7 @@ jest.mock("jotai", () => ({ useAtomValue: () => ({}) }));
 jest.mock("@/core/musicHistory", () => ({ useMusicHistory: () => [] }));
 jest.mock("@/core/musicSheet", () => ({
     __esModule: true, default: { defaultSheet: { id: "favorite", platform: "local", title: "Favorites", worksNum: 0 } },
+    useFavoriteCount: () => mockSheets.find(sheet => sheet.id === "favorite")?.worksNum ?? 0,
     useSheetsBase: () => mockSheets,
     useSheetItem: (id: string) => {
         mockUseSheet(id); return { musicList: mockMusics };

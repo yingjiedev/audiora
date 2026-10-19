@@ -368,7 +368,7 @@ function formatLog(obj) {
     if (obj.toString) {
         try {
             return `object(${JSON.stringify(obj, null, 2)})`;
-        } catch (err) {
+        } catch {
             return 'Invalid symbol';
         }
     }

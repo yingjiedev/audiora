@@ -1,3 +1,4 @@
+import { spacing } from "@/constants/designSystem";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
@@ -35,6 +36,8 @@ export default function SheetItem(props: ISheetItemProps) {
 const style = StyleSheet.create({
     imageWrapper: {
         width: "100%",
+        paddingHorizontal: spacing.xs,
+        paddingBottom: spacing.md,
         justifyContent: "center",
         alignItems: "center",
     },

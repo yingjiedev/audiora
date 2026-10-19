@@ -1,6 +1,6 @@
+import { radius, spacing, controlSize } from "@/constants/designSystem";
 import React from "react";
 import { StyleProp, StyleSheet, TouchableOpacity, ViewStyle } from "react-native";
-import rpx from "@/utils/rpx";
 import Image from "./image";
 import { ImgAsset } from "@/constants/assetsConst";
 import ThemeText from "./themeText";
@@ -35,15 +35,15 @@ export default function ImageBtn(props: IImageBtnProps) {
 
 const style = StyleSheet.create({
     wrapper: {
-        width: rpx(210),
-        height: rpx(290),
+        width: "100%",
+        minHeight: Math.max(44, controlSize.minimumTouch),
         flexGrow: 0,
         flexShrink: 0,
     },
     image: {
-        width: rpx(210),
-        height: rpx(210),
-        borderRadius: rpx(12),
-        marginBottom: rpx(16),
+        width: "100%",
+        aspectRatio: 1,
+        borderRadius: radius.lg,
+        marginBottom: spacing.sm,
     },
 });

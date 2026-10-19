@@ -2,6 +2,7 @@ import React from "react";
 import { View } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import { closePlayer, openPlayer } from "@/core/playerOverlay";
+jest.mock("@/core/playerTransition", () => ({ armPlayerTransition: jest.fn() }));
 import { panelInfoStore } from "@/components/panels/usePanel";
 import Pages from "./index";
 

@@ -8,17 +8,22 @@ import { ROUTE_PATH, useParams } from "@/core/router";
 import { default as Toast, default as toast } from "@/utils/toast";
 import { useNavigation } from "@react-navigation/native";
 import React from "react";
+import { SelectionDoneAction } from "@/components/musicList/selectionControls";
+import useOpenMusicListEditor from "@/components/musicList/useOpenMusicListEditor";
 
-export default function () {
+export default function NavBar({ editing = false, onEdit, onFinishEdit }: { editing?: boolean; onEdit: () => void; onFinishEdit: () => void }) {
     const navigation = useNavigation<any>();
     const { id = "favorite" } = useParams<"local-sheet-detail">();
     const musicSheet = useSheetItem(id);
     const { t } = useI18N();
+    const openEditor = useOpenMusicListEditor();
 
     return (
         <>
             <AppBar
-                menu={[
+                onBackPress={editing ? onFinishEdit : undefined}
+                actionComponent={editing ? <SelectionDoneAction onPress={onFinishEdit} /> : undefined}
+                menu={editing ? [] : [
                     {
                         icon: "pencil-outline",
                         title: t("sheetDetail.editSheetInfo"),
@@ -31,8 +36,13 @@ export default function () {
                     {
                         icon: "pencil-square",
                         title: t("sheetDetail.batchEditMusic"),
+                        onPress: onEdit,
+                    },
+                    {
+                        icon: "bars-3",
+                        title: t("sheetDetail.manualSortMusic"),
                         onPress() {
-                            navigation.navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
+                            openEditor({
                                 musicList: musicSheet.musicList,
                                 musicSheet: musicSheet,
                             });
@@ -98,7 +108,7 @@ export default function () {
                         },
                     },
                 ]}
-                actions={[
+                actions={editing ? [] : [
                     {
                         icon: "magnifying-glass",
                         onPress() {

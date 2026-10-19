@@ -30,6 +30,12 @@ Set-Location C:\a
 
 ## 自动构建（推荐）
 
+### 在 CI 中重建正式发布
+
+若已有发布标签的构建因流水线配置失败，可以在 Actions 的 **Build Android APK → Run workflow** 中选择包含修复的分支，填写对应 `version`（例如 `v0.3.0`）和 `release_tag`（例如 `v0.3.0`）。流水线会检出已有标签的代码、校验版本与下载地址，并使用固定发布证书构建和上传到该标签的 Release，无需移动标签。留空 `release_tag` 时仍为验证构建，不上传到 Release。
+
+### 本地预览包
+
 在仓库根目录执行：
 
 ```powershell
@@ -51,6 +57,21 @@ npm run build-preview
 npm run build-preview -- -Abi all
 ```
 
+构建可与正式版并存的预览应用（显示名为“Audiora 预览”，包名追加 `.preview`）：
+
+```powershell
+npm run build-preview -- -PreviewApp
+```
+
+构建可与正式版并存的测试包：
+
+```powershell
+npm run build-preview -- -TestApp
+```
+
+测试包使用 `io.github.yingjiedev.audiora.test` 作为 `applicationId`，桌面名称为 `audiora-test`，APK 文件名以 `Audiora-test` 开头。它与正式版使用独立应用数据目录。
+
+需要在同一设备安装多个测试包时，可以指定不同的 ID 后缀，例如 `npm run build-preview -- -TestApp -TestAppIdSuffix test.codex` 会生成 `io.github.yingjiedev.audiora.test.codex`；桌面名称仍为 `audiora-test`。
 强制重新安装依赖：
 
 ```powershell

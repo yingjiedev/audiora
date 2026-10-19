@@ -50,6 +50,7 @@ import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
 import { readCompanionText } from "@/utils/mediaCompanion";
 import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
 import { readCachedMediaSource } from "./mediaSourceCache";
+import { createPluginStorage } from "@/core/pluginManager/storage";
 
 
 const sha256 = CryptoJs.SHA256;
@@ -1271,6 +1272,9 @@ export class Plugin {
     private lazyProps: ILazyProps | null = null;
     /** Dedup concurrent ensureMounted() so callers wait for the same load. */
     private mountPromise: Promise<void> | null = null;
+    private storageDisposed = false;
+    private readonly storageReady: Promise<void>;
+    private resolveStorageReady!: () => void;
     /** Per-plugin sandbox env (userVariables etc.), rebound before method calls. */
     private sandboxEnv: {
         getUserVariables: () => Record<string, string>;
@@ -1296,8 +1300,15 @@ export class Plugin {
     constructor(
         funcCode: string | (() => IPlugin.IPluginDefine) | null,
         pluginPath: string,
-        lazyProps: ILazyProps | null = null
+        lazyProps: ILazyProps | null = null,
+        deferStorage = false,
     ) {
+        this.storageReady = new Promise(resolve => {
+            this.resolveStorageReady = resolve;
+        });
+        if (!deferStorage) {
+            this.activateStorage();
+        }
         this.lazyProps = lazyProps;
         if (!lazyProps) {
             // 如果没有懒加载，直接挂载并初始化
@@ -1358,6 +1369,17 @@ export class Plugin {
         return this.mountPromise;
     }
 
+    /** Release top-level calls only after the candidate has been installed. */
+    activateStorage() {
+        this.resolveStorageReady();
+    }
+
+    /** Reject pending and future calls, including discarded install candidates. */
+    disposeStorage() {
+        this.storageDisposed = true;
+        this.resolveStorageReady();
+    }
+
     /**
      * Bind this plugin's sandbox env/process to global free identifiers.
      * Plugin code resolves bare `env` / `process` via globalThis, so every
@@ -1406,6 +1428,14 @@ export class Plugin {
         const _module: any = { exports: {} };
         try {
             if (typeof funcCode === "string") {
+                const storage = createPluginStorage(
+                    () => !this.storageDisposed && this.state === PluginState.Mounted
+                        ? this.name
+                        : "",
+                    this.storageReady,
+                );
+                const pluginRequire = (packageName: string) =>
+                    packageName === "musicfree/storage" ? storage : _require(packageName);
                 // 插件的环境变量
                 const env = {
                     getUserVariables: () => {
@@ -1489,8 +1519,8 @@ export class Plugin {
                 );
 
                 pluginRunner(
-                    _require,
-                    _require,
+                    pluginRequire,
+                    pluginRequire,
                     _module,
                     _module.exports,
                     _console,

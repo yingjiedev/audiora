@@ -6,6 +6,8 @@ Audiora 是音乐客户端，不提供音乐内容，也不运营在线音乐服
 
 插件是为播放器扩展音乐源的程序。在线搜索、播放地址、歌词、歌单、榜单和音质等能力，取决于插件的实现及其连接的服务；应用中的功能入口并不代表每个插件都支持该功能。
 
+插件可通过 [`musicfree/storage`](./plugin-storage.md) 保存自己的配置、状态和小型缓存。数据按插件隔离，更新时保留，卸载时清除；可在插件管理中单独重置。
+
 在 **我的 → 插件管理** 中，可以从本地文件或网络链接安装插件。开发兼容插件可参考 [MusicFree 插件文档](https://musicfree.catcat.work/plugin/introduction.html)。
 
 遇到单个音源搜不到歌曲、链接失效或功能缺失时，请先检查对应插件的说明和更新，必要时联系其作者。客户端问题请通过 [Audiora Issues](https://github.com/yingjiedev/audiora/issues/new/choose) 反馈。

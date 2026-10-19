@@ -2,6 +2,7 @@
     <string name="app_name">Audiora</string>
     <string name="auto_queue">当前播放列表</string>
     <string name="auto_song_count">%1$d 首歌曲</string>
+    <string name="app_name_preview">Audiora 预览</string>
     <string name="expo_splash_screen_status_bar_translucent">true</string>
     <!-- rtnp channel id -->
     <string name="rntp_temporary_channel_id">audiora_temporary_channel</string>

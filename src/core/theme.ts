@@ -8,8 +8,10 @@ import {
 import { GlobalState } from "@/utils/stateMapper";
 import { CustomizedColors } from "@/hooks/useColors";
 import Color from "color";
-import { Appearance, Image as RNImage } from "react-native";
+import { Appearance, AppState, Image as RNImage } from "react-native";
 import { darkColors, lightColors, neutralFallbackPrimary } from "@/constants/colorPalette";
+import SystemColors from "@/native/dynamicColors";
+import { systemThemeColors } from "@/utils/systemThemeColors";
 
 /** RN Navigation 7+ reads theme.fonts.regular in native-stack headers. */
 const navigationFonts: NavigationTheme["fonts"] =
@@ -114,7 +116,7 @@ function getOpaqueSurfaceFallback(
     if (!isPresetThemeId(theme.id)) {
         return (customThemeDefaultColors[key] ?? "#1D1D1D") as string;
     }
-    return (theme.dark ? darkTheme.colors : lightTheme.colors)[key] as string;
+    return getPresetTheme(theme.id).colors[key] as string;
 }
 
 /**
@@ -197,6 +199,56 @@ const surfaceColorKeys: Array<keyof CustomizedColors> = [
  * 配色。持久化和再次计算都以它为基准，否则 alpha 会被反复乘进去越调越透。
  */
 let baseColors = darkTheme.colors as CustomizedColors;
+let systemPalette = SystemColors.getInitialPalette();
+let paletteRequest = 0;
+
+function getPresetTheme(themeId: string) {
+    const preset = themeId === "p-dark" ? darkTheme : lightTheme;
+    if (!Config.getConfig("theme.dynamicColors") || !systemPalette) return preset;
+    return {
+        ...preset,
+        colors: { ...preset.colors, ...systemThemeColors(systemPalette, preset.dark) },
+    };
+}
+
+/** Re-resolve a preset without writing runtime system colors into saved user settings. */
+function applySystemColors() {
+    const current = themeStore.getValue();
+    if (!isPresetThemeId(current.id)) return;
+    const next = getPresetTheme(current.id);
+    if (JSON.stringify(baseColors) !== JSON.stringify(next.colors)) commitTheme(next);
+}
+
+async function refreshSystemColors() {
+    const request = ++paletteRequest;
+    const palette = await SystemColors.getPalette();
+    if (request !== paletteRequest) return;
+    systemPalette = palette;
+    applySystemColors();
+}
+
+function setDynamicColors(enabled: boolean) {
+    Config.setConfig("theme.dynamicColors", enabled);
+    applySystemColors();
+    if (enabled && SystemColors.isSupported) refreshSystemColors();
+}
+
+/** ReactContext can outlive an Activity; refresh on remount/resume as well as configuration events. */
+function observeSystemColors(): () => void {
+    if (!SystemColors.isSupported) return () => {};
+    const removeListener = SystemColors.addChangeListener(() => {
+        refreshSystemColors();
+    });
+    const appStateListener = AppState.addEventListener("change", state => {
+        if (state === "active") refreshSystemColors();
+    });
+    refreshSystemColors();
+    return () => {
+        paletteRequest += 1;
+        removeListener();
+        appStateListener.remove();
+    };
+}
 
 function applySurfaceOpacity(colors: CustomizedColors): CustomizedColors {
     const ratio = Config.getConfig("theme.surfaceOpacity") ?? 1;
@@ -379,9 +431,9 @@ function setup() {
     const bgUrl = Config.getConfig("theme.background");
 
     if (currentTheme === "p-dark") {
-        commitTheme(darkTheme);
+        commitTheme(getPresetTheme("p-dark"));
     } else if (currentTheme === "p-light") {
-        commitTheme(lightTheme);
+        commitTheme(getPresetTheme("p-light"));
     } else {
         let savedColors = (Config.getConfig("theme.colors") as CustomizedColors) ??
             darkTheme.colors;
@@ -531,9 +583,9 @@ function setTheme(
     },
 ) {
     if (themeName === "p-light") {
-        commitTheme(lightTheme);
+        commitTheme(getPresetTheme("p-light"));
     } else if (themeName === "p-dark") {
-        commitTheme(darkTheme);
+        commitTheme(getPresetTheme("p-dark"));
     } else {
         const hasBackground = !!(
             extra?.background?.url ??
@@ -557,7 +609,8 @@ function setTheme(
 
     Config.setConfig("theme.selectedTheme", themeName);
     // 存未叠加「表面不透明度」的原始配色，否则 alpha 会被反复乘进去
-    Config.setConfig("theme.colors", baseColors);
+    Config.setConfig("theme.colors", isPresetThemeId(themeName)
+        ? (themeName === "p-dark" ? darkTheme.colors : lightTheme.colors) : baseColors);
 
     if (extra?.background) {
         const currentBg = backgroundStore.getValue();
@@ -796,6 +849,9 @@ const Theme = {
     setup,
     setTheme,
     setFollowSystem,
+    setDynamicColors,
+    refreshSystemColors,
+    observeSystemColors,
     setBackground,
     setColors,
     setSurfaceOpacity,

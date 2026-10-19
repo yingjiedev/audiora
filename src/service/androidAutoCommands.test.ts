@@ -66,10 +66,10 @@ it("waits for readiness, dispatches in order and lets pause/next supersede a sta
     let ready!: () => void;
     let finishFirst!: () => void;
     const readyPromise = new Promise<void>(resolve => {
-        ready = resolve; 
+        ready = resolve;
     });
     const firstPromise = new Promise<void>(resolve => {
-        finishFirst = resolve; 
+        finishFirst = resolve;
     });
     const pending = [command("next"), command("pause")];
     const calls: string[] = [];
@@ -79,7 +79,7 @@ it("waits for readiness, dispatches in order and lets pause/next supersede a sta
         async execute(value) {
             calls.push(value.command);
             if (value.command === "next") {
-                await firstPromise; 
+                await firstPromise;
             }
         },
         reportError: jest.fn(),

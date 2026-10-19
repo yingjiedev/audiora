@@ -176,6 +176,26 @@ export function dragProgress(translationY: number, screenHeight: number) {
     return clamp(1 - translationY / (screenHeight * DRAG_FULL_RATIO), 0, 1);
 }
 
+/** Whole-page dismissal: follow the finger without scaling individual covers. */
+export function playerDismissProgress(translationY: number, screenHeight: number) {
+    "worklet";
+    return screenHeight > 0 ? clamp(translationY / screenHeight, 0, 1) : 0;
+}
+
+export function playerDismissTransform(
+    progress: number,
+    screenHeight: number,
+    reduceMotion = false,
+) {
+    "worklet";
+    const p = clamp(progress, 0, 1);
+    return {
+        // Keep the first part opaque so controls do not double over the home page.
+        opacity: reduceMotion ? 1 - p : 1 - clamp((p - 0.35) / 0.65, 0, 1),
+        translateY: reduceMotion ? 0 : Math.max(0, screenHeight) * p,
+    };
+}
+
 export type DismissDecision = "dismiss" | "cancel";
 
 /** Worklet for the same reason as `dragProgress`. */

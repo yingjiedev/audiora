@@ -4,8 +4,11 @@ import ThemeText from "@/components/base/themeText";
 import MusicItem from "@/components/mediaItem/musicItem";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
+import { localPluginPlatform } from "@/constants/commonConst";
 import { controlSize, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
+import { useListeningStats } from "@/core/listeningStats";
+import { countSongPlays, songKey } from "@/core/listeningStatsModel";
 import { resolveArtwork } from "@/utils/artwork";
 import { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { ROUTE_PATH, useNavigate } from "@/core/router";
@@ -13,7 +16,7 @@ import TrackPlayer from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import useMotion from "@/hooks/useMotion";
 import rpx, { fontRpx } from "@/utils/rpx";
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent } from "react-native";
 import HomeFeatureDeck from "../HomeFeatureDeck";
 import HomeSectionNavigation from "../HomeSectionNavigation";
@@ -201,6 +204,9 @@ function FavoriteListening({ musics = [], sheet }: { musics?: IMusic.IMusicItem[
     const { t } = useI18N();
     const colors = useColors();
     const navigate = useNavigate();
+    const stats = useListeningStats();
+    const playCounts = useMemo(() => countSongPlays(stats.days), [stats.days]);
+    const getDisplayName = usePluginDisplayNameResolver();
     const { width } = useWindowDimensions();
     const groupWidth = Math.min(520, width * 0.86, width - spacing.xxxl * 2);
     const groups = Array.from({ length: Math.ceil(Math.min(9, musics.length) / 3) }, (_, index) => musics.slice(index * 3, index * 3 + 3));
@@ -232,11 +238,13 @@ function FavoriteListening({ musics = [], sheet }: { musics?: IMusic.IMusicItem[
                         <View key={index} style={{ width: groupWidth }}>
                             {group.map(music => (
                                 <MusicItem
-                                    key={music.platform + "@" + music.id}
+                                    key={songKey(music)}
                                     musicItem={music}
                                     showCover
                                     density="compact"
-                                    presentation="discovery"
+                                    presentation="favorites"
+                                    playCount={playCounts.get(songKey(music)) ?? 0}
+                                    sourceName={music.platform === localPluginPlatform ? t("home.localMusic") : getDisplayName(music.platform)}
                                     actions={["favorite"]}
                                     onItemPress={play}
                                 />

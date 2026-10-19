@@ -1,11 +1,13 @@
+import { PageAction } from "@/components/base/pageSection";
+import { radius, spacing } from "@/constants/designSystem";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { getFSInfo } from "react-native-fs";
 import rpx from "@/utils/rpx";
 import useColors from "@/hooks/useColors";
 import ThemeText from "@/components/base/themeText";
-import Icon from "@/components/base/icon";
-import { TouchableOpacity } from "react-native";
+
+
 import { useI18N } from "@/core/i18n";
 import { useAppConfig } from "@/core/appConfig";
 import downloadHistory from "@/core/downloadHistory";
@@ -152,33 +154,7 @@ export default function OverviewCard(props: IOverviewCardProps) {
                     )}
                 </View>
 
-                <TouchableOpacity
-                    style={[
-                        styles.action,
-                        {
-                            backgroundColor: lowStorage
-                                ? (colors.danger ?? colors.primary)
-                                : colors.listActive,
-                        },
-                    ]}
-                    onPress={onToggleAll}>
-                    <Icon
-                        name={pausedCount > 0 ? "play" : "pause"}
-                        size={rpx(28)}
-                        color={lowStorage ? colors.onDanger : colors.primaryText}
-                    />
-                    <ThemeText
-                        fontSize="description"
-                        fontWeight="medium"
-                        style={{
-                            color: lowStorage ? colors.onDanger : colors.primaryText,
-                            marginLeft: rpx(6),
-                        }}>
-                        {pausedCount > 0
-                            ? t("downloading.overview.resumeAll")
-                            : t("downloading.overview.pauseAll")}
-                    </ThemeText>
-                </TouchableOpacity>
+                <PageAction title={t(pausedCount > 0 ? "downloading.overview.resumeAll" : "downloading.overview.pauseAll")} icon={pausedCount > 0 ? "play" : "pause"} disabled={queueActive === 0} variant={lowStorage ? "danger" : "tonal"} onPress={onToggleAll} />
             </View>
         </View>
     );
@@ -186,20 +162,24 @@ export default function OverviewCard(props: IOverviewCardProps) {
 
 const styles = StyleSheet.create({
     card: {
-        marginHorizontal: rpx(24),
-        marginBottom: rpx(16),
-        padding: rpx(24),
-        borderRadius: rpx(28),
+        marginHorizontal: spacing.xxxl,
+        marginTop: spacing.lg,
+        marginBottom: spacing.md,
+        padding: spacing.lg,
+        borderRadius: radius.xl,
         borderWidth: StyleSheet.hairlineWidth,
     },
     topRow: {
         flexDirection: "row",
-        alignItems: "flex-start",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: spacing.md,
         justifyContent: "space-between",
     },
     stats: {
         flexDirection: "row",
-        gap: rpx(40),
+        gap: spacing.lg,
+        flexWrap: "wrap",
         flex: 1,
         marginRight: rpx(16),
     },

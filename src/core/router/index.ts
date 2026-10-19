@@ -2,6 +2,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useCallback } from "react";
 import { LogBox } from "react-native";
 import { closePlayer, isPlayerOpen } from "@/core/playerOverlay";
+import type { MusicListEditorOptions } from "@/core/musicListEditor";
 
 LogBox.ignoreLogs([
     "Non-serializable values were found in the navigation state",
@@ -83,10 +84,7 @@ interface RouterParams extends RouterParamsBase {
         musicList: IMusic.IMusicItem[] | null;
         musicSheet?: IMusic.IMusicSheetItem;
     };
-    "music-list-editor": {
-        musicSheet?: Partial<IMusic.IMusicSheetItem>;
-        musicList: IMusic.IMusicItem[] | null;
-    };
+    "music-list-editor": MusicListEditorOptions;
     "file-selector": {
         fileType?: "folder" | "file" | "file-and-folder"; // 10: folder 11: file and folder,
         multi?: boolean; // 是否多选

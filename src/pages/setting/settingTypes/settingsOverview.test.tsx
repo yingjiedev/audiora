@@ -1,6 +1,7 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
 import SettingsOverview from "./settingsOverview";
+import { Platform } from "react-native";
 
 const mockNavigate = jest.fn();
 const mockPush = jest.fn();
@@ -52,6 +53,28 @@ jest.mock("react-native-device-info", () => ({
 }));
 
 describe("SettingsOverview", () => {
+    it("opens audio effects as a nested Android settings page", () => {
+        const originalOS = Platform.OS;
+        try {
+            Platform.OS = "android";
+            let renderer!: TestRenderer.ReactTestRenderer;
+            act(() => {
+                renderer = TestRenderer.create(<SettingsOverview />);
+            });
+            act(() => {
+                renderer.root.findByProps({ accessibilityLabel: "audioEffects.title" }).props.onPress();
+            });
+            expect(mockPush).toHaveBeenCalledWith("setting", { type: "audioEffects", section: undefined });
+            Platform.OS = "ios";
+            act(() => {
+                renderer = TestRenderer.create(<SettingsOverview />);
+            });
+            expect(renderer.root.findAllByProps({ accessibilityLabel: "audioEffects.title" })).toHaveLength(0);
+        } finally {
+            Platform.OS = originalOS;
+        }
+    });
+
     beforeEach(() => {
         mockNavigate.mockReset();
         mockPush.mockReset();

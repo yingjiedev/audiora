@@ -30,7 +30,7 @@ import EventEmitter from "eventemitter3";
 import { ISheetPlaybackContext, recordSheetPlayback } from "@/core/sheetPlaybackHistory";
 import { reconcileQueueOrder } from "./reorderQueue";
 import { produce } from "immer";
-import { atom, getDefaultStore, useAtomValue } from "jotai";
+import { atom, getDefaultStore, useAtomValue, type PrimitiveAtom } from "jotai";
 import shuffle from "lodash.shuffle";
 import ReactNativeTrackPlayer, {
     Event,
@@ -58,11 +58,14 @@ import { EncryptedSourceError, QmcKeyError } from "@/service/mflac/songKey";
 import { adaptMediaSourceForPlayback, canReuseMediaSourceForPlayback } from "./mediaSourceAdapter";
 import { refreshCurrentSource } from "./refreshCurrentSource";
 import SeekCoordinator from "./seekCoordinator";
+import MusicSheet from "@/core/musicSheet";
+import { findLinkedSource, replaceLinkedQueueItem, waitForSource } from "./linkedSource";
+import { trackSourceKey } from "@/utils/trackGroup";
 import PlayFailPolicy from "./playFailPolicy";
 
 
 
-const currentMusicAtom = atom<IMusic.IMusicItem | null>(null);
+const currentMusicAtom = atom<IMusic.IMusicItem | null>(null) as PrimitiveAtom<IMusic.IMusicItem | null>;
 const repeatModeAtom = atom<MusicRepeatMode>(MusicRepeatMode.QUEUE);
 const qualityAtom = atom<IMusic.IQualityKey>("320k");
 const playListAtom = atom<IMusic.IMusicItem[]>([]);
@@ -125,6 +128,11 @@ class TrackPlayer extends EventEmitter<{
     // Changes whenever the selected track changes, including switching away
     // from and back to the same media item during an asynchronous refresh.
     private currentMusicRevision = 0;
+    // Source loading may finish after pause, but only for the same selection.
+    private playRequestId = 0;
+    private pauseRevision = 0;
+    private linkedFailures = new Set<string>();
+    private linkedRecoveryRequest: number | null = null;
     private seekCoordinator = new SeekCoordinator();
     // 连续取源失败的收敛策略：整列都取不到源时不再无限自动跳曲
     private playFailPolicy = new PlayFailPolicy();
@@ -416,7 +424,6 @@ class TrackPlayer extends EventEmitter<{
                 Event.PlaybackError,
                 async e => {
                     const requestRevision = this.playRequestRevision;
-                    const musicRevision = this.currentMusicRevision;
                     const session = this.nativeQueue;
                     void appendStartupBreadcrumb("trackplayer-playback-error", {
                         message: e.message,
@@ -443,7 +450,6 @@ class TrackPlayer extends EventEmitter<{
                         currentTrack?.audioraQueueRevision === session.revision &&
                         currentTrack?.url !== TrackPlayer.fakeAudioUrl && currentTrack?.url !== TrackPlayer.proposedAudioUrl &&
                         (await ReactNativeTrackPlayer.getActiveTrackIndex()) === 0 &&
-                        (await ReactNativeTrackPlayer.getPlaybackState()).state === State.Error &&
                         e.message &&
                         e.message !== "android-io-file-not-found"
                     ) {
@@ -452,8 +458,12 @@ class TrackPlayer extends EventEmitter<{
                             code: e.code,
                         });
 
+                        const playback = await ReactNativeTrackPlayer.getPlaybackState().catch(() => null);
+                        if (playback && playback.state !== State.Error) return;
                         if (this.isCurrentNativeQueue(session)) {
-                            await this.handlePlayFail(requestRevision, musicRevision);
+                            if (!await this.recoverLinkedPlayback(!playback)) {
+                                await this.handlePlayFail(requestRevision, this.currentMusicRevision);
+                            }
                         }
                     }
                 },
@@ -633,10 +643,13 @@ class TrackPlayer extends EventEmitter<{
         forcePlay?: boolean,
         sheetContext?: ISheetPlaybackContext,
     ): Promise<void> {
+        const requestId = ++this.playRequestId;
         const requestRevision = ++this.playRequestRevision;
+        const pauseRevision = this.pauseRevision;
         let musicRevision = this.currentMusicRevision;
+        this.linkedFailures = new Set();
         const isCurrentRequest = () =>
-            requestRevision === this.playRequestRevision &&
+            requestId === this.playRequestId &&
             musicRevision === this.currentMusicRevision;
         const playStartTime = Date.now();
         void appendStartupBreadcrumb("trackplayer-play-invoked", {
@@ -787,7 +800,7 @@ class TrackPlayer extends EventEmitter<{
             let track: IMusic.IMusicItem;
 
             // 5.1 通过插件获取音源
-            const plugin = this.pluginManagerService.getByName(musicItem.platform);
+            let plugin = this.pluginManagerService.getByName(musicItem.platform);
 
             // 5.1.1 插件音质档位范围：官方协议插件只认 MusicFree 的 4 档
             // （low/standard/high/super），扩展协议插件按自己的 supportedQualities。
@@ -828,7 +841,7 @@ class TrackPlayer extends EventEmitter<{
             );
 
             // 5.4 插件返回音源
-            let source: IPlugin.IMediaSourceResult | null = localSource;
+            let source: (IPlugin.IMediaSourceResult & { type?: string }) | null = localSource;
 
             // 首先尝试智能选择的音质
             if (source) {
@@ -838,13 +851,7 @@ class TrackPlayer extends EventEmitter<{
                 });
                 this.setQuality(selectedQuality);
             } else if (isCurrentRequest()) {
-                source = (await plugin?.methods?.getMediaSource(
-                    musicItem,
-                    selectedQuality,
-                )) ?? null;
-                if (!isCurrentRequest()) {
-                    return;
-                }
+                source = await waitForSource(() => plugin?.methods?.getMediaSource(musicItem!, selectedQuality) ?? Promise.resolve(null), isCurrentRequest, 5000);
 
                 if (source) {
                     // Clone before mutation — cached/plugin sources may be frozen.
@@ -881,13 +888,7 @@ class TrackPlayer extends EventEmitter<{
                         }
                         if (isCurrentRequest()) {
                             triedQualities.push(quality);
-                            source = (await plugin?.methods?.getMediaSource(
-                                musicItem,
-                                quality,
-                            )) ?? null;
-                            if (!isCurrentRequest()) {
-                                return;
-                            }
+                            source = await waitForSource(() => plugin?.methods?.getMediaSource(musicItem!, quality) ?? Promise.resolve(null), isCurrentRequest, Math.max(0, fallbackDeadline - Date.now()));
                             // 5.4.1 获取到真实源
                             if (source) {
                                 source = { ...source };
@@ -938,47 +939,57 @@ class TrackPlayer extends EventEmitter<{
                 if (!source && !musicItem.url) {
                     // 插件失效的情况
                     if (this.configService.getConfig("basic.tryChangeSourceWhenPlayFail")) {
+                        this.linkedFailures.add(trackSourceKey(musicItem));
+                        const linked = await this.resolveLinkedFavorite(musicItem, isCurrentRequest);
+                        if (!isCurrentRequest()) return;
+                        if (linked) {
+                            this.setPlayList(replaceLinkedQueueItem(this.playList, musicItem, linked.item));
+                            musicItem = linked.item;
+                            this.setCurrentMusic(musicItem);
+                            musicRevision = this.currentMusicRevision;
+                            plugin = this.pluginManagerService.getByMedia(musicItem);
+                            this.setQuality(linked.quality);
+                            source = linked.source;
+                        }
+                        // Existing similarity search is only a fallback, never a saved association.
+                        if (!source) {
                         // 重试
-                        const similarMusic = await this.getSimilarMusic(
-                            musicItem,
-                            "music",
-                            () => !isCurrentRequest(),
-                        );
+                            const similarMusic = await this.getSimilarMusic(
+                                musicItem,
+                                "music",
+                                () => !isCurrentRequest(),
+                                this.linkedFailures,
+                            );
 
-                        if (similarMusic) {
-                            const similarMusicPlugin =
-                                this.pluginManagerService.getByMedia(similarMusic);
-
-                            for (let quality of qualityOrder) {
-                                if (isCurrentRequest()) {
-                                    source =
-                                        (await similarMusicPlugin?.methods?.getMediaSource(
-                                            similarMusic,
-                                            quality,
-                                        )) ?? null;
-                                    if (!isCurrentRequest()) {
-                                        return;
-                                    }
-                                    // 5.4.1 获取到真实源
-                                    if (source) {
-                                        source = { ...source };
+                            if (similarMusic && isCurrentRequest()) {
+                                const similarMusicPlugin = this.pluginManagerService.getByMedia(similarMusic);
+                                const similarScope = getPluginQualityScope(similarMusicPlugin?.instance);
+                                const similarQuality = pickSupportedQuality(preferredQuality, similarScope) ?? preferredQuality;
+                                const similarDeadline = Date.now() + 8000;
+                                this.linkedFailures.add(trackSourceKey(similarMusic));
+                                for (const quality of getQualityOrder(similarQuality, "asc", similarScope)) {
+                                    if (!isCurrentRequest() || Date.now() >= similarDeadline) break;
+                                    source = await waitForSource(() => similarMusicPlugin?.methods?.getMediaSource(similarMusic, quality) ?? Promise.resolve(null), isCurrentRequest, Math.min(2500, similarDeadline - Date.now()));
+                                    if (source?.url && isCurrentRequest()) {
+                                        this.setPlayList(replaceLinkedQueueItem(this.playList, musicItem, similarMusic as IMusic.IMusicItem));
+                                        musicItem = similarMusic as IMusic.IMusicItem;
+                                        this.setCurrentMusic(musicItem);
+                                        musicRevision = this.currentMusicRevision;
+                                        plugin = similarMusicPlugin;
                                         this.setQuality(quality);
                                         break;
                                     }
-                                } else {
-                                    // 5.4.2 已经切换到其他歌曲了，
-                                    return;
                                 }
                             }
-                        }
 
+                        }
                         if (!source) {
                             throw new Error(PlayFailReason.INVALID_SOURCE);
                         }
                     } else {
                         throw new Error(PlayFailReason.INVALID_SOURCE);
                     }
-                } else {
+                } else if (!source) {
                     const providedSource = musicItem as IPlugin.IMediaSourceResult;
                     source = {
                         url: musicItem.url,
@@ -1023,7 +1034,8 @@ class TrackPlayer extends EventEmitter<{
             trace("获取音源成功", track);
 
             // 9. 设置音源并立即开始播放 - CRITICAL: 不等待任何其他操作
-            await this.setTrackSource(track as Track, resumePosition === 0);
+            const canAutoPlay = () => isCurrentRequest() && pauseRevision === this.pauseRevision;
+            await this.setTrackSource(track as Track, resumePosition === 0, canAutoPlay);
             if (!isCurrentRequest()) {
                 return;
             }
@@ -1032,7 +1044,9 @@ class TrackPlayer extends EventEmitter<{
                 if (!isCurrentRequest()) {
                     return;
                 }
-                await ReactNativeTrackPlayer.play();
+                if (canAutoPlay()) {
+                    await ReactNativeTrackPlayer.play();
+                }
             }
 
             devLog("info", "[TrackPlayer] Playback started successfully", {
@@ -1126,6 +1140,7 @@ class TrackPlayer extends EventEmitter<{
     }
 
     async pause(): Promise<void> {
+        this.pauseRevision += 1;
         this.playRequestRevision += 1;
         await ReactNativeTrackPlayer.pause();
     }
@@ -1454,7 +1469,7 @@ class TrackPlayer extends EventEmitter<{
     }
 
     // 设置音源
-    private async setTrackSource(track: Track, autoPlay = true) {
+    private async setTrackSource(track: Track, autoPlay = true, canAutoPlay = () => true) {
         const clonedTrack = this.patchMediaArtwork(track);
         if (!clonedTrack) {
             void appendStartupBreadcrumb("trackplayer-set-source-skipped", {
@@ -1473,7 +1488,7 @@ class TrackPlayer extends EventEmitter<{
         }
         PersistStatus.set("music.musicItem", track as IMusic.IMusicItem);
         PersistStatus.set("music.progress", 0);
-        if (autoPlay) {
+        if (autoPlay && canAutoPlay()) {
             void appendStartupBreadcrumb("trackplayer-native-play", {
                 title: (track as IMusic.IMusicItem)?.title ?? "",
             });
@@ -1615,6 +1630,78 @@ class TrackPlayer extends EventEmitter<{
     }
 
 
+    private async resolveLinkedFavorite(item: IMusic.IMusicItem, isCurrent: () => boolean, budgetMs = 8000) {
+        const groupId = MusicSheet.favorites.groupFor(item)?.id;
+        if (!groupId) return null;
+        const linkedCurrent = () => isCurrent() && MusicSheet.favorites.groupFor(item)?.id === groupId;
+        const result = await findLinkedSource(MusicSheet.favorites.linkedSources(item), async candidate => {
+            const local = LocalMusicSheet.isLocalMusic(candidate);
+            const localSource = local ? getLocalPlaybackSource(candidate, local) : null;
+            const preferred = this.configService.getConfig("basic.defaultPlayQuality") ?? "master";
+            if (localSource) return { source: localSource, quality: mapLocalQuality(resolveLocalAudioMeta(candidate, local)) ?? "320k" };
+            if (Network.isCellular && !this.configService.getConfig("basic.useCelluarNetworkPlay")) return null;
+            const plugin = this.pluginManagerService.getByMedia(candidate);
+            if (!plugin || !this.pluginManagerService.getEnabledPlugins().some(enabled => enabled.hash === plugin.hash)) return null;
+            const scope = getPluginQualityScope(plugin.instance);
+            const quality = candidate.qualities || candidate.source
+                ? getSmartQuality(preferred, candidate.qualities || candidate.source, scope)
+                : pickSupportedQuality(preferred, scope) ?? preferred;
+            const source = await plugin.methods.getMediaSource(candidate, quality);
+            return source?.url ? { source, quality } : null;
+        }, linkedCurrent, this.linkedFailures, budgetMs);
+        return result && linkedCurrent() && MusicSheet.favorites.linkedSources(item).some(candidate => trackSourceKey(candidate) === trackSourceKey(result.item)) ? result : null;
+    }
+
+    private async recoverLinkedPlayback(assumePaused = false) {
+        if (!this.configService.getConfig("basic.tryChangeSourceWhenPlayFail")) return false;
+        let item = this.currentMusic;
+        if (!item) return false;
+        const request = this.playRequestId;
+        if (this.linkedRecoveryRequest === request) return true;
+        this.linkedRecoveryRequest = request;
+        let revision = this.currentMusicRevision;
+        const pauseRevision = this.pauseRevision;
+        const isCurrent = () => request === this.playRequestId && revision === this.currentMusicRevision;
+        const deadline = Date.now() + 8000;
+        this.linkedFailures.add(trackSourceKey(item));
+        let pausedAtStart = true;
+        try {
+            const progress = await ReactNativeTrackPlayer.getProgress().catch(() => ({ position: 0 }));
+            pausedAtStart = assumePaused || (await ReactNativeTrackPlayer.getPlaybackState().catch(() => ({ state: State.Paused }))).state === State.Paused;
+            while (isCurrent() && Date.now() < deadline) {
+                const linked = await this.resolveLinkedFavorite(item, isCurrent, deadline - Date.now());
+                if (!isCurrent()) return true;
+                if (!linked) return pausedAtStart || pauseRevision !== this.pauseRevision;
+                try {
+                    const source = await waitForSource(() => adaptMediaSourceForPlayback(linked.source), isCurrent, Math.min(2000, deadline - Date.now()));
+                    if (!isCurrent()) return true;
+                    if (!source) continue;
+                    this.setPlayList(replaceLinkedQueueItem(this.playList, item, linked.item));
+                    item = linked.item;
+                    this.setCurrentMusic(item);
+                    revision = this.currentMusicRevision;
+                    this.setQuality(linked.quality);
+                    await this.setTrackSource(this.mergeTrackSource(item, source) as unknown as Track, false);
+                    if (!isCurrent()) return true;
+                    const position = Math.max(0, Number(progress.position) || 0);
+                    if (position > 0) await this.seekTo(item.duration > 0 ? Math.min(position, Math.max(0, item.duration - 1)) : position);
+                    if (!isCurrent()) return true;
+                    this.musicHistoryService.addMusic(item);
+                    if (!pausedAtStart && pauseRevision === this.pauseRevision) await ReactNativeTrackPlayer.play();
+                    return true;
+                } catch {
+                    if (!isCurrent()) return true;
+                    // Each candidate is already in linkedFailures; continue with the next.
+                }
+            }
+            return !isCurrent() || pausedAtStart || pauseRevision !== this.pauseRevision;
+        } catch {
+            return !isCurrent() || pausedAtStart || pauseRevision !== this.pauseRevision;
+        } finally {
+            if (this.linkedRecoveryRequest === request) this.linkedRecoveryRequest = null;
+        }
+    }
+
     /**
      * 本曲播放结束，推进到下一条该播的曲目。
      *
@@ -1700,6 +1787,7 @@ class TrackPlayer extends EventEmitter<{
         musicItem: IMusic.IMusicItem,
         type: T = "music" as T,
         abortFunction?: () => boolean,
+        attempted = new Set<string>(),
     ): Promise<ICommon.SupportMediaItemBase[T] | null> {
         const keyword = musicItem.alias || musicItem.title;
         const plugins = this.pluginManagerService.getSearchablePlugins(type);
@@ -1718,14 +1806,13 @@ class TrackPlayer extends EventEmitter<{
             if (plugin.name === musicItem.platform) {
                 continue;
             }
-            const results = await plugin.methods
-                .search(keyword, 1, type)
-                .catch(() => null);
+            const results = await waitForSource<IPlugin.ISearchResult<T>>(() => plugin.methods.search(keyword, 1, type), () => !abortFunction?.(), Math.min(3000, Math.max(0, 8000 - (Date.now() - startTime))));
 
             // 取前两个
             const firstTwo = results?.data?.slice(0, 2) || [];
 
             for (let item of firstTwo) {
+                if (attempted.has(trackSourceKey(item))) continue;
                 if (item.title === keyword && item.artist === musicItem.artist) {
                     distance = 0;
                     minDistanceMusicItem = item;
@@ -1733,7 +1820,7 @@ class TrackPlayer extends EventEmitter<{
                     break;
                 } else {
                     const dist =
-                        minDistance(keyword, musicItem.title) +
+                        minDistance(keyword, item.title) +
                         minDistance(item.artist, musicItem.artist);
                     if (dist < distance) {
                         distance = dist;

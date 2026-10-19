@@ -4,9 +4,14 @@ on:
     workflow_dispatch:
         inputs:
             version:
-                description: 'Version to build (e.g., v0.3.0)'
+                description: 'Version to build (e.g., v0.3.2)'
                 required: true
-                default: 'v0.3.0'
+                default: 'v0.3.2'
+                type: string
+            release_tag:
+                description: 'Existing tag to rebuild and publish (leave empty for a verification build)'
+                required: false
+                default: ''
                 type: string
     push:
         tags:
@@ -20,6 +25,7 @@ jobs:
     build-android:
         runs-on: ubuntu-latest
         env:
+            RELEASE_TAG: ${{ inputs.release_tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
             # 发布证书指纹是公开信息；固定在代码中可防止 Actions secret 被误配为其他证书。
             EXPECTED_RELEASE_CERT_SHA256: '43310e86c2f8e0d8a54e276994ca277437371c7af71bbf79efa916263361f9f9'
 
@@ -28,6 +34,7 @@ jobs:
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
+                  ref: ${{ inputs.release_tag || github.ref }}
 
             # 🚀 Node.js 设置
             - name: Setup Node.js with built-in caching
@@ -47,6 +54,9 @@ jobs:
             # 📱 Android SDK 设置
             - name: Setup Android SDK with caching
               uses: android-actions/setup-android@v3
+              with:
+                  packages: 'platform-tools'
+                  log-accepted-android-sdk-licenses: false
 
             - name: Cache Android SDK
               uses: actions/cache@v4
@@ -100,9 +110,8 @@ jobs:
 
             # 🔎 发布版本必须在打 tag 前完整提交，流水线只校验、不回写主分支
             - name: Verify release version metadata
-              if: startsWith(github.ref, 'refs/tags/')
+              if: env.RELEASE_TAG != ''
               env:
-                  RELEASE_TAG: ${{ github.ref_name }}
                   REPOSITORY: ${{ github.repository }}
               run: |
                   node <<'NODE'
@@ -117,6 +126,10 @@ jobs:
                   const expectedDownload = `https://github.com/${repository}/releases/download/${tag}/Audiora-v${version}-arm64-v8a-release.apk`;
                   const failures = [];
 
+                  if (!/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(tag)) failures.push("invalid release tag");
+                  const checkedOutCommit = require("child_process").execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+                  const taggedCommit = require("child_process").execFileSync("git", ["rev-parse", `refs/tags/${tag}^{commit}`], { encoding: "utf8" }).trim();
+                  if (checkedOutCommit !== taggedCommit) failures.push("checkout does not match the release tag");
                   if (pkg.version !== version) failures.push(`package.json=${pkg.version}`);
                   if (app.expo?.version !== version) failures.push(`app.json=${app.expo?.version}`);
                   if (release.version !== version) failures.push(`release/version.json=${release.version}`);
@@ -153,7 +166,7 @@ jobs:
 
                   # 预构建React Native依赖以避免超时
                   echo "🚀 Pre-building React Native native modules..."
-                  cd android && ./gradlew :app:preBuild \
+                  ./gradlew :app:preBuild \
                     --build-cache \
                     --parallel \
                     --daemon \
@@ -163,7 +176,7 @@ jobs:
                     || echo "⚠️  Pre-build completed with warnings"
 
             # 🔐 设置签名证书：配了 secret 就用 secret。
-            # tag 发版构建缺少 secret 直接失败，禁止降级为临时自签证书（issue #3）；
+            # tag 发版与指定已有标签的重建缺少 secret 直接失败（issue #3）；
             # 手动触发的验证构建允许当场生成自签证书兜底。
             - name: Setup keystore
               env:
@@ -181,7 +194,7 @@ jobs:
 
                   # 是否为 tag 发版构建
                   IS_RELEASE_TAG=false
-                  if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+                  if [[ -n "${RELEASE_TAG}" ]]; then
                     IS_RELEASE_TAG=true
                   fi
 
@@ -193,7 +206,7 @@ jobs:
                     ALIAS_PASSWORD="$KEY_PASSWORD"
                     echo "SIGNING_MODE=release" >> "$GITHUB_ENV"
                   elif [[ "$IS_RELEASE_TAG" == "true" ]]; then
-                    echo "❌ 正式发版构建（tag $GITHUB_REF_NAME）缺少签名 secrets：KEYSTORE_FILE / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD"
+                    echo "❌ 正式发版构建（tag $RELEASE_TAG）缺少签名 secrets：KEYSTORE_FILE / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD"
                     echo "❌ 禁止降级为临时自签证书——每次构建签名都不同，发布后用户将无法覆盖更新。"
                     exit 1
                   else
@@ -325,7 +338,7 @@ jobs:
                   APK_DIR="android/app/build/outputs/apk/release"
 
                   IS_RELEASE_TAG=false
-                  if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+                  if [[ -n "${RELEASE_TAG}" ]]; then
                     IS_RELEASE_TAG=true
                   fi
 
@@ -431,14 +444,14 @@ jobs:
 
             # ✅ 验证APK文件存在性
             - name: Verify APK files exist
-              if: startsWith(github.ref, 'refs/tags/')
+              if: env.RELEASE_TAG != ''
               run: |
                   echo "🔍 Checking APK files..."
                   APK_DIR="android/app/build/outputs/apk/release"
                   ls -la $APK_DIR/
 
                   # 从tag获取版本号（去掉v前缀）
-                  TAG_VERSION="${{ github.ref_name }}"
+                  TAG_VERSION="$RELEASE_TAG"
                   VERSION=${TAG_VERSION#v}
 
                   # Verify expected APK files exist (只编 arm64，其他架构不再产出)
@@ -466,7 +479,7 @@ jobs:
             # 🧭 tag 尚未合入默认分支时，只发布 prerelease
             - name: Determine release channel
               id: release-channel
-              if: startsWith(github.ref, 'refs/tags/')
+              if: env.RELEASE_TAG != ''
               env:
                   DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -475,14 +488,15 @@ jobs:
                   git fetch --no-tags origin "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
 
                   IS_MERGED=false
-                  if git merge-base --is-ancestor "${GITHUB_SHA}" "refs/remotes/origin/${DEFAULT_BRANCH}"; then
+                  TAGGED_COMMIT=$(git rev-parse HEAD)
+                  if git merge-base --is-ancestor "${TAGGED_COMMIT}" "refs/remotes/origin/${DEFAULT_BRANCH}"; then
                     IS_MERGED=true
                   else
                     ASSOCIATED_PULLS=$(curl --fail --silent --show-error \
                       -H "Authorization: Bearer ${GITHUB_TOKEN}" \
                       -H "Accept: application/vnd.github+json" \
                       -H "X-GitHub-Api-Version: 2022-11-28" \
-                      "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")
+                      "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/commits/${TAGGED_COMMIT}/pulls")
                     if jq -e --arg branch "${DEFAULT_BRANCH}" \
                       'any(.[]; .merged_at != null and .base.ref == $branch)' \
                       <<< "${ASSOCIATED_PULLS}" >/dev/null; then
@@ -492,19 +506,19 @@ jobs:
 
                   if [[ "${IS_MERGED}" == "true" ]]; then
                     echo "prerelease=false" >> "$GITHUB_OUTPUT"
-                    echo "name=Audiora ${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+                    echo "name=Audiora ${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
                     echo "Stable release: tagged commit is already merged into ${DEFAULT_BRANCH}."
                   else
                     echo "prerelease=true" >> "$GITHUB_OUTPUT"
-                    echo "name=Audiora ${GITHUB_REF_NAME} (Prerelease)" >> "$GITHUB_OUTPUT"
+                    echo "name=Audiora ${RELEASE_TAG} (Prerelease)" >> "$GITHUB_OUTPUT"
                     echo "Prerelease: tagged commit has not been merged into ${DEFAULT_BRANCH}."
                   fi
 
             # 📝 生成Release描述
             - name: Generate Release Body
-              if: startsWith(github.ref, 'refs/tags/')
+              if: env.RELEASE_TAG != ''
               run: |
-                  TAG_VERSION="${{ github.ref_name }}"
+                  TAG_VERSION="$RELEASE_TAG"
                   VERSION=${TAG_VERSION#v}
                   if [[ "${{ steps.release-channel.outputs.prerelease }}" == "true" ]]; then
                     RELEASE_NOTICE="> [!WARNING]
@@ -514,31 +528,36 @@ jobs:
                   > 此版本对应的代码已合入默认分支。"
                   fi
                   cat > release_body.md << EOF
-                  ## Audiora ${{ github.ref_name }}
+                  ## Audiora ${RELEASE_TAG}
 
                   ${RELEASE_NOTICE}
 
                   ### 下载
 
-                  - **arm64 (Android 64 位)**: [Audiora-v${VERSION}-arm64-v8a-release.apk](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Audiora-v${VERSION}-arm64-v8a-release.apk)
+                  - **arm64 (Android 64 位)**: [Audiora-v${VERSION}-arm64-v8a-release.apk](https://github.com/${{ github.repository }}/releases/download/${RELEASE_TAG}/Audiora-v${VERSION}-arm64-v8a-release.apk)
 
                   目前只编译 arm64 版本，其他架构有需要请提 Issue。
 
                   ### 更新内容
 
-                  见 [此版本提交](https://github.com/${{ github.repository }}/tree/${{ github.ref_name }})。
                   EOF
+                  node <<'NODE'
+                  const fs = require("fs");
+                  const release = JSON.parse(fs.readFileSync("release/version.json", "utf8"));
+                  fs.appendFileSync("release_body.md", release.changeLog.map(item => `- ${item}`).join("\n") + "\n");
+                  fs.appendFileSync("release_body.md", `\n完整说明：[${release.version} 发布说明](https://github.com/${process.env.GITHUB_REPOSITORY}/blob/${process.env.RELEASE_TAG}/release/${release.version}.md)。\n`);
+                  NODE
                   echo "✅ Release body generated"
 
             # 🎉 创建Release并上传所有APK
             - name: Create Release and Upload APKs
-              if: startsWith(github.ref, 'refs/tags/')
+              if: env.RELEASE_TAG != ''
               uses: softprops/action-gh-release@v1
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TZ: Asia/Shanghai
               with:
-                  tag_name: ${{ github.ref_name }}
+                  tag_name: ${{ env.RELEASE_TAG }}
                   name: ${{ steps.release-channel.outputs.name }}
                   body_path: release_body.md
                   draft: false

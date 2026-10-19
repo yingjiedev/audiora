@@ -16,6 +16,8 @@ interface IResultListProps<T = IArtist.ArtistMediaType> {
     tab: T;
     data: IQueryResult<T>;
     renderItem: (...args: any) => any;
+    extraData?: unknown;
+    Header?: React.ReactElement;
 }
 export default function ResultList(props: IResultListProps) {
     const { data, renderItem, tab } = props;
@@ -45,6 +47,8 @@ export default function ResultList(props: IResultListProps) {
 
     return (
         <FlashList
+            extraData={props.extraData}
+            ListHeaderComponent={props.Header}
             onScroll={e => {
                 const currentY = e.nativeEvent.contentOffset.y;
                 if (
@@ -73,7 +77,6 @@ export default function ResultList(props: IResultListProps) {
                     queryState === RequestStateCode.PARTLY_DONE) &&
                     queryArtist(artistItem, undefined, tab);
             }}
-            estimatedItemSize={ITEM_HEIGHT}
             overScrollMode="always" 
             data={data.data ?? []}
             renderItem={renderItem}

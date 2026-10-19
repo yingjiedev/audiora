@@ -1,164 +1,136 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
-import rpx from "@/utils/rpx";
-import Config, { useAppConfig } from "@/core/appConfig";
+import React, { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
-import Empty from "@/components/base/empty";
-import ListItem from "@/components/base/listItem";
-import Toast from "@/utils/toast";
 import Clipboard from "@react-native-clipboard/clipboard";
-import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
-import globalStyle from "@/constants/globalStyle";
-import { showDialog } from "@/components/dialogs/useDialog";
-import AppBar from "@/components/base/appBar";
-import Fab from "@/components/base/fab";
+import Config, { useAppConfig } from "@/core/appConfig";
 import { useI18N } from "@/core/i18n";
-
-interface ISubscribeItem {
-    name: string;
-    url: string;
-}
-
-const ITEM_HEIGHT = rpx(108);
+import AppBar from "@/components/base/appBar";
+import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
+import { PageAction, PageState, PageSummary } from "@/components/base/pageSection";
+import ThemeText from "@/components/base/themeText";
+import { showDialog } from "@/components/dialogs/useDialog";
+import { radius, spacing } from "@/constants/designSystem";
+import globalStyle from "@/constants/globalStyle";
+import useColors from "@/hooks/useColors";
+import Toast from "@/utils/toast";
+import SubscriptionStatus from "../components/subscriptionStatus";
+import useUpdateSubscriptions from "../hooks/useUpdateSubscriptions";
+import { parseSubscriptions, Subscription, subscriptionName } from "../utils/subscriptions";
 
 export default function PluginSubscribe() {
-    const urls = useAppConfig("plugin.subscribeUrl") ?? "";
-    const [subscribes, setSubscribes] = useState<Array<ISubscribeItem>>([]);
-
+    const configuredUrls = useAppConfig("plugin.subscribeUrl");
     const { t } = useI18N();
-
-    useEffect(() => {
+    const colors = useColors();
+    const { updating, cancelling, updates, updateSubscriptions, cancelUpdate } = useUpdateSubscriptions();
+    const { subscriptions, invalid } = useMemo(() => {
         try {
-            const parsed = JSON.parse(urls);
-            if (Array.isArray(parsed)) {
-                setSubscribes(parsed);
-            } else {
-                throw new Error();
-            }
+            return { subscriptions: parseSubscriptions(configuredUrls), invalid: false };
         } catch {
-            if (urls.length) {
-                setSubscribes([
-                    {
-                        name: t("common.default"),
-                        url: urls,
-                    },
-                ]);
-            } else {
-                setSubscribes([]);
-            }
+            return { subscriptions: [], invalid: true };
         }
-    }, [urls, t]);
+    }, [configuredUrls]);
 
-    const onSubmit = (
-        subscribeItem: ISubscribeItem,
-        hideDialog: () => void,
-        editingIndex?: number,
-    ) => {
-        if (
-            subscribeItem.url.endsWith(".js") ||
-            subscribeItem.url.endsWith(".json")
-        ) {
-            if (editingIndex !== undefined) {
-                Config.setConfig(
-                    "plugin.subscribeUrl",
-                    JSON.stringify([
-                        ...subscribes.slice(0, editingIndex),
-                        subscribeItem,
-                        ...subscribes.slice(editingIndex + 1),
-                    ]),
-                );
-            } else {
-                Config.setConfig(
-                    "plugin.subscribeUrl",
-                    JSON.stringify([...subscribes, subscribeItem]),
-                );
-            }
-            hideDialog();
-        } else {
+    function onSubmit(item: Subscription, hideDialog: () => void, editingIndex?: number) {
+        const url = item.url.trim();
+        if (!/^https?:\/\/\S+\.(?:js|json)(?:[?#]\S*)?$/i.test(url)) {
             Toast.warn(t("toast.subscriptionHaveToEndWithJs"));
+            return;
         }
-    };
+        const subscription = { name: item.name.trim(), url };
+        const next = [...subscriptions];
+        if (editingIndex === undefined) {
+            next.push(subscription);
+        } else {
+            next[editingIndex] = subscription;
+        }
+        Config.setConfig("plugin.subscribeUrl", JSON.stringify(next));
+        hideDialog();
+    }
+
+    function editSubscription(item?: Subscription, index?: number) {
+        showDialog("SubscribePluginDialog", {
+            subscribeItem: item,
+            editingIndex: index,
+            onSubmit,
+            onDelete(editingIndex, hideDialog) {
+                Config.setConfig("plugin.subscribeUrl", JSON.stringify(subscriptions.filter((_item, i) => i !== editingIndex)));
+                hideDialog();
+                Toast.success(t("toast.deleteSuccess"));
+            },
+        });
+    }
 
     return (
         <>
             <AppBar>{t("pluginSetting.menu.subscriptionSetting")}</AppBar>
             <HorizontalSafeAreaView style={globalStyle.flex1}>
                 <FlatList
-                    style={style.listWrapper}
-                    ListEmptyComponent={Empty}
-                    data={subscribes}
+                    contentContainerStyle={styles.content}
+                    data={subscriptions}
+                    keyExtractor={(item, index) => `${index}:${item.url}`}
+                    ListHeaderComponent={
+                        <>
+                            <PageSummary title={t("subpage.subscribeCount", { count: subscriptions.length })}
+                                action={<PageAction allowFontScaling title={t("subpage.addSubscription")} icon="plus" variant="text"
+                                    disabled={updating || invalid} onPress={() => editSubscription()} />} />
+                            {subscriptions.length > 1 || updating ? <View style={styles.toolbar}>
+                                {subscriptions.length > 1 ? <PageAction allowFontScaling title={t("subscription.updateAll")} icon="arrow-path" variant="primary"
+                                    disabled={updating} onPress={() => updateSubscriptions()} /> : null}
+                                {updating ? <>
+                                    <ThemeText allowFontScaling fontSize="description" fontColor="textSecondary" style={styles.taskHint}>{t("subscription.backgroundHint")}</ThemeText>
+                                    <PageAction allowFontScaling title={t(cancelling ? "subscription.stopping" : "subscription.stop")} variant="text"
+                                        disabled={cancelling} onPress={cancelUpdate} />
+                                </> : null}
+                            </View> : null}
+                        </>
+                    }
+                    ListEmptyComponent={<PageState title={t(invalid ? "toast.subscriptionInvalid" : "toast.noSubscription")}
+                        description={invalid ? undefined : t("subscription.emptyHint")} />}
                     renderItem={({ item, index }) => {
+                        const update = updates[item.url];
+                        const failures = update?.results.filter(result => !result.success) ?? [];
+                        const active = update && ["queued", "fetching", "updating"].includes(update.phase);
                         return (
-                            <ListItem
-                                withHorizontalPadding
-                                onPress={() => {
-                                    showDialog("SubscribePluginDialog", {
-                                        subscribeItem: item,
-                                        onSubmit,
-                                        editingIndex: index,
-                                        onDelete(editingIndex, hideDialog) {
-                                            Config.setConfig(
-                                                "plugin.subscribeUrl",
-                                                JSON.stringify([
-                                                    ...subscribes.slice(
-                                                        0,
-                                                        editingIndex,
-                                                    ),
-                                                    ...subscribes.slice(
-                                                        editingIndex + 1,
-                                                    ),
-                                                ]),
-                                            );
-                                            hideDialog();
-                                            Toast.success(t("toast.deleteSuccess"));
-                                        },
-                                    });
-                                }}>
-                                <ListItem.Content
-                                    title={item.name}
-                                    description={item.url}
-                                />
-                                <ListItem.ListItemIcon
-                                    icon="share"
-                                    position="right"
-                                    onPress={() => {
+                            <View style={[styles.card, { backgroundColor: colors.card }]}>
+                                <View style={styles.cardHeader}>
+                                    <ThemeText allowFontScaling fontWeight="semibold" numberOfLines={2} style={styles.name}>{subscriptionName(item)}</ThemeText>
+                                    <PageAction allowFontScaling title={t("subscription.edit")} icon="pencil-outline" variant="text"
+                                        disabled={updating} onPress={() => editSubscription(item, index)} />
+                                </View>
+                                <ThemeText allowFontScaling selectable numberOfLines={2} fontSize="description" fontColor="textSecondary">{item.url}</ThemeText>
+                                <View style={styles.status}><SubscriptionStatus update={update} /></View>
+                                <View style={styles.cardActions}>
+                                    <PageAction allowFontScaling title={t("subpage.copy")} variant="text" onPress={() => {
                                         Clipboard.setString(item.url);
                                         Toast.success(t("toast.copiedToClipboard"));
-                                    }}
-                                />
-                            </ListItem>
+                                    }} />
+                                    {!active && failures.length ? <>
+                                        <PageAction allowFontScaling title={t("subscription.details")} variant="text" onPress={() => showDialog("SimpleDialog", {
+                                            title: t("pluginSetting.menu.pluginUpdateFailedDialogTitle"),
+                                            content: failures.map(result => `${result.pluginName ?? result.pluginUrl ?? item.url}\n${result.message ?? ""}`).join("\n-----\n"),
+                                        })} />
+                                        <PageAction allowFontScaling title={t("subscription.retryFailed")} variant="text" disabled={updating}
+                                            onPress={() => updateSubscriptions([item], true)} />
+                                    </> : null}
+                                    <PageAction allowFontScaling title={t(active ? "subscription.updating" : "pluginSetting.fabOptions.updateSubscription")}
+                                        icon="arrow-path" variant="primary" disabled={updating} onPress={() => updateSubscriptions([item])} />
+                                </View>
+                            </View>
                         );
                     }}
-                    getItemLayout={(_, index) => ({
-                        length: ITEM_HEIGHT,
-                        offset: ITEM_HEIGHT * index,
-                        index,
-                    })}
                 />
             </HorizontalSafeAreaView>
-            <Fab
-                icon="plus"
-                onPress={() => {
-                    showDialog("SubscribePluginDialog", {
-                        onSubmit,
-                    });
-                }}
-            />
         </>
     );
 }
 
-const style = StyleSheet.create({
-    wrapper: {
-        width: rpx(750),
-        flex: 1,
-    },
-    listWrapper: {
-        marginTop: rpx(24),
-    },
-    fab: {
-        position: "absolute",
-        right: rpx(36),
-        bottom: rpx(36),
-    },
+const styles = StyleSheet.create({
+    content: { paddingBottom: spacing.xxxl },
+    toolbar: { paddingHorizontal: spacing.xxxl, paddingBottom: spacing.md, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, alignItems: "center" },
+    taskHint: { flex: 1, minWidth: 120 },
+    card: { marginHorizontal: spacing.xxxl, marginBottom: spacing.md, padding: spacing.xl, borderRadius: radius.lg },
+    cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    name: { flex: 1, minWidth: 0 },
+    status: { marginTop: spacing.lg },
+    cardActions: { marginTop: spacing.sm, flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, justifyContent: "flex-end" },
 });

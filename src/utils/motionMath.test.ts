@@ -8,6 +8,8 @@ import {
     dragProgress,
     lerp,
     motionDuration,
+    playerDismissProgress,
+    playerDismissTransform,
 } from "./motionMath";
 import { motion as motionTokens } from "@/constants/designSystem";
 
@@ -109,6 +111,36 @@ describe("dragProgress", () => {
 
     it("ignores an unmeasured screen", () => {
         expect(dragProgress(300, 0)).toBe(1);
+    });
+});
+
+describe("whole-player dismissal", () => {
+    it("tracks the finger one to one and ignores upward drags or missing dimensions", () => {
+        expect(playerDismissProgress(200, 1000)).toBe(0.2);
+        expect(playerDismissTransform(0.2, 1000)).toEqual({ opacity: 1, translateY: 200 });
+        expect(playerDismissProgress(-100, 1000)).toBe(0);
+        expect(playerDismissProgress(2000, 1000)).toBe(1);
+        expect(playerDismissProgress(200, 0)).toBe(0);
+    });
+
+    it("remains opaque at first, then moves monotonically to a fully hidden page", () => {
+        let previousOpacity = 1;
+        let previousY = 0;
+        for (let step = 0; step <= 20; step++) {
+            const { opacity, translateY } = playerDismissTransform(step / 20, 1000);
+            expect(opacity).toBeLessThanOrEqual(previousOpacity);
+            expect(translateY).toBeGreaterThanOrEqual(previousY);
+            previousOpacity = opacity;
+            previousY = translateY;
+        }
+        expect(playerDismissTransform(1, 1000)).toEqual({ opacity: 0, translateY: 1000 });
+        expect(playerDismissTransform(2, 1000)).toEqual({ opacity: 0, translateY: 1000 });
+        expect(playerDismissTransform(-1, 1000)).toEqual({ opacity: 1, translateY: 0 });
+    });
+
+    it("turns travel into a short stationary fade for Reduce Motion", () => {
+        expect(playerDismissTransform(0.5, 1000, true)).toEqual({ opacity: 0.5, translateY: 0 });
+        expect(playerDismissTransform(1, 1000, true)).toEqual({ opacity: 0, translateY: 0 });
     });
 });
 

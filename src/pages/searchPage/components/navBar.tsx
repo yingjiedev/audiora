@@ -1,29 +1,18 @@
-import AppBar from "@/components/base/appBar";
-import Icon from "@/components/base/icon.tsx";
-import IconButton from "@/components/base/iconButton";
-import Input from "@/components/base/input";
-import Button from "@/components/base/textButton.tsx";
-import { iconSizeConst } from "@/constants/uiConst";
-import { useI18N } from "@/core/i18n";
-import useCardStyle from "@/hooks/useCardStyle";
-import useColors from "@/hooks/useColors";
-import rpx from "@/utils/rpx";
-import Color from "color";
-import { useAtom, useSetAtom } from "jotai";
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import { addHistory } from "../common/historySearch";
-import useSearch from "../hooks/useSearch";
+import { Keyboard } from "react-native";
+import AppBar from "@/components/base/appBar";
+import SearchField from "@/components/base/searchField";
+import { PageAction } from "@/components/base/pageSection";
+import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
 import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
-import {
-    PageStatus,
-    initSearchResults,
-    pageStatusAtom,
-    queryAtom,
-    searchResultsAtom,
-} from "../store/atoms";
-
+import { useAtom, useSetAtom } from "jotai";
+import { addHistory } from "../common/historySearch";
+import useSearch from "../hooks/useSearch";
+import { PageStatus, initSearchResults, pageStatusAtom, queryAtom, searchResultsAtom } from "../store/atoms";
+import useColors from "@/hooks/useColors";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
+import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 export default function NavBar() {
     const params = useParams<"search-page">();
     const getDisplayName = usePluginDisplayNameResolver();
@@ -31,127 +20,37 @@ export default function NavBar() {
     const search = useSearch();
     const [query, setQuery] = useAtom(queryAtom);
     const setPageStatus = useSetAtom(pageStatusAtom);
-    const colors = useColors();
-    const searchBarCardStyle = useCardStyle({
-        borderWidth: rpx(2),
-        elevation: 2,
-        shadowOpacity: 0.05,
-    });
     const setSearchResultsState = useSetAtom(searchResultsAtom);
     const { t } = useI18N();
+    const colors = useColors();
+    const editor = useActiveMusicSelection();
     const placeholder = source ? t("musicLibrary.searchSourcePlaceholder", { name: getDisplayName(source) }) : t("searchPage.searchPlaceHolder");
-
     const onSearchSubmit = async () => {
-        if (query === "") {
-            return;
-        }
+        editor?.finish();
+        const keyword = query.trim();
+        if (!keyword) return;
+        Keyboard.dismiss();
+        setQuery(keyword);
         setSearchResultsState(initSearchResults);
         setPageStatus(prev =>
             prev === PageStatus.EDITING ? PageStatus.SEARCHING : prev,
         );
-        await search(query, 1);
-        await addHistory(query);
+        void search(keyword, 1);
+        void addHistory(keyword).catch(() => {});
     };
-
-    const hintTextColor = Color(colors.text).alpha(0.6).toString();
-
-    return (
-        <AppBar containerStyle={style.appbar} contentStyle={style.appbar}>
-            <View style={style.searchBarContainer}>
-                <Icon
-                    name="magnifying-glass"
-                    color={hintTextColor}
-                    size={iconSizeConst.small}
-                    style={style.magnify}
-                />
-                <Input
-                    autoFocus
-                    style={[
-                        style.searchBar,
-                        {
-                            color: colors.text,
-                            backgroundColor: colors.surface,
-                        },
-                        searchBarCardStyle,
-                    ]}
-                    accessible
-                    accessibilityLabel={t("searchPage.searchLabel.a11y")}
-                    accessibilityHint={placeholder}
-                    onFocus={() => {
-                        setPageStatus(PageStatus.EDITING);
-                    }}
-                    placeholderTextColor={hintTextColor}
-                    placeholder={placeholder}
-                    onSubmitEditing={onSearchSubmit}
-                    onChangeText={_ => {
-                        if (_ === "") {
-                            setPageStatus(PageStatus.EDITING);
-                        }
-                        setQuery(_);
-                    }}
-                    value={query}
-                />
-                {query.length ? (
-                    <IconButton
-                        style={style.close}
-                        sizeType="light"
-                        onPress={() => {
-                            setQuery("");
-                            setPageStatus(PageStatus.EDITING);
-                        }}
-                        color={hintTextColor}
-                        name="x-mark"
-                    />
-                ) : null}
-            </View>
-            <Button
-                style={[style.button]}
-                hitSlop={0}
-                fontColor={"appBarText"}
-                onPress={onSearchSubmit}>
-                {t("common.search")}
-            </Button>
-        </AppBar>
-    );
+    return <AppBar onBackPress={editor?.finish} actionComponent={editor ? <SelectionDoneAction onPress={editor.finish} />
+        : <PageAction title={t("common.search")} variant="text" textColor={colors.appBarText} onPress={onSearchSubmit} disabled={!query.trim()} />}>
+        <SearchField autoFocus value={query} placeholder={placeholder} accessibilityLabel={t("searchPage.searchLabel.a11y")} accessibilityHint={placeholder}
+            onFocus={() => {
+                editor?.finish(); setPageStatus(PageStatus.EDITING);
+            }} onSubmitEditing={onSearchSubmit}
+            onClear={() => {
+                editor?.finish();
+                setQuery(""); setPageStatus(PageStatus.EDITING);
+            }}
+            onChangeText={text => {
+                editor?.finish();
+                if (!text) setPageStatus(PageStatus.EDITING); setQuery(text);
+            }} />
+    </AppBar>;
 }
-
-const style = StyleSheet.create({
-    appbar: {
-        paddingRight: 0,
-    },
-    button: {
-        paddingHorizontal: rpx(24),
-        height: "100%",
-        justifyContent: "center",
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    searchBarContainer: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    searchBar: {
-        minWidth: rpx(375),
-        flex: 1,
-        paddingHorizontal: rpx(64),
-        borderRadius: rpx(64),
-        height: rpx(64),
-        maxHeight: rpx(64),
-        alignItems: "center",
-        shadowOffset: {
-            width: 0,
-            height: rpx(2),
-        },
-        shadowRadius: rpx(4),
-    },
-    magnify: {
-        position: "absolute",
-        left: rpx(16),
-        zIndex: 100,
-    },
-    close: {
-        position: "absolute",
-        right: rpx(16),
-    },
-});

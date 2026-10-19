@@ -1,22 +1,17 @@
 import Image from "@/components/base/image";
-import ThemeText from "@/components/base/themeText";
+import SettingSection from "@/pages/setting/components/settingSection";
+import SettingRow from "@/pages/setting/components/settingRow";
+import { radius, spacing } from "@/constants/designSystem";
 import BackgroundTuningSliders from "@/components/base/backgroundTuningSliders";
 import { showPanel } from "@/components/panels/usePanel";
 import { ImgAsset } from "@/constants/assetsConst";
 import globalStyle from "@/constants/globalStyle";
 import { useI18N } from "@/core/i18n";
-import Theme, {
-    customBackgroundSurfaceColors,
-    customThemeDefaultPrimary,
-    darkTheme,
-} from "@/core/theme";
+import Theme, { customBackgroundSurfaceColors, customThemeDefaultPrimary, darkTheme } from "@/core/theme";
 import { derivePrimaryColor } from "@/utils/themePalette";
 import useColors, { CustomizedColors } from "@/hooks/useColors";
-import {
-    pickBackgroundImage,
-    saveBackgroundImage,
-} from "@/utils/backgroundImage";
-import rpx from "@/utils/rpx";
+import { pickBackgroundImage, saveBackgroundImage } from "@/utils/backgroundImage";
+
 import { devLog } from "@/utils/log";
 import Toast from "@/utils/toast";
 import Color from "color";
@@ -110,125 +105,34 @@ export default function Body() {
     }
 
     return (
-        <ScrollView style={globalStyle.fwflex1}>
-            <TouchableOpacity onPress={onImageClick}>
-                <Image
-                    style={styles.image}
-                    uri={backgroundInfo?.url}
-                    emptySrc={ImgAsset.addBackground}
-                />
-            </TouchableOpacity>
-
-            <View style={styles.sliderWrapper}>
-                <BackgroundTuningSliders />
-            </View>
-            <View style={styles.colorsContainer}>
-                {Theme.configableColorKey.map(key => (
-                    <View key={key} style={styles.colorItem}>
-                        <ThemeText>{t("setCustomTheme." + key + "Color" as any)}</ThemeText>
-                        <TouchableOpacity
-                            onPress={() => {
-                                showPanel("ColorPicker", {
-                                    // @ts-ignore
-                                    defaultColor: theme.colors[key],
-                                    onSelected(color) {
-                                        Theme.setColors({
-                                            [key]: color.hexa().toString(),
-                                        });
-                                    },
-                                });
-                            }}
-                            style={styles.colorItemBlockContainer}>
-                            <View style={[styles.colorBlockContainer, { borderColor: colors.border }]}>
-                                <Image
-                                    resizeMode="repeat"
-                                    emptySrc={ImgAsset.transparentBg}
-                                    style={styles.transparentBg}
-                                />
-                                <View
-                                    style={[
-                                        {
-                                            /** @ts-ignore */
-                                            backgroundColor: theme.colors[key],
-                                        },
-                                        styles.colorBlock,
-                                    ]}
-                                />
-                            </View>
-                            <ThemeText
-                                fontSize="subTitle"
-                                style={styles.colorText}>
-                                {
-                                    /** @ts-ignore */
-                                    Color(theme.colors[key]).hexa().toString()
-                                }
-                            </ThemeText>
-                        </TouchableOpacity>
-                    </View>
-                ))}
-            </View>
+        <ScrollView style={globalStyle.fwflex1} contentContainerStyle={styles.content}>
+            <SettingSection title={t("subpage.backgroundPreview")} cardStyle={styles.previewCard}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("subpage.backgroundPreview")} onPress={onImageClick}>
+                    <Image style={styles.image} uri={backgroundInfo?.url} emptySrc={ImgAsset.addBackground} />
+                </TouchableOpacity>
+            </SettingSection>
+            <SettingSection title={t("themeSettings.backgroundTuning")}><BackgroundTuningSliders /></SettingSection>
+            <SettingSection title={t("subpage.themeColors")}>
+                {Theme.configableColorKey.map(key => {
+                    const selectColor = () => showPanel("ColorPicker", {
+                        defaultColor: theme.colors[key],
+                        onSelected(color) {
+                            Theme.setColors({ [key]: color.hexa().toString() });
+                        },
+                    });
+                    return <SettingRow key={key} title={t("setCustomTheme." + key + "Color" as any)} value={Color(theme.colors[key]).hexa().toString()} onPress={selectColor}
+                        right={<View style={[styles.swatch, { borderColor: colors.border }]}>
+                            <Image resizeMode="repeat" emptySrc={ImgAsset.transparentBg} style={styles.transparentBg} />
+                            <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors[key] }]} />
+                        </View>} />;
+                })}
+            </SettingSection>
         </ScrollView>
     );
 }
-
 const styles = StyleSheet.create({
-    container: {
-        width: "100%",
-        flex: 1,
-    },
-    image: {
-        marginTop: rpx(36),
-        borderRadius: rpx(12),
-        width: rpx(460),
-        height: rpx(690),
-        alignSelf: "center",
-    },
-    sliderWrapper: {
-        marginTop: rpx(36),
-        width: "100%",
-    },
-    colorsContainer: {
-        width: "100%",
-        flex: 1,
-        flexDirection: "row",
-        flexWrap: "wrap",
-        marginTop: rpx(48),
-        paddingHorizontal: rpx(24),
-        justifyContent: "space-between",
-    },
-    colorItem: {
-        flex: 1,
-        flexBasis: "40%",
-        marginBottom: rpx(36),
-    },
-    colorBlockContainer: {
-        width: rpx(76),
-        height: rpx(50),
-        borderWidth: 1,
-        borderStyle: "solid",
-    },
-    colorBlock: {
-        width: "100%",
-        height: "100%",
-        position: "absolute",
-        top: 0,
-        left: 0,
-        zIndex: 2,
-    },
-    colorItemBlockContainer: {
-        marginTop: rpx(18),
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    colorText: {
-        marginLeft: rpx(8),
-    },
-    transparentBg: {
-        position: "absolute",
-        zIndex: -1,
-        width: "100%",
-        height: "100%",
-        left: 0,
-        top: 0,
-    },
+    content: { paddingBottom: spacing.xxxl }, previewCard: { padding: spacing.lg },
+    image: { width: "100%", aspectRatio: 1.5, borderRadius: radius.lg },
+    swatch: { width: 44, height: 32, borderRadius: radius.xs, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth },
+    transparentBg: { width: "100%", height: "100%" },
 });

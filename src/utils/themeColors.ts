@@ -51,7 +51,9 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const playerText = Color(bestForeground(playerGradient[0], [colors.musicBarText ?? colors.text, preset.text, lightColors.text, mediaOnDark])).alpha(1).hex();
     const playerTextSecondary = readableAccent(Color(playerText).mix(Color(playerSurface), 0.28).hex(), playerGradient, colorContrastMinimum.text);
     const playerTextTertiary = readableAccent(Color(playerText).mix(Color(playerSurface), 0.36).hex(), playerGradient, colorContrastMinimum.text);
-    const tonalSurface = Color(blendOver(card, page)).mix(Color(primaryOpaque), 0.16).hex();
+    const tonalSurface = colors.tonalSurface
+        ? safeColor(colors.tonalSurface, card).alpha(1).hex()
+        : Color(blendOver(card, page)).mix(Color(primaryOpaque), 0.16).hex();
     const cardBackground = blendOver(card, page);
     const cardInset = Color(tonalSurface).mix(Color(blendOver(surface, page)), 0.25).hex();
     const insetBackgrounds = [cardBackground, cardInset];
@@ -74,9 +76,10 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const windowBackgrounds = [featuredWindowSurface, featuredWindowFoldSurface];
     const onFeaturedWindow = readableAccent(safeColor(colors.text, preset.text).hex(), windowBackgrounds, colorContrastMinimum.text);
     const onFeaturedWindowSecondary = readableAccent(safeColor(colors.textSecondary, preset.textSecondary).hex(), windowBackgrounds, colorContrastMinimum.text);
-    const featuredRecordSurface = Color(darkColors.card).mix(Color(primaryOpaque), 0.025).hex();
+    const darkSurface = colors.darkSurface ?? darkColors.surface;
+    const featuredRecordSurface = Color(colors.darkCard ?? darkColors.card).mix(Color(primaryOpaque), 0.025).hex();
     const featuredRecordGradient = [
-        Color(darkColors.surfaceElevated).mix(Color(primaryOpaque), 0.02).mix(Color(mediaOnDark), 0.02).hex(),
+        Color(colors.darkSurfaceElevated ?? darkColors.surfaceElevated).mix(Color(primaryOpaque), 0.02).mix(Color(mediaOnDark), 0.02).hex(),
         featuredRecordSurface,
         Color(featuredRecordSurface).mix(Color(mediaScrim), 0.10).hex(),
     ];
@@ -89,7 +92,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     ];
     // Full-strength grooves stay in a separate art column, never behind the text.
     const featuredRecordTextureOpacity = 1;
-    const featuredRecordHalo = Color(darkColors.textSecondary).mix(Color(primaryOpaque), 0.12).alpha(dark ? 0.28 : 0.42).toString();
+    const featuredRecordHalo = Color(colors.darkTextSecondary ?? darkColors.textSecondary).mix(Color(primaryOpaque), 0.12).alpha(dark ? 0.28 : 0.42).toString();
     const featuredRecordShadow = Color(mediaScrim).alpha(dark ? 0.24 : 0.12).toString();
     const featuredRecordRim = Color(mediaOnDark).alpha(0.16).toString();
     const recordBackgrounds = [featuredRecordSurface, featuredRecordFoldSurface, ...featuredRecordGradient, ...featuredRecordFoldGradient];
@@ -99,6 +102,10 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
     const onFeaturedAction = bestForeground(featuredActionSurface, [mediaOnDark, lightColors.text, controlNeutralDark]);
     const backgrounds = [page, blendOver(card, page), blendOver(surface, page), blendOver(surfaceElevated, page), tonalSurface, ...playerGradient];
     const primaryText = readableAccent(primaryOpaque, backgrounds, colorContrastMinimum.text);
+    const compactPlaybackBackground = blendOver(dark ? colors.tabBar ?? surface : colors.musicBar ?? card, page);
+    // Keep active as the progress color; only its leading edge has a faint violet tint.
+    const compactPlaybackTint = readableAccent(Color(primaryText).mix(Color(accentWarm).alpha(1), 0.12).hex(), [compactPlaybackBackground], colorContrastMinimum.control);
+    const compactPlaybackProgressGradient = [compactPlaybackTint, primaryText, primaryText];
     const activityUnrecorded = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.04).hex();
     const activityEmpty = Color(cardBackground).mix(Color(onCardInsetSecondary), 0.09).hex();
     const activityBackgrounds = [cardBackground, activityUnrecorded, activityEmpty];
@@ -114,10 +121,13 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         primary,
         primaryText,
         active: primaryText,
+        compactPlaybackProgressGradient,
         favorite: readableAccent(safeColor(colors.favorite, preset.favorite).hex(), backgrounds, colorContrastMinimum.control),
-        onPrimary: bestForeground(blendOver(primary, blendOver(card, page)), [mediaOnDark, lightColors.text, controlNeutralDark]),
+        onPrimary: colors.onPrimary
+            ? readableAccent(safeColor(colors.onPrimary, colors.text).hex(), [blendOver(primary, blendOver(card, page))], colorContrastMinimum.text)
+            : bestForeground(blendOver(primary, blendOver(card, page)), [mediaOnDark, lightColors.text, controlNeutralDark]),
         tonalSurface,
-        onTonal: readableAccent(primaryOpaque, [tonalSurface], colorContrastMinimum.text),
+        onTonal: readableAccent(safeColor(colors.onTonal, primaryOpaque).hex(), [tonalSurface], colorContrastMinimum.text),
         cardInset,
         onCardInset,
         onCardInsetSecondary,
@@ -145,7 +155,7 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         divider: colors.divider ?? preset.divider,
         shadow: colors.shadow ?? preset.shadow,
         mask: colors.mask ?? preset.mask,
-        modalScrim: Color(preset.mask).alpha(1).hex(),
+        modalScrim: Color(colors.mask ?? preset.mask).alpha(1).hex(),
         inverseSurface: mediaOnDark,
         onInverse: lightColors.text,
         onMedia: mediaOnDark,
@@ -153,8 +163,8 @@ export function resolveThemeColors(colors: CustomizedColors, dark: boolean) {
         onMediaTrack: Color(mediaOnDark).alpha(0.28).toString(),
         onMediaSurface: Color(mediaOnDark).alpha(0.16).toString(),
         onMediaScrim: mediaScrim,
-        mediaSurface: darkColors.surface,
-        mediaAccent: readableAccent(primaryOpaque, [mediaScrim, darkColors.surface], colorContrastMinimum.text),
+        mediaSurface: darkSurface,
+        mediaAccent: readableAccent(primaryOpaque, [mediaScrim, darkSurface], colorContrastMinimum.text),
         mediaFavorite: readableAccent(safeColor(colors.favorite, preset.favorite).hex(), [mediaScrim], colorContrastMinimum.control),
         mediaAmbientGradient: [Color(primaryOpaque).alpha(0.16).toString(), Color(primaryOpaque).alpha(0.18).toString(), Color(accentWarm).alpha(0.24).toString()],
         panelGradient: [Color(surfaceElevated).alpha(1).hex(), Color(surface).alpha(1).hex()],

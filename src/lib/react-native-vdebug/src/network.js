@@ -26,8 +26,8 @@ class AjaxStack {
         return this.requests[id] || {};
     }
 
-    readBlobAsText(blob, encoding = 'utf-8') {
-        return new Promise((resolve, reject) => {
+    readBlobAsText(blob, _encoding = 'utf-8') {
+        return new Promise((resolve, _reject) => {
             resolve('undefined');
             // const fr = new FileReader();
             // fr.onload = event => {
@@ -43,7 +43,7 @@ class AjaxStack {
     JSONTryParse(jsonStr) {
         try {
             return JSON.parse(jsonStr);
-        } catch (error) {
+        } catch {
             return {};
         }
     }
@@ -95,7 +95,7 @@ class AjaxStack {
                 if (typeof item.response === 'string') {
                     try {
                         domData.response = this.formatResponse(item.response);
-                    } catch (e) {
+                    } catch {
                         // not a JSON string
                         domData.response = item.response;
                     }
@@ -165,7 +165,7 @@ class Network extends Component {
             requests: {},
             filterValue: '',
         };
-        ajaxStack.attach(currentRequest => {
+        ajaxStack.attach(_currentRequest => {
             if (this.mountState) {
                 this.setState({
                     requestIds: ajaxStack.getRequestIds(),
@@ -689,7 +689,7 @@ function proxyAjax(XHR, stack) {
             } else {
                 try {
                     item.postData = JSON.stringify(data);
-                } catch (error) {}
+                } catch {}
             }
         }
 

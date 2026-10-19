@@ -4,13 +4,14 @@ import TestRenderer, { act } from "react-test-renderer";
 import { getDefaultStore } from "jotai";
 import { initSearchResults, pageStatusAtom, PageStatus, searchResultsAtom } from "../store/atoms";
 import useSearch from "./useSearch";
+import { resetSearch } from "../store/searchController";
 
 let mockSource: string | undefined;
 const mockA = { hash: "a", name: "A", instance: { platform: "A" }, methods: { search: jest.fn(async () => ({ data: [], isEnd: true })) } };
 const mockB = { hash: "b", name: "B", instance: { platform: "B" }, methods: { search: jest.fn(async () => ({ data: [], isEnd: true })) } };
 let mockPlugins = [mockA, mockB];
 jest.mock("@/core/router", () => ({ useParams: () => mockSource ? { pluginHash: mockSource } : undefined }));
-jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getSearchablePlugins: () => mockPlugins } }));
+jest.mock("@/core/pluginManager", () => ({ __esModule: true, default: { getSearchablePlugins: () => mockPlugins, getSortedSearchablePlugins: () => mockPlugins } }));
 jest.mock("@/utils/log", () => ({ devLog: jest.fn(), errorLog: jest.fn(), trace: jest.fn() }));
 jest.mock("@/constants/commonConst", () => ({ RequestStateCode: { IDLE: 0, PENDING_FIRST_PAGE: 2, PENDING_REST_PAGE: 3, PARTLY_DONE: 4, FINISHED: 8, ERROR: 128 } }));
 
@@ -25,7 +26,9 @@ describe("library search source scope", () => {
         getDefaultStore().set(searchResultsAtom, initSearchResults);
         getDefaultStore().set(pageStatusAtom, PageStatus.SEARCHING);
     });
-    afterEach(() => act(() => renderer?.unmount()));
+    afterEach(() => act(() => {
+        renderer?.unmount(); resetSearch();
+    }));
     function render() {
         act(() => {
             renderer = TestRenderer.create(<Harness />);
@@ -70,14 +73,18 @@ describe("library search source scope", () => {
         mockA.methods.search.mockImplementationOnce(() => new Promise(resolve => {
             finish = resolve;
         }));
-        mockSource = "a"; render(); await submit();
+        mockSource = "a"; render();
+        let pending!: Promise<void>;
+        await act(async () => {
+            pending = search("song", 1); await Promise.resolve();
+        });
         mockSource = "b";
         act(() => {
             getDefaultStore().set(searchResultsAtom, initSearchResults); renderer.update(<Harness />);
         });
         await submit();
         await act(async () => {
-            finish({ data: [], isEnd: true }); await Promise.resolve();
+            finish({ data: [], isEnd: true }); await pending;
         });
         expect(Object.keys(getDefaultStore().get(searchResultsAtom).music)).toEqual(["b"]);
     });
@@ -86,5 +93,13 @@ describe("library search source scope", () => {
         mockSource = "a"; render(); await submit();
         expect(getDefaultStore().get(searchResultsAtom).music.a.state).toBe(128);
         expect(mockB.methods.search).not.toHaveBeenCalled();
+    });
+    it("honors explicit later pages through the shared controller", async () => {
+        render(); await submit("a");
+        await act(async () => {
+            await search("song", 2, "music", "a");
+        });
+        expect(mockA.methods.search).toHaveBeenLastCalledWith("song", 2, "music");
+        expect(getDefaultStore().get(searchResultsAtom).music.a.page).toBe(2);
     });
 });

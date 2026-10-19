@@ -1,103 +1,39 @@
 import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import rpx from "@/utils/rpx";
-import Button from "@/components/base/textButton.tsx";
+import { PageAction } from "@/components/base/pageSection";
+import { SelectionBar } from "@/components/musicList/selectionControls";
+import { spacing } from "@/constants/designSystem";
 import { useAtom } from "jotai";
-import { editingMusicListAtom, musicListChangedAtom } from "../store/atom";
-import Toast from "@/utils/toast";
+import { editingMusicListAtom } from "../store/atom";
 import MusicList from "./musicList";
-import { useParams } from "@/core/router";
-import { localMusicSheetId, musicHistorySheetId } from "@/constants/commonConst";
-import LocalMusicSheet from "@/core/localMusicSheet";
-import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
+import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
-import musicHistory from "@/core/musicHistory";
-import MusicSheet from "@/core/musicSheet";
 import { useI18N } from "@/core/i18n";
+import { MusicListSource } from "@/core/musicListSource";
+import { RequestStateCode } from "@/constants/commonConst";
 
-export default function Body() {
-    const { musicSheet } = useParams<"music-list-editor">();
-
+export default function Body({ source, state, canEdit, canSave, onSave }: {
+    source?: MusicListSource;
+    state: RequestStateCode;
+    canEdit: boolean;
+    canSave: boolean;
+    onSave: () => void;
+}) {
     const { t } = useI18N();
-    const [editingMusicList, setEditingMusicList] =
-        useAtom(editingMusicListAtom);
-    const [musicListChanged, setMusicListChanged] =
-        useAtom(musicListChangedAtom);
-    const selectedItems = useMemo(
-        () => editingMusicList.filter(_ => _.checked),
-        [editingMusicList],
-    );
-    return (
-        <HorizontalSafeAreaView style={globalStyle.flex1}>
-            <View style={style.header}>
-                <Button
-                    onPress={() => {
-                        if (
-                            selectedItems.length !== editingMusicList.length &&
-                            editingMusicList.length
-                        ) {
-                            setEditingMusicList(
-                                editingMusicList.map(_ => ({
-                                    musicItem: _.musicItem,
-                                    checked: true,
-                                })),
-                            );
-                        } else {
-                            setEditingMusicList(
-                                editingMusicList.map(_ => ({
-                                    musicItem: _.musicItem,
-                                    checked: false,
-                                })),
-                            );
-                        }
-                    }}>
-                    {`${selectedItems.length !== editingMusicList.length &&
-                        editingMusicList.length
-                        ? t("common.selectAll")
-                        : t("common.unselectAll")
-                    } (${t("musicListEditor.selectMusicCount", { count: selectedItems.length })})`}
-                </Button>
-                <Button
-                    fontColor={
-                        musicListChanged && musicSheet?.id
-                            ? "primary"
-                            : "textSecondary"
-                    }
-                    onPress={async () => {
-                        if (musicListChanged && musicSheet?.id) {
-                            if (musicSheet.id === localMusicSheetId) {
-                                await LocalMusicSheet.updateMusicList(
-                                    editingMusicList.map(_ => _.musicItem),
-                                );
-                            } else if (musicSheet.id === musicHistorySheetId) {
-                                await musicHistory.setHistory(
-                                    editingMusicList.map(_ => _.musicItem),
-                                );
-                            } else {
-                                await MusicSheet.manualSort(
-                                    musicSheet.id,
-                                    editingMusicList.map(_ => _.musicItem),
-                                );
-                            }
-
-                            Toast.success(t("toast.saveSuccess"));
-                            setMusicListChanged(false);
-                        }
-                    }}>
-                    {t("common.save")}
-                </Button>
-            </View>
-            <MusicList />
-        </HorizontalSafeAreaView>
-    );
+    const [editingMusicList, setEditingMusicList] = useAtom(editingMusicListAtom);
+    const selectedCount = useMemo(() => editingMusicList.filter(item => item.checked).length, [editingMusicList]);
+    const allSelected = editingMusicList.length > 0 && selectedCount === editingMusicList.length;
+    return <HorizontalSafeAreaView style={globalStyle.flex1}>
+        <View style={styles.controls}>
+            <SelectionBar count={selectedCount} allSelected={allSelected} disabled={!editingMusicList.length}
+                onToggleAll={() => setEditingMusicList(previous => previous.map(item => ({ ...item, checked: !allSelected })))}
+                description={source ? t("musicListEditor.loadedCount", { count: editingMusicList.length }) : undefined}
+                extraAction={canEdit ? <PageAction title={t("common.save")} variant="text" disabled={!canSave} onPress={onSave} /> : undefined} />
+        </View>
+        <MusicList source={source} state={state} canEdit={canEdit} />
+    </HorizontalSafeAreaView>;
 }
 
-const style = StyleSheet.create({
-    header: {
-        flexDirection: "row",
-        height: rpx(88),
-        paddingHorizontal: rpx(24),
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
+const styles = StyleSheet.create({
+    controls: { paddingHorizontal: spacing.xxxl },
 });

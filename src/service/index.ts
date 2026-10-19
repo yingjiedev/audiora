@@ -1,3 +1,4 @@
+import i18n from "@/core/i18n";
 import Config from "@/core/appConfig";
 import RNTrackPlayer, { Event, State } from "react-native-track-player";
 import trackPlayer from "@/core/trackPlayer";
@@ -14,11 +15,7 @@ let installed = false;
 
 /** 把当前收藏态推给紧凑通知（实心红心/空心白心） */
 function pushCompactFavoriteState(musicItem: IMusic.IMusicItem | null) {
-    const isFavorite = musicItem
-        ? MusicSheet.getSortedMusicListBySheetId(
-            MusicSheet.defaultSheet.id,
-        ).has(musicItem)
-        : false;
+    const isFavorite = MusicSheet.favorites.isFavorite(musicItem);
     NativeModules.LyricUtil?.setCompactNotificationFavorite?.(isFavorite)?.catch?.(
         () => undefined,
     );
@@ -31,30 +28,21 @@ module.exports = async function () {
     installed = true;
     setupAndroidAutoService();
     setupListeningStatsRecorder();
+    MusicSheet.subscribeFavorites(() => pushCompactFavoriteState(trackPlayer.currentMusic));
     // 紧凑通知上的收藏按钮（原生 MusicService 补丁发出的事件）
-    DeviceEventEmitter.addListener("remote-favorite", () => {
+    DeviceEventEmitter.addListener("remote-favorite", async () => {
         const musicItem = trackPlayer.currentMusic;
         if (!musicItem) {
             return;
         }
-        const favList = MusicSheet.getSortedMusicListBySheetId(
-            MusicSheet.defaultSheet.id,
-        );
-        if (favList.has(musicItem)) {
-            MusicSheet.removeMusic(
-                MusicSheet.defaultSheet.id,
-                musicItem,
-            ).catch(() => undefined);
-            Toast.warn("已取消收藏");
-            pushCompactFavoriteState(musicItem);
-        } else {
-            MusicSheet.addMusic(
-                MusicSheet.defaultSheet.id,
-                musicItem,
-            ).catch(() => undefined);
-            Toast.success("已收藏");
-            pushCompactFavoriteState(musicItem);
+        try {
+            const favorite = await MusicSheet.favorites.toggle(musicItem);
+            if (favorite) Toast.success(i18n.t("aggregate.saved"));
+            else Toast.warn(i18n.t("aggregate.removed"));
+        } catch {
+            Toast.warn(i18n.t("aggregate.updateFailed"));
         }
+        pushCompactFavoriteState(trackPlayer.currentMusic);
     });
 
     // 换歌后同步新歌的收藏态到通知

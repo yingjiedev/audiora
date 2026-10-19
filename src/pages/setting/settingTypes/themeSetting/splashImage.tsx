@@ -1,5 +1,5 @@
 import React from "react";
-import ListItem from "@/components/base/listItem";
+import SettingRow from "../../components/settingRow";
 import Config, { useAppConfig } from "@/core/appConfig";
 import { useI18N } from "@/core/i18n";
 import {
@@ -46,22 +46,13 @@ export default function SplashImage() {
 
     return (
         <SettingSection title={t("themeSettings.splashImage")}>
-            <ListItem withHorizontalPadding onPress={onPickPress}>
-                <ListItem.Content
-                    title={
-                        splashImage
-                            ? t("themeSettings.changeSplashImage")
-                            : t("themeSettings.pickSplashImage")
-                    }
-                    description={t("themeSettings.splashImageDesc")}
-                />
-            </ListItem>
+            <SettingRow onPress={onPickPress} title={
+                splashImage
+                    ? t("themeSettings.changeSplashImage")
+                    : t("themeSettings.pickSplashImage")
+            } description={t("themeSettings.splashImageDesc")} descriptionLines={2} />
             {splashImage ? (
-                <ListItem withHorizontalPadding onPress={onClearPress}>
-                    <ListItem.Content
-                        title={t("themeSettings.clearSplashImage")}
-                    />
-                </ListItem>
+                <SettingRow onPress={onClearPress} title={t("themeSettings.clearSplashImage")} />
             ) : null}
         </SettingSection>
     );
