@@ -25,6 +25,18 @@ export function songKey(song: ListeningSong) {
     return JSON.stringify([song.platform, song.id]);
 }
 
+/** Sum every retained song entry, without limiting the result to report rankings. */
+export function countSongPlays(days: ListeningDay[]) {
+    const counts = new Map<string, number>();
+    for (const day of days) {
+        for (const entry of day.songs) {
+            const key = songKey(entry.song);
+            counts.set(key, (counts.get(key) ?? 0) + entry.plays);
+        }
+    }
+    return counts;
+}
+
 function cleanSong(value: any): ListeningSong | undefined {
     if (!value || !["string", "number"].includes(typeof value.id) || String(value.id).length === 0 || typeof value.platform !== "string" || !value.platform) return;
     return {

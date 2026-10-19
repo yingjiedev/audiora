@@ -10,6 +10,8 @@ interface ISettingSectionProps {
     title?: ReactNode;
     /** 标题下方的说明行，用来承载「这组是干什么的」的长句，避免把长句塞进标题 */
     description?: ReactNode;
+    /** 卡片下方的简短提示，不与设置行的右侧控件争用宽度 */
+    footer?: ReactNode;
     cardStyle?: StyleProp<ViewStyle>;
     style?: StyleProp<ViewStyle>;
 }
@@ -19,7 +21,7 @@ interface ISettingSectionProps {
  * one place prevents the overview and nested settings from drifting apart.
  */
 export default function SettingSection(props: ISettingSectionProps) {
-    const { cardStyle, children, description, style, title } = props;
+    const { cardStyle, children, description, footer, style, title } = props;
     const colors = useColors();
 
     return (
@@ -50,6 +52,14 @@ export default function SettingSection(props: ISettingSectionProps) {
                 ]}>
                 {children}
             </View>
+            {footer ? (
+                <ThemeText
+                    fontColor="textSecondary"
+                    fontSize="description"
+                    style={styles.footer}>
+                    {footer}
+                </ThemeText>
+            ) : null}
         </View>
     );
 }
@@ -75,5 +85,9 @@ const styles = StyleSheet.create({
     card: {
         borderRadius: settingsLayout.cardRadius,
         overflow: "hidden",
+    },
+    footer: {
+        marginTop: settingsLayout.titleGap,
+        marginHorizontal: rpx(14),
     },
 });

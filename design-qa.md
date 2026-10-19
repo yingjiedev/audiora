@@ -538,3 +538,15 @@ Native visual QA final result: **blocked — pending user acceptance**。不将�
 应用源码 `92b970a465ca990f06bd180be785b5b49b0cec38`，预览 `0.3.1-preview.i88.marquee.20261013.194208` / `1791891729`，SHA-256 `1F03832AE118D0FB99A1216115A9811C97BB5719940BBF5FF55BCBD241D143A6`；真实 APK、签名、字体、16 个 bundle 模块及既有素材核对通过。`2026-10-13T19:45:24.5215231+08:00` 保留数据安装 Success 并确认精确版本，随后停止设备操作，没有自动启动或截屏。
 
 Native visual QA final result: **blocked — pending user acceptance**。修改前截图、TestRenderer 与源码检查不作为新包原生视觉通过证据。
+
+# 2026-10-17 首页收藏播放次数（Issue #112）
+
+用户确认稿：`docs/design/evidence/home-favorite-replay/approved.png`（850 × 1851）。目标为现有首页收藏区，歌名后跟小型 play 图标和次数，下一行显示真实歌手、专辑与来源。确认图中的其他首页区域沿用现有实现，不将生成图漂移纳入修改范围。
+
+实现：`MusicItem` 的显式 favorites 展示方式，104rpx 封面、128rpx 行高、可收缩标题、不可收缩次数标签。1–99 显示数字，100 及以上显示 99+，0 隐藏；读屏报告实际完整次数。标签使用 tonalSurface/onTonal 与已有图标，无新增图片、字体或硬编码颜色。统计按平台与 ID 跨保留日期汇总，单次订阅仅更新收藏区域。详情见 `docs/design/home-favorite-replay-20261017.md`。
+
+全仓 Jest 127 套件 / 985 项、完整颜色 23 套件 / 282 项通过；颜色、UI、运行时守卫与修改文件 ESLint（0 错误 / 0 警告）、whitespace 通过。全仓 lint 为 0 错误 / 102 条存量警告。
+
+没有实现截图或同状态配对比较；本轮未构建/安装 APK。依照仓库原生预览规则，不自动截屏或使用替代视觉验收，原生的字号、截断、触摸和主题效果仍待实际版本验收。自动化通过不代表视觉通过。
+
+Native visual QA final result: **blocked — pending user acceptance**。

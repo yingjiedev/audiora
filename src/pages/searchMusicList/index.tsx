@@ -1,71 +1,45 @@
+import { filterMusic } from "./filterMusic";
+import React, { useMemo, useState } from "react";
 import AppBar from "@/components/base/appBar";
-import Input from "@/components/base/input";
+import SearchField from "@/components/base/searchField";
+import { PageSummary } from "@/components/base/pageSection";
 import StatusBar from "@/components/base/statusBar";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
+import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
 import { useI18N } from "@/core/i18n";
 import { useParams } from "@/core/router";
+import useInlineMusicSelection from "@/components/musicList/useInlineMusicSelection";
+import MusicSelectionProvider from "@/components/musicList/musicSelectionProvider";
+import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
+import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 import PluginManager from "@/core/pluginManager";
-import useColors from "@/hooks/useColors";
-import rpx, { fontRpx } from "@/utils/rpx";
-import React, { useState } from "react";
-import { StyleSheet } from "react-native";
 import SearchResult from "./searchResult";
-
-function filterMusic(query: string, musicList: IMusic.IMusicItem[]) {
-    if (query?.length === 0) {
-        return musicList;
-    }
-    return musicList.filter(_ =>
-        `${_.title} ${_.artist} ${_.album} ${PluginManager.getPluginDisplayName(
-            _.platform,
-        )}`
-            .toLowerCase()
-            .includes(query.toLowerCase()),
-    );
-}
-
+import { spacing } from "@/constants/designSystem";
 export default function SearchMusicList() {
-    const { musicList, musicSheet } = useParams<"search-music-list">();
-    const [result, setResult] = useState<IMusic.IMusicItem[]>(musicList ?? []);
-    const [query, setQuery] = useState("");
-
-    const colors = useColors();
-    const { t } = useI18N();
-
-    const onChangeSearch = (_: string) => {
-        setQuery(_);
-        // useTransition做优化
-        setResult(filterMusic(_.trim(), musicList ?? []));
-    };
-
-    return (
-        <VerticalSafeAreaView style={globalStyle.fwflex1}>
-            <StatusBar />
-            <AppBar>
-                <Input
-                    style={style.searchBar}
-                    fontColor={colors.appBarText}
-                    placeholder={t("searchMusicList.searchPlaceHolder")}
-                    accessible
-                    autoFocus
-                    accessibilityLabel="搜索框"
-                    accessibilityHint={t("searchMusicList.searchLabel.a11y")}
-                    value={query}
-                    onChangeText={onChangeSearch}
-                />
-            </AppBar>
-            <SearchResult result={result} musicSheet={musicSheet} />
-        </VerticalSafeAreaView>
-    );
+    return <VerticalSafeAreaView style={globalStyle.fwflex1}>
+        <MusicSelectionProvider><SearchMusicListContent /></MusicSelectionProvider>
+    </VerticalSafeAreaView>;
 }
 
-const style = StyleSheet.create({
-    searchBar: {
-        minWidth: rpx(375),
-        flex: 1,
-        borderRadius: rpx(64),
-        height: rpx(64),
-        fontSize: fontRpx(32),
-    },
-});
+function SearchMusicListContent() {
+    const { musicList, musicSheet } = useParams<"search-music-list">();
+    const [query, setQuery] = useState("");
+    const { t } = useI18N();
+    const result = useMemo(() => filterMusic(query, musicList ?? [], platform => PluginManager.getPluginDisplayName(platform)), [musicList, query]);
+    const editor = useInlineMusicSelection(`filtered:${musicSheet?.id}:${query}`, result);
+    return <>
+        <StatusBar />
+        <AppBar onBackPress={editor.editing ? editor.finish : undefined}
+            actionComponent={editor.editing ? <SelectionDoneAction onPress={editor.finish} /> : undefined} menu={!editor.editing && result.length ? [{
+                icon: "pencil-square",
+                title: t("common.batchEdit"),
+                onPress: editor.start,
+            }] : []}><SearchField autoFocus value={query} placeholder={t("searchMusicList.searchPlaceHolder")} accessibilityLabel={t("searchMusicList.searchLabel.a11y")} onChangeText={setQuery} onClear={() => setQuery("")} /></AppBar>
+        <HorizontalSafeAreaView style={globalStyle.flex1}>
+            <PageSummary title={musicSheet?.title || t("home.localMusic")} description={t("home.songCount", { count: result.length })} />
+            <InlineSelectionBar style={{ paddingHorizontal: spacing.xxxl }} editor={editor} count={result.length} />
+            <SearchResult result={result} musicSheet={musicSheet} selection={editor.selection} />
+        </HorizontalSafeAreaView>
+    </>;
+}

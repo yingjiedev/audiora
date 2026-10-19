@@ -12,7 +12,8 @@ export default function AlbumDetail() {
 
     return (
         <MusicSheetPage
-            navTitle={t("common.sheet")}
+            navTitle={t("common.album")}
+            typeLabel={t("common.album")}
             sheetInfo={albumItem}
             state={requestStateCode}
             onRetry={getAlbumDetail}

@@ -4,6 +4,9 @@ import { compare } from "compare-versions";
 import PluginManager from "./pluginManager";
 import MusicSheet from "@/core/musicSheet";
 import { ResumeMode } from "@/constants/commonConst.ts";
+import { FavoriteGroups } from "@/core/favoriteGroups";
+import { reconcileFavoriteGroups } from "@/core/favoriteGroupsModel";
+import { audioEffects } from "./audioEffects";
 import {
     createBackupFileName,
     createBackupPayload,
@@ -13,7 +16,8 @@ import {
 
 /** Build the shared BakaMusic/MusicFree v3 backup envelope. */
 
-function backup() {
+async function backup() {
+    const effectsSettings = await audioEffects.backupSettings();
     const musicSheets = MusicSheet.backupSheets();
     const plugins = PluginManager.getEnabledPlugins();
     const normalizedPlugins = plugins.flatMap(plugin => {
@@ -29,14 +33,15 @@ function backup() {
         ];
     });
 
-    return createBackupPayload(musicSheets, normalizedPlugins);
+    const favorites = musicSheets.find(sheet => sheet.id === MusicSheet.defaultSheet.id)?.musicList ?? [];
+    return createBackupPayload(musicSheets, normalizedPlugins, Date.now(), reconcileFavoriteGroups(FavoriteGroups.get(), favorites), effectsSettings);
 }
 
 async function resume(
     raw: string | Record<string, unknown>,
     resumeMode: ResumeMode = ResumeMode.Append,
 ) {
-    const { plugins, musicSheets } = parseBackupPayload(raw);
+    const { plugins, musicSheets, audiora } = parseBackupPayload(raw);
     /** 恢复插件 */
     const validPlugins = PluginManager.getEnabledPlugins();
     const resumePlugins = plugins?.map(_ => {
@@ -58,9 +63,13 @@ async function resume(
     });
 
     /** 恢复歌单 */
-    const resumeMusicSheets = MusicSheet.resumeSheets(musicSheets, resumeMode);
+    const resumeMusicSheets = MusicSheet.resumeSheets(musicSheets, resumeMode).then(async () => {
+        if (audiora?.favoriteGroups) await MusicSheet.favorites.restore(audiora.favoriteGroups);
+    });
 
-    return Promise.all([...(resumePlugins ?? []), resumeMusicSheets]);
+    const results = await Promise.all([...(resumePlugins ?? []), resumeMusicSheets]);
+    if (audiora?.audioEffects) await audioEffects.restoreSettings(audiora.audioEffects);
+    return results;
 }
 
 const Backup = {

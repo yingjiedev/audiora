@@ -2,7 +2,9 @@
 # Examples:
 #   npm run build-preview
 #   npm run build-preview -- -Abi all
+#   npm run build-preview -- -PreviewApp
 #   npm run build-preview -- -InstallDependencies
+#   npm run build-preview -- -TestApp
 
 [CmdletBinding()]
 param(
@@ -10,6 +12,10 @@ param(
     [string]$Abi = "arm64-v8a",
     [string]$PreviewVersion,
     [long]$VersionCode = 0,
+    [switch]$PreviewApp,
+    [switch]$TestApp,
+    [ValidatePattern('^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$')]
+    [string]$TestAppIdSuffix = "test",
     [switch]$InstallDependencies,
     [switch]$SkipBuildInfo,
     [switch]$SkipVerification,
@@ -21,6 +27,15 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($PreviewApp -and $TestApp) {
+    throw "PreviewApp and TestApp cannot be enabled together."
+}
+
+# Local handoffs default to the independent test identity; keep explicit preview-channel builds.
+if (-not $PreviewApp -and -not $TestApp) {
+    $TestApp = $true
+}
 
 function Invoke-RequiredCommand {
     param(
@@ -226,15 +241,25 @@ try {
         "assembleRelease",
         "-PappVersion=$PreviewVersion",
         "-PappVersionCode=$VersionCode",
-        "-PaudioraPreview=true",
         "--no-daemon"
     )
+
+    if ($TestApp) {
+        $gradleArguments += @(
+            "-PtestApp=true",
+            "-PtestAppIdSuffix=$TestAppIdSuffix"
+        )
+    }
 
     if ($Abi -ne "all") {
         $gradleArguments += @(
             "-PbuildAbi=$Abi",
             "-PreactNativeArchitectures=$Abi"
         )
+    }
+
+    if ($PreviewApp) {
+        $gradleArguments += "-PpreviewApp=true"
     }
 
     $gradleArguments += @(
@@ -318,10 +343,11 @@ gradle.allprojects { project ->
     Invoke-RequiredCommand -FilePath ".\gradlew.bat" -Arguments $gradleArguments -WorkingDirectory $androidRoot `
         -LogPath (Join-Path $logDirectory "gradle.log") -ErrorTailLines $ErrorTailLines
 
+    $apkNamePrefix = if ($TestApp) { "Audiora-test" } else { "Audiora" }
     $apkPattern = if ($Abi -eq "all") {
-        "Audiora-v$PreviewVersion-*-release.apk"
+        "$apkNamePrefix-v$PreviewVersion-*-release.apk"
     } else {
-        "Audiora-v$PreviewVersion-$Abi-release.apk"
+        "$apkNamePrefix-v$PreviewVersion-$Abi-release.apk"
     }
     $apkFiles = @(Get-ChildItem -LiteralPath $releaseDirectory -Filter $apkPattern -File)
     if ($apkFiles.Count -eq 0) {
@@ -337,10 +363,12 @@ gradle.allprojects { project ->
                 Write-Host "`nAPK: $($apk.FullName)" -ForegroundColor Green
                 Write-Host "SHA-256: $(Get-Sha256Hash -Path $apk.FullName)"
                 $badging = & $aapt2Candidates[0].FullName dump badging $apk.FullName
+                $expectedPackage = if ($TestApp) { "io.github.yingjiedev.audiora.$TestAppIdSuffix" } elseif ($PreviewApp) { "io.github.yingjiedev.audiora.preview" } else { "io.github.yingjiedev.audiora" }
+                $expectedLabel = if ($TestApp) { "audiora-test" } elseif ($PreviewApp) { "Audiora 预览" } else { "Audiora" }
                 if ($LASTEXITCODE -ne 0 -or
-                    -not ($badging -match "package: name='io\.github\.yingjiedev\.audiora\.test'") -or
-                    -not ($badging -match "application-label:'audiora-test'")) {
-                    throw "Preview APK must use package io.github.yingjiedev.audiora.test and label audiora-test."
+                    -not ($badging -match ("package: name='" + [regex]::Escape($expectedPackage) + "'")) -or
+                    -not ($badging -match ("application-label:'" + [regex]::Escape($expectedLabel) + "'"))) {
+                    throw "APK identity mismatch: expected package $expectedPackage and label $expectedLabel."
                 }
                 $badging | Select-String "package:|application-label:|native-code:"
 

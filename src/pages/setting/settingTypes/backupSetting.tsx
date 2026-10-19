@@ -21,9 +21,11 @@ import { saveJsonToSelectedAndroidDirectory } from "@/utils/androidSaf";
 import rpx from "@/utils/rpx";
 import SettingSection from "../components/settingSection";
 import SettingRow from "../components/settingRow";
+import ThemeSwitch from "@/components/base/switch";
+import PersistStatus from "@/utils/persistStatus";
+import { backupToWebdav, getWebdavBackupStatus, getWebdavConfig, WEBDAV_BACKUP_FILE } from "@/core/webdavBackup";
+import dayjs from "dayjs";
 
-const AUDIORA_WEBDAV_BACKUP_DIR = "/Audiora";
-const AUDIORA_WEBDAV_BACKUP_FILE = `${AUDIORA_WEBDAV_BACKUP_DIR}/AudioraBackup.json`;
 const LEGACY_MUSICFREE_WEBDAV_BACKUP_FILE = "/MusicFree/MusicFreeBackup.json";
 const BAKAMUSIC_WEBDAV_BACKUP_FILE = "/BakaMusic/BakaMusicBackup.json";
 
@@ -35,14 +37,25 @@ export default function BackupSetting() {
     const webdavUrl = useAppConfig("webdav.url");
     const webdavUsername = useAppConfig("webdav.username");
     const webdavPassword = useAppConfig("webdav.password");
+    const autoEnabled = useAppConfig("backup.webdavAutoEnabled") ?? false;
+    const autoInterval = useAppConfig("backup.webdavAutoInterval") === "weekly" ? "weekly" : "daily";
+    PersistStatus.useValue("backup.webdavStatus");
+    const webdavStatus = getWebdavBackupStatus();
 
+    function setAutoEnabled(enabled: boolean) {
+        if (enabled && !getWebdavConfig()) {
+            Toast.warn(t("toast.resumePreCheckFailed"));
+            return;
+        }
+        Config.setConfig("backup.webdavAutoEnabled", enabled);
+    }
 
     const onBackupToLocal = async () => {
         if (Platform.OS === "android") {
             try {
                 const result = await saveJsonToSelectedAndroidDirectory(
                     Backup.createBackupFileName(),
-                    Backup.backup(),
+                    await Backup.backup(),
                 );
                 if (result) {
                     Toast.success(t("toast.backupSuccess"));
@@ -61,17 +74,16 @@ export default function BackupSetting() {
             multi: false,
             actionText: t("backupAndResume.beginBackup"),
             async onAction(selectedFiles) {
-                const raw = Backup.backup();
                 const folder = selectedFiles[0]?.path;
                 return new Promise(resolve => {
                     showDialog("LoadingDialog", {
                         title: t("backupAndResume.backupDialogTitle"),
                         loadingText: t("backupAndResume.backuping"),
-                        promise: writeInChunks(
+                        promise: Backup.backup().then(raw => writeInChunks(
                             `${folder}${folder?.endsWith("/") ? "" : "/"
                             }${Backup.createBackupFileName()}`,
                             raw,
-                        ),
+                        )),
                         onResolve(_, hideDialog) {
                             Toast.success(t("toast.backupSuccess"));
                             hideDialog();
@@ -158,33 +170,29 @@ export default function BackupSetting() {
     }
 
     async function onResumeFromWebdav() {
-        const url = Config.getConfig("webdav.url");
-        const username = Config.getConfig("webdav.username");
-        const password = Config.getConfig("webdav.password");
-
-        if (!(username && password && url)) {
+        const config = getWebdavConfig();
+        if (!config) {
             Toast.warn(t("toast.resumePreCheckFailed"));
-            return;
-        }
-        const client = createClient(url, {
-            authType: AuthType.Password,
-            username: username,
-            password: password,
-        });
-
-        const restoreSource = await client.exists(AUDIORA_WEBDAV_BACKUP_FILE)
-            ? AUDIORA_WEBDAV_BACKUP_FILE
-            : await client.exists(LEGACY_MUSICFREE_WEBDAV_BACKUP_FILE)
-                ? LEGACY_MUSICFREE_WEBDAV_BACKUP_FILE
-                : await client.exists(BAKAMUSIC_WEBDAV_BACKUP_FILE)
-                    ? BAKAMUSIC_WEBDAV_BACKUP_FILE
-                    : null;
-        if (!restoreSource) {
-            Toast.warn(t("toast.backupFileNotFound"));
             return;
         }
 
         try {
+            const client = createClient(config.url, {
+                authType: AuthType.Password,
+                username: config.username,
+                password: config.password,
+            });
+            const restoreSource = await client.exists(WEBDAV_BACKUP_FILE)
+                ? WEBDAV_BACKUP_FILE
+                : await client.exists(LEGACY_MUSICFREE_WEBDAV_BACKUP_FILE)
+                    ? LEGACY_MUSICFREE_WEBDAV_BACKUP_FILE
+                    : await client.exists(BAKAMUSIC_WEBDAV_BACKUP_FILE)
+                        ? BAKAMUSIC_WEBDAV_BACKUP_FILE
+                        : null;
+            if (!restoreSource) {
+                Toast.warn(t("toast.backupFileNotFound"));
+                return;
+            }
             const resumeData = await client.getFileContents(
                 restoreSource,
                 {
@@ -205,32 +213,12 @@ export default function BackupSetting() {
     }
 
     async function onBackupToWebdav() {
-        const username = Config.getConfig("webdav.username");
-        const password = Config.getConfig("webdav.password");
-        const url = Config.getConfig("webdav.url");
-        if (!(username && password && url)) {
+        if (!getWebdavConfig()) {
             Toast.warn(t("toast.resumePreCheckFailed"));
             return;
         }
         try {
-            const client = createClient(url, {
-                authType: AuthType.Password,
-                username: username,
-                password: password,
-            });
-
-            const raw = Backup.backup();
-            if (!(await client.exists(AUDIORA_WEBDAV_BACKUP_DIR))) {
-                await client.createDirectory(AUDIORA_WEBDAV_BACKUP_DIR);
-            }
-            // 临时文件
-            await client.putFileContents(
-                AUDIORA_WEBDAV_BACKUP_FILE,
-                raw,
-                {
-                    overwrite: true,
-                },
-            );
+            await backupToWebdav();
             Toast.success(t("toast.backupSuccess"));
         } catch (e: any) {
             Toast.warn(t("toast.backupFail", { reason: e?.message ?? e }));
@@ -242,7 +230,7 @@ export default function BackupSetting() {
             style={style.wrapper}
             contentContainerStyle={style.content}
             showsVerticalScrollIndicator={false}>
-            <SettingSection title={t("sidebar.backupAndResume")}>
+            <SettingSection title={t("sidebar.backupAndResume")} description={t("backupAndResume.scope")}>
                 <SettingRow
                     title={t("backupAndResume.resumeMode")}
                     value={t(
@@ -293,7 +281,9 @@ export default function BackupSetting() {
                 />
             </SettingSection>
 
-            <SettingSection title="WebDAV">
+            <SettingSection
+                title="WebDAV"
+                footer={t("backupAndResume.webdavBackupSummary")}>
                 <SettingRow
                     title={t("backupAndResume.webdavSettings")}
                     onPress={() => {
@@ -337,6 +327,52 @@ export default function BackupSetting() {
                 <SettingRow
                     title={t("backupAndResume.resumeFromWebdav")}
                     onPress={onResumeFromWebdav}
+                />
+                <SettingRow
+                    title={t("backupAndResume.webdavAutoBackup")}
+                    description={t("backupAndResume.webdavAutoSummary")}
+                    descriptionLines={2}
+                    onPress={() => setAutoEnabled(!autoEnabled)}
+                    right={<ThemeSwitch value={autoEnabled} onValueChange={setAutoEnabled} />}
+                />
+                <SettingRow
+                    title={t("backupAndResume.webdavAutoInterval")}
+                    value={t(`backupAndResume.webdavAutoInterval.${autoInterval}`)}
+                    onPress={() => {
+                        showDialog("RadioDialog", {
+                            title: t("backupAndResume.webdavAutoInterval"),
+                            content: ["daily", "weekly"].map(value => ({
+                                label: t(value === "weekly"
+                                    ? "backupAndResume.webdavAutoInterval.weekly"
+                                    : "backupAndResume.webdavAutoInterval.daily"),
+                                value,
+                            })),
+                            onOk(value) {
+                                if (value === "daily" || value === "weekly") {
+                                    Config.setConfig("backup.webdavAutoInterval", value);
+                                }
+                            },
+                        });
+                    }}
+                />
+                <SettingRow
+                    title={t("backupAndResume.webdavLastBackup")}
+                    description={webdavStatus?.lastSuccessAt
+                        ? dayjs(webdavStatus.lastSuccessAt).format("YYYY-MM-DD HH:mm")
+                        : t("backupAndResume.webdavNeverBackedUp")}
+                    descriptionLines={2}
+                />
+                {webdavStatus?.result === "failed" ? (
+                    <SettingRow
+                        title={t("backupAndResume.webdavBackupFailure")}
+                        showChevron
+                        onPress={() => showPanel("WebdavBackupInfo", { showFailure: true })}
+                    />
+                ) : null}
+                <SettingRow
+                    title={t("backupAndResume.webdavBackupHelp")}
+                    showChevron
+                    onPress={() => showPanel("WebdavBackupInfo", {})}
                 />
             </SettingSection>
         </ScrollView>

@@ -645,5 +645,7 @@ patchBundleNullability();
 patchTurboModuleVoidReturn();
 writeCompactNotificationRes();
 patchCompactNotification();
+require("./patch-track-player-audio-effects").patchAudioEffects();
+require("./patch-android-auto").patchAndroidAuto(servicePath, modulePath);
 require("./patch-track-player-widget")(servicePath, modulePath);
 cleanTrackPlayerAndroidBuild();

@@ -5,6 +5,7 @@ type Plugin = any; // Placeholder for the actual Plugin type
  */
 export interface IInstallPluginConfig {
     notCheckVersion?: boolean;
+    signal?: AbortSignal;
 }
 
 /**
@@ -12,6 +13,7 @@ export interface IInstallPluginConfig {
  */
 export interface IInstallPluginResult {
     success: boolean;
+    status?: "installed" | "updated" | "unchanged";
     message?: string;
     pluginName?: string;
     pluginHash?: string;
@@ -56,6 +58,12 @@ export interface IPluginManager {
         config?: IInstallPluginConfig,
     ): Promise<IInstallPluginResult>;
 
+    installPluginFromCode(
+        code: string,
+        url: string,
+        config?: IInstallPluginConfig,
+    ): Promise<IInstallPluginResult>;
+
     /**
      * 通过哈希值卸载插件
      * @param hash - 要卸载的插件哈希值
@@ -67,6 +75,9 @@ export interface IPluginManager {
      * 同时清理媒体额外数据并删除插件文件
      */
     uninstallAllPlugins(): Promise<void>;
+
+    /** Clear only the plugin's own persistent runtime data. */
+    resetPluginStorage(plugin: Plugin): void;
 
     /**
      * 使用插件的源URL更新插件

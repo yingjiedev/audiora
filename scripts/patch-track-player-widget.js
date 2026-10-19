@@ -114,18 +114,26 @@ module.exports = function patchWidgetPlayback(servicePath, modulePath) {
 `);
     }
     if (!nativeModule.includes(marker)) {
+        const backgroundGuard = nativeModule.includes("AppForegroundTracker.backgrounded && !MusicService.androidAutoConnected")
+            ? "if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && AppForegroundTracker.backgrounded && !MusicService.androidAutoConnected) {"
+            : "if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && AppForegroundTracker.backgrounded) {";
         nativeModule = replace(nativeModule,
-            "if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && AppForegroundTracker.backgrounded) {",
+            backgroundGuard,
             `// ${marker}: the widget has already foregrounded this playback service.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && AppForegroundTracker.backgrounded && !MusicService.widgetStartupInProgress) {`);
-        nativeModule = replace(nativeModule,
-            "            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {\n                context.startForegroundService(intent)\n            } else {\n                context.startService(intent)\n            }",
-            `            // A widget cold start binds the already foregrounded service; it must not
+        ${backgroundGuard.replace(") {", " && !MusicService.widgetStartupInProgress) {")}`);
+        if (nativeModule.includes("if (!MusicService.androidAutoConnected) {")) {
+            nativeModule = replace(nativeModule, "if (!MusicService.androidAutoConnected) {",
+                "if (!MusicService.androidAutoConnected && !MusicService.widgetStartupInProgress) {");
+        } else {
+            nativeModule = replace(nativeModule,
+                "            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {\n                context.startForegroundService(intent)\n            } else {\n                context.startService(intent)\n            }",
+                `            // A widget cold start binds the already foregrounded service; it must not
             // issue another late foreground-service start after plugin initialization.
             if (!MusicService.widgetStartupInProgress) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent)
                 else context.startService(intent)
             }`);
+        }
     }
     fs.writeFileSync(servicePath, service);
     fs.writeFileSync(modulePath, nativeModule);

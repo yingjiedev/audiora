@@ -2,19 +2,27 @@ import React from "react";
 
 import { ROUTE_PATH, useNavigate } from "@/core/router";
 import AppBar from "@/components/base/appBar";
+import { useI18N } from "@/core/i18n";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
+import { SelectionDoneAction } from "@/components/musicList/selectionHeader";
 
 interface INavBarProps {
+    onEdit: () => void;
     navTitle: string;
     musicList: IMusic.IMusicItem[] | null;
 }
 
 export default function (props: INavBarProps) {
     const navigate = useNavigate();
-    const { navTitle, musicList = [] } = props;
+    const editor = useActiveMusicSelection();
+    const { t } = useI18N();
+    const { navTitle, musicList = [], onEdit } = props;
 
     return (
         <AppBar
-            actions={[
+            onBackPress={editor?.finish}
+            actionComponent={editor ? <SelectionDoneAction onPress={editor.finish} /> : undefined}
+            actions={editor ? [] : [
                 {
                     icon: "magnifying-glass",
                     onPress() {
@@ -24,18 +32,11 @@ export default function (props: INavBarProps) {
                     },
                 },
             ]}
-            menu={[
+            menu={editor ? [] : [
                 {
                     icon: "pencil-square",
-                    title: "批量编辑",
-                    onPress() {
-                        navigate(ROUTE_PATH.MUSIC_LIST_EDITOR, {
-                            musicList: musicList,
-                            musicSheet: {
-                                title: navTitle,
-                            },
-                        });
-                    },
+                    title: t("common.batchEdit"),
+                    onPress: onEdit,
                 },
             ]}>
             {navTitle}

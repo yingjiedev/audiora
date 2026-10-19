@@ -1,5 +1,157 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "subscription.neverUpdated": string;
+    "subscription.queued": string;
+    "subscription.fetching": string;
+    "subscription.progress": string;
+    "subscription.finished": string;
+    "subscription.hasFailures": string;
+    "subscription.cancelled": string;
+    "subscription.timedOut": string;
+    "subscription.installed": string;
+    "subscription.updated": string;
+    "subscription.unchanged": string;
+    "subscription.failed": string;
+    "subscription.lastChecked": string;
+    "subscription.keptChanges": string;
+    "subscription.updateAll": string;
+    "subscription.backgroundHint": string;
+    "subscription.stop": string;
+    "subscription.stopping": string;
+    "subscription.emptyHint": string;
+    "subscription.edit": string;
+    "subscription.details": string;
+    "subscription.retryFailed": string;
+    "subscription.updating": string;
+    "subscription.viewProgress": string;
+    "musicListEditor.actionFailed": string;
+    "sheetDetail.manualSortMusic": string;
+    "sheetDetail.removeSelectedContent": string;
+    "sheetDetail.removeAction": string;
+    "sheetDetail.removeFromSheet": string;
+    "sheetDetail.removeSuccess": string;
+    "musicListEditor.nextAction": string;
+    "subpage.copy": string;
+    "subpage.addSubscription": string;
+    "subpage.back": string;
+    "subpage.more": string;
+    "subpage.expandDescription": string;
+    "subpage.collapseDescription": string;
+    "subpage.searchEmpty": string;
+    "subpage.searchHint": string;
+    "subpage.sortHint": string;
+    "subpage.manageLocal": string;
+    "subpage.pluginCount": string;
+    "subpage.subscribeCount": string;
+    "subpage.subscriptionHint": string;
+    "subpage.noBackground": string;
+    "subpage.chooseBackground": string;
+    "subpage.backgroundPreview": string;
+    "subpage.themeColors": string;
+    "subpage.permissionEnabled": string;
+    "subpage.permissionDisabled": string;
+    "subpage.systemPicker": string;
+    "subpage.selectedFiles": string;
+    "audioEffects.custom": string;
+    "audioEffects.customHint": string;
+    "audioEffects.curveHint": string;
+    "audioEffects.inactive": string;
+    "audioEffects.musicOnly": string;
+    "audioEffects.savedPresetHint": string;
+    "audioEffects.selected": string;
+    "audioEffects.savedState": string;
+    "audioEffects.editingState": string;
+    "audioEffects.resetShort": string;
+    "audioEffects.saveFailed": string;
+    "audioEffects.enableToEdit": string;
+    "audioEffects.noBands": string;
+    "audioEffects.headroomTitle": string;
+    "audioEffects.range.low": string;
+    "audioEffects.range.mid": string;
+    "audioEffects.range.high": string;
+    "audioEffects.rangeHint.low": string;
+    "audioEffects.rangeHint.mid": string;
+    "audioEffects.rangeHint.high": string;
+    "audioEffects.preset.pop": string;
+    "audioEffects.preset.rock": string;
+    "audioEffects.preset.jazz": string;
+    "audioEffects.preset.classical": string;
+    "audioEffects.preset.electronic": string;
+    "audioEffects.presetHint.flat": string;
+    "audioEffects.presetHint.vocal": string;
+    "audioEffects.presetHint.bass": string;
+    "audioEffects.presetHint.bright": string;
+    "audioEffects.presetHint.soft": string;
+    "audioEffects.presetHint.pop": string;
+    "audioEffects.presetHint.rock": string;
+    "audioEffects.presetHint.jazz": string;
+    "audioEffects.presetHint.classical": string;
+    "audioEffects.presetHint.electronic": string;
+    "backupAndResume.scope": string;
+    "audioEffects.featured": string;
+    "audioEffects.heroTag": string;
+    "audioEffects.heroHint": string;
+    "audioEffects.presetCount": string;
+    "audioEffects.myPresets": string;
+    "audioEffects.createPreset": string;
+    "audioEffects.createFirstPreset": string;
+    "audioEffects.createHint": string;
+    "audioEffects.presetNamePlaceholder": string;
+    "audioEffects.defaultPresetName": string;
+    "audioEffects.renamePreset": string;
+    "audioEffects.renameHint": string;
+    "audioEffects.deletePreset": string;
+    "audioEffects.deletePresetHint": string;
+    "audioEffects.deleteNamedPreset": string;
+    "audioEffects.applyNamedPreset": string;
+    "audioEffects.editNamedPreset": string;
+    "audioEffects.manageNamedPreset": string;
+    "audioEffects.applyPreset": string;
+    "audioEffects.inUse": string;
+    "audioEffects.created": string;
+    "audioEffects.renamed": string;
+    "audioEffects.deleted": string;
+    "audioEffects.saveChanges": string;
+    "audioEffects.saveAsNew": string;
+    "audioEffects.unsavedChanges": string;
+    "audioEffects.offlineEditHint": string;
+    "audioEffects.liveHint": string;
+    "audioEffects.libraryHint": string;
+    "audioEffects.editSound": string;
+    "audioEffects.showAll": string;
+    "audioEffects.showLess": string;
+    "audioEffects.nameRequired": string;
+    "audioEffects.duplicateName": string;
+    "audioEffects.presetLimit": string;
+    "audioEffects.presetMissing": string;
+    "audioEffects.active": string;
+    "audioEffects.automatic": string;
+    "audioEffects.bandLabel": string;
+    "audioEffects.enabled": string;
+    "audioEffects.equalizer": string;
+    "audioEffects.error": string;
+    "audioEffects.headroomHint": string;
+    "audioEffects.limiter": string;
+    "audioEffects.loading": string;
+    "audioEffects.off": string;
+    "audioEffects.preamp": string;
+    "audioEffects.preampHint": string;
+    "audioEffects.preset.bass": string;
+    "audioEffects.preset.bright": string;
+    "audioEffects.preset.flat": string;
+    "audioEffects.preset.soft": string;
+    "audioEffects.preset.vocal": string;
+    "audioEffects.presets": string;
+    "audioEffects.previewHint": string;
+    "audioEffects.reset": string;
+    "audioEffects.retry": string;
+    "audioEffects.saveCustom": string;
+    "audioEffects.saved": string;
+    "audioEffects.savedPreset": string;
+    "audioEffects.saveHint": string;
+    "audioEffects.title": string;
+    "audioEffects.unsupported": string;
+    "audioEffects.waiting": string;
     "listening.collection": string;
     "listening.today": string;
     "listening.todayEntry": string;
@@ -230,6 +382,8 @@ export interface ILanguageData {
 
     // 音乐列表编辑器相关
     "musicListEditor.selectMusicCount": string; // 选择的音乐数量
+    "musicListEditor.loadedCount": string;
+    "musicListEditor.loadMore": string;
     "musicListEditor.addToNextPlay": string; // 添加到下一曲
     "musicListEditor.addToSheet": string; // 添加到歌单
 
@@ -251,9 +405,82 @@ export interface ILanguageData {
     "searchMusicList.searchLabel.a11y": string; // 搜索音乐标签
 
     // 搜索页面相关
+    "aggregate.searching": string;
+    "aggregate.searchingMore": string;
+    "aggregate.slowSources": string;
+    "aggregate.loadMore": string;
+    "aggregate.linkFavorites": string;
+    "aggregate.linkConfirm": string;
+    "aggregate.splitFavorites": string;
+    "aggregate.splitConfirm": string;
+    "aggregate.removeSource": string;
+    "aggregate.updateFailed": string;
+    "aggregate.saved": string;
+    "aggregate.removed": string;
+    "aggregate.playingSource": string;
+    "aggregate.unfavoriteGroup": string;
+    "aggregate.groupHeartHint": string;
+    "aggregate.allSources": string;
+    "aggregate.all": string;
+    "aggregate.moreSources": string;
+    "aggregate.bySong": string;
+    "aggregate.bySource": string;
+    "aggregate.currentSource": string;
+    "aggregate.chooseSource": string;
+    "aggregate.sourcePickerTitle": string;
+    "aggregate.sourceSelected": string;
+    "aggregate.sourcePlaying": string;
+    "aggregate.sourceSelectionHint": string;
+    "aggregate.collectionCount": string;
+    "aggregate.searchProgress": string;
+    "aggregate.retrySource": string;
+    "aggregate.sourceSummary": string;
+    "aggregate.pendingSources": string;
+    "aggregate.pendingWithIssues": string;
+    "aggregate.issueCount": string;
+    "aggregate.searchFinished": string;
+    "aggregate.sourceDetails": string;
+    "aggregate.retryIncomplete": string;
+    "aggregate.sourceDeferred": string;
+    "aggregate.continueSource": string;
+    "aggregate.retry": string;
+    "aggregate.configureSource": string;
+    "aggregate.manageSources": string;
+    "aggregate.sourceSearching": string;
+    "aggregate.sourceQueued": string;
+    "aggregate.sourceReturned": string;
+    "aggregate.sourceEmpty": string;
+    "aggregate.sourceTiming": string;
+    "aggregate.httpStatus": string;
+    "aggregate.allSourcesIncomplete": string;
+    "aggregate.incompleteHint": string;
+    "aggregate.error.timeout": string;
+    "aggregate.error.network": string;
+    "aggregate.error.authentication": string;
+    "aggregate.error.rateLimited": string;
+    "aggregate.error.unavailable": string;
+    "aggregate.error.configuration": string;
+    "aggregate.error.invalidResponse": string;
+    "aggregate.error.plugin": string;
     "searchPage.searchPlaceHolder": string; // 搜索
     "searchPage.searchLabel.a11y": string; // 搜索标签
     "searchPage.history": string; // 历史记录
+    "searchPage.manageHistory": string;
+    "searchPage.removeHistory": string;
+    "searchPage.historyHint": string;
+    "searchPage.historyEmpty": string;
+    "searchPage.historyError": string;
+    "searchPage.retryHistory": string;
+    "searchPage.clearHistory": string;
+    "searchPage.clearHistoryConfirm": string;
+    "searchPage.discovery": string;
+    "searchPage.discovery.recent": string;
+    "searchPage.discovery.favorite": string;
+    "searchPage.discovery.chart": string;
+    "searchPage.discoveryEmpty": string;
+    "searchPage.refreshDiscovery": string;
+    "searchPage.sourceLabel": string;
+    "searchPage.sourceTitle": string;
     "searchPage.artistResultWorksNum": string; // 艺术家作品数量
     "searchPage.comingSoon": string; // 敬请期待
 
@@ -348,6 +575,10 @@ export interface ILanguageData {
     "pluginSetting.pluginItem.options.sharePlugin": string; // 分享插件
     "pluginSetting.pluginItem.options.uninstallPlugin": string; // 卸载插件
     "pluginSetting.pluginItem.options.uninstallPluginContent": string; // 确定卸载该插件吗？
+    "pluginSetting.pluginItem.options.resetStorage": string;
+    "pluginSetting.pluginItem.options.resetStorageContent": string;
+    "pluginSetting.pluginItem.options.resetStorageSuccess": string;
+    "pluginSetting.pluginItem.options.resetStorageFailed": string;
     "pluginSetting.pluginItem.options.alternativePlugin": string; // 替代插件
     "pluginSetting.pluginItem.alternativePlugin": string; // 该插件实际使用的插件
     "pluginSetting.pluginItem.dialog.setAlternativePluginTitle": string; // 设置替代插件
@@ -407,6 +638,10 @@ export interface ILanguageData {
     // 主题设置相关
     "themeSettings.displayStyle": string; // 显示风格
     "themeSettings.followSystemTheme": string; // 跟随系统主题
+    "themeSettings.dynamicColors": string;
+    "themeSettings.dynamicColorsDescription": string;
+    "themeSettings.dynamicColorsUnavailable": string;
+    "themeSettings.dynamicColorsCustom": string;
     "themeSettings.setTheme": string; // 设置主题
     "themeSettings.lightMode": string; // 明亮模式
     "themeSettings.darkMode": string; // 黑暗模式
@@ -484,6 +719,20 @@ export interface ILanguageData {
     "backupAndResume.webdavUrl": string; // WebDAV URL
     "backupAndResume.backupToWebdav": string; // 备份到WebDAV
     "backupAndResume.resumeFromWebdav": string; // 从WebDAV恢复
+    "backupAndResume.webdavAutoBackup": string;
+    "backupAndResume.webdavAutoSummary": string;
+    "backupAndResume.webdavAutoDescription": string;
+    "backupAndResume.webdavAutoInterval": string;
+    "backupAndResume.webdavAutoInterval.daily": string;
+    "backupAndResume.webdavAutoInterval.weekly": string;
+    "backupAndResume.webdavLastBackup": string;
+    "backupAndResume.webdavNeverBackedUp": string;
+    "backupAndResume.webdavBackupFailed": string;
+    "backupAndResume.webdavBackupContents": string;
+    "backupAndResume.webdavBackupSummary": string;
+    "backupAndResume.webdavBackupFailure": string;
+    "backupAndResume.webdavBackupHelp": string;
+    "backupAndResume.webdavBackupScope": string;
     "backupAndResume.resumeMode.append": string; // 附加
     "backupAndResume.resumeMode.overwrite-default": string; // 覆盖（默认）
     "backupAndResume.resumeMode.overwrite": string; // 覆盖
@@ -511,19 +760,19 @@ export interface ILanguageData {
     "basicSettings.clickMusicInAlbum": string; // 点击专辑内单曲时
     "basicSettings.clickMusicInAlbum.playMusic": string; // 播放歌曲
     "basicSettings.clickMusicInAlbum.playAlbum": string; // 播放专辑
-    
+
     "basicSettings.musicOrderInLocalSheet": string; // 新建歌单时默认歌曲排序
     "basicSettings.musicOrderInLocalSheet.title": string; // 按歌曲名排序
     "basicSettings.musicOrderInLocalSheet.artist": string; // 按作者名排序
     "basicSettings.musicOrderInLocalSheet.album": string; // 按专辑名排序
     "basicSettings.musicOrderInLocalSheet.newest": string; // 按收藏时间从新到旧排序
     "basicSettings.musicOrderInLocalSheet.oldest": string; // 按收藏时间从旧到新排序
-    
+
     "basicSettings.plugin": string; // 插件
     "basicSettings.autoUpdatePlugin": string; // 软件启动时自动更新插件
     "basicSettings.notCheckPluginVersion": string; // 安装插件时不校验版本
     "basicSettings.lazyLoadPlugin": string; // 启用插件懒加载（默认开启）
-    
+
     "basicSettings.playback": string; // 播放
     "basicSettings.notInterrupt": string; // 允许与其他应用同时播放
     "basicSettings.autoPlayWhenAppStart": string; // 软件启动时自动播放歌曲
@@ -537,7 +786,7 @@ export interface ILanguageData {
     "basicSettings.playQualityOrder": string; // 默认播放音质缺失时
     "basicSettings.playQualityOrder.asc": string; // 播放更高音质
     "basicSettings.playQualityOrder.desc": string; // 播放更低音质
-    
+
     "basicSettings.download": string; // 下载
     "basicSettings.downloadPath": string; // 下载路径
     "basicSettings.fileSelector.selectFolder": string; // 选择文件夹
@@ -560,11 +809,11 @@ export interface ILanguageData {
     "basicSettings.fileNamingVariables": string; // 可用变量：{variables}
     "basicSettings.fileNamingTemplateInvalid": string; // 模板格式错误
     "basicSettings.fileNamingTemplateSaved": string; // 模板设置成功
-    
+
     "basicSettings.network": string; // 网络
     "basicSettings.useCelluarNetworkPlay": string; // 使用移动网络播放
     "basicSettings.useCelluarNetworkDownload": string; // 使用移动网络下载
-    
+
     "basicSettings.lyric": string; // 歌词
     "basicSettings.lyric.autoSearchLyric": string; // 歌词缺失时自动搜索歌词
     "basicSettings.lyric.align.left": string; // 左对齐
@@ -574,13 +823,13 @@ export interface ILanguageData {
     "basicSettings.lyric.wordByWordFloat": string;
     "basicSettings.lyric.pureWhiteMode": string;
     "basicSettings.lyric.breathingDots": string;
-    
+
     "basicSettings.cache": string; // 缓存
     "basicSettings.cache.musicCacheLimit": string; // 音乐缓存上限
     "basicSettings.cache.clearMusicCache": string; // 清除音乐缓存
     "basicSettings.cache.clearLyricCache": string; // 清除歌词缓存
     "basicSettings.cache.clearImageCache": string; // 清除图片缓存
-    
+
     "basicSettings.developer": string; // 开发选项
     "basicSettings.developer.errorLog": string; // 记录错误日志
     "basicSettings.developer.traceLog": string; // 记录详细日志
@@ -589,7 +838,7 @@ export interface ILanguageData {
     "basicSettings.developer.clearLog": string; // 清空日志
     "basicSettings.developer.checkAnnouncements": string; // 检查公告
     "basicSettings.developer.clearAnnouncements": string; // 清除公告
-    
+
     // 对话框相关 - 缓存设置
     "dialog.setCacheTitle": string; // 设置缓存
     "dialog.setCachePlaceholder": string; // 输入缓存占用上限提示
@@ -608,7 +857,7 @@ export interface ILanguageData {
     "dialog.setScheduleCloseTime.unit": string; // 分钟
     "dialog.setScheduleCloseTime.hint": string; // 最长支持设置24小时（1440分钟）
     "dialog.dontShowAgain": string; // 不再显示
-    
+
     // 提示消息相关 - 缓存和日志
     "toast.cacheSetSuccess": string; // 设置成功
     "toast.musicCacheCleared": string; // 已清除音乐缓存
@@ -616,9 +865,13 @@ export interface ILanguageData {
     "toast.imageCacheCleared": string; // 已清除图片缓存
     "toast.logCleared": string; // 日志已清空
     "toast.folderNotExistOrNoPermission": string; // 文件夹不存在或无权限
-    
+
     // 播放全部栏相关
     "playAllBar.title": string; // 播放全部
+    "playAllBar.star": string;
+    "playAllBar.unstar": string;
+    "playAllBar.saveAction": string;
+    "playAllBar.savedAction": string;
 
     // 无插件相关
     "noPlugin.title": string; // 还没有安装插件
@@ -773,7 +1026,7 @@ export interface ILanguageData {
     "panel.musicItemOptions.deleteLocalDownloadConfirm": string; // 删除本地下载确认
     "panel.musicItemOptions.associatedLyric": string; // 已关联歌词
     "panel.musicItemOptions.associateLyric": string; // 关联歌词
-    "panel.musicItemOptions.unassociateLyric": string; // 解除关联歌词    
+    "panel.musicItemOptions.unassociateLyric": string; // 解除关联歌词
     "panel.musicItemOptions.unassociateLyricSuccess": string; // 已解除关联歌词
     "panel.musicItemOptions.manageCover": string; // 管理封面
     "panel.musicItemOptions.associatedCover": string; // 已关联自定义封面
@@ -852,7 +1105,7 @@ export interface ILanguageData {
     "repeatMode.SHUFFLE": string; // 随机播放
     "repeatMode.QUEUE": string; // 列表循环
     "repeatMode.SINGLE": string; // 单曲循环
-    
+
     // 音质翻译
     "quality.96k": string; // 低清音质 96K
     "quality.128k": string; // 普通音质 128K
@@ -915,6 +1168,9 @@ export interface ILanguageData {
     "checkUpdate.newVersion": string;
     "checkUpdate.currentVersion": string;
     "checkUpdate.download": string;
+    "checkUpdate.checking": string;
+    "checkUpdate.selectingDownload": string;
+    "checkUpdate.error.downloadFailed": string;
     "announcement.view": string;
     "announcement.description": string;
     "announcement.error": string;

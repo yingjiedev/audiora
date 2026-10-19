@@ -58,8 +58,9 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
         offset.value = event.contentOffset.x;
     });
     const foldStyle = useAnimatedStyle((): ViewStyle => ({
-        // Clear the final hidden sliver so it cannot show through the rounded front corners.
-        opacity: reduceMotion ? 1 : interpolate(homeFoldProgress(offset.value, leafWidth), [155 / 180, 1], [1, 0], Extrapolation.CLAMP),
+        // Fade paper and its shadow together at the edge. A rotating back face
+        // otherwise protrudes through the main card's newly rounded corners.
+        opacity: reduceMotion ? 1 : interpolate(homeFoldProgress(offset.value, leafWidth), [75 / 180, 0.5], [1, 0], Extrapolation.CLAMP),
         // The native center is the hinge. No translated perspective matrix is decomposed
         // into Android scale/translation, which used to detach the leaf from the card.
         transform: reduceMotion ? [] : [
@@ -68,13 +69,12 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
         ],
     }), [reduceMotion, leafWidth]);
     const heroFoldStyle = useAnimatedStyle(() => ({
-        borderTopLeftRadius: reduceMotion ? radius.xl : interpolate(homeFoldProgress(offset.value, leafWidth), [0.5, 1], [0, radius.xl], Extrapolation.CLAMP),
-        borderBottomLeftRadius: reduceMotion ? radius.xl : interpolate(homeFoldProgress(offset.value, leafWidth), [0.5, 1], [0, radius.xl], Extrapolation.CLAMP),
+        borderTopLeftRadius: reduceMotion ? radius.xl : radius.xl * homeFoldProgress(offset.value, leafWidth),
+        borderBottomLeftRadius: reduceMotion ? radius.xl : radius.xl * homeFoldProgress(offset.value, leafWidth),
     }), [reduceMotion, leafWidth]);
-    // Android backfaceVisibility checks the child's local rotation, not its rotating parent.
-    // Fade only its print at the edge, preserving the solid paper as it turns behind.
-    const frontFaceStyle = useAnimatedStyle(() => ({
-        opacity: reduceMotion ? 1 : interpolate(homeFoldProgress(offset.value, leafWidth), [75 / 180, 0.5], [1, 0], Extrapolation.CLAMP),
+    const leafFoldStyle = useAnimatedStyle(() => ({
+        borderTopRightRadius: reduceMotion ? radius.xl : radius.xl * homeFoldProgress(offset.value, leafWidth),
+        borderBottomRightRadius: reduceMotion ? radius.xl : radius.xl * homeFoldProgress(offset.value, leafWidth),
     }), [reduceMotion, leafWidth]);
 
     return (
@@ -92,11 +92,11 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
             scrollEventThrottle={16}>
             <View testID="home-feature-spread" onLayout={onSpreadLayout} style={[styles.spread, { width: cardWidth, minHeight: layout.minimumHeight }]}>
                 <View collapsable={false} style={[styles.leafSlot, { width: leafWidth }]}>
-                    <Animated.View testID="home-feature-fold" pointerEvents="box-none" collapsable={false} renderToHardwareTextureAndroid={!reduceMotion} style={[styles.foldCarrier, { width: leafWidth * 2, height: cardHeight * 2.4 }, foldStyle]}>
-                        <Animated.View testID="home-feature-fold-paper" collapsable={false} style={[styles.leaf, { width: leafWidth, height: cardHeight, backgroundColor: foldSurface, boxShadow: shadow }]}>
-                            <View testID="home-feature-fold-clip" collapsable={false} style={styles.leafClip}>
+                    <Animated.View testID="home-feature-fold" pointerEvents="box-none" collapsable={false} needsOffscreenAlphaCompositing renderToHardwareTextureAndroid={!reduceMotion} style={[styles.foldCarrier, { width: leafWidth * 2, height: cardHeight * 2.4 }, foldStyle]}>
+                        <Animated.View testID="home-feature-fold-paper" collapsable={false} style={[styles.leaf, { width: leafWidth, height: cardHeight, backgroundColor: foldSurface, boxShadow: shadow }, leafFoldStyle]}>
+                            <Animated.View testID="home-feature-fold-clip" collapsable={false} style={[styles.leafClip, leafFoldStyle]}>
                                 {record && <LinearGradient testID="home-record-fold-lighting" pointerEvents="none" colors={colors.featuredRecordFoldGradient} locations={[0, 0.52, 1]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />}
-                                <Animated.View testID="home-feature-fold-face" collapsable={false} style={[styles.leafFace, frontFaceStyle]}>
+                                <View testID="home-feature-fold-face" collapsable={false} style={styles.leafFace}>
                                     <Pressable
                                         accessibilityRole="button"
                                         accessibilityLabel={`${t("home.favoriteSheet")} · ${t("home.songCount", { count: props.favoriteCount })}`}
@@ -110,9 +110,9 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
                                         </View>
                                         <Icon name="chevron-right" size={rpx(22)} color={foldSecondary} />
                                     </Pressable>
-                                </Animated.View>
+                                </View>
                                 {record && <LinearGradient testID="home-record-spine" pointerEvents="none" colors={colors.featuredRecordSpineGradient} locations={[0, 0.45, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.spine} />}
-                            </View>
+                            </Animated.View>
                         </Animated.View>
                     </Animated.View>
                 </View>
@@ -136,7 +136,7 @@ export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
 }
 
 const styles = StyleSheet.create({
-    // The free edge descends below the card while turning, then disappears at 180°.
+    // The free edge descends below the card while turning, fading out at the hinge.
     deck: { paddingHorizontal: spacing.xxxl, paddingTop: spacing.sm, gap: spacing.md, alignItems: "stretch" },
     spread: { flexDirection: "row" },
     leafSlot: { zIndex: 0, overflow: "visible" },

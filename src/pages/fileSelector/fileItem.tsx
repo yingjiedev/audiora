@@ -100,6 +100,8 @@ const styles = StyleSheet.create({
     path: {
         height: "100%",
         textAlignVertical: "center",
+        flex: 1,
+        minWidth: 0,
     },
     checkIcon: {
         padding: rpx(14),

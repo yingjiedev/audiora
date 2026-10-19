@@ -1,4 +1,4 @@
-import { devLog } from '@/utils/log';
+import { devLog } from "@/utils/log";
 
 const timeReg = /\[[\d:.]+\]/g;
 const metaReg = /\[(.+):(.+)\]/g;
@@ -161,7 +161,7 @@ function msToTimestamp(ms: number): string {
     const totalSeconds = ms / 1000;
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toFixed(3).padStart(6, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toFixed(3).padStart(6, "0")}`;
 }
 
 function normalizeRawLyricText(raw: string) {
@@ -174,7 +174,7 @@ function createTimedWord(
     text: string,
     startTime: number,
     duration: number,
-    index: number,
+    _index: number,
 ): ILyric.IWordData {
     return {
         text,
@@ -285,14 +285,14 @@ export function formatQrcToAngleBracket(qrcLine: string): string {
     // 提取行起始时间 [start_ms, duration_ms]
     const lineTimingMatch = qrcLine.match(/^\[(\d+),\d+\]/);
     if (!lineTimingMatch) {
-        return '';
+        return "";
     }
 
     const lineStartMs = parseInt(lineTimingMatch[1], 10);
     const lineTimestamp = msToTimestamp(lineStartMs);
 
     // 移除 [timestamp,duration] 前缀获取逐字内容
-    const contentAfterTiming = qrcLine.replace(/^\[\d+,\d+\]/, '');
+    const contentAfterTiming = qrcLine.replace(/^\[\d+,\d+\]/, "");
 
     // 解析逐字时间: 字(start_ms,duration_ms) 或 (offset_ms,duration_ms,0)字
     const words = adjustRelativeWordTimes(
@@ -305,11 +305,11 @@ export function formatQrcToAngleBracket(qrcLine: string): string {
 
     // 如果没有解析到任何单词，返回空
     if (formattedWords.length === 0) {
-        return '';
+        return "";
     }
 
     // 组合行时间戳与逐字时间戳
-    return `[${lineTimestamp}]${formattedWords.join('')}`;
+    return `[${lineTimestamp}]${formattedWords.join("")}`;
 }
 
 /**
@@ -318,7 +318,7 @@ export function formatQrcToAngleBracket(qrcLine: string): string {
  * @returns 尖括号格式的完整歌词内容
  */
 export function formatQrcContentToAngleBracket(qrcContent: string): string {
-    const lines = normalizeRawLyricText(qrcContent).split('\n');
+    const lines = normalizeRawLyricText(qrcContent).split("\n");
     const formattedLines: string[] = [];
     let filteredCount = 0;
 
@@ -354,10 +354,10 @@ export function formatQrcContentToAngleBracket(qrcContent: string): string {
     }
 
     if (filteredCount > 0) {
-        devLog('info', '[歌词格式化] 过滤掉注释行', { count: filteredCount });
+        devLog("info", "[歌词格式化] 过滤掉注释行", { count: filteredCount });
     }
 
-    return formattedLines.join('\n');
+    return formattedLines.join("\n");
 }
 
 type LyricMeta = Record<string, any>;
@@ -436,24 +436,24 @@ export function formatLyricsByTimestamp(
     const meta = parser.getMeta();
 
     if (lrcItems.length === 0) {
-        devLog('warn', '[歌词格式化] 解析后的歌词项为空', {
+        devLog("warn", "[歌词格式化] 解析后的歌词项为空", {
             hasRawLrc: !!rawLrc,
             hasTranslation: !!translation,
             hasRomanization: !!romanization,
         });
-        return '';
+        return "";
     }
 
     // Build header tags (metadata)
-    let result = '';
-    const metaTags = ['ti', 'ar', 'al', 'by', 'offset'];
+    let result = "";
+    const metaTags = ["ti", "ar", "al", "by", "offset"];
     for (const tag of metaTags) {
         if (meta[tag]) {
             result += `[${tag}:${meta[tag]}]\n`;
         }
     }
     if (result) {
-        result += '\n';
+        result += "\n";
     }
 
     // Process each timestamp group
@@ -463,33 +463,33 @@ export function formatLyricsByTimestamp(
 
         // Build lines according to lyricOrder
         for (const langType of order) {
-            let line = '';
-            let content = '';
+            let line = "";
+            let content = "";
 
             switch (langType) {
-                case "original":
-                    content = item.lrc;
-                    if (enableWordByWord && item.hasWordByWord && item.words) {
-                        line = formatWordByWordLine(item.time, content, item.words, item.duration);
-                    }
-                    break;
-                case "translation":
-                    // Use == null to only skip undefined/null, allow empty string (breaks)
-                    if (!parser.hasTranslation || item.translation == null) {
-                        continue;
-                    }
-                    content = item.translation;
-                    break;
-                case "romanization":
-                    // Use == null to only skip undefined/null, allow empty string (breaks)
-                    if (!parser.hasRomanization || item.romanization == null) {
-                        continue;
-                    }
-                    content = item.romanization;
-                    if (enableWordByWord && item.hasRomanizationWordByWord && item.romanizationWords) {
-                        line = formatWordByWordLine(item.time, content, item.romanizationWords, item.romanizationDuration);
-                    }
-                    break;
+            case "original":
+                content = item.lrc;
+                if (enableWordByWord && item.hasWordByWord && item.words) {
+                    line = formatWordByWordLine(item.time, content, item.words, item.duration);
+                }
+                break;
+            case "translation":
+                // Use == null to only skip undefined/null, allow empty string (breaks)
+                if (!parser.hasTranslation || item.translation == null) {
+                    continue;
+                }
+                content = item.translation;
+                break;
+            case "romanization":
+                // Use == null to only skip undefined/null, allow empty string (breaks)
+                if (!parser.hasRomanization || item.romanization == null) {
+                    continue;
+                }
+                content = item.romanization;
+                if (enableWordByWord && item.hasRomanizationWordByWord && item.romanizationWords) {
+                    line = formatWordByWordLine(item.time, content, item.romanizationWords, item.romanizationDuration);
+                }
+                break;
             }
 
             // For empty content: only output timestamp for original lyrics (breaks/pauses)
@@ -513,13 +513,13 @@ export function formatLyricsByTimestamp(
 
         // Join lines for this timestamp
         if (timestampGroups.length > 0) {
-            result += timestampGroups.join('\n') + '\n';
+            result += timestampGroups.join("\n") + "\n";
         }
     }
 
     const finalResult = result.trim();
 
-    devLog('info', '[歌词格式化] 格式化完成', {
+    devLog("info", "[歌词格式化] 格式化完成", {
         lyricsCount: lrcItems.length,
         hasTranslation: parser.hasTranslation,
         hasRomanization: parser.hasRomanization,
@@ -543,7 +543,7 @@ export function formatLyricsByTimestamp(
 function formatWordByWordLine(lineTime: number, text: string, words: ILyric.IWordData[], lineDuration?: number): string {
     // If no words data, return empty (will fallback to regular format)
     if (!words || words.length === 0) {
-        return '';
+        return "";
     }
 
     const lineTimestamp = timeToLrcTime(lineTime);
@@ -598,7 +598,7 @@ function generatePseudoWordTimestamps(
     }
 
     const words: ILyric.IWordData[] = [];
-    const chars = text.split('');
+    const chars = text.split("");
     const charCount = chars.length;
 
     if (charCount === 0) {
@@ -614,7 +614,7 @@ function generatePseudoWordTimestamps(
         const duration = durationPerChar;
 
         // Check if next char is a space
-        const isNextSpace = i < charCount - 1 && chars[i + 1] === ' ';
+        const isNextSpace = i < charCount - 1 && chars[i + 1] === " ";
 
         words.push({
             text: char,
@@ -1392,8 +1392,8 @@ export default class LyricParser {
                             type === "raw"
                                 ? item.lrc
                                 : type === "translation"
-                                ? item.translation
-                                : item.romanization
+                                    ? item.translation
+                                    : item.romanization
                         }`,
                 )
                 .join("\r\n");
@@ -1403,8 +1403,8 @@ export default class LyricParser {
                     type === "raw"
                         ? item.lrc
                         : type === "translation"
-                        ? item.translation
-                        : item.romanization
+                            ? item.translation
+                            : item.romanization
                 )
                 .join("\r\n");
         }
@@ -1489,7 +1489,7 @@ export default class LyricParser {
             const startIdx = timePositions[i].index;
             const endIdx =
                 i < timePositions.length - 1
-                    ? content.indexOf('<', startIdx)
+                    ? content.indexOf("<", startIdx)
                     : content.length;
 
             if (endIdx > startIdx) {
@@ -1506,7 +1506,7 @@ export default class LyricParser {
                         text: text,
                         startTime: timePositions[i].time,
                         duration: Math.max(duration, 50), // 最小持续 50ms
-                        space: text.endsWith(' '),
+                        space: text.endsWith(" "),
                     });
                     textParts.push(text);
                 }
@@ -1518,7 +1518,7 @@ export default class LyricParser {
         if (words.length === 0 && timePositions.length > 0) {
             return {
                 time: lineStartTime,
-                lrc: '',
+                lrc: "",
                 index: 0,
                 hasWordByWord: false,
                 words: undefined,
@@ -1534,7 +1534,7 @@ export default class LyricParser {
 
         return {
             time: lineStartTime,
-            lrc: textParts.join('').trim(),
+            lrc: textParts.join("").trim(),
             index: 0,
             hasWordByWord: true,
             words: words,
@@ -1578,7 +1578,7 @@ export default class LyricParser {
 
     /** 解析 mm:ss.xxx 或 mm:ss 格式的时间为秒 */
     private parseAngleBracketTime(timeStr: string): number {
-        const parts = timeStr.split(':');
+        const parts = timeStr.split(":");
         if (parts.length === 2) {
             const minutes = parseFloat(parts[0]);
             const seconds = parseFloat(parts[1]);
@@ -1597,7 +1597,7 @@ export default class LyricParser {
         }
 
         raw = normalizeRawLyricText(raw).trim();
-        const lines = raw.split('\n');
+        const lines = raw.split("\n");
         const rawLrcItems: Array<IParsedLrcItem> = [];
         let meta: any = {};
         let isFirstLine = true;
@@ -1669,7 +1669,7 @@ export default class LyricParser {
                 }
 
                 // 提取歌词内容
-                const lrcContent = trimmedLine.replace(timeReg, '').trim();
+                const lrcContent = trimmedLine.replace(timeReg, "").trim();
 
                 // 为每个时间标记创建歌词项
                 for (const timeStr of timeMatches) {

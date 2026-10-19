@@ -29,6 +29,11 @@ export const controlSize = {
     hero: rpx(112),
 } as const;
 
+export const buttonHeight = {
+    compact: 32,
+    standard: 40,
+} as const;
+
 export { audioraGradient, topListGradients } from "./colorPalette";
 
 /**

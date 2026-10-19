@@ -15,6 +15,7 @@ export default function TopListDetail() {
     return (
         <MusicSheetPage
             navTitle={t("topList.title")}
+            typeLabel={t("topList.title")}
             sheetInfo={topListDetail ? { ...topListDetail, platform: pluginHash } : null}
             state={state}
             onLoadMore={loadMore}

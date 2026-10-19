@@ -9,6 +9,11 @@ const mockWidget = jest.fn();
 const mockSchedule = jest.fn();
 const mockConfigValue = jest.fn();
 const mockInject = jest.fn();
+let mockCarConnected = false;
+jest.mock("react-native", () => ({
+    Platform: { OS: "android" },
+    NativeModules: { AndroidAuto: { isConnected: () => mockCarConnected } },
+}));
 jest.mock("react-native-get-random-values", () => ({}));
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { logoTransparent: "icon" } }));
 jest.mock("@/constants/pathConst", () => ({ __esModule: true, default: {
@@ -57,6 +62,7 @@ beforeEach(() => {
         mock.mockResolvedValue(undefined);
     }
     mockConfigValue.mockReturnValue(undefined);
+    mockCarConnected = false;
 });
 
 it("coalesces headless and UI startup without restoring a running queue twice", async () => {
@@ -137,4 +143,12 @@ it("attaches to an already initialized player and preserves notification options
         compactCapabilities: ["play", "pause", "next", "previous"],
         android: { alwaysPauseOnInterruption: true, appKilledPlaybackBehavior: "continue" },
     }));
+});
+
+it("preserves Android Auto background restoration if the host disconnects during startup", async () => {
+    mockCarConnected = true;
+    const { initTrackPlayer } = require("./playbackRuntime");
+    mockCarConnected = false;
+    await initTrackPlayer();
+    expect(mockQueue).toHaveBeenCalledWith({ background: false, backgroundRestore: true });
 });

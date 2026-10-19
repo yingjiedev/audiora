@@ -22,5 +22,5 @@ export default function BoardPanelWrapper(props: IBoardPanelProps) {
         return () => task.cancel();
     }, [getTopList, hash]);
 
-    return <BoardPanel topListData={topListData} hash={hash} />;
+    return <BoardPanel topListData={topListData} hash={hash} onRetry={() => getTopList(hash)} />;
 }

@@ -19,9 +19,14 @@ import i18n from "@/core/i18n";
 import bootstrapAtom from "./bootstrap.atom";
 import { getDefaultStore } from "jotai";
 import { handleMusicWidgetLink } from "@/service/musicWidget";
-import { initTrackPlayer, setupNativePlayer, setupPlaybackData, setupPlaybackPlugins } from "@/service/playbackRuntime";
+import { initTrackPlayer as initPlaybackRuntime, setupNativePlayer, setupPlaybackData, setupPlaybackPlugins, startedFromAndroidAuto } from "@/service/playbackRuntime";
 
-export { initTrackPlayer } from "@/service/playbackRuntime";
+export async function initTrackPlayer(logger?: IPerfLogger) {
+    await initPlaybackRuntime(logger);
+    if (getDefaultStore().get(bootstrapAtom).state === "TrackPlayerError") {
+        getDefaultStore().set(bootstrapAtom, { state: "Done" });
+    }
+}
 
 // Request this at module load, before the first React commit. Calling it only
 // after the async bootstrap starts can let Expo auto-hide the native splash
@@ -269,7 +274,8 @@ async function extraMakeup() {
         handleLinkingUrl(initUrl);
     }
 
-    if (Config.getConfig("basic.autoPlayWhenAppStart")) {
+    if (Config.getConfig("basic.autoPlayWhenAppStart") &&
+        !startedFromAndroidAuto) {
         TrackPlayer.play();
     }
 }
@@ -299,7 +305,16 @@ function bindEvents() {
     });
 }
 
-export default async function () {
+let bootstrapTask: Promise<void> | null = null;
+
+export default function bootstrap(): Promise<void> {
+    if (!bootstrapTask) {
+        bootstrapTask = runBootstrap();
+    }
+    return bootstrapTask;
+}
+
+async function runBootstrap() {
     void markStartupSession("bootstrap-entry");
 
     try {
@@ -309,9 +324,9 @@ export default async function () {
         await bootstrapImpl();
         bindEvents();
         void appendStartupBreadcrumb("bootstrap-bind-events");
-        getDefaultStore().set(bootstrapAtom, {
-            "state": "Done",
-        });
+        if (getDefaultStore().get(bootstrapAtom).state === "Loading") {
+            getDefaultStore().set(bootstrapAtom, { state: "Done" });
+        }
         void appendStartupBreadcrumb("bootstrap-done");
     } catch (e: any) {
         void appendStartupBreadcrumb("bootstrap-fatal", {
@@ -330,5 +345,5 @@ export default async function () {
     // 隐藏开屏动画
     devLog("info", "🎯[Bootstrap] 隐藏启动屏幕");
     void appendStartupBreadcrumb("splashscreen-hide");
-    await SplashScreen.hideAsync();
+    await SplashScreen.hideAsync().catch(emptyFunction);
 }

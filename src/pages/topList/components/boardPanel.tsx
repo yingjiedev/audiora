@@ -16,10 +16,11 @@ import ListEmpty from "@/components/base/listEmpty";
 import useOrientation from "@/hooks/useOrientation";
 import useColors from "@/hooks/useColors";
 import Color from "color";
+import { spacing } from "@/constants/designSystem";
 
 /** Gutters between cards (explicit margins, not gap). */
 const COLUMN_GAP = rpx(14);
-const HORIZONTAL_PADDING = rpx(24);
+const HORIZONTAL_PADDING = spacing.xxxl;
 /** Soft target for “how many fit”; still clamped to min/max columns. */
 const MIN_CARD_WIDTH = rpx(220);
 
@@ -55,9 +56,10 @@ function getUnitWidth(availableWidth: number, columnCount: number) {
 interface IBoardPanelProps {
     hash: string;
     topListData: IPluginTopListResult;
+    onRetry?: () => void;
 }
 function BoardPanel(props: IBoardPanelProps) {
-    const { hash, topListData } = props ?? {};
+    const { hash, topListData, onRetry } = props ?? {};
     const orientation = useOrientation();
     const colors = useColors();
     const { width: windowWidth } = useWindowDimensions();
@@ -104,7 +106,9 @@ function BoardPanel(props: IBoardPanelProps) {
         [sections],
     );
 
-    return topListData?.state !== RequestStateCode.FINISHED ? (
+    return topListData?.state === RequestStateCode.ERROR ? (
+        <ListEmpty state={RequestStateCode.ERROR} onRetry={onRetry} />
+    ) : topListData?.state !== RequestStateCode.FINISHED ? (
         <Loading />
     ) : !sectionCards.length ? (
         <ListEmpty state={topListData?.state} />

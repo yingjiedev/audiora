@@ -2,14 +2,15 @@
  * 搜索结果面板 一级页
  */
 import React, { memo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import rpx, { fontRpx, vw } from "@/utils/rpx";
+import { StyleSheet, View } from "react-native";
+import { vw } from "@/utils/rpx";
 import { SceneMap, TabView } from "react-native-tab-view";
 import ResultSubPanel from "./resultSubPanel";
 import results from "./results";
-import { fontWeightConst } from "@/constants/uiConst";
-import useColors from "@/hooks/useColors";
+import PillTabBar from "@/components/base/pillTabBar";
+import { spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
 
 const routes = results;
 
@@ -27,56 +28,19 @@ const renderScene = getRouterScene(routes);
 
 function ResultPanel() {
     const [index, setIndex] = useState(0);
-    const colors = useColors();
     const { t } = useI18N();
+    const editor = useActiveMusicSelection();
+    const changeTab = (next: number) => {
+        if (next === index) return;
+        editor?.finish(); setIndex(next);
+    };
 
     return (
         <View style={styles.container}>
-            <View
-                style={[
-                    styles.primaryTabs,
-                    {
-                        borderBottomColor: colors.divider,
-                    },
-                ]}>
-                {routes.map((route, routeIndex) => {
-                    const focused = routeIndex === index;
-
-                    return (
-                        <Pressable
-                            key={route.key}
-                            style={styles.primaryTabItem}
-                            onPress={() => setIndex(routeIndex)}>
-                            <Text
-                                numberOfLines={1}
-                                style={{
-                                    fontSize: fontRpx(28),
-                                    fontWeight: focused
-                                        ? fontWeightConst.bolder
-                                        : fontWeightConst.medium,
-                                    color: focused
-                                        ? colors.text
-                                        : colors.textSecondary ?? colors.text,
-                                    textAlign: "center",
-                                }}>
-                                {route.i18nKey
-                                    ? t(route.i18nKey as any)
-                                    : route.title}
-                            </Text>
-                            <View
-                                style={[
-                                    styles.primaryTabIndicator,
-                                    {
-                                        backgroundColor: focused
-                                            ? colors.text
-                                            : "transparent",
-                                    },
-                                ]}
-                            />
-                        </Pressable>
-                    );
-                })}
-            </View>
+            <PillTabBar routes={routes} index={index} variant="underline" onIndexChange={changeTab}
+                contentContainerStyle={{ paddingHorizontal: spacing.xxl }} getTitle={route => {
+                    const item = routes.find(value => value.key === route.key)!; return item.i18nKey ? t(item.i18nKey as any) : item.title;
+                }} />
             <TabView
                 lazy
                 navigationState={{
@@ -85,37 +49,13 @@ function ResultPanel() {
                 }}
                 renderTabBar={() => null}
                 renderScene={renderScene}
-                onIndexChange={setIndex}
+                onIndexChange={changeTab}
+                swipeEnabled={!editor}
                 initialLayout={{ width: vw(100) }}
             />
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    primaryTabs: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: rpx(20),
-        paddingTop: rpx(4),
-        borderBottomWidth: StyleSheet.hairlineWidth,
-    },
-    primaryTabItem: {
-        flex: 1,
-        alignItems: "center",
-        paddingHorizontal: rpx(8),
-        paddingTop: rpx(12),
-        paddingBottom: rpx(10),
-    },
-    primaryTabIndicator: {
-        width: rpx(40),
-        height: rpx(6),
-        borderRadius: rpx(999),
-        marginTop: rpx(10),
-    },
-});
-
+const styles = StyleSheet.create({ container: { flex: 1 } });
 export default memo(ResultPanel);

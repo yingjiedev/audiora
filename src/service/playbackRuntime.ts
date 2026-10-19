@@ -15,7 +15,11 @@ import { appendStartupBreadcrumb, trace } from "@/utils/log";
 import type { IPerfLogger } from "@/utils/perfLogger";
 import { restoreScheduleClose } from "@/utils/scheduleClose";
 import RNTrackPlayer, { AppKilledPlaybackBehavior, Capability } from "react-native-track-player";
+import { NativeModules, Platform } from "react-native";
 import { setupMusicWidget } from "./musicWidget";
+
+// Preserve the car launch origin even if the host disconnects during initialization.
+export const startedFromAndroidAuto = Platform.OS === "android" && !!NativeModules.AndroidAuto?.isConnected();
 
 PluginManager.injectDependencies(Config);
 musicHistory.injectDependencies(Config);
@@ -105,7 +109,10 @@ export function initTrackPlayer(logger?: IPerfLogger, background = false) {
             await native;
             logger?.mark("播放器初始化完成");
             if (!queueSetup) {
-                queueSetup = TrackPlayer.setupTrackPlayer({ background });
+                queueSetup = TrackPlayer.setupTrackPlayer({
+                    background,
+                    ...(startedFromAndroidAuto ? { backgroundRestore: true } : {}),
+                });
                 queueSetup.catch(() => {
                     queueSetup = undefined;
                 });

@@ -1,25 +1,34 @@
+
 import React from "react";
+import { spacing } from "@/constants/designSystem";
 import MusicItem from "@/components/mediaItem/musicItem";
-import Empty from "@/components/base/empty";
+import { PageState } from "@/components/base/pageSection";
+import { useI18N } from "@/core/i18n";
 import { FlashList } from "@shopify/flash-list";
-import rpx from "@/utils/rpx.ts";
+import type { MusicListSelection } from "@/components/musicList/useMusicSelection";
+import SelectionCheckbox from "@/components/musicList/selectionCheckbox";
+import { getMediaUniqueKey } from "@/utils/mediaUtils";
 
 interface ISearchResultProps {
     result: IMusic.IMusicItem[];
     musicSheet?: IMusic.IMusicSheetItem;
+    selection?: MusicListSelection;
 }
 
-const ITEM_HEIGHT = rpx(120);
 
 export default function SearchResult(props: ISearchResultProps) {
-    const { result, musicSheet } = props;
+    const { result, musicSheet, selection } = props;
+    const { t } = useI18N();
     return (
         <FlashList
-            estimatedItemSize={ITEM_HEIGHT}
-            ListEmptyComponent={<Empty />}
+            ListEmptyComponent={<PageState icon="magnifying-glass" title={t("subpage.searchEmpty")} description={t("subpage.searchHint")} />}
             data={result}
+            extraData={selection}
             renderItem={({ item }) => (
-                <MusicItem musicItem={item} musicSheet={musicSheet} />
+                <MusicItem itemPaddingLeft={spacing.xxxl} itemPaddingRight={spacing.xxxl} musicItem={item} musicSheet={musicSheet}
+                    checked={selection?.selectedKeys.has(getMediaUniqueKey(item))}
+                    left={selection ? <SelectionCheckbox checked={selection.selectedKeys.has(getMediaUniqueKey(item))} /> : undefined}
+                    actions={selection ? [] : undefined} onItemPress={selection ? () => selection.onToggle(item) : undefined} />
             )}
         />
     );

@@ -5,6 +5,7 @@
 import getOrCreateMMKV from "@/utils/getOrCreateMMKV";
 import { useEffect, useState } from "react";
 import { safeParse } from "./jsonUtil";
+import type { WebdavBackupStatus } from "@/core/webdavBackup";
 
 // Internal Method
 const getStore = () => {
@@ -12,6 +13,7 @@ const getStore = () => {
 };
 
 interface IPersistStatus {
+    "backup.webdavStatus": WebdavBackupStatus;
     /** 当前的音乐 */
     "music.musicItem": IMusic.IMusicItem;
     /** 进度 */

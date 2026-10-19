@@ -96,6 +96,9 @@ describe("motion functions on a separate UI runtime", () => {
             );
         }
         expect(onUI(math.dragProgress)(240, 800)).toBe(0.5);
+        expect(onUI(math.playerDismissProgress)(240, 800)).toBe(0.3);
+        expect(onUI(math.playerDismissTransform)(0.3, 800)).toEqual({ opacity: 1, translateY: 240 });
+        expect(onUI(math.playerDismissTransform)(0.5, 800, true)).toEqual({ opacity: 0.5, translateY: 0 });
         expect(onUI(math.dismissDecision)(240, 0, 800)).toBe("dismiss");
         expect(onUI(math.dismissDecision)(0, 0, 800)).toBe("cancel");
         expect(onUI(math.clamp)(NaN, 0, 1)).toBe(0);

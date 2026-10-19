@@ -32,7 +32,7 @@ interface IMiniLyricProps {
     onPress?: () => void;
     layout?: "normal" | "compact";
     immersive?: boolean;
-    /** Suspend visual work while the album tab is hidden or the page exits. */
+    /** Suspend visual work while the album tab is hidden. */
     hidden?: boolean;
 }
 

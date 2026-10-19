@@ -2,7 +2,7 @@
 
 本页用于构建可安装的 Android Release 测试 APK。推荐使用仓库自带的 PowerShell 脚本自动完成版本号、构建、校验和清理。
 
-预览交付须提前编译。`build-preview` 固定使用显示名称 `audiora-test` 和独立包名 `io.github.yingjiedev.audiora.test`，可与既有 Audiora 安装共存。只改名称不能防止覆盖；脚本会校验实际 APK 的名称和包名。禁止为安装测试包卸载已有 Audiora 或清空其数据。连接实体设备后安装测试包并核对版本，由用户完成桌面小部件的手动验收。
+预览交付须提前编译。`build-preview` 默认使用显示名称 `audiora-test` 和独立包名 `io.github.yingjiedev.audiora.test`，可与既有 Audiora 安装共存。只改名称不能防止覆盖；脚本会校验实际 APK 的名称和包名。禁止为安装测试包卸载已有 Audiora 或清空其数据。连接实体设备后安装测试包并核对版本，由用户完成桌面小部件的手动验收。显式的 `-PreviewApp` 选项保留上游预览渠道身份，日常预览交付使用默认测试包。
 
 ## 构建前准备
 
@@ -32,6 +32,12 @@ Set-Location C:\a
 
 ## 自动构建（推荐）
 
+### 在 CI 中重建正式发布
+
+若已有发布标签的构建因流水线配置失败，可以在 Actions 的 **Build Android APK → Run workflow** 中选择包含修复的分支，填写对应 `version`（例如 `v0.3.0`）和 `release_tag`（例如 `v0.3.0`）。流水线会检出已有标签的代码、校验版本与下载地址，并使用固定发布证书构建和上传到该标签的 Release，无需移动标签。留空 `release_tag` 时仍为验证构建，不上传到 Release。
+
+### 本地预览包
+
 在仓库根目录执行：
 
 ```powershell
@@ -41,7 +47,7 @@ npm run build-preview
 默认生成 `arm64-v8a` APK。脚本会自动：
 
 - 按当前 `package.json` 版本生成唯一的预览 `versionName` 和 Android `versionCode`。
-- 传入 `-PaudioraPreview=true`，使用独立测试包身份；常规 Release 构建保持 Audiora 名称与正式包名。
+- 默认传入 `-PtestApp=true`，使用独立测试包身份；常规 Release 构建保持 Audiora 名称与正式包名。
 - 在依赖缺失时执行 `npm ci`（也可以显式传入 `-InstallDependencies`）。
 - 生成构建信息并调用 Gradle Release 构建。
 - 在 Windows 上临时处理 NDK 文件属性问题。
@@ -54,6 +60,21 @@ npm run build-preview
 npm run build-preview -- -Abi all
 ```
 
+构建可与正式版并存的预览应用（显示名为“Audiora 预览”，包名追加 `.preview`）：
+
+```powershell
+npm run build-preview -- -PreviewApp
+```
+
+构建可与正式版并存的测试包：
+
+```powershell
+npm run build-preview -- -TestApp
+```
+
+测试包使用 `io.github.yingjiedev.audiora.test` 作为 `applicationId`，桌面名称为 `audiora-test`，APK 文件名以 `Audiora-test` 开头。它与正式版使用独立应用数据目录。
+
+需要在同一设备安装多个测试包时，可以指定不同的 ID 后缀，例如 `npm run build-preview -- -TestApp -TestAppIdSuffix test.codex` 会生成 `io.github.yingjiedev.audiora.test.codex`；桌面名称仍为 `audiora-test`。
 强制重新安装依赖：
 
 ```powershell

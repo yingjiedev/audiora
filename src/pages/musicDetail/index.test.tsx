@@ -16,6 +16,8 @@ jest.mock("@/hooks/useColors", () => () => {
 });
 
 const mockProgress = { value: 0 };
+const mockDismissProgress = { value: 0 };
+let mockReduceMotion = false;
 let mockGesture: Record<string, jest.Mock>;
 let mockBackPress: () => boolean | null | undefined;
 let mockRemoval: (() => void) | undefined;
@@ -38,6 +40,13 @@ jest.mock("react-native-reanimated", () => {
         interpolate: (value: number) => value,
         runOnJS: (callback: Function) => callback,
         useAnimatedStyle: (callback: Function) => callback(),
+        useDerivedValue: (callback: () => number) => {
+            return ReactMock.useRef({
+                get value() {
+                    return callback();
+                },
+            }).current;
+        },
         useAnimatedReaction: (
             prepare: () => number,
             react: (value: number, previous: number | null) => void,
@@ -78,7 +87,7 @@ jest.mock("expo-keep-awake", () => ({
     deactivateKeepAwake: jest.fn(),
 }));
 jest.mock("@/hooks/useOrientation", () => () => mockOrientation);
-jest.mock("@/hooks/useMotion", () => () => ({ reduceMotion: false }));
+jest.mock("@/hooks/useMotion", () => () => ({ reduceMotion: mockReduceMotion }));
 jest.mock("@/core/appConfig", () => ({
     __esModule: true,
     default: {
@@ -88,7 +97,7 @@ jest.mock("@/core/appConfig", () => ({
     useAppConfig: () => undefined,
 }));
 jest.mock("@/core/playerTransition", () => ({
-    playerTransition: () => ({ progress: mockProgress }),
+    playerTransition: () => ({ progress: mockProgress, dismissProgress: mockDismissProgress }),
     expandPlayerTransition: jest.fn(),
     resetPlayerTransition: jest.fn(),
     cancelPlayerTransitionCollapse: jest.fn(),
@@ -126,7 +135,7 @@ function flushVisibility() {
 
 function contentView(renderer: TestRenderer.ReactTestRenderer) {
     return renderer.root.findAllByType(View)
-        .find(node => node.props.collapsable === false)!;
+        .find(node => node.props.accessibilityElementsHidden !== undefined)!;
 }
 
 describe("full player input lifecycle", () => {
@@ -134,6 +143,8 @@ describe("full player input lifecycle", () => {
         jest.useFakeTimers();
         jest.clearAllMocks();
         mockProgress.value = 0;
+        mockDismissProgress.value = 0;
+        mockReduceMotion = false;
         mockRemoval = undefined;
         mockOrientation = "vertical";
         mockTab = "album";
@@ -180,6 +191,40 @@ describe("full player input lifecycle", () => {
         expect(expandPlayerTransition).toHaveBeenCalledWith({ reduceMotion: false });
     });
 
+    it("starts the entire background and controls below the screen, then slides them up together", () => {
+        const { renderer, onClose } = render();
+        const page = renderer.root.findAllByType(View)
+            .find(node => node.props.needsOffscreenAlphaCompositing)!;
+        const initial = StyleSheet.flatten(page.props.style);
+        expect(initial.opacity).toBe(0);
+        expect(initial.transform[0].translateY).toBeGreaterThan(0);
+        expect(StyleSheet.flatten(contentView(renderer).props.style).opacity).toBeUndefined();
+        expect(page.findAllByType(NavBar)).toHaveLength(1);
+        mockProgress.value = 0.5;
+        act(() => renderer.update(<MusicDetail onClose={onClose} />));
+        const middle = StyleSheet.flatten(page.props.style);
+        expect(middle.transform[0].translateY).toBeCloseTo(initial.transform[0].translateY / 2);
+        mockProgress.value = 1;
+        flushVisibility();
+        expect(StyleSheet.flatten(page.props.style)).toMatchObject({
+            opacity: 1, transform: [{ translateY: 0 }],
+        });
+    });
+
+    it("closes a partially opened page from its current position without snapping to full screen", () => {
+        mockProgress.value = 0.4;
+        const { renderer, onClose } = render();
+        const page = renderer.root.findAllByType(View)
+            .find(node => node.props.needsOffscreenAlphaCompositing)!;
+        const initialY = StyleSheet.flatten(page.props.style).transform[0].translateY;
+        act(() => renderer.root.findByType(NavBar).props.onBack());
+        expect(StyleSheet.flatten(page.props.style).transform[0].translateY).toBe(initialY);
+        mockDismissProgress.value = 0.5;
+        act(() => renderer.update(<MusicDetail onClose={onClose} />));
+        expect(StyleSheet.flatten(page.props.style).transform[0].translateY).toBeGreaterThan(initialY);
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
     it("restores the player when an active drag is cancelled even beyond the dismiss threshold", () => {
         const { renderer, onClose } = render();
         act(() => {
@@ -194,7 +239,7 @@ describe("full player input lifecycle", () => {
         expect(cancelPlayerTransitionCollapse).toHaveBeenCalledTimes(1);
         expect(cancelPlayerTransitionCollapse).toHaveBeenCalledWith({
             reduceMotion: false,
-            velocity: -0,
+            velocity: 0,
         });
         expect(collapsePlayerTransition).not.toHaveBeenCalled();
         expect(onClose).not.toHaveBeenCalled();
@@ -237,6 +282,7 @@ describe("full player input lifecycle", () => {
             finalize?.({}, false);
         });
         expect(mockProgress.value).toBe(0.1);
+        expect(mockDismissProgress.value).toBe(0);
         expect(cancelAnimation).toHaveBeenCalledTimes(1);
         expect(cancelPlayerTransitionCollapse).not.toHaveBeenCalled();
         expect(onClose).not.toHaveBeenCalled();
@@ -341,18 +387,66 @@ describe("full player input lifecycle", () => {
             gestureCallback("onUpdate")?.({ translationY: 2000 });
         });
         flushVisibility();
-        expect(mockProgress.value).toBe(0);
+        expect(mockProgress.value).toBe(1);
+        expect(mockDismissProgress.value).toBe(1);
         expect(StyleSheet.flatten(contentView(renderer).props.style).pointerEvents).toBe("auto");
         act(() => jest.advanceTimersByTime(1500));
         expect(onClose).not.toHaveBeenCalled();
         act(() => gestureCallback("onEnd")?.({ translationY: 2000, velocityY: 0 }, false));
         flushVisibility();
         act(() => jest.advanceTimersByTime(450));
-        mockProgress.value = 1;
+        mockDismissProgress.value = 0;
         flushVisibility();
         act(() => jest.advanceTimersByTime(1000));
         expect(onClose).not.toHaveBeenCalled();
         expect(cancelPlayerTransitionCollapse).toHaveBeenCalledTimes(1);
+    });
+
+    it("moves one page containing both background and controls without removing immersive art early", () => {
+        mockProgress.value = 1;
+        mockDismissProgress.value = 0.2;
+        const { renderer, onClose } = render();
+        const page = renderer.root.findAllByType(View)
+            .find(node => node.props.needsOffscreenAlphaCompositing)!;
+        const presentation = StyleSheet.flatten(page.props.style);
+        expect(presentation.opacity).toBe(1);
+        expect(presentation.transform[0].translateY).toBeGreaterThan(0);
+        expect(page.findByType("Background" as React.ElementType).props.renderImmersiveCover).toBe(true);
+        expect(page.findAllByType(NavBar)).toHaveLength(1);
+        expect(page.findAllByType("Content" as React.ElementType)).toHaveLength(1);
+        expect(page.props.renderToHardwareTextureAndroid).toBe(false);
+        act(() => renderer.root.findByType(NavBar).props.onBack());
+        expect(page.findByType("Background" as React.ElementType).props.renderImmersiveCover).toBe(true);
+        expect(page.props.renderToHardwareTextureAndroid).toBe(true);
+        expect(mockProgress.value).toBe(1);
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("uses a stationary whole-page fade under Reduce Motion", () => {
+        mockProgress.value = 1;
+        mockDismissProgress.value = 0.5;
+        mockReduceMotion = true;
+        const { renderer } = render();
+        const page = renderer.root.findAllByType(View)
+            .find(node => node.props.needsOffscreenAlphaCompositing)!;
+        expect(StyleSheet.flatten(page.props.style)).toMatchObject({
+            opacity: 0.5,
+            transform: [{ translateY: 0 }],
+        });
+        act(() => renderer.root.findByType(NavBar).props.onBack());
+        expect(collapsePlayerTransition).toHaveBeenCalledWith(expect.any(Function), { reduceMotion: true });
+    });
+
+    it("follows the finger and preserves the cover's entrance progress", () => {
+        mockProgress.value = 1;
+        render();
+        act(() => {
+            gestureCallback("onStart")?.();
+            gestureCallback("onUpdate")?.({ translationY: 80 });
+        });
+        expect(mockDismissProgress.value).toBeGreaterThan(0);
+        expect(mockDismissProgress.value).toBeLessThan(1);
+        expect(mockProgress.value).toBe(1);
     });
 
     it("rechecks current UI values before a delayed visibility reaction arrives", () => {

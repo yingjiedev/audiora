@@ -101,6 +101,8 @@ export interface IAppConfigProperties {
     "theme.colors": CustomizedColors;
     "theme.customColors"?: CustomizedColors;
     "theme.followSystem": boolean;
+    /** Android 12+ 系统动态配色，未设置时关闭；自定义主题优先 */
+    "theme.dynamicColors"?: boolean;
     "theme.selectedTheme": string;
     "theme.coverStyle": "square" | "circle";
     "theme.musicDetailCoverStyle": "classic" | "immersive";
@@ -115,6 +117,8 @@ export interface IAppConfigProperties {
 
     // Backup
     "backup.resumeMode": ResumeMode;
+    "backup.webdavAutoEnabled": boolean;
+    "backup.webdavAutoInterval": "daily" | "weekly";
 
     // Plugin
     "plugin.subscribeUrl": string;

@@ -1,9 +1,10 @@
 import Empty from "@/components/base/empty";
-import PillTabBar from "@/components/base/pillTabBar";
-import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
+import { usePluginDisplayNameResolver, useSearchablePlugins } from "@/core/pluginManager";
+import { useI18N } from "@/core/i18n";
+import AggregateResults from "./aggregateResults";
 import { vw } from "@/utils/rpx";
-import { useAtomValue } from "jotai";
-import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import { atom, useAtomValue } from "jotai";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SceneMap, TabView } from "react-native-tab-view";
 import { searchResultsAtom } from "../../store/atoms";
 import { renderMap } from "./results";
@@ -11,22 +12,33 @@ import DefaultResults from "./results/defaultResults";
 import ResultWrapper from "./resultWrapper";
 import { useParams } from "@/core/router";
 import { scopeSearchPlugins } from "../../common/searchScope";
+import { spacing } from "@/constants/designSystem";
+import { StyleSheet, View } from "react-native";
+import SourceTabs from "./sourceTabs";
+import SourceFeedback from "./sourceFeedback";
+import { useActiveMusicSelection } from "@/components/musicList/selectionContext";
+import BatchEditAction from "@/components/musicList/batchEditAction";
+import InlineSelectionBar from "@/components/musicList/inlineSelectionBar";
+import type { SearchSelectionEntry, SearchSelectionListener } from "./useSearchSelection";
 
 interface IResultSubPanelProps {
     tab: ICommon.SupportMediaType;
 }
+
+const aggregateKey = "aggregate-all";
 
 // 展示结果的视图
 function getResultComponent(
     tab: ICommon.SupportMediaType,
     pluginHash: string,
     pluginName: string,
+    onSelectionChange: SearchSelectionListener,
 ) {
+    const sourceResultAtom = atom(get => get(searchResultsAtom)[tab][pluginHash]);
     return tab in renderMap
         ? memo(
             () => {
-                const searchResults = useAtomValue(searchResultsAtom);
-                const pluginSearchResult = searchResults[tab][pluginHash];
+                const pluginSearchResult = useAtomValue(sourceResultAtom);
                 const pluginSearchResultRef = useRef(pluginSearchResult);
 
                 useEffect(() => {
@@ -40,6 +52,7 @@ function getResultComponent(
                         pluginHash={pluginHash}
                         pluginName={pluginName}
                         pluginSearchResultRef={pluginSearchResultRef}
+                        onSelectionChange={onSelectionChange}
                     />
                 );
             },
@@ -52,10 +65,13 @@ function getResultComponent(
 function getSubRouterScene(
     tab: ICommon.SupportMediaType,
     routes: Array<{ key: string; title: string }>,
+    onSelectionChange: (source: string, entry?: SearchSelectionEntry) => void,
 ) {
     const scene: Record<string, React.FC> = {};
     routes.forEach(r => {
-        scene[r.key] = getResultComponent(tab, r.key, r.title);
+        const update: SearchSelectionListener = entry => onSelectionChange(r.key, entry);
+        scene[r.key] = r.key === aggregateKey ? () => <AggregateResults onSelectionChange={update} />
+            : getResultComponent(tab, r.key, r.title, update);
     });
     return SceneMap(scene);
 }
@@ -63,25 +79,40 @@ function getSubRouterScene(
 function ResultSubPanel(props: IResultSubPanelProps) {
     const params = useParams<"search-page">();
     const [index, setIndex] = useState(0);
+    const [selectionEntries, setSelectionEntries] = useState<Record<string, SearchSelectionEntry | undefined>>({});
+    const onSelectionChange = useCallback((source: string, entry?: SearchSelectionEntry) => {
+        setSelectionEntries(previous => previous[source] === entry ? previous : { ...previous, [source]: entry });
+    }, []);
+    const editor = useActiveMusicSelection();
+    const changeSource = (next: number) => {
+        if (next === index) return;
+        editor?.finish(); setIndex(next);
+    };
     const getDisplayName = usePluginDisplayNameResolver();
+    const { t } = useI18N();
     // Do not over-memoize: plugins can load/enable after mount.
-    const routes = scopeSearchPlugins(PluginManager.getSortedSearchablePlugins(props.tab), params?.pluginHash).map(
+    const plugins = scopeSearchPlugins(useSearchablePlugins(props.tab), params?.pluginHash);
+    const routes = plugins.map(
         _ => ({
             key: _.hash,
             title: getDisplayName(_),
         }),
     );
+    if (props.tab === "music" && !params?.pluginHash && routes.length) {
+        routes.unshift({ key: aggregateKey, title: t("aggregate.all") });
+    }
     // 标题参与 memo key：插件改名后场景随之重建，避免残留旧名字
     const routeKey = routes.map(r => `${r.key}:${r.title}`).join("|");
     const renderScene = useMemo(
-        () => getSubRouterScene(props.tab, routes),
+        () => getSubRouterScene(props.tab, routes, onSelectionChange),
         // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild when plugin set changes
-        [props.tab, routeKey],
+        [props.tab, routeKey, onSelectionChange],
     );
 
     const safeIndex = routes.length
         ? Math.min(index, routes.length - 1)
         : 0;
+    const selectionEntry = selectionEntries[routes[safeIndex]?.key];
 
     if (!routes.length) {
         return <Empty />;
@@ -95,19 +126,33 @@ function ResultSubPanel(props: IResultSubPanelProps) {
                 routes,
             }}
             renderTabBar={() => (
-                <PillTabBar
-                    routes={routes}
-                    index={safeIndex}
-                    onIndexChange={setIndex}
-                    variant="pill"
-                />
+                <View>
+                    <View style={styles.sourceRow}>
+                        <SourceTabs
+                            routes={routes}
+                            index={safeIndex}
+                            onIndexChange={changeSource}
+                        />
+                        {props.tab === "music" && !params?.pluginHash ? <SourceFeedback plugins={plugins} type={props.tab} /> : null}
+                        {props.tab === "music" && !!selectionEntry?.count && !selectionEntry.editor.editing
+                            ? <BatchEditAction onPress={selectionEntry.editor.start} /> : null}
+                    </View>
+                    {selectionEntry?.editor.editing ? <InlineSelectionBar style={styles.selectionControls}
+                        editor={selectionEntry.editor} count={selectionEntry.count} paginated /> : null}
+                </View>
             )}
             renderScene={renderScene}
-            onIndexChange={setIndex}
+            onIndexChange={changeSource}
+            swipeEnabled={!editor}
             initialLayout={{ width: vw(100) }}
         />
     );
 }
+
+const styles = StyleSheet.create({
+    sourceRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.xl, gap: spacing.xs },
+    selectionControls: { paddingHorizontal: spacing.xxl },
+});
 
 // 不然会一直重新渲染
 export default memo(ResultSubPanel);

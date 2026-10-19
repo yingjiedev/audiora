@@ -7,6 +7,8 @@ import FailedList from "./failedList";
 import OverviewCard from "./components/overviewCard";
 import VerticalSafeAreaView from "@/components/base/verticalSafeAreaView";
 import globalStyle from "@/constants/globalStyle";
+import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
+import { spacing } from "@/constants/designSystem";
 import AppBar from "@/components/base/appBar";
 import PillTabBar from "@/components/base/pillTabBar";
 import { showDialog } from "@/components/dialogs/useDialog";
@@ -130,24 +132,27 @@ export default function Downloading() {
                 ]}>
                 {t("downloading.title")}
             </AppBar>
-            <OverviewCard
-                queueActive={queueStats.active + queueStats.paused}
-                pausedCount={queueStats.paused}
-                onToggleAll={handleToggleAll}
-            />
-            <PillTabBar
-                variant="underline"
-                routes={tabs}
-                index={index}
-                onIndexChange={setIndex}
-                getTitle={route => route.title}
-                getBadge={route => route.count}
-            />
-            <View style={styles.body}>
-                {index === 0 ? <DownloadingList /> : null}
-                {index === 1 ? <CompletedList /> : null}
-                {index === 2 ? <FailedList /> : null}
-            </View>
+            <HorizontalSafeAreaView style={globalStyle.flex1}>
+                <OverviewCard
+                    queueActive={queueStats.active + queueStats.paused}
+                    pausedCount={queueStats.paused}
+                    onToggleAll={handleToggleAll}
+                />
+                <PillTabBar
+                    contentContainerStyle={{ paddingHorizontal: spacing.xxl }}
+                    variant="underline"
+                    routes={tabs}
+                    index={index}
+                    onIndexChange={setIndex}
+                    getTitle={route => route.title}
+                    getBadge={route => route.count}
+                />
+                <View style={styles.body}>
+                    {index === 0 ? <DownloadingList /> : null}
+                    {index === 1 ? <CompletedList /> : null}
+                    {index === 2 ? <FailedList /> : null}
+                </View>
+            </HorizontalSafeAreaView>
         </VerticalSafeAreaView>
     );
 }

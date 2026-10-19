@@ -1,83 +1,35 @@
+import React, { useState } from "react";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import AppBar from "@/components/base/appBar";
-import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView.tsx";
+import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
 import SortableFlatList from "@/components/base/SortableFlatList";
 import ThemeText from "@/components/base/themeText";
+import { PageAction, PageState, PageSummary } from "@/components/base/pageSection";
+import { radius, spacing } from "@/constants/designSystem";
 import globalStyle from "@/constants/globalStyle";
 import { useI18N } from "@/core/i18n";
-import PluginManager, {
-    Plugin,
-    usePluginDisplayNameResolver,
-    useSortedPlugins,
-} from "@/core/pluginManager";
+import PluginManager, { usePluginDisplayNameResolver, useSortedPlugins } from "@/core/pluginManager";
 import useColors from "@/hooks/useColors";
 import rpx from "@/utils/rpx";
 import Toast from "@/utils/toast";
-import React, { useState } from "react";
-import { StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
-
-const ITEM_HEIGHT = rpx(96);
-const marginTop = rpx(188) + (StatusBar.currentHeight ?? 0);
-
 export default function PluginSort() {
     const plugins = useSortedPlugins();
     const [sortingPlugins, setSortingPlugins] = useState([...plugins]);
     const getDisplayName = usePluginDisplayNameResolver();
-
     const colors = useColors();
     const { t } = useI18N();
-
-    function renderSortingItem({ item }: { item: Plugin }) {
-        return (
-            <View style={style.sortItem}>
-                <ThemeText>{getDisplayName(item)}</ThemeText>
-            </View>
-        );
-    }
-    return (
-        <>
-            <AppBar>{t("pluginSetting.menu.sort")}</AppBar>
-            <HorizontalSafeAreaView style={style.sortWrapper}>
-                <>
-                    <ThemeText fontWeight="bold">{t("pluginSetting.menu.sort")}</ThemeText>
-                    <TouchableOpacity
-                        onPress={async () => {
-                            PluginManager.setPluginOrder(sortingPlugins);
-                            Toast.success(t("toast.saveSuccess"));
-                        }}>
-                        <ThemeText>{t("common.done")}</ThemeText>
-                    </TouchableOpacity>
-                </>
-            </HorizontalSafeAreaView>
-            <HorizontalSafeAreaView style={globalStyle.flex1}>
-                <SortableFlatList
-                    data={sortingPlugins}
-                    activeBackgroundColor={colors.placeholder}
-                    marginTop={marginTop}
-                    renderItem={renderSortingItem}
-                    itemHeight={ITEM_HEIGHT}
-                    itemJustifyContent={"space-between"}
-                    onSortEnd={data => {
-                        setSortingPlugins(data);
-                    }}
-                />
-            </HorizontalSafeAreaView>
-        </>
-    );
+    const { fontScale } = useWindowDimensions();
+    const itemHeight = Math.max(52, rpx(128) * fontScale);
+    return <>
+        <AppBar actionComponent={<PageAction title={t("common.done")} variant="primary" disabled={!sortingPlugins.length} onPress={() => {
+            PluginManager.setPluginOrder(sortingPlugins); Toast.success(t("toast.saveSuccess"));
+        }} />}>{t("pluginSetting.menu.sort")}</AppBar>
+        <PageSummary title={t("subpage.pluginCount", { count: sortingPlugins.length })} description={t("subpage.sortHint")} />
+        <HorizontalSafeAreaView style={globalStyle.flex1}>
+            {sortingPlugins.length ? <SortableFlatList data={sortingPlugins} activeBackgroundColor={colors.tonalSurface} itemHeight={itemHeight}
+                itemJustifyContent="space-between" onSortEnd={setSortingPlugins}
+                renderItem={({ item }) => <View style={[styles.row, { minHeight: itemHeight, backgroundColor: colors.card }]}><ThemeText numberOfLines={2} fontWeight="medium">{getDisplayName(item)}</ThemeText></View>} /> : <PageState title={t("common.emptyList")} />}
+        </HorizontalSafeAreaView>
+    </>;
 }
-
-const style = StyleSheet.create({
-    sortWrapper: {
-        marginHorizontal: rpx(24),
-        marginTop: rpx(36),
-        justifyContent: "space-between",
-        height: rpx(64),
-        alignItems: "center",
-        flexDirection: "row",
-    },
-    sortItem: {
-        height: ITEM_HEIGHT,
-        width: rpx(500),
-        paddingLeft: rpx(24),
-        justifyContent: "center",
-    },
-});
+const styles = StyleSheet.create({ row: { flex: 1, minWidth: 0, marginLeft: spacing.xxxl, marginRight: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.lg, justifyContent: "center" } });

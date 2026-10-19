@@ -277,7 +277,7 @@ class VDebug extends PureComponent {
             try {
                 // eslint-disable-next-line no-eval
                 result = eval(str);
-            } catch (err) {
+            } catch {
                 result = 'Invalid input';
             }
             return event.trigger('addLog', result);

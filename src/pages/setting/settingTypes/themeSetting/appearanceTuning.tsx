@@ -1,5 +1,6 @@
 import React from "react";
-import ListItem from "@/components/base/listItem";
+import SettingRow from "../../components/settingRow";
+
 import SliderRow from "@/components/base/sliderRow";
 import Config, { useAppConfig } from "@/core/appConfig";
 import Theme from "@/core/theme";
@@ -35,17 +36,10 @@ export default function AppearanceTuning() {
                     Config.setConfig("theme.cardShadowStrength", val);
                 }}
             />
-            <ListItem
-                withHorizontalPadding
+            <SettingRow title={t("themeSettings.resetAppearanceTuning")} description={t("themeSettings.surfaceOpacityDesc")} descriptionLines={2}
                 onPress={() => {
-                    Theme.setSurfaceOpacity(1);
-                    Config.setConfig("theme.cardShadowStrength", 1);
-                }}>
-                <ListItem.Content
-                    title={t("themeSettings.resetAppearanceTuning")}
-                    description={t("themeSettings.surfaceOpacityDesc")}
-                />
-            </ListItem>
+                    Theme.setSurfaceOpacity(1); Config.setConfig("theme.cardShadowStrength", 1);
+                }} />
         </SettingSection>
     );
 }

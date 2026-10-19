@@ -50,8 +50,17 @@ static def getVersion() {
 }
 
 def appVersion = findProperty("appVersion") ?: getVersion()
-def appVersionCode = (findProperty("appVersionCode") ?: 1791892584).toInteger()
-def isPreviewBuild = (findProperty("audioraPreview") ?: "false").toBoolean()
+def appVersionCode = (findProperty("appVersionCode") ?: 1792314750).toInteger()
+def previewApp = (findProperty("previewApp") ?: "false").toBoolean()
+def isTestApp = (findProperty("testApp") ?: "false").toBoolean()
+def testAppIdSuffix = (findProperty("testAppIdSuffix") ?: "test").toString()
+if (isTestApp && previewApp) {
+    throw new GradleException("PreviewApp and TestApp cannot be enabled together.")
+}
+if (isTestApp && !(testAppIdSuffix ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*/)) {
+    throw new GradleException("Invalid test application ID suffix: ${testAppIdSuffix}")
+}
+def testApplicationIdSuffixValue = isTestApp ? ".${testAppIdSuffix}" : ""
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -62,8 +71,11 @@ android {
     namespace "fun.xwj.musicfree"
 
     defaultConfig {
-        applicationId isPreviewBuild ? "io.github.yingjiedev.audiora.test" : "io.github.yingjiedev.audiora"
-        resValue "string", "app_name", isPreviewBuild ? "audiora-test" : "Audiora"
+        applicationId "io.github.yingjiedev.audiora${isTestApp ? testApplicationIdSuffixValue : (previewApp ? '.preview' : '')}"
+        manifestPlaceholders = [appLabel: isTestApp ? "@string/app_name_test" : (previewApp ? "@string/app_name_preview" : "@string/app_name")]
+        if (isTestApp) {
+            resValue "string", "app_name_test", "audiora-test"
+        }
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
@@ -172,7 +184,7 @@ android {
         variant.outputs.all { output ->
             def abi = output.getFilter(OutputFile.ABI)
             def versionName = variant.versionName
-            def outputFileName = "Audiora-v${versionName}"
+            def outputFileName = "${isTestApp ? 'Audiora-test' : 'Audiora'}-v${versionName}"
 
             if (abi != null) {
                 outputFileName += "-${abi}"
@@ -216,6 +228,7 @@ tasks.named("preBuild").configure { dependsOn("generateMusicWidgetResources") }
 }
 
 dependencies {
+    testImplementation 'junit:junit:4.13.2'
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
@@ -244,6 +257,12 @@ dependencies {
     implementation 'net.jthink:jaudiotagger:2.2.5'
     implementation 'androidx.core:core-splashscreen:1.0.0'
     implementation 'androidx.documentfile:documentfile:1.1.0'
+    implementation 'androidx.media:media:1.7.0'
+    // Same version used by RNTrackPlayer/KotlinAudio; only the existing session is shared.
+    implementation 'com.google.android.exoplayer:extension-mediasession:2.19.0'
+    implementation 'com.google.android.exoplayer:exoplayer-common:2.19.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
     // Streaming mflac proxy
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'

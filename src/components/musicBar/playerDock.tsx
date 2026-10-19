@@ -1,7 +1,6 @@
 import React, { ReactNode, useCallback, useEffect, useState } from "react";
 import { BackHandler, Image, Keyboard, Pressable, StyleSheet, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import Animated, { measure, runOnUI, useAnimatedRef } from "react-native-reanimated";
 import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon, { IIconName } from "@/components/base/icon";
@@ -13,17 +12,19 @@ import { elevation, radius, spacing } from "@/constants/designSystem";
 import { useI18N } from "@/core/i18n";
 import MusicSheet, { useFavorite } from "@/core/musicSheet";
 import { openPlayer } from "@/core/playerOverlay";
-import { armPlayerTransition, playerTransition } from "@/core/playerTransition";
+import { armPlayerTransition } from "@/core/playerTransition";
 import TrackPlayer, { useCurrentMusic, useMusicState } from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import SeekBar from "@/pages/musicDetail/components/bottom/seekBar";
 import { resolveArtwork } from "@/utils/artwork";
 import { useMediaExtraProperty } from "@/utils/mediaExtra";
+import { getMediaUniqueKey } from "@/utils/mediaUtils";
 import rpx from "@/utils/rpx";
 import { musicIsPaused } from "@/utils/trackUtils";
 import MusicInfo from "./musicInfo";
 import { compactCoverOverhang, compactPlayerHeight } from "./compactLayout";
 import useAutoExpand from "./useAutoExpand";
+import CompactPlaybackButton from "./compactPlaybackButton";
 
 const TOUCH_SIZE = 48;
 const COVER_SIZE = Math.min(96, Math.max(80, rpx(180)));
@@ -101,24 +102,8 @@ export default function PlayerDock(props: IPlayerDockProps) {
     const foreground = showExpanded ? colors.playerText : dark ? colors.text : colors.musicBarText ?? colors.text;
     const cardBackground = colors.playerSurface;
     const album = typeof musicItem?.album === "string" ? musicItem.album.trim() : "";
-    const artworkRef = useAnimatedRef<Animated.View>();
-    const { origin } = playerTransition();
-    const measureArtwork = useCallback(() => {
-        runOnUI(() => {
-            const frame = measure(artworkRef);
-            if (frame && frame.width > 0 && frame.height > 0) {
-                origin.value = {
-                    x: frame.pageX,
-                    y: frame.pageY,
-                    width: frame.width,
-                    height: frame.height,
-                };
-            }
-        })();
-    }, [artworkRef, origin]);
     const openExpandedPlayer = () => {
-        measureArtwork();
-        // Keep the source card mounted for the return morph as well.
+        // Keep the dock mounted underneath the sliding player.
         openPlayer(armPlayerTransition);
     };
 
@@ -295,9 +280,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
                             resizeMode="contain"
                             style={styles.vinyl}
                         />
-                        <Animated.View
-                            ref={artworkRef}
-                            onLayout={measureArtwork}
+                        <View
                             collapsable={false}
                             style={[styles.coverShadow, { shadowColor: colors.shadow ?? colors.text }]}>
                             <FastImage
@@ -306,7 +289,7 @@ export default function PlayerDock(props: IPlayerDockProps) {
                                 placeholderSource={ImgAsset.albumDefault}
                                 style={styles.cover}
                             />
-                        </Animated.View>
+                        </View>
                     </Pressable>
                 </View>
             ) : null}
@@ -363,8 +346,10 @@ export default function PlayerDock(props: IPlayerDockProps) {
                             selected={isFavorite}
                             onPress={toggleFavorite}
                         />
-                        <DockAction
-                            icon={isPaused ? "play" : "pause"}
+                        <CompactPlaybackButton
+                            key={getMediaUniqueKey(musicItem)}
+                            musicItem={musicItem}
+                            paused={isPaused}
                             label={playbackLabel}
                             color={foreground}
                             onPress={togglePlayback}

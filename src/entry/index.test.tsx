@@ -2,8 +2,17 @@ import React from "react";
 import { View } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 import { closePlayer, openPlayer } from "@/core/playerOverlay";
+jest.mock("@/core/playerTransition", () => ({ armPlayerTransition: jest.fn() }));
 import { panelInfoStore } from "@/components/panels/usePanel";
 import Pages from "./index";
+import { getDefaultStore } from "jotai";
+import bootstrapAtom from "./bootstrap/bootstrap.atom";
+import { startWebdavAutoBackup } from "@/core/webdavAutoBackup";
+
+const mockStopAutoBackup = jest.fn();
+jest.mock("@/core/webdavAutoBackup", () => ({
+    startWebdavAutoBackup: jest.fn(() => mockStopAutoBackup),
+}));
 
 jest.mock("@react-navigation/native", () => ({
     NavigationContainer: "NavigationContainer",
@@ -70,8 +79,29 @@ function navigationGate(renderer: TestRenderer.ReactTestRenderer) {
 
 describe("root overlay input isolation", () => {
     beforeEach(() => {
+        getDefaultStore().set(bootstrapAtom, { state: "Loading" });
+        jest.mocked(startWebdavAutoBackup).mockClear();
+        mockStopAutoBackup.mockClear();
         closePlayer();
         panelInfoStore.setValue({ name: null } as any);
+    });
+
+    it("starts automatic backup only after bootstrap succeeds and cleans it up on unmount", async () => {
+        let renderer!: TestRenderer.ReactTestRenderer;
+        await act(async () => {
+            renderer = TestRenderer.create(<Pages />);
+        });
+        expect(startWebdavAutoBackup).not.toHaveBeenCalled();
+        await act(async () => {
+            getDefaultStore().set(bootstrapAtom, { state: "Fatal" });
+        });
+        expect(startWebdavAutoBackup).not.toHaveBeenCalled();
+        await act(async () => {
+            getDefaultStore().set(bootstrapAtom, { state: "Done" });
+        });
+        expect(startWebdavAutoBackup).toHaveBeenCalledTimes(1);
+        act(() => renderer.unmount());
+        expect(mockStopAutoBackup).toHaveBeenCalledTimes(1);
     });
 
     it("blocks the mounted home until the player has actually closed", () => {
