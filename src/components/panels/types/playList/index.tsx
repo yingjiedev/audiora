@@ -4,6 +4,7 @@ import { StyleSheet, useWindowDimensions, View } from "react-native";
 import Header, { PlaybackTab } from "./header";
 import Body, { SheetBody } from "./body";
 import PanelBase from "../../base/panelBase";
+import Loading from "@/components/base/loading";
 import { radius } from "@/constants/designSystem";
 import TrackPlayer, { usePlayList } from "@/core/trackPlayer";
 import musicHistory, { useMusicHistory } from "@/core/musicHistory";
@@ -25,6 +26,8 @@ export default function PlayList(props: { initialTab?: PlaybackTab } = {}) {
     const { t } = useI18N();
     const navigate = useNavigate();
     const musics = tab === "queue" ? queue : history;
+    const play = useCallback((item: IMusic.IMusicItem) => TrackPlayer.play(item), []);
+    const remove = useCallback((item: IMusic.IMusicItem) => tab === "queue" ? TrackPlayer.remove(item) : musicHistory.removeMusic(item), [tab]);
     const move = useCallback((item: IMusic.IMusicItem, offset: number) => {
         const items = tab === "queue" ? TrackPlayer.playList : musicHistory.history;
         const order = moveQueueItem(items, item, offset);
@@ -80,7 +83,7 @@ export default function PlayList(props: { initialTab?: PlaybackTab } = {}) {
                         onClear={clear}
                     />
                     <View style={styles.list}>
-                        {tab === "sheets" ? (
+                        {loading ? <Loading /> : tab === "sheets" ? (
                             <SheetBody entries={sheets} onOpen={openSheet} onRemove={removeSheetPlayback} />
                         ) : (
                             <Body
@@ -88,8 +91,8 @@ export default function PlayList(props: { initialTab?: PlaybackTab } = {}) {
                                 loading={loading}
                                 queue={tab === "queue"}
                                 musics={musics}
-                                onPlay={item => TrackPlayer.play(item)}
-                                onRemove={item => tab === "queue" ? TrackPlayer.remove(item) : musicHistory.removeMusic(item)}
+                                onPlay={play}
+                                onRemove={remove}
                                 onMove={move}
                             />
                         )}

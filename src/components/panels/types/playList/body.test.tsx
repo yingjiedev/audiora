@@ -1,6 +1,6 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
-import { SheetBody, SongRow } from "./body";
+import Body, { SheetBody, SongRow } from "./body";
 import type { ISheetPlaybackEntry } from "@/core/sheetPlaybackHistory";
 import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
@@ -8,6 +8,8 @@ import ThemeText from "@/components/base/themeText";
 const song = { id: "one", platform: "demo", title: "Song", artist: "Artist" } as IMusic.IMusicItem;
 let mockCurrent: IMusic.IMusicItem | null = song;
 let mockPaused = false;
+const mockUseCurrentMusic = jest.fn(() => mockCurrent);
+const mockUseMusicState = jest.fn(() => mockPaused);
 let mockDisplayName = "Renamed source";
 jest.mock("@/core/pluginManager", () => ({ usePluginDisplayNameResolver: () => (platform: string) => platform === "demo" ? mockDisplayName : platform }));
 const mockGestures: Array<Record<string, (...args: any[]) => void>> = [];
@@ -40,7 +42,7 @@ jest.mock("react-native-reanimated", () => ({
     __esModule: true,
     default: { View: "AnimatedView" },
     runOnJS: (callback: (...args: any[]) => void) => callback,
-    useSharedValue: (value: unknown) => ({ value }),
+    useSharedValue: (value: unknown) => require("react").useRef({ value }).current,
     useAnimatedStyle: (callback: () => unknown) => callback(),
 }));
 jest.mock("@shopify/flash-list", () => {
@@ -57,7 +59,7 @@ jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/base/fastImage", () => "FastImage");
 jest.mock("@/components/base/loading", () => "Loading");
 jest.mock("@/constants/assetsConst", () => ({ ImgAsset: { albumDefault: 1 } }));
-jest.mock("@/core/trackPlayer", () => ({ useCurrentMusic: () => mockCurrent, useMusicState: () => mockPaused }));
+jest.mock("@/core/trackPlayer", () => ({ useCurrentMusic: () => mockUseCurrentMusic(), useMusicState: () => mockUseMusicState() }));
 jest.mock("@/core/i18n", () => ({ useI18N: () => ({ t: (key: string) => key }) }));
 jest.mock("@/hooks/useColors", () => () => ({ text: "#10172D", textSecondary: "#777777", active: "#3867F4", success: "#188A51", card: "#FFFFFF" }));
 jest.mock("@/hooks/useMotion", () => () => ({ duration: () => 160 }));
@@ -74,7 +76,7 @@ describe("playback drawer song row", () => {
         const handlers = { onPlay: jest.fn(), onRemove: jest.fn(), onMove: jest.fn(), onDragging: jest.fn() };
         let renderer!: TestRenderer.ReactTestRenderer;
         act(() => {
-            renderer = TestRenderer.create(<SongRow item={item} {...handlers} />);
+            renderer = TestRenderer.create(<SongRow item={item} current={true} paused={mockPaused} {...handlers} />);
         });
         return { renderer, handlers };
     }
@@ -119,6 +121,38 @@ describe("playback drawer song row", () => {
         const free = render(song);
         expect(free.renderer.root.findAllByType(ThemeText).some(node => node.props.children === "VIP")).toBe(false);
         act(() => free.renderer.unmount());
+    });
+});
+
+describe("playback drawer list state", () => {
+    it("shares playback state across rows and refreshes current and paused markers", () => {
+        mockGestures.length = 0;
+        mockUseCurrentMusic.mockClear();
+        mockUseMusicState.mockClear();
+        mockPaused = false;
+        mockCurrent = song;
+        const other = { ...song, id: "two", title: "Other" };
+        const handlers = { onPlay: jest.fn(), onRemove: jest.fn(), onMove: jest.fn() };
+        let renderer!: TestRenderer.ReactTestRenderer;
+        const content = () => <Body loading={false} queue={false} musics={[song, other]} {...handlers} />;
+        act(() => {
+            renderer = TestRenderer.create(content());
+        });
+        expect(mockUseCurrentMusic).toHaveBeenCalledTimes(1);
+        expect(mockUseMusicState).toHaveBeenCalledTimes(1);
+        expect(mockGestures).toHaveLength(2);
+        const selected = (title: string) => renderer.root.findByProps({ accessibilityLabel: `${title} - Artist` }).props.accessibilityState.selected;
+        expect(selected("Song")).toBe(true);
+        expect(selected("Other")).toBe(false);
+        expect(renderer.root.findAllByType(Icon).filter(node => node.props.name === "musical-note")).toHaveLength(1);
+        mockCurrent = other;
+        mockPaused = true;
+        act(() => renderer.update(content()));
+        expect(selected("Song")).toBe(false);
+        expect(selected("Other")).toBe(true);
+        expect(renderer.root.findAllByType(Icon).filter(node => node.props.name === "pause")).toHaveLength(1);
+        expect(mockGestures).toHaveLength(2);
+        act(() => renderer.unmount());
     });
 });
 

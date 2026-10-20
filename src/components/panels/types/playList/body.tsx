@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { Gesture, GestureDetector, GestureHandlerRootView, ScrollView as GHScrollView } from "react-native-gesture-handler";
@@ -23,26 +23,26 @@ import { QueueAction } from "./header";
 
 const ITEM_HEIGHT = Math.max(48, rpx(92));
 
-export function SongRow(props: {
+export const SongRow = React.memo(function SongRowView(props: {
     item: IMusic.IMusicItem;
+    current: boolean;
+    paused: boolean;
     onPlay: (item: IMusic.IMusicItem) => void;
     onRemove: (item: IMusic.IMusicItem) => void;
     onMove: (item: IMusic.IMusicItem, offset: number) => void;
     onDragging: (dragging: boolean) => void;
 }) {
-    const { item, onPlay, onRemove, onMove, onDragging } = props;
-    const currentMusic = useCurrentMusic();
-    const musicState = useMusicState();
+    const { item, current, paused, onPlay, onRemove, onMove, onDragging } = props;
     const colors = useColors();
     const motion = useMotion();
     const { t } = useI18N();
-    const current = !!isSameMediaItem(item, currentMusic);
     const highlight = colors.active;
     const offset = useSharedValue(0);
     const moving = useSharedValue(false);
-    const move = (distance: number) => onMove(item, distance);
-    const gesture = Gesture.Pan()
-        .activateAfterLongPress(motion.duration("fast"))
+    const move = useCallback((distance: number) => onMove(item, distance), [item, onMove]);
+    const longPressDuration = motion.duration("fast");
+    const gesture = useMemo(() => Gesture.Pan()
+        .activateAfterLongPress(longPressDuration)
         .onStart(() => {
             moving.value = true;
             runOnJS(onDragging)(true);
@@ -61,7 +61,7 @@ export function SongRow(props: {
                 runOnJS(onDragging)(false);
             }
             moving.value = false;
-        });
+        }), [longPressDuration, move, moving, offset, onDragging]);
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ translateY: offset.value }],
         zIndex: moving.value ? 10 : 0,
@@ -92,7 +92,7 @@ export function SongRow(props: {
                 </ThemeText>
             </Pressable>
             {item.fee === 1 ? <ThemeText fontSize="caption" color={highlight} style={styles.vip}>VIP</ThemeText> : null}
-            {current ? <Icon name={musicIsPaused(musicState) ? "pause" : "musical-note"} color={highlight} size={rpx(30)} style={styles.currentIcon} /> : null}
+            {current ? <Icon name={paused ? "pause" : "musical-note"} color={highlight} size={rpx(30)} style={styles.currentIcon} /> : null}
             <QueueAction icon="x-mark" label={t("panel.playList.remove", { title: item.title })} onPress={() => onRemove(item)} />
             <GestureDetector gesture={gesture}>
                 <View
@@ -117,7 +117,7 @@ export function SongRow(props: {
             </GestureDetector>
         </Animated.View>
     );
-}
+});
 
 interface IBodyProps {
     loading: boolean;
@@ -130,6 +130,9 @@ interface IBodyProps {
 
 export default function Body(props: IBodyProps) {
     const currentMusic = useCurrentMusic();
+    const musicState = useMusicState();
+    const paused = musicIsPaused(musicState);
+    const playback = useMemo(() => ({ currentMusic, paused }), [currentMusic, paused]);
     const [dragging, setDragging] = useState(false);
     const insets = useSafeAreaInsets();
     const { t } = useI18N();
@@ -143,7 +146,7 @@ export default function Body(props: IBodyProps) {
             <FlashList
                 data={props.musics}
                 keyExtractor={getMediaUniqueKey}
-                extraData={currentMusic}
+                extraData={playback}
                 initialScrollIndex={initialIndex}
                 scrollEnabled={!dragging}
                 renderScrollComponent={GHScrollView as any}
@@ -151,7 +154,10 @@ export default function Body(props: IBodyProps) {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: insets.bottom + spacing.sm }}
                 ListEmptyComponent={<ThemeText fontColor="textSecondary" style={styles.empty}>{t(props.queue ? "panel.playList.emptyQueue" : "panel.playList.emptyHistory")}</ThemeText>}
-                renderItem={({ item }) => <SongRow item={item} onPlay={props.onPlay} onRemove={props.onRemove} onMove={props.onMove} onDragging={setDragging} />}
+                renderItem={({ item }) => {
+                    const current = !!isSameMediaItem(item, currentMusic);
+                    return <SongRow item={item} current={current} paused={current && paused} onPlay={props.onPlay} onRemove={props.onRemove} onMove={props.onMove} onDragging={setDragging} />;
+                }}
             />
         </GestureHandlerRootView>
     );

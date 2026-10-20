@@ -16,8 +16,10 @@ let mockQueue = [song, other];
 let mockHistory = [other];
 let mockSheets: ISheetPlaybackEntry[] = [];
 const mockNavigate = jest.fn();
+let mockLoading = false;
 
-jest.mock("../../base/panelBase", () => ({ __esModule: true, default: (props: { renderBody: (loading: boolean) => React.ReactNode }) => props.renderBody(false) }));
+jest.mock("../../base/panelBase", () => ({ __esModule: true, default: (props: { renderBody: (loading: boolean) => React.ReactNode }) => props.renderBody(mockLoading) }));
+jest.mock("@/components/base/loading", () => "Loading");
 jest.mock("./body", () => ({ __esModule: true, default: "SongBody", SheetBody: "SheetBody" }));
 jest.mock("react-native-gesture-handler", () => ({ GestureHandlerRootView: "GestureRoot" }));
 jest.mock("@/components/base/icon", () => "Icon");
@@ -67,6 +69,7 @@ describe("playback drawer", () => {
         mockQueue = [song, other];
         mockHistory = [other];
         mockSheets = [];
+        mockLoading = false;
     });
     afterEach(() => act(() => {
         renderers.splice(0).forEach(renderer => renderer.unmount());
@@ -77,6 +80,16 @@ describe("playback drawer", () => {
         expect(renderer.root.findByType(Header).props).toMatchObject({ tab: "queue", counts: { queue: 2, history: 1, sheets: 0 } });
         expect(renderer.root.findByType(Body).props.musics).toBe(mockQueue);
         expect(renderer.root.findByProps({ testID: "playback-tab-queue" }).props.accessibilityState.selected).toBe(true);
+    });
+
+    it.each(["queue", "history", "sheets"] as const)("defers the %s list until the panel is ready", tab => {
+        mockLoading = true;
+        const renderer = render(tab);
+        expect(renderer.root.findAllByType(Body)).toHaveLength(0);
+        expect(renderer.root.findAllByType(SheetBody)).toHaveLength(0);
+        mockLoading = false;
+        act(() => renderer.update(<PlayList initialTab={tab} />));
+        expect(renderer.root.findAllByType(tab === "sheets" ? SheetBody : Body)).toHaveLength(1);
     });
 
     it("opens history directly and switches lists without replacing the queue", () => {

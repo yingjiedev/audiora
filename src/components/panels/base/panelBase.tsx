@@ -18,7 +18,6 @@ import {
 } from "react-native";
 import Animated, {
     runOnJS,
-    useAnimatedReaction,
     useAnimatedStyle,
     useSharedValue,
 } from "react-native-reanimated";
@@ -68,7 +67,8 @@ export default function (props: IPanelBaseProps) {
     // 深色下 0.5 的纯黑压不住底下的卡片，面板会显得发飘；浅色保持原观感
     const resolvedMaskOpacity = maskOpacity ?? (dark ? 0.82 : 0.5);
     const [loading, setLoading] = useState(true);
-    const timerRef = useRef<any>(null);
+    const mountedRef = useRef(true);
+    const openingRef = useRef(false);
     const safeAreaInsets = useSafeAreaInsets();
     const orientation = useOrientation();
     const useAnimatedBase = useMemo(
@@ -99,6 +99,31 @@ export default function (props: IPanelBaseProps) {
         closingRef.current = false;
     }, []);
 
+    const mountPanel = useCallback(() => {
+        if (mountedRef.current && !closingRef.current) {
+            setLoading(false);
+        }
+    }, []);
+
+    const openPanel = useCallback(() => {
+        if (openingRef.current || closingRef.current) {
+            return;
+        }
+        openingRef.current = true;
+        // Start in the visible native window, then mount heavy content only
+        // after the enter animation has actually finished.
+        snapPoint.value = motion.timing(
+            1,
+            { duration: "normal", easing: "standard" },
+            finished => {
+                "worklet";
+                if (finished) {
+                    runOnJS(mountPanel)();
+                }
+            },
+        );
+    }, [snapPoint, motion, mountPanel]);
+
     const closePanel = useCallback(() => {
         if (closingRef.current) {
             return;
@@ -122,17 +147,8 @@ export default function (props: IPanelBaseProps) {
     }, [snapPoint, unmountPanel, motion, releaseCloseGuard]);
 
     useEffect(() => {
+        mountedRef.current = true;
         closingRef.current = false;
-        snapPoint.value = motion.timing(1, {
-            duration: "normal",
-            easing: "decelerate",
-        });
-
-        timerRef.current = setTimeout(() => {
-            if (loading) {
-                setLoading(false);
-            }
-        }, 400);
 
         if (backHandlerRef.current) {
             backHandlerRef.current.remove();
@@ -201,10 +217,7 @@ export default function (props: IPanelBaseProps) {
         );
 
         return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-                timerRef.current = null;
-            }
+            mountedRef.current = false;
             if (backHandlerRef.current) {
                 backHandlerRef.current?.remove();
                 backHandlerRef.current = null;
@@ -234,24 +247,6 @@ export default function (props: IPanelBaseProps) {
         opacity: snapPoint.value * resolvedMaskOpacity,
     }), [resolvedMaskOpacity]);
 
-    const mountPanel = useCallback(() => {
-        setLoading(false);
-    }, []);
-
-    useAnimatedReaction(
-        () => snapPoint.value,
-        (result, prevResult) => {
-            if (
-                ((prevResult !== null && result > prevResult) ||
-                    prevResult === null) &&
-                result > 0.8
-            ) {
-                runOnJS(mountPanel)();
-            }
-        },
-        [],
-    );
-
     const windowHeight = Dimensions.get("window").height;
     const verticalPositionStyle =
         positionMethod === "top"
@@ -271,9 +266,11 @@ export default function (props: IPanelBaseProps) {
         <Modal
             visible
             transparent
+            hardwareAccelerated
             animationType="none"
             statusBarTranslucent
             presentationStyle="overFullScreen"
+            onShow={openPanel}
             onRequestClose={closePanel}>
             <View style={style.rootHost} collapsable={false}>
                 <TouchableWithoutFeedback
@@ -343,7 +340,6 @@ const style = StyleSheet.create({
         flexDirection: "column",
         overflow: "hidden",
         zIndex: 1,
-        elevation: 16,
     },
     sheetBody: {
         flex: 1,
