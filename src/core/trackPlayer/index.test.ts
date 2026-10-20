@@ -250,6 +250,51 @@ describe("TrackPlayer playback lifecycle", () => {
         );
     }
 
+    it("retains widget resume progress after an empty native queue publishes zero", async () => {
+        restoreSession(67.5);
+        await player.setupTrackPlayer({ background: true });
+        persist.get.mockImplementation(key => key === "music.progress" ? 0 : undefined);
+        await player.play();
+        expect(native.seekTo).toHaveBeenCalledWith(67.5);
+        expect(native.seekTo.mock.invocationCallOrder[0]).toBeLessThan(native.play.mock.invocationCallOrder[0]);
+    });
+
+    it("consumes the saved widget position once instead of reapplying it on later source loads", async () => {
+        restoreSession(67.5);
+        await player.setupTrackPlayer({ background: true });
+        persist.get.mockImplementation(key => key === "music.progress" ? 0 : undefined);
+        await player.play();
+        await native.setQueue([]);
+        await player.play();
+        expect(native.seekTo).toHaveBeenCalledTimes(1);
+        expect(native.seekTo).toHaveBeenCalledWith(67.5);
+    });
+
+    it.each(["next", "restart", "clear"])("discards widget resume progress after %s", async action => {
+        restoreSession(67.5);
+        await player.setupTrackPlayer({ background: true });
+        persist.get.mockImplementation(key => key === "music.progress" ? 0 : undefined);
+        if (action === "next") {
+            await player.skipToNext();
+            await player.play(items[0]);
+        } else if (action === "restart") {
+            await player.play(items[0], true);
+        } else {
+            await player.clearPlayList();
+            await player.play(items[0]);
+        }
+        expect(native.seekTo).not.toHaveBeenCalledWith(67.5);
+        expect(native.play).toHaveBeenCalled();
+    });
+
+    it.each([0, -1, NaN, Infinity])("ignores invalid widget resume progress: %s", async position => {
+        restoreSession(position);
+        await player.setupTrackPlayer({ background: true });
+        await player.play();
+        expect(native.seekTo).not.toHaveBeenCalled();
+        expect(native.play).toHaveBeenCalled();
+    });
+
     it("waits for headless restore without auto-playing and keeps the saved progress", async () => {
         const source = deferred<IPlugin.IMediaSourceResult>();
         restoreSession(67.5, source.promise);

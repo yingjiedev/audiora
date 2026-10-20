@@ -20,6 +20,12 @@ import { setupMusicWidget } from "./musicWidget";
 
 // Preserve the car launch origin even if the host disconnects during initialization.
 export const startedFromAndroidAuto = Platform.OS === "android" && !!NativeModules.AndroidAuto?.isConnected();
+let widgetStartupRequested = false;
+
+/** Opening the UI must preserve explicit widget/car play and pause requests. */
+export function shouldAutoPlayOnAppStart() {
+    return !widgetStartupRequested && !startedFromAndroidAuto && !!Config.getConfig("basic.autoPlayWhenAppStart");
+}
 
 PluginManager.injectDependencies(Config);
 musicHistory.injectDependencies(Config);
@@ -37,16 +43,17 @@ let runtimeSetup: Promise<void> | undefined;
 /** UI and headless tasks share migrations and data; opening the UI never reloads a live queue. */
 export function setupPlaybackData() {
     if (!dataSetup) {
-        dataSetup = Promise.all([
-            ...[
-                pathConst.dataPath, pathConst.logPath, pathConst.cachePath, pathConst.pluginPath,
-                pathConst.lrcCachePath, pathConst.downloadCachePath, pathConst.localLrcPath,
-            ].map(folder => checkAndCreateDir(folder)),
-            checkAndCreateDir(pathConst.downloadPath).then(() => checkAndCreateDir(pathConst.downloadMusicPath)),
-            Config.setup(), MusicSheet.setup(), musicHistory.setup(),
-        ]).then(() => {
+        dataSetup = (async () => {
+            await Promise.all([
+                ...[
+                    pathConst.dataPath, pathConst.logPath, pathConst.cachePath, pathConst.pluginPath,
+                    pathConst.lrcCachePath, pathConst.downloadCachePath, pathConst.localLrcPath,
+                ].map(folder => checkAndCreateDir(folder)),
+                checkAndCreateDir(pathConst.downloadPath).then(() => checkAndCreateDir(pathConst.downloadMusicPath)),
+            ]);
+            await Promise.all([Config.setup(), MusicSheet.setup(), musicHistory.setup()]);
             i18n.setup();
-        });
+        })();
         dataSetup.catch(() => {
             dataSetup = undefined;
         });
@@ -100,6 +107,8 @@ async function initNativePlayer() {
 
 /** Restore once per JS runtime, including when a widget starts playback before the first UI render. */
 export function initTrackPlayer(logger?: IPerfLogger, background = false) {
+    // Also covers a widget task joining an in-flight UI initialization.
+    if (background) widgetStartupRequested = true;
     if (!runtimeSetup) {
         runtimeSetup = (async () => {
             const native = setupNativePlayer();
