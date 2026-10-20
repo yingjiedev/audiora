@@ -58,7 +58,7 @@ Audiora 不内置在线音乐源。请使用可信且有权访问的插件与内
 
 | 你想做什么 | 入口 |
 | --- | --- |
-| 查看版本改动 | [更新日志](./changelog.md) · [0.3.2 发布说明](./release/0.3.2.md) |
+| 查看版本改动 | [更新日志](./changelog.md) · [0.3.3 发布说明](./release/0.3.3.md) |
 | 构建 Android 安装包 | [构建与验证指南](./BUILDING.md) |
 | 了解插件与音乐源 | [音乐源与插件说明](./docs/plugins-and-sources.md) |
 | 开发兼容插件 | [MusicFree 插件开发文档](https://musicfree.catcat.work/plugin/introduction.html) |
