@@ -98,9 +98,53 @@ it("waits for the nested download directory before declaring data ready", async 
     const pending = setupPlaybackData().then(ready);
     await flush();
     expect(ready).not.toHaveBeenCalled();
+    for (const setup of [mockData.config, mockData.sheets, mockData.history]) {
+        expect(setup).not.toHaveBeenCalled();
+    }
     resolveFolder();
     await pending;
     expect(ready).toHaveBeenCalledTimes(1);
+});
+
+it("does not run migrations when directory creation fails, and allows retry", async () => {
+    const { setupPlaybackData } = require("./playbackRuntime");
+    mockData.folder.mockRejectedValueOnce(new Error("storage unavailable"));
+    await expect(setupPlaybackData()).rejects.toThrow("storage unavailable");
+    for (const setup of [mockData.config, mockData.sheets, mockData.history]) {
+        expect(setup).not.toHaveBeenCalled();
+    }
+    await setupPlaybackData();
+    for (const setup of [mockData.config, mockData.sheets, mockData.history]) {
+        expect(setup).toHaveBeenCalledTimes(1);
+    }
+});
+
+it.each([true, false])("keeps widget actions authoritative when background startup is first: %s", async backgroundFirst => {
+    mockConfigValue.mockImplementation((key: string) => key === "basic.autoPlayWhenAppStart");
+    const { initTrackPlayer, shouldAutoPlayOnAppStart } = require("./playbackRuntime");
+    const first = initTrackPlayer(undefined, backgroundFirst);
+    const second = initTrackPlayer(undefined, !backgroundFirst);
+    await Promise.all([first, second]);
+    expect(shouldAutoPlayOnAppStart()).toBe(false);
+    expect(mockConfigValue("basic.autoPlayWhenAppStart")).toBe(true);
+    expect(mockQueue).toHaveBeenCalledTimes(1);
+});
+
+it.each([true, false])("honors startup autoplay for an ordinary UI launch when enabled: %s", async enabled => {
+    mockConfigValue.mockImplementation((key: string) => key === "basic.autoPlayWhenAppStart" && enabled);
+    const { initTrackPlayer, shouldAutoPlayOnAppStart } = require("./playbackRuntime");
+    await initTrackPlayer();
+    expect(shouldAutoPlayOnAppStart()).toBe(enabled);
+});
+
+it("does not re-enable UI autoplay after a widget startup retry", async () => {
+    mockConfigValue.mockImplementation((key: string) => key === "basic.autoPlayWhenAppStart");
+    const { initTrackPlayer, shouldAutoPlayOnAppStart } = require("./playbackRuntime");
+    mockLyrics.mockRejectedValueOnce(new Error("lyric setup failed"));
+    await expect(initTrackPlayer(undefined, true)).rejects.toThrow("lyric setup failed");
+    await initTrackPlayer();
+    expect(shouldAutoPlayOnAppStart()).toBe(false);
+    expect(mockQueue).toHaveBeenCalledTimes(1);
 });
 
 it("retries failed native initialization while keeping successfully migrated data", async () => {
@@ -147,8 +191,10 @@ it("attaches to an already initialized player and preserves notification options
 
 it("preserves Android Auto background restoration if the host disconnects during startup", async () => {
     mockCarConnected = true;
-    const { initTrackPlayer } = require("./playbackRuntime");
+    mockConfigValue.mockImplementation((key: string) => key === "basic.autoPlayWhenAppStart");
+    const { initTrackPlayer, shouldAutoPlayOnAppStart } = require("./playbackRuntime");
     mockCarConnected = false;
     await initTrackPlayer();
     expect(mockQueue).toHaveBeenCalledWith({ background: false, backgroundRestore: true });
+    expect(shouldAutoPlayOnAppStart()).toBe(false);
 });

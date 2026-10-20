@@ -19,7 +19,7 @@ import i18n from "@/core/i18n";
 import bootstrapAtom from "./bootstrap.atom";
 import { getDefaultStore } from "jotai";
 import { handleMusicWidgetLink } from "@/service/musicWidget";
-import { initTrackPlayer as initPlaybackRuntime, setupNativePlayer, setupPlaybackData, setupPlaybackPlugins, startedFromAndroidAuto } from "@/service/playbackRuntime";
+import { initTrackPlayer as initPlaybackRuntime, setupNativePlayer, setupPlaybackData, setupPlaybackPlugins, shouldAutoPlayOnAppStart } from "@/service/playbackRuntime";
 
 export async function initTrackPlayer(logger?: IPerfLogger) {
     await initPlaybackRuntime(logger);
@@ -274,8 +274,7 @@ async function extraMakeup() {
         handleLinkingUrl(initUrl);
     }
 
-    if (Config.getConfig("basic.autoPlayWhenAppStart") &&
-        !startedFromAndroidAuto) {
+    if (shouldAutoPlayOnAppStart()) {
         TrackPlayer.play();
     }
 }

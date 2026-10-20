@@ -119,6 +119,7 @@ class TrackPlayer extends EventEmitter<{
     private currentIndex = -1;
     // 音乐播放器服务是否启动
     private serviceInited = false;
+    private pendingWidgetProgress: { music: IMusic.IMusicItem; position: number } | null = null;
     // 由定时关闭使用：本曲自然播放到结尾时暂停，不让播放器自动切到下一曲。
     private pauseAfterCurrentTrackEnd = false;
     private videoSuspension: {
@@ -249,6 +250,10 @@ class TrackPlayer extends EventEmitter<{
         }
 
         if (track && this.isInPlayList(track)) {
+            // Empty-queue progress events may overwrite persistence before the
+            // widget's first play request. Keep the original position in memory.
+            this.pendingWidgetProgress = options.background && progress && Number.isFinite(progress) && progress > 0
+                ? { music: track, position: progress } : null;
             const shouldAutoPlayOnStartup = !options.background && !options.backgroundRestore && !!this.configService.getConfig("basic.autoPlayWhenAppStart");
             void appendStartupBreadcrumb("trackplayer-restore-found", {
                 title: track.title,
@@ -687,8 +692,10 @@ class TrackPlayer extends EventEmitter<{
 
             // A headless cold start may need a fresh source before its saved
             // position can be restored. Explicit song selection still starts at 0.
+            if (forcePlay) this.pendingWidgetProgress = null;
+            const pendingWidgetProgress = this.pendingWidgetProgress;
             const savedProgress = !forcePlay && musicItem.isInit && this.isCurrentMusic(musicItem)
-                ? Number(PersistStatus.get("music.progress")) : 0;
+                ? pendingWidgetProgress?.position ?? Number(PersistStatus.get("music.progress")) : 0;
             const resumePosition = Number.isFinite(savedProgress) && savedProgress > 0 ? savedProgress : 0;
 
             // 2. 如果是当前正在播放的音频
@@ -1044,6 +1051,9 @@ class TrackPlayer extends EventEmitter<{
                 if (!isCurrentRequest()) {
                     return;
                 }
+                if (this.pendingWidgetProgress === pendingWidgetProgress) {
+                    this.pendingWidgetProgress = null;
+                }
                 if (canAutoPlay()) {
                     await ReactNativeTrackPlayer.play();
                 }
@@ -1388,6 +1398,9 @@ class TrackPlayer extends EventEmitter<{
     /**************** 辅助函数 -- 设置内部状态 ****************/
 
     private setCurrentMusic(musicItem?: IMusic.IMusicItem | null) {
+        if (this.pendingWidgetProgress && !isSameMediaItem(this.pendingWidgetProgress.music, musicItem)) {
+            this.pendingWidgetProgress = null;
+        }
         this.currentMusicRevision += 1;
         // 设置UI内部状态的musicitem
         if (!musicItem) {
