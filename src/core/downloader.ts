@@ -982,7 +982,8 @@ class Downloader extends EventEmitter<IEvents> implements IInjectable {
         if (plugin) {
             // 下载与播放保持一致：档位范围由插件协议决定（官方协议插件只有 4 档），
             // 默认下载音质（多数是 master）若不在范围内，先落到范围内的最高档再逐档降。
-            const pluginQualityScope = getPluginQualityScope(plugin.instance);
+            const pluginQualityScope = this.pluginManagerService.getMediaSourceQualityScope?.(musicItem) ??
+                getPluginQualityScope(plugin.instance);
             const scopedStartQuality =
                 pickSupportedQuality(actualQuality, pluginQualityScope) ?? actualQuality;
             const qualityOrder = getQualityOrder(

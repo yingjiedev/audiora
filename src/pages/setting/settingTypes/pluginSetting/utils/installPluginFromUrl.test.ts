@@ -84,3 +84,11 @@ it("passes a trimmed direct URL and version policy to the serial installer", asy
     await installPluginFromUrl(" https://source/plugin.js ");
     expect(install).toHaveBeenCalledWith("code", "https://source/plugin.js", expect.objectContaining({ notCheckVersion: true }));
 });
+
+it("imports an explicit custom source URL without treating its extension as a subscription", async () => {
+    get.mockResolvedValue({ data: "source code" });
+    install.mockResolvedValue({ success: true, status: "installed" });
+    await installPluginFromUrl(" https://source/resolver.json ", { scriptSource: true });
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(install).toHaveBeenCalledWith("source code", "https://source/resolver.json", expect.objectContaining({ scriptSource: true }));
+});

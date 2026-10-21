@@ -15,6 +15,7 @@ interface IPluginMetaStorage {
     [key: `${IPluginPlatform}.alternativePlugin`]: IPluginPlatform | null;
     [key: `${IPluginPlatform}.userVariables`]: Record<string, string>;
     [key: `${IPluginPlatform}.displayName`]: string;
+    [key: `${IPluginPlatform}.sourceProvider`]: import("@/core/scriptSource/types").SourceProvider | null;
 
 }
 
@@ -172,6 +173,14 @@ class PluginMeta {
             return alternativePlugin;
         }
         return null;
+    }
+
+    setSourceProvider(pluginPlatform: string, provider: import("@/core/scriptSource/types").SourceProvider | null) {
+        this.setMetaStorage(`${pluginPlatform}.sourceProvider`, provider);
+    }
+
+    getSourceProvider(pluginPlatform: string) {
+        return this.getMetaStorage(`${pluginPlatform}.sourceProvider`);
     }
 }
 

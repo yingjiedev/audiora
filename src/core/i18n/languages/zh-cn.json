@@ -1183,5 +1183,16 @@
     "subscription.details": "失败详情",
     "subscription.retryFailed": "重试失败项",
     "subscription.updating": "更新中…",
-    "subscription.viewProgress": "查看进度"
+    "subscription.viewProgress": "查看进度",
+    "scriptSource.defaultName": "自定义音源 {index}",
+    "scriptSource.importLocal": "从文件导入自定义音源",
+    "scriptSource.importNetwork": "从链接添加自定义音源",
+    "scriptSource.playbackResolver": "播放解析",
+    "scriptSource.providerSetting": "解析平台",
+    "scriptSource.autoProvider": "自动识别",
+    "scriptSource.provider.kw": "酷我音乐",
+    "scriptSource.provider.kg": "酷狗音乐",
+    "scriptSource.provider.tx": "QQ 音乐",
+    "scriptSource.provider.wy": "网易云音乐",
+    "scriptSource.provider.mg": "咪咕音乐"
 }

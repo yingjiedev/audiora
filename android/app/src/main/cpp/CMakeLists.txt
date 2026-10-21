@@ -23,3 +23,6 @@ target_compile_options(musicfree-cenc PRIVATE -fno-exceptions)
 
 find_library(log-lib log)
 target_link_libraries(musicfree-cenc ${log-lib})
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../../../../../native/script-runtime
+    ${CMAKE_CURRENT_BINARY_DIR}/script-runtime)

@@ -110,6 +110,10 @@ declare namespace IPlugin {
     type IImportMusicSheetResult = IMusic.IMusicSheetItem | IMusic.IMusicItem[];
 
     interface IPluginDefine {
+        /** Host-owned metadata for imported playback resolver scripts. */
+        scriptSource?: import("@/core/scriptSource/types").ScriptSourceDescriptor;
+        /** Platform-native song identifiers produced by this music plugin. */
+        providerId?: import("@/core/scriptSource/types").SourceProvider;
         /** 来源名 */
         platform: string;
         /** 匹配的版本号 */

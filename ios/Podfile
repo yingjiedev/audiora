@@ -26,6 +26,7 @@ prepare_react_native_project!
 
 target 'MusicFree' do
   use_expo_modules!
+  pod 'AudioraScriptRuntime', :path => '../native/script-runtime'
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
     config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];

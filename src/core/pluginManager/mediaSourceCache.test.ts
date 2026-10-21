@@ -1,7 +1,15 @@
-import { readCachedMediaSource } from "./mediaSourceCache";
+import { canReuseResolverCache, readCachedMediaSource } from "./mediaSourceCache";
 import { QmcKeyError, resolveSongKey } from "@/service/mflac/songKey";
 
 describe("cached encrypted media sources", () => {
+    it("invalidates addresses after a resolver revision or provider binding changes", () => {
+        const source = { url: "https://example.invalid/audio", resolverKey: "[\"source\",\"revision1\",\"wy\"]" };
+        expect(canReuseResolverCache(source, source.resolverKey, false)).toBe(true);
+        expect(canReuseResolverCache(source, "[\"source\",\"revision2\",\"wy\"]", false)).toBe(false);
+        expect(canReuseResolverCache(source, "[\"source\",\"revision1\",\"tx\"]", false)).toBe(false);
+        expect(canReuseResolverCache({ url: source.url }, source.resolverKey, false)).toBe(false);
+        expect(canReuseResolverCache({ url: source.url }, source.resolverKey, true)).toBe(true);
+    });
     it("retains the external raw key and source headers across serialization", () => {
         const source = {
             url: "https://example.com/opaque-audio",

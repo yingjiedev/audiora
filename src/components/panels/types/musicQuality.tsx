@@ -43,8 +43,10 @@ export default function MusicQuality(props: IMusicQualityProps) {
     } = props ?? {};
 
     // 使用增强的音质获取函数，传入插件信息
-    const plugin = PluginManager.getByMedia(musicItem);
-    const availableQualities = getAvailableQualities(musicItem, plugin?.instance);
+    const plugin = PluginManager.getMediaSourcePlugin?.(musicItem) ?? PluginManager.getByMedia(musicItem);
+    const availableQualities = plugin?.instance.scriptSource
+        ? PluginManager.getMediaSourceQualityScope(musicItem)
+        : getAvailableQualities(musicItem, plugin?.instance);
 
     // 本地音乐：展示文件真实技术参数，不显示虚构的在线音质列表
     const localAudioMeta = getMusicItemAudioMeta(musicItem);

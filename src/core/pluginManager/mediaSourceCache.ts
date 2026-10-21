@@ -1,3 +1,16 @@
+export function resolverCacheKey(name: string, revision: string, provider: string = ""): string {
+    return JSON.stringify([name, revision, provider]);
+}
+
+export function canReuseResolverCache(
+    source: IMusic.IMediaSource | undefined,
+    resolverKey: string,
+    allowLegacy: boolean,
+): boolean {
+    return !!source?.url && (source.resolverKey === resolverKey ||
+        (!source.resolverKey && allowLegacy));
+}
+
 /** Preserve decryption metadata when replaying a cached source, including opaque URLs. */
 export function readCachedMediaSource(
     source: IMusic.IMediaSource,

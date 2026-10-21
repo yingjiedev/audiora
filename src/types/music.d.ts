@@ -16,6 +16,8 @@ declare namespace IMusic {
 
     // 音源定义
     export interface IMediaSource {
+        /** Host resolver revision; cached URLs must match the current binding. */
+        resolverKey?: string;
         headers?: Record<string, string>;
         /** 兜底播放 */
         url?: string;

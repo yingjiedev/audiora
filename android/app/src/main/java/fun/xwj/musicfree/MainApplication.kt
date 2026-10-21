@@ -16,6 +16,7 @@ import expo.modules.ExpoReactHostFactory
 
 import `fun`.xwj.musicfree.cenc.CencPackage
 import `fun`.xwj.musicfree.audioEffects.AudioEffectsController
+import `fun`.xwj.musicfree.scriptsource.ScriptSourcePackage
 import `fun`.xwj.musicfree.lyricUtil.LyricUtilPackage
 import `fun`.xwj.musicfree.mp3Util.Mp3UtilPackage
 import `fun`.xwj.musicfree.utils.UtilsPackage
@@ -35,6 +36,7 @@ class MainApplication : Application(), ReactApplication {
           add(CencPackage())
           add(MusicWidgetPackage())
           add(`fun`.xwj.musicfree.auto.AndroidAutoPackage())
+          add(ScriptSourcePackage())
         }
     )
   }

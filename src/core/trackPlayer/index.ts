@@ -222,16 +222,24 @@ class TrackPlayer extends EventEmitter<{
         const restorePlugin = track
             ? this.pluginManagerService.getByMedia(track)
             : undefined;
+        const restoreSourcePlugin = track
+            ? this.pluginManagerService.getMediaSourcePlugin?.(track) ?? restorePlugin
+            : undefined;
+        const restoreScope = track
+            ? this.pluginManagerService.getMediaSourceQualityScope?.(track) ?? getPluginQualityScope(restorePlugin?.instance)
+            : undefined;
         const quality: IMusic.IQualityKey =
-            track && (track.qualities || track.source)
-                ? getSmartQuality(
-                    preferredQuality,
+            restoreSourcePlugin?.instance.scriptSource
+                ? pickSupportedQuality(preferredQuality, restoreScope) ?? preferredQuality
+                : track && (track.qualities || track.source)
+                    ? getSmartQuality(
+                        preferredQuality,
                       (track.qualities || track.source) as
                           | IMusic.IQuality
                           | undefined,
-                      getPluginQualityScope(restorePlugin?.instance),
-                )
-                : preferredQuality;
+                      restoreScope,
+                    )
+                    : preferredQuality;
 
         // 状态恢复
         if (rate) {
@@ -711,6 +719,9 @@ class TrackPlayer extends EventEmitter<{
                     currentTrack.url !== TrackPlayer.proposedAudioUrl &&
                     currentTrack.url !== TrackPlayer.fakeAudioUrl &&
                     canReuseMediaSourceForPlayback(currentTrack as IPlugin.IMediaSourceResult) &&
+                    (localSource || (this.pluginManagerService.canReuseMediaSource?.(
+                        musicItem, currentTrack as IMusic.IMediaSource,
+                    ) ?? true)) &&
                     isSameMediaItem(
                         musicItem,
                         currentTrack as IMusic.IMusicItem,
@@ -812,7 +823,9 @@ class TrackPlayer extends EventEmitter<{
             // 5.1.1 插件音质档位范围：官方协议插件只认 MusicFree 的 4 档
             // （low/standard/high/super），扩展协议插件按自己的 supportedQualities。
             // 全部选择与降级都限制在这个范围内，避免拿插件根本不认识的档位去请求。
-            const pluginQualityScope = getPluginQualityScope(plugin?.instance);
+            const sourcePlugin = this.pluginManagerService.getMediaSourcePlugin?.(musicItem) ?? plugin;
+            const pluginQualityScope = this.pluginManagerService.getMediaSourceQualityScope?.(musicItem) ??
+                getPluginQualityScope(sourcePlugin?.instance);
 
             // 5.2 智能音质选择
             const preferredQuality = this.configService.getConfig("basic.defaultPlayQuality") ?? "master";
@@ -824,7 +837,7 @@ class TrackPlayer extends EventEmitter<{
                 selectedQuality = mapLocalQuality(
                     resolveLocalAudioMeta(musicItem, localMusicItem),
                 ) ?? "320k";
-            } else if (musicItem.qualities || musicItem.source) {
+            } else if ((musicItem.qualities || musicItem.source) && !sourcePlugin?.instance.scriptSource) {
                 selectedQuality = getSmartQuality(
                     preferredQuality,
                     (musicItem.qualities || musicItem.source) as IMusic.IQuality | undefined,

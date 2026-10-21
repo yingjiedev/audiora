@@ -6,6 +6,10 @@ type Plugin = any; // Placeholder for the actual Plugin type
 export interface IInstallPluginConfig {
     notCheckVersion?: boolean;
     signal?: AbortSignal;
+    /** Explicitly import a custom playback resolver script. */
+    scriptSource?: boolean;
+    /** Preserve identity when updating an existing custom source. */
+    sourceId?: string;
 }
 
 /**
@@ -24,6 +28,9 @@ export interface IInstallPluginResult {
  * 插件管理器接口
  */
 export interface IPluginManager {
+    getMediaSourcePlugin?(mediaItem: IMusic.IMusicItemBase): Plugin | undefined;
+    getMediaSourceQualityScope?(mediaItem: IMusic.IMusicItemBase): string[];
+    canReuseMediaSource?(mediaItem: IMusic.IMusicItemBase, source: IMusic.IMediaSource): boolean;
     /**
      * 初始化插件管理器，从文件系统加载所有插件
      * 读取插件目录中的所有.js文件并创建插件实例

@@ -75,12 +75,14 @@ export default function PluginList() {
         },
     ];
 
-    async function onInstallFromLocalClick() {
+    async function onInstallFromLocalClick(scriptSource = false) {
         try {
             const results = await DocumentPicker.getDocumentAsync({
                 copyToCacheDirectory: true,
                 multiple: true,
-                type: ["application/javascript", "text/javascript"],
+                type: scriptSource
+                    ? ["application/javascript", "text/javascript", "text/plain", "application/octet-stream"]
+                    : ["application/javascript", "text/javascript"],
             });
             if (results.canceled) {
                 // 用户取消
@@ -88,9 +90,10 @@ export default function PluginList() {
             }
             setLoading(true);
 
-            await Promise.all(
+            const installed = await Promise.all(
                 results.assets.map(async it => {
-                    await PluginManager.installPluginFromLocalFile(it.uri, {
+                    return PluginManager.installPluginFromLocalFile(it.uri, {
+                        scriptSource,
                         notCheckVersion: Config.getConfig(
                             "basic.notCheckPluginVersion",
                         ),
@@ -98,6 +101,10 @@ export default function PluginList() {
                     });
                 }),
             );
+            const failures = installed.filter(result => !result.success);
+            if (failures.length) {
+                throw new Error(failures.map(result => result.message).filter(Boolean).join("\n"));
+            }
             // 初步过滤
 
             Toast.success(t("toast.installPluginSuccess"));
@@ -110,16 +117,16 @@ export default function PluginList() {
         setLoading(false);
     }
 
-    async function onInstallFromNetworkClick() {
+    async function onInstallFromNetworkClick(scriptSource = false) {
         showPanel("SimpleInput", {
-            title: t("pluginSetting.menu.installPlugin"),
+            title: scriptSource ? t("scriptSource.importNetwork") : t("pluginSetting.menu.installPlugin"),
             placeholder: t("pluginSetting.menu.installPluginDialogPlaceholder"),
             maxLength: 200,
             async onOk(text, closePanel) {
                 setLoading(true);
                 closePanel();
 
-                const result = await installPluginFromUrl(text.trim());
+                const result = await installPluginFromUrl(text.trim(), { scriptSource });
 
                 // 检查是否全部安装成功
                 const successResults: IInstallPluginResult[] = [];
@@ -168,7 +175,10 @@ export default function PluginList() {
             for (let i = 0; i < enabledPlugins.length; ++i) {
                 const srcUrl = enabledPlugins[i].instance.srcUrl;
                 if (srcUrl) {
-                    const result = await installPluginFromUrl(srcUrl);
+                    const source = enabledPlugins[i].instance.scriptSource;
+                    const result = source ? [await PluginManager.installPluginFromUrl(srcUrl, {
+                        scriptSource: true, sourceId: source.id,
+                    })] : await installPluginFromUrl(srcUrl);
                     if (result[0]) {
                         if (result[0].success) {
                             successResults.push(result[0]);
@@ -238,6 +248,15 @@ export default function PluginList() {
                                 header: t("pluginSetting.menu.installPlugin"),
                                 candidates: [
                                     {
+                                        value: "source-local",
+                                        title: t("scriptSource.importLocal"),
+                                        invokeAfterDismiss: true,
+                                    },
+                                    {
+                                        value: "source-network",
+                                        title: t("scriptSource.importNetwork"),
+                                    },
+                                    {
                                         value: "从本地安装插件",
                                         title: t("pluginSetting.fabOptions.installFromLocal"),
                                         invokeAfterDismiss: true,
@@ -256,7 +275,11 @@ export default function PluginList() {
                                     },
                                 ],
                                 onPress(item) {
-                                    if (item.value === "从本地安装插件") {
+                                    if (item.value === "source-local") {
+                                        onInstallFromLocalClick(true);
+                                    } else if (item.value === "source-network") {
+                                        onInstallFromNetworkClick(true);
+                                    } else if (item.value === "从本地安装插件") {
                                         onInstallFromLocalClick();
                                     } else if (
                                         item.value === "从网络安装插件"

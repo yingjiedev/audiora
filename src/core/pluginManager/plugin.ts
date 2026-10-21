@@ -49,8 +49,8 @@ import { normalizePluginMusicItem } from "@/utils/qualities";
 import { androidSafUriExists, isAndroidSafUri } from "@/utils/androidSaf";
 import { readCompanionText } from "@/utils/mediaCompanion";
 import { resolveCompanionArtwork } from "@/utils/mediaCompanion";
-import { readCachedMediaSource } from "./mediaSourceCache";
 import { createPluginStorage } from "@/core/pluginManager/storage";
+import { canReuseResolverCache, readCachedMediaSource, resolverCacheKey } from "./mediaSourceCache";
 
 
 const sha256 = CryptoJs.SHA256;
@@ -393,28 +393,39 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
         if (musicItem.platform === localPluginPlatform) {
             throw new Error("本地音乐不存在");
         }
+        // Resolve and mount the actual parser before consulting URL caches.
+        const alternativePlugin = Plugin.pluginManager?.getAlternativePlugin(this.plugin) as Plugin | null;
+        if (alternativePlugin) {
+            await alternativePlugin.ensureMounted();
+        }
+        const parserPlugin = alternativePlugin?.instance?.getMediaSource ? alternativePlugin : this.plugin;
+        const resolverKey = resolverCacheKey(
+            parserPlugin.name, parserPlugin.hash,
+            _internalPluginMeta.getSourceProvider(this.plugin.name) ??
+                musicItem.providerId ?? musicItem.sourceProvider ?? this.plugin.instance.providerId ?? "",
+        );
         // 2. 缓存播放
         const mediaCache = MediaCache.getMediaCache(
             musicItem,
         ) as IMusic.IMusicItem | null;
         const pluginCacheControl =
-            this.plugin.instance.cacheControl ?? "no-cache";
+            parserPlugin.instance.cacheControl ?? "no-cache";
         if (
             !bypassLocalAndCache &&
             mediaCache &&
-            mediaCache?.source?.[quality]?.url &&
+            canReuseResolverCache(mediaCache.source?.[quality], resolverKey,
+                !alternativePlugin && !parserPlugin.instance.scriptSource) &&
             (pluginCacheControl === CacheControl.Cache ||
                 (pluginCacheControl === CacheControl.NoCache &&
                     Network.isOffline))
         ) {
             trace("播放", "缓存播放");
-            const qualityInfo = mediaCache.source[quality];
-            return readCachedMediaSource(qualityInfo!, mediaCache);
+            const qualityInfo = mediaCache.source?.[quality];
+            return readCachedMediaSource(qualityInfo!, {
+                headers: mediaCache.headers,
+                userAgent: mediaCache.userAgent,
+            });
         }
-        // 3. 替代插件
-        const alternativePlugin = Plugin.pluginManager?.getAlternativePlugin(this.plugin) as Plugin | null;
-        const parserPlugin = alternativePlugin?.instance?.getMediaSource ? alternativePlugin : this.plugin;
-
         if (alternativePlugin) {
             devLog("info", "设置了替代插件，实际使用的插件为", parserPlugin.name);
         }
@@ -451,6 +462,7 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
             trace("播放", "插件播放");
             const result = {
                 url,
+                resolverKey,
                 headers,
                 userAgent: headers?.["user-agent"],
                 ekey, // 仅识别旧来源以提示迁移，宿主不再解包
@@ -485,7 +497,7 @@ class PluginMethodsWrapper implements IPlugin.IPluginInstanceMethods {
             }
             return result;
         } catch (e: any) {
-            if (retryCount > 0 && e?.message !== "NOT RETRY") {
+            if (retryCount > 0 && e?.message !== "NOT RETRY" && !parserPlugin.instance.scriptSource) {
                 await delay(150);
                 return this.getMediaSource(musicItem, quality, --retryCount, notUpdateCache, bypassLocalAndCache);
             }

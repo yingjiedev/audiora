@@ -152,6 +152,17 @@ export interface ILanguageData {
     "audioEffects.title": string;
     "audioEffects.unsupported": string;
     "audioEffects.waiting": string;
+    "scriptSource.defaultName": string;
+    "scriptSource.importLocal": string;
+    "scriptSource.importNetwork": string;
+    "scriptSource.playbackResolver": string;
+    "scriptSource.providerSetting": string;
+    "scriptSource.autoProvider": string;
+    "scriptSource.provider.kw": string;
+    "scriptSource.provider.kg": string;
+    "scriptSource.provider.tx": string;
+    "scriptSource.provider.wy": string;
+    "scriptSource.provider.mg": string;
     "listening.collection": string;
     "listening.today": string;
     "listening.todayEntry": string;

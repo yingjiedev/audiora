@@ -11,6 +11,7 @@ export interface SubscriptionProgress {
 
 export interface SubscriptionInstallOptions {
     signal?: AbortSignal;
+    scriptSource?: boolean;
     pluginUrls?: string[];
     onProgress?: (progress: SubscriptionProgress) => void;
 }
@@ -30,7 +31,7 @@ export default async function installPluginFromUrl(text: string, options: Subscr
         options.onProgress?.({ phase: "fetching", results: [] });
         let urls = options.pluginUrls;
         if (!urls) {
-            if (/\.json(?:[?#]|$)/i.test(inputUrl)) {
+            if (!options.scriptSource && /\.json(?:[?#]|$)/i.test(inputUrl)) {
                 const { data } = await axios.get(inputUrl, { headers, timeout: 10_000, signal });
                 if (!Array.isArray(data?.plugins)) {
                     throw new Error("Invalid subscription manifest");
@@ -60,6 +61,7 @@ export default async function installPluginFromUrl(text: string, options: Subscr
                     result = await PluginManager.installPluginFromCode(data, url, {
                         notCheckVersion: Config.getConfig("basic.notCheckPluginVersion"),
                         signal,
+                        scriptSource: options.scriptSource,
                     });
                 } catch (e: any) {
                     result = { success: false, message: e?.message ?? "", pluginUrl: url };

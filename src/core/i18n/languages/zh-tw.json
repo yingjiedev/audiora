@@ -1183,5 +1183,16 @@
     "subscription.details": "失敗詳情",
     "subscription.retryFailed": "重試失敗項",
     "subscription.updating": "更新中…",
-    "subscription.viewProgress": "查看進度"
+    "subscription.viewProgress": "查看進度",
+    "scriptSource.defaultName": "自訂音源 {index}",
+    "scriptSource.importLocal": "從檔案匯入自訂音源",
+    "scriptSource.importNetwork": "從連結新增自訂音源",
+    "scriptSource.playbackResolver": "播放解析",
+    "scriptSource.providerSetting": "解析平台",
+    "scriptSource.autoProvider": "自動識別",
+    "scriptSource.provider.kw": "酷我音樂",
+    "scriptSource.provider.kg": "酷狗音樂",
+    "scriptSource.provider.tx": "QQ 音樂",
+    "scriptSource.provider.wy": "網易雲音樂",
+    "scriptSource.provider.mg": "咪咕音樂"
 }

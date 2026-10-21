@@ -30,6 +30,12 @@ import { IInjectable } from "@/types/infra";
 import { IAppConfig } from "@/types/core/config";
 import delay from "@/utils/delay";
 import { clearAllPluginStorage, clearPluginStorage } from "@/core/pluginManager/storage";
+import { createSourceDefinition, getSourceQualityScope } from "../scriptSource/adapter";
+import { isScriptSourceCode, parseScriptInfo, readSourceRecord, scriptRevision, validateScript } from "../scriptSource/metadata";
+import { inferSourceProvider, resolveSourceProvider } from "../scriptSource/musicInfo";
+import { disposeSourceRuntime, getSourceRuntime } from "../scriptSource/runtime";
+import type { ScriptSourceRecord, SourceProvider } from "../scriptSource/types";
+import { canReuseResolverCache, resolverCacheKey } from "./mediaSourceCache";
 
 const pluginsAtom = atom<Plugin[]>([]);
 /** 插件显示名（本地自定义）：platform -> 显示名。未自定义的插件不在其中。 */
@@ -53,17 +59,11 @@ function toPlatform(pluginOrPlatform: PluginRef | null | undefined) {
         : pluginOrPlatform?.name;
 }
 
-/** 显示名解析：本地自定义优先，否则回落到插件平台名（唯一标识） */
-function resolveDisplayName(
-    platform: string | null | undefined,
-    displayNames: Record<string, string>,
-): string {
-    return (platform && displayNames[platform]) || platform || "";
-}
-
 class PluginManager implements IPluginManager, IInjectable {
     private installationQueue: Promise<void> = Promise.resolve();
     private appConfigService!: IAppConfig;
+    private sourceRecords = new Map<string, ScriptSourceRecord>();
+    private sourceInstallQueue: Promise<unknown> = Promise.resolve();
 
     injectDependencies(config: IAppConfig): void {
         this.appConfigService = config;
@@ -157,8 +157,7 @@ class PluginManager implements IPluginManager, IInjectable {
             const jsFiles = pluginsFileItems.filter(
                 item =>
                     item.isFile() &&
-                    (item.name?.endsWith?.(".js") ||
-                        item.path?.endsWith?.(".js")),
+                    (item.path?.endsWith?.(".js") || item.path?.endsWith?.(".source.json")),
             );
 
             const lazyEnabled = this.isLazyLoadPluginEnabled();
@@ -176,7 +175,7 @@ class PluginManager implements IPluginManager, IInjectable {
                 jsFiles.map(async (pluginFileItem): Promise<LoadPlan> => {
                     try {
                         if (
-                            lazyEnabled &&
+                            lazyEnabled && !pluginFileItem.path.endsWith(".source.json") &&
                             pluginCacheStore.contains(pluginFileItem.path)
                         ) {
                             const lazyProps = safeParse(
@@ -226,7 +225,21 @@ class PluginManager implements IPluginManager, IInjectable {
                         isLazyLoad = true;
                         plugin = new Plugin(null, plan.path, plan.lazyProps);
                     } else {
-                        plugin = new Plugin(plan.code, plan.path);
+                        if (plan.path.endsWith(".source.json")) {
+                            const record = readSourceRecord(plan.code);
+                            const previous = this.sourceRecords.get(record.id);
+                            if (previous && (previous.updatedAt ?? 0) >= (record.updatedAt ?? 0)) {
+                                continue;
+                            }
+                            const previousIndex = allPlugins.findIndex(it => it.instance.scriptSource?.id === record.id);
+                            if (previousIndex !== -1) {
+                                allPlugins.splice(previousIndex, 1);
+                            }
+                            plugin = this.createScriptSourcePlugin(record, plan.path);
+                            this.sourceRecords.set(record.id, record);
+                        } else {
+                            plugin = new Plugin(plan.code, plan.path);
+                        }
                         fullMountCount += 1;
                         // Yield only when compiling real plugin sandboxes.
                         if (fullMountCount > 0 && fullMountCount % 2 === 0) {
@@ -332,6 +345,9 @@ class PluginManager implements IPluginManager, IInjectable {
         }
 
         if (funcCode) {
+            if (config?.scriptSource || isScriptSourceCode(funcCode)) {
+                return this.installScriptSource(funcCode, undefined, config);
+            }
             const plugin = new Plugin(funcCode, pluginPath, null, true);
             let installed = false;
             try {
@@ -449,6 +465,9 @@ class PluginManager implements IPluginManager, IInjectable {
         let installed = false;
         try {
             if (funcCode) {
+                if (config?.scriptSource || isScriptSourceCode(funcCode)) {
+                    return this.installScriptSource(funcCode, url, config);
+                }
                 const plugin = new Plugin(funcCode, "", null, true);
                 candidate = plugin;
                 let allPlugins = [...this.getPlugins()];
@@ -559,6 +578,11 @@ class PluginManager implements IPluginManager, IInjectable {
         devLog("info", "📤[插件管理器] 卸载插件", { targetIndex, hash });
         if (targetIndex !== -1) {
             const targetPlugin = plugins[targetIndex];
+            const source = plugins[targetIndex].instance.scriptSource;
+            if (source) {
+                disposeSourceRuntime(source.id);
+                this.sourceRecords.delete(source.id);
+            }
             const pluginName = plugins[targetIndex].name;
             const pluginPath = plugins[targetIndex].path;
             targetPlugin.disposeStorage();
@@ -572,6 +596,12 @@ class PluginManager implements IPluginManager, IInjectable {
                 });
             }
             plugins = plugins.filter(_ => _.hash !== hash);
+            // Remove references before removing the target; stale bindings must not revive.
+            plugins.forEach(candidate => {
+                if (pluginMeta.getAlternativePlugin(candidate.name) === pluginName) {
+                    pluginMeta.setAlternativePlugin(candidate.name, null as any);
+                }
+            });
             this.setPlugins(plugins);
             // 防止其他重名
             if (plugins.every(_ => _.name !== pluginName)) {
@@ -592,6 +622,9 @@ class PluginManager implements IPluginManager, IInjectable {
             this.getPlugins().map(async plugin => {
                 plugin.disposeStorage();
                 try {
+                    if (plugin.instance.scriptSource) {
+                        disposeSourceRuntime(plugin.instance.scriptSource.id);
+                    }
                     const pluginName = plugin.name;
                     await unlink(plugin.path);
                     removeAllMediaExtra(pluginName);
@@ -600,6 +633,7 @@ class PluginManager implements IPluginManager, IInjectable {
         );
         clearAllPluginStorage();
         this.setPlugins([]);
+        this.sourceRecords.clear();
         pluginMeta.clearDisplayNames();
         this.syncPluginDisplayNames();
 
@@ -624,7 +658,13 @@ class PluginManager implements IPluginManager, IInjectable {
             throw new Error("没有更新源");
         }
         try {
-            await this.installPluginFromUrl(updateUrl);
+            const result = await this.installPluginFromUrl(updateUrl, {
+                sourceId: plugin.instance.scriptSource?.id,
+                scriptSource: !!plugin.instance.scriptSource,
+            });
+            if (!result.success) {
+                throw new Error(result.message || "更新失败");
+            }
         } catch (e: any) {
             if (e.message === "插件已安装") {
                 throw new Error(i18n.t("checkUpdate.error.latestVersion"));
@@ -755,6 +795,9 @@ class PluginManager implements IPluginManager, IInjectable {
      */
     setPluginEnabled(plugin: Plugin, enabled: boolean) {
         pluginMeta.setPluginEnabled(plugin.name, enabled);
+        if (!enabled && plugin.instance.scriptSource) {
+            disposeSourceRuntime(plugin.instance.scriptSource.id);
+        }
         ee.emit("enabled-updated", plugin.name, enabled);
     }
 
@@ -797,11 +840,11 @@ class PluginManager implements IPluginManager, IInjectable {
      * 所有对外展示插件名的地方都必须走这里，不要直接读 plugin.name / platform。
      * @param pluginOrPlatform - 插件实例，或插件的平台名（媒体项 / 歌单 / 榜单数据里只有平台名）
      */
-    getPluginDisplayName(pluginOrPlatform: PluginRef) {
-        return resolveDisplayName(
-            toPlatform(pluginOrPlatform),
-            getDefaultStore().get(pluginDisplayNamesAtom),
-        );
+    getPluginDisplayName(pluginOrPlatform: PluginRef, displayNames = getDefaultStore().get(pluginDisplayNamesAtom)) {
+        const plugin = typeof pluginOrPlatform === "string" ? this.getByName(pluginOrPlatform) : pluginOrPlatform;
+        const platform = toPlatform(pluginOrPlatform);
+        const customName = platform && displayNames[platform];
+        return customName || plugin?.instance.scriptSource?.displayName || platform || "";
     }
 
     /**
@@ -833,9 +876,113 @@ class PluginManager implements IPluginManager, IInjectable {
     getAlternativePlugin(plugin: Plugin) {
         const alternativePluginName = this.getAlternativePluginName(plugin);
         if (alternativePluginName) {
-            return this.getByName(alternativePluginName);
+            const target = this.getByName(alternativePluginName);
+            return target && this.isPluginEnabled(target) ? target : null;
         }
         return null;
+    }
+
+    getMediaSourcePlugin(item: IMusic.IMusicItemBase) {
+        const plugin = this.getByMedia(item);
+        return plugin ? this.getAlternativePlugin(plugin) ?? plugin : undefined;
+    }
+
+    getMediaSourceQualityScope(item: IMusic.IMusicItemBase) {
+        return getSourceQualityScope(this.getMediaSourcePlugin(item)?.instance, item,
+            pluginMeta.getSourceProvider(item.platform), this.getByMedia(item)?.instance.providerId);
+    }
+
+    canReuseMediaSource(item: IMusic.IMusicItemBase, source: IMusic.IMediaSource) {
+        const original = this.getByMedia(item);
+        const parser = this.getMediaSourcePlugin(item);
+        if (!parser) {
+            return true;
+        }
+        const key = resolverCacheKey(parser.name, parser.hash,
+            pluginMeta.getSourceProvider(item.platform) ?? item.providerId ??
+                item.sourceProvider ?? original?.instance.providerId ?? "");
+        return canReuseResolverCache(source, key, parser === original && !parser.instance.scriptSource);
+    }
+
+    getSourceProvider(plugin: Plugin) {
+        return pluginMeta.getSourceProvider(plugin.name) ?? plugin.instance.providerId ?? inferSourceProvider(plugin.name);
+    }
+
+    setSourceProvider(plugin: Plugin, provider: SourceProvider | null) {
+        pluginMeta.setSourceProvider(plugin.name, provider);
+    }
+
+    private createScriptSourcePlugin(record: ScriptSourceRecord, pluginPath: string) {
+        const plugin = new Plugin(() => createSourceDefinition(record, item => {
+            return resolveSourceProvider(item, pluginMeta.getSourceProvider(item.platform),
+                this.getByMedia(item)?.instance.providerId);
+        }), pluginPath);
+        plugin.hash = record.revision;
+        return plugin;
+    }
+
+    private installScriptSource(script: string, srcUrl?: string, config?: IInstallPluginConfig): Promise<IInstallPluginResult> {
+        const install = this.sourceInstallQueue.then(async () => {
+            try {
+                if (config?.signal?.aborted) {
+                    throw new Error("Cancelled");
+                }
+                validateScript(script);
+                const revision = scriptRevision(script);
+                const duplicate = this.getPlugins().find(plugin => plugin.hash === revision && plugin.instance.scriptSource);
+                if (duplicate) {
+                    return { success: true, status: "unchanged" as const, message: "自定义音源已安装", pluginName: this.getPluginDisplayName(duplicate), pluginHash: duplicate.hash, pluginUrl: srcUrl };
+                }
+                const scriptInfo = parseScriptInfo(script);
+                const previous = config?.sourceId ? this.sourceRecords.get(config.sourceId) :
+                    Array.from(this.sourceRecords.values()).find(record =>
+                        (srcUrl && record.srcUrl === srcUrl) || (scriptInfo.name &&
+                            record.scriptInfo.name === scriptInfo.name && record.scriptInfo.author === scriptInfo.author));
+                if (config?.sourceId && !previous) {
+                    throw new Error("待更新的自定义音源不存在");
+                }
+                let nameIndex = this.sourceRecords.size + 1;
+                let defaultName = i18n.t("scriptSource.defaultName", { index: nameIndex });
+                while (!previous && this.getPlugins().some(plugin => this.getPluginDisplayName(plugin) === defaultName)) {
+                    defaultName = i18n.t("scriptSource.defaultName", { index: ++nameIndex });
+                }
+                const record: ScriptSourceRecord = {
+                    format: "audiora-script-source-v1",
+                    id: previous?.id ?? nanoid(), revision, script, scriptInfo,
+                    displayName: previous?.displayName ?? defaultName,
+                    srcUrl: srcUrl ?? previous?.srcUrl, providers: {}, updatedAt: Date.now(),
+                };
+                const runtime = getSourceRuntime(record);
+                try {
+                    record.providers = await runtime.initialize();
+                } finally {
+                    disposeSourceRuntime(record.id, revision);
+                }
+                if (config?.signal?.aborted) {
+                    throw new Error("Cancelled");
+                }
+                const sourcePath = `${pathConst.pluginPath}${record.id}-${revision.slice(0, 16)}.source.json`;
+                await writeFile(sourcePath, JSON.stringify(record), "utf8");
+                const plugin = this.createScriptSourcePlugin(record, sourcePath);
+                const oldPlugin = this.getPlugins().find(candidate => candidate.name === plugin.name);
+                oldPlugin?.disposeStorage();
+                this.sourceRecords.set(record.id, record);
+                this.setPlugins(this.getPlugins().filter(candidate => candidate.name !== plugin.name).concat(plugin));
+                if (oldPlugin && oldPlugin.path !== sourcePath) {
+                    if (previous) {
+                        disposeSourceRuntime(previous.id, previous.revision);
+                    }
+                    try {
+                        await unlink(oldPlugin.path);
+                    } catch {}
+                }
+                return { success: true, status: oldPlugin ? "updated" as const : "installed" as const, pluginName: this.getPluginDisplayName(plugin), pluginHash: plugin.hash, pluginUrl: srcUrl };
+            } catch (error: any) {
+                return { success: false, message: error?.message ?? "自定义音源导入失败", pluginUrl: srcUrl };
+            }
+        });
+        this.sourceInstallQueue = install;
+        return install;
     }
 }
 
@@ -902,7 +1049,7 @@ export function usePluginDisplayNameResolver() {
     const displayNames = useAtomValue(pluginDisplayNamesAtom);
     return useCallback(
         (pluginOrPlatform: PluginRef) =>
-            resolveDisplayName(toPlatform(pluginOrPlatform), displayNames),
+            pluginManager.getPluginDisplayName(pluginOrPlatform, displayNames),
         [displayNames],
     );
 }

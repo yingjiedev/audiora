@@ -1183,5 +1183,16 @@
     "subscription.details": "Failure details",
     "subscription.retryFailed": "Retry failed",
     "subscription.updating": "Updating…",
-    "subscription.viewProgress": "View progress"
+    "subscription.viewProgress": "View progress",
+    "scriptSource.defaultName": "Custom source {index}",
+    "scriptSource.importLocal": "Import custom source file",
+    "scriptSource.importNetwork": "Add custom source URL",
+    "scriptSource.playbackResolver": "Playback resolver",
+    "scriptSource.providerSetting": "Source platform",
+    "scriptSource.autoProvider": "Detect automatically",
+    "scriptSource.provider.kw": "Kuwo",
+    "scriptSource.provider.kg": "Kugou",
+    "scriptSource.provider.tx": "QQ Music",
+    "scriptSource.provider.wy": "NetEase Music",
+    "scriptSource.provider.mg": "Migu"
 }

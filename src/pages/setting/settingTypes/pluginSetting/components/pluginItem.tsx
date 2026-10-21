@@ -19,6 +19,7 @@ import { IIconName } from "@/components/base/icon.tsx";
 import { useI18N } from "@/core/i18n";
 import IconButton from "@/components/base/iconButton";
 import useRerender from "@/hooks/useRerender";
+import { SOURCE_PROVIDERS, type SourceProvider } from "@/core/scriptSource/types";
 
 interface IPluginItemProps {
     plugin: Plugin;
@@ -43,6 +44,12 @@ function PluginItemBase(props: IPluginItemProps) {
     const rerender = useRerender();
 
     const alternativePluginName = pluginManager.getAlternativePluginName(plugin);
+    const source = plugin.instance.scriptSource;
+    const providerLabels: Record<SourceProvider, string> = {
+        kw: t("scriptSource.provider.kw"), kg: t("scriptSource.provider.kg"),
+        tx: t("scriptSource.provider.tx"), wy: t("scriptSource.provider.wy"),
+        mg: t("scriptSource.provider.mg"),
+    };
 
     const options: IOption[] = [
         {
@@ -115,7 +122,7 @@ function PluginItemBase(props: IPluginItemProps) {
         {
             title: t("pluginSetting.pluginItem.options.alternativePlugin"),
             icon: "strategy",
-            show: true,
+            show: !source,
             onPress() {
                 // 音源重定向落库的一定是平台名：这里只把展示换成显示名，
                 // 显示名撞车时补上平台名消歧，保证选中项能唯一映射回平台。
@@ -125,7 +132,7 @@ function PluginItemBase(props: IPluginItemProps) {
                 const labels = candidates.map(it => getDisplayName(it));
                 const uniqueLabels = labels.map((label, index) =>
                     labels.filter(_ => _ === label).length > 1
-                        ? `${label}（${candidates[index].name}）`
+                        ? `${label}（${candidates[index].instance.scriptSource ? index + 1 : candidates[index].name}）`
                         : label,
                 );
                 const currentPlatform = pluginManager.getAlternativePluginName(
@@ -155,6 +162,26 @@ function PluginItemBase(props: IPluginItemProps) {
 
                 });
 
+            },
+        },
+        {
+            title: t("scriptSource.providerSetting"),
+            icon: "musical-note",
+            show: !source && !!pluginManager.getByName(alternativePluginName ?? "")?.instance.scriptSource,
+            onPress() {
+                const automatic = t("scriptSource.autoProvider");
+                const labels = [automatic, ...SOURCE_PROVIDERS.map(provider => providerLabels[provider])];
+                const provider = pluginManager.getSourceProvider(plugin);
+                showDialog("RadioDialog", {
+                    title: t("scriptSource.providerSetting"),
+                    content: labels,
+                    defaultSelected: provider ? providerLabels[provider] : automatic,
+                    onOk(value) {
+                        const index = labels.indexOf(String(value)) - 1;
+                        pluginManager.setSourceProvider(plugin, SOURCE_PROVIDERS[index] ?? null);
+                        rerender();
+                    },
+                });
             },
         },
         {
@@ -316,6 +343,12 @@ function PluginItemBase(props: IPluginItemProps) {
                     </ThemeText>
                 ) : null}
             </View>
+            {source ? (
+                <ThemeText fontSize="subTitle" fontColor="textSecondary">
+                    {t("scriptSource.playbackResolver")} · {SOURCE_PROVIDERS.filter(provider => source.providers[provider])
+                        .map(provider => providerLabels[provider]).join(" / ")}
+                </ThemeText>
+            ) : null}
             {alternativePluginName ? <View style={styles.alternativePluginDescription}>
                 <ThemeText fontSize="subTitle" fontColor="textSecondary">
                     {t("pluginSetting.pluginItem.alternativePlugin", {
