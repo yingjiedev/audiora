@@ -1,6 +1,6 @@
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
-import { Linking } from "react-native";
+import { Linking, Platform } from "react-native";
 import ThemeText from "@/components/base/themeText";
 import AboutSetting from "./aboutSetting";
 
@@ -146,6 +146,22 @@ describe("AboutSetting", () => {
                 okText: "checkUpdate.download",
                 onOk: expect.any(Function),
             }));
+    });
+
+    it("opens the in-app updater on Android", async () => {
+        jest.replaceProperty(Platform, "OS", "android");
+        jest.requireMock("@/core/appRelease").checkAppRelease.mockResolvedValue(releaseResult);
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<AboutSetting />);
+        });
+
+        await act(async () => {
+            await renderer.root.findByProps({ accessibilityLabel: "sidebar.checkUpdate" }).props.onPress();
+        });
+
+        expect(jest.requireMock("@/components/dialogs/useDialog").showDialog)
+            .toHaveBeenCalledWith("AppUpdateDialog", { release: releaseResult.release });
     });
 
     it("opens the automatically selected route when the user confirms the update", async () => {

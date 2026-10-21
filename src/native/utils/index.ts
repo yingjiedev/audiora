@@ -2,6 +2,8 @@ import { NativeModule, NativeModules } from "react-native";
 
 interface INativeUtils extends NativeModule {
     exitApp: () => void;
+    installAppUpdate: (apkPath: string) => Promise<void>;
+    logAppUpdateDiagnostic?: (details: string) => void;
     saveImageToAppStorage: (sourcePath: string, displayName: string) => Promise<string>;
     scanSafDirectoryFiles: (directoryUri: string) => Promise<Array<{
         uri: string;

@@ -3,6 +3,7 @@ import { controlSize, radius, spacing } from "@/constants/designSystem";
 import {
     Image,
     Linking,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -87,6 +88,11 @@ export default function AboutSetting() {
             }
             if (!result.hasUpdate) {
                 Toast.success(t("checkUpdate.error.latestVersion"));
+                return;
+            }
+
+            if (Platform.OS === "android") {
+                showDialog("AppUpdateDialog", { release: result.release });
                 return;
             }
 
