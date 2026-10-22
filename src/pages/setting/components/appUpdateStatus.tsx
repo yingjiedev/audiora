@@ -156,7 +156,8 @@ const styles = StyleSheet.create({
         marginTop: spacing.xs,
     },
     install: {
-        paddingHorizontal: spacing.md,
+        width: rpx(136),
+        paddingHorizontal: spacing.sm,
         paddingVertical: spacing.sm,
         borderRadius: radius.pill,
     },
