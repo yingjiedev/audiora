@@ -1168,6 +1168,17 @@ export interface ILanguageData {
     "checkUpdate.newVersion": string;
     "checkUpdate.currentVersion": string;
     "checkUpdate.download": string;
+    "checkUpdate.title": string;
+    "checkUpdate.releaseNotes": string;
+    "checkUpdate.downloadingTitle": string;
+    "checkUpdate.preparingInstall": string;
+    "checkUpdate.downloadedSize": string;
+    "checkUpdate.downloadFailedTitle": string;
+    "checkUpdate.installFailedTitle": string;
+    "checkUpdate.cancelDownload": string;
+    "checkUpdate.cancelDownloadHint": string;
+    "checkUpdate.stopDownload": string;
+    "checkUpdate.continueDownload": string;
     "checkUpdate.downloading": string;
     "checkUpdate.installing": string;
     "checkUpdate.install": string;

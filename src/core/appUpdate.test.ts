@@ -72,7 +72,9 @@ describe("appUpdate", () => {
             connectionTimeout: 15_000,
             readTimeout: 30_000,
         }));
-        expect(onProgress).toHaveBeenCalledWith(0.5);
+        expect(onProgress).toHaveBeenNthCalledWith(1, { bytesWritten: 0, contentLength: 100 });
+        expect(onProgress).toHaveBeenCalledWith({ bytesWritten: 50, contentLength: 100 });
+        expect(onProgress).toHaveBeenLastCalledWith({ bytesWritten: 100, contentLength: 100 });
         expect(fs.moveFile).toHaveBeenCalledWith(
             "/cache/app-updates/audiora-update.apk.part",
             "/cache/app-updates/audiora-update.apk",
@@ -111,7 +113,9 @@ describe("appUpdate", () => {
         const onProgress = jest.fn();
         mockDownload(result, -1);
         await downloadAppUpdate(release, onProgress).promise;
-        expect(onProgress).toHaveBeenCalledWith(null);
+        expect(onProgress).toHaveBeenCalledWith({ bytesWritten: 0, contentLength: null });
+        expect(onProgress).toHaveBeenCalledWith({ bytesWritten: 50, contentLength: null });
+        expect(onProgress).toHaveBeenLastCalledWith({ bytesWritten: 100, contentLength: 100 });
         expect(fs.moveFile).toHaveBeenCalledTimes(1);
     });
 

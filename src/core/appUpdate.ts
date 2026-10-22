@@ -7,6 +7,11 @@ import { getFastestGithubDownloadUrl } from "./githubNetwork";
 const UPDATE_DIRECTORY = `${RNFS.CachesDirectoryPath}/app-updates`;
 let downloadInProgress = false;
 
+export interface IAppUpdateProgress {
+    bytesWritten: number;
+    contentLength: number | null;
+}
+
 function redactUrls(value: string) {
     return value.replace(/https?:\/\/[^\s"'<>]+/gi, candidate => {
         try {
@@ -58,7 +63,7 @@ export function getAppUpdateUrl(release: IAppRelease) {
 
 export function downloadAppUpdate(
     release: IAppRelease,
-    onProgress: (progress: number | null) => void,
+    onProgress: (progress: IAppUpdateProgress) => void,
 ) {
     const url = getAppUpdateUrl(release);
     if (!url || downloadInProgress) {
@@ -105,12 +110,19 @@ export function downloadAppUpdate(
                 progressInterval: 300,
                 begin: response => {
                     contentLength = response.contentLength;
+                    if (!cancelled) {
+                        onProgress({
+                            bytesWritten: 0,
+                            contentLength: contentLength > 0 ? contentLength : null,
+                        });
+                    }
                 },
                 progress: progress => {
                     if (!cancelled) {
-                        onProgress(progress.contentLength > 0
-                            ? Math.min(progress.bytesWritten / progress.contentLength, 1)
-                            : null);
+                        onProgress({
+                            bytesWritten: progress.bytesWritten,
+                            contentLength: progress.contentLength > 0 ? progress.contentLength : null,
+                        });
                     }
                 },
             });
@@ -125,6 +137,7 @@ export function downloadAppUpdate(
             }
             await RNFS.moveFile(partialPath, apkPath);
             checkCancelled();
+            onProgress({ bytesWritten: result.bytesWritten, contentLength: result.bytesWritten });
             return apkPath;
         } catch (error) {
             await Promise.allSettled([
