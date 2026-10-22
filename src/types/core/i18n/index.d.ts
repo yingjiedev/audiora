@@ -1165,6 +1165,13 @@ export interface ILanguageData {
     "settingsEntry.sheetAndAlbum": string;
     "settingsEntry.sheetAndAlbumDescription": string;
     "settingsEntry.developerDescription": string;
+    "checkUpdate.foundNewVersion": string;
+    "checkUpdate.later": string;
+    "checkUpdate.updateNow": string;
+    "checkUpdate.downloadingVersion": string;
+    "checkUpdate.packageDownloaded": string;
+    "checkUpdate.installNow": string;
+    "checkUpdate.cancelling": string;
     "checkUpdate.newVersion": string;
     "checkUpdate.currentVersion": string;
     "checkUpdate.download": string;

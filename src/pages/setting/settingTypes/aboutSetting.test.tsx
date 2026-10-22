@@ -3,6 +3,9 @@ import TestRenderer, { act } from "react-test-renderer";
 import { Linking, Platform } from "react-native";
 import ThemeText from "@/components/base/themeText";
 import AboutSetting from "./aboutSetting";
+import { appUpdate } from "@/core/appUpdateState";
+import { downloadAppUpdate } from "@/core/appUpdate";
+import NativeUtils from "@/native/utils";
 
 jest.mock("@/components/base/themeText", () => "ThemeText");
 jest.mock("@/components/base/linkText", () => "LinkText");
@@ -15,6 +18,9 @@ jest.mock("@/core/appRelease", () => ({
 jest.mock("@/core/githubNetwork", () => ({
     getFastestGithubDownloadUrl: jest.fn(),
 }));
+jest.mock("@/core/appUpdate", () => ({ downloadAppUpdate: jest.fn() }));
+jest.mock("@/native/utils", () => ({ installAppUpdate: jest.fn() }));
+jest.mock("@/utils/fileUtils", () => ({ sizeFormatter: (bytes: number) => `${bytes}B` }));
 jest.mock("@/utils/toast", () => ({ success: jest.fn(), warn: jest.fn() }));
 jest.mock("@/constants/assetsConst", () => ({
     ImgAsset: { logo: 1 },
@@ -69,7 +75,17 @@ describe("AboutSetting", () => {
         },
     };
 
+    const renderers: TestRenderer.ReactTestRenderer[] = [];
+    function createAbout() {
+        const renderer = TestRenderer.create(<AboutSetting />);
+        renderers.push(renderer);
+        return renderer;
+    }
+
     beforeEach(() => {
+        appUpdate.state.setValue({ phase: "idle" });
+        jest.mocked(downloadAppUpdate).mockReset();
+        jest.mocked(NativeUtils.installAppUpdate).mockReset().mockResolvedValue(undefined);
         jest.requireMock("@/components/dialogs/useDialog").showDialog.mockReset();
         jest.requireMock("@/core/appRelease").checkAppRelease.mockReset();
         jest.requireMock("@/core/appRelease").getLatestAnnouncement.mockReset();
@@ -80,13 +96,18 @@ describe("AboutSetting", () => {
         jest.spyOn(Linking, "openURL").mockReset().mockResolvedValue(undefined);
     });
 
-    afterEach(() => jest.restoreAllMocks());
+    afterEach(() => {
+        act(() => {
+            renderers.splice(0).forEach(renderer => renderer.unmount());
+        });
+        jest.restoreAllMocks();
+    });
 
     async function showUpdate() {
         jest.requireMock("@/core/appRelease").checkAppRelease.mockResolvedValue(releaseResult);
         let renderer!: TestRenderer.ReactTestRenderer;
         act(() => {
-            renderer = TestRenderer.create(<AboutSetting />);
+            renderer = createAbout();
         });
         await act(async () => {
             await renderer.root.findByProps({ accessibilityLabel: "sidebar.checkUpdate" }).props.onPress();
@@ -100,7 +121,7 @@ describe("AboutSetting", () => {
         let renderer: TestRenderer.ReactTestRenderer;
 
         act(() => {
-            renderer = TestRenderer.create(<AboutSetting />);
+            renderer = createAbout();
         });
 
         const text = renderer!.root
@@ -132,7 +153,7 @@ describe("AboutSetting", () => {
         let renderer: TestRenderer.ReactTestRenderer;
 
         act(() => {
-            renderer = TestRenderer.create(<AboutSetting />);
+            renderer = createAbout();
         });
         await act(async () => {
             await renderer!.root.findByProps({
@@ -153,7 +174,7 @@ describe("AboutSetting", () => {
         jest.requireMock("@/core/appRelease").checkAppRelease.mockResolvedValue(releaseResult);
         let renderer!: TestRenderer.ReactTestRenderer;
         act(() => {
-            renderer = TestRenderer.create(<AboutSetting />);
+            renderer = createAbout();
         });
 
         await act(async () => {
@@ -260,7 +281,7 @@ describe("AboutSetting", () => {
         }));
         let renderer!: TestRenderer.ReactTestRenderer;
         act(() => {
-            renderer = TestRenderer.create(<AboutSetting />);
+            renderer = createAbout();
         });
         let check!: Promise<void>;
         act(() => {
@@ -280,5 +301,46 @@ describe("AboutSetting", () => {
             await check;
         });
         expect(jest.requireMock("@/components/dialogs/useDialog").showDialog).not.toHaveBeenCalled();
+    });
+
+    it("continues downloading away from About and restores progress and install action on return", async () => {
+        jest.replaceProperty(Platform, "OS", "android");
+        let finish!: (path: string) => void;
+        const cancel = jest.fn();
+        jest.mocked(downloadAppUpdate).mockReturnValue({
+            cancel, promise: new Promise(resolve => {
+                finish = resolve;
+            }),
+        });
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = createAbout();
+        });
+        let pending!: Promise<void>;
+        act(() => {
+            pending = appUpdate.start(releaseResult.release);
+        });
+        expect(renderer.root.findAllByProps({ accessibilityLabel: "sidebar.checkUpdate" })).toHaveLength(0);
+        act(() => renderer.unmount());
+        act(() => {
+            jest.mocked(downloadAppUpdate).mock.calls[0][1]({ bytesWritten: 62, contentLength: 100 });
+            renderer = createAbout();
+        });
+        expect(renderer.root.findByProps({ testID: "app-update-percentage" }).props.children).toBe("62%");
+        expect(cancel).not.toHaveBeenCalled();
+        await act(async () => {
+            finish("/cache/update.apk");
+            await pending;
+        });
+        expect(renderer.root.findAllByType(ThemeText).map(node => node.props.children))
+            .toEqual(expect.arrayContaining(["checkUpdate.packageDownloaded", "checkUpdate.installNow", "0.3.0 · 100B"]));
+        expect(NativeUtils.installAppUpdate).not.toHaveBeenCalled();
+        expect(renderer.root.findByProps({ accessibilityLabel: "announcement.view" })).toBeDefined();
+        act(() => renderer.unmount());
+        act(() => {
+            renderer = createAbout();
+        });
+        expect(renderer.root.findAllByType(ThemeText).map(node => node.props.children)).toContain("checkUpdate.installNow");
+        act(() => renderer.unmount());
     });
 });

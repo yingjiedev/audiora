@@ -12,6 +12,8 @@ import {
 import rpx, { fontRpx } from "@/utils/rpx";
 import { ImgAsset } from "@/constants/assetsConst";
 import ThemeText from "@/components/base/themeText";
+import Icon from "@/components/base/icon";
+import Divider from "@/components/base/divider";
 import LinkText from "@/components/base/linkText";
 import useOrientation from "@/hooks/useOrientation";
 import DeviceInfo from "react-native-device-info";
@@ -20,14 +22,17 @@ import { useI18N } from "@/core/i18n";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { checkAppRelease, getLatestAnnouncement } from "@/core/appRelease";
 import { getFastestGithubDownloadUrl } from "@/core/githubNetwork";
+import { appUpdate } from "@/core/appUpdateState";
 import Toast from "@/utils/toast";
 import SettingSection from "../components/settingSection";
+import AppUpdateStatus from "../components/appUpdateStatus";
 
 export default function AboutSetting() {
     const orientation = useOrientation();
     const { t } = useI18N();
     const version = DeviceInfo.getVersion(); // 从 package.json 获取版本号
     const buildTime = buildInfo.buildTime; // 从构建信息文件获取构建时间
+    const updateState = appUpdate.state.useValue();
     const [updateActivity, setUpdateActivity] = useState<"checking" | "selecting" | null>(null);
     const updateRequestRef = useRef<AbortController | null>(null);
     const mountedRef = useRef(true);
@@ -188,7 +193,7 @@ export default function AboutSetting() {
                 style={style.scrollView}>
 
                 <SettingSection title={t("home.aboutAndUpdate")}>
-                    <Pressable
+                    {Platform.OS === "android" && updateState.phase !== "idle" ? <AppUpdateStatus /> : <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t("sidebar.checkUpdate")}
                         accessibilityState={{ busy: updateActivity !== null, disabled: updateActivity !== null }}
@@ -207,7 +212,9 @@ export default function AboutSetting() {
                         <ThemeText fontColor="textSecondary">
                             {t("checkUpdate.currentVersion", { version })}
                         </ThemeText>
-                    </Pressable>
+                        <Icon name="chevron-right" size={rpx(28)} />
+                    </Pressable>}
+                    <Divider style={style.divider} />
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t("announcement.view")}
@@ -218,6 +225,7 @@ export default function AboutSetting() {
                                 {t("announcement.view")}
                             </ThemeText>
                         </View>
+                        <Icon name="chevron-right" size={rpx(28)} />
                     </Pressable>
                 </SettingSection>
 
@@ -319,9 +327,15 @@ const style = StyleSheet.create({
     actionRow: {
         minHeight: Math.max(44, controlSize.minimumTouch),
         paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.lg,
+        paddingHorizontal: spacing.xxl,
         flexDirection: "row",
         alignItems: "center",
+        gap: spacing.sm,
+    },
+    divider: {
+        marginHorizontal: spacing.xxl,
+        width: "auto",
+        height: StyleSheet.hairlineWidth,
     },
     actionText: {
         flex: 1,

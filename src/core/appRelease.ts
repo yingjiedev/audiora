@@ -12,6 +12,8 @@ export interface IAppRelease {
     version: string;
     changeLog: string[];
     download: string[];
+    /** Optional APK size in bytes, when supplied by the release manifest. */
+    downloadSize?: number;
 }
 
 export interface IAppAnnouncement {
@@ -43,7 +45,9 @@ function isAppRelease(value: unknown): value is IAppRelease {
         validate(normalizeVersion(value.version)) &&
         isStringArray(value.changeLog) &&
         isStringArray(value.download) &&
-        value.download.every(url => /^https:\/\/[^/\s]+\//.test(url));
+        value.download.every(url => /^https:\/\/[^/\s]+\//.test(url)) &&
+        (value.downloadSize === undefined ||
+            (typeof value.downloadSize === "number" && Number.isFinite(value.downloadSize) && value.downloadSize > 0));
 }
 
 function isAnnouncementsPayload(value: unknown): value is IAnnouncementsPayload {
