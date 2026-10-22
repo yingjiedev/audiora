@@ -5,11 +5,44 @@ import type { IAppRelease } from "./appRelease";
 import { getFastestGithubDownloadUrl } from "./githubNetwork";
 
 const UPDATE_DIRECTORY = `${RNFS.CachesDirectoryPath}/app-updates`;
+const APK_PATH = `${UPDATE_DIRECTORY}/audiora-update.apk`;
+const PARTIAL_PATH = `${APK_PATH}.part`;
 let downloadInProgress = false;
+let cacheCleanup: Promise<void> | null = null;
 
 export interface IAppUpdateProgress {
     bytesWritten: number;
     contentLength: number | null;
+}
+
+async function removeFile(path: string) {
+    if (await RNFS.exists(path)) {
+        await RNFS.unlink(path);
+    }
+}
+
+/** Cold-start cleanup only: update state is intentionally scoped to the app session. */
+export function cleanupAppUpdateCache(): Promise<void> {
+    if (cacheCleanup) {
+        return cacheCleanup;
+    }
+    if (downloadInProgress) {
+        return Promise.resolve();
+    }
+    cacheCleanup = (async () => {
+        // Settle both deletions before allowing a new download to reuse either file.
+        const results = await Promise.allSettled([
+            removeFile(PARTIAL_PATH),
+            removeFile(APK_PATH),
+        ]);
+        const failure = results.find(result => result.status === "rejected");
+        if (failure?.status === "rejected") {
+            throw failure.reason;
+        }
+    })().finally(() => {
+        cacheCleanup = null;
+    });
+    return cacheCleanup;
 }
 
 function redactUrls(value: string) {
@@ -79,8 +112,8 @@ export function downloadAppUpdate(
     let contentLength = 0;
     let statusCode: number | undefined;
     let bytesWritten: number | undefined;
-    const apkPath = `${UPDATE_DIRECTORY}/audiora-update.apk`;
-    const partialPath = `${apkPath}.part`;
+    const apkPath = APK_PATH;
+    const partialPath = PARTIAL_PATH;
 
     function checkCancelled() {
         if (cancelled) {
@@ -88,14 +121,9 @@ export function downloadAppUpdate(
         }
     }
 
-    async function removeFile(path: string) {
-        if (await RNFS.exists(path)) {
-            await RNFS.unlink(path);
-        }
-    }
-
     const promise = (async () => {
         try {
+            await cacheCleanup;
             await RNFS.mkdir(UPDATE_DIRECTORY);
             await removeFile(partialPath);
             await removeFile(apkPath);

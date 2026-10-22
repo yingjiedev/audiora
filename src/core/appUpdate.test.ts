@@ -1,7 +1,7 @@
 import RNFS from "react-native-fs";
 import NativeUtils from "@/native/utils";
 import { getFastestGithubDownloadUrl } from "./githubNetwork";
-import { downloadAppUpdate, getAppUpdateUrl } from "./appUpdate";
+import { cleanupAppUpdateCache, downloadAppUpdate, getAppUpdateUrl } from "./appUpdate";
 
 jest.mock("react-native-url-polyfill", () => ({ URL: require("url").URL }));
 jest.mock("./githubNetwork", () => ({
@@ -49,6 +49,70 @@ describe("appUpdate", () => {
         fs.unlink.mockResolvedValue(undefined);
         fs.moveFile.mockResolvedValue(undefined);
         mockDownload();
+    });
+
+    it("removes the previous session's APK and partial download from the update cache only", async () => {
+        await cleanupAppUpdateCache();
+        expect(fs.unlink.mock.calls).toEqual([
+            ["/cache/app-updates/audiora-update.apk.part"],
+            ["/cache/app-updates/audiora-update.apk"],
+        ]);
+        expect(fs.downloadFile).not.toHaveBeenCalled();
+    });
+
+    it("does nothing when neither cached update file exists", async () => {
+        fs.exists.mockResolvedValue(false);
+        await cleanupAppUpdateCache();
+        expect(fs.unlink).not.toHaveBeenCalled();
+    });
+
+    it("attempts both deletions on cleanup failure and permits a later retry", async () => {
+        fs.unlink.mockRejectedValueOnce(new Error("Cache temporarily unavailable"));
+        await expect(cleanupAppUpdateCache()).rejects.toThrow("Cache temporarily unavailable");
+        expect(fs.unlink).toHaveBeenCalledWith("/cache/app-updates/audiora-update.apk");
+        await expect(cleanupAppUpdateCache()).resolves.toBeUndefined();
+        await expect(downloadAppUpdate(release, jest.fn()).promise).resolves.toContain(".apk");
+    });
+
+    it("waits for startup cleanup before writing a new download", async () => {
+        let finishCleanup!: () => void;
+        fs.unlink.mockImplementationOnce(() => new Promise<void>(resolve => {
+            finishCleanup = resolve;
+        }));
+        const cleanup = cleanupAppUpdateCache();
+        expect(cleanupAppUpdateCache()).toBe(cleanup);
+        const task = downloadAppUpdate(release, jest.fn());
+        await new Promise<void>(resolve => setImmediate(resolve));
+        expect(fs.downloadFile).not.toHaveBeenCalled();
+        finishCleanup();
+        await cleanup;
+        await expect(task.promise).resolves.toContain(".apk");
+    });
+
+    it("does not clean files belonging to an active download", async () => {
+        let finish!: (value: typeof result) => void;
+        fs.downloadFile.mockReturnValueOnce({
+            jobId: 8,
+            promise: new Promise(resolve => {
+                finish = resolve;
+            }),
+        });
+        const task = downloadAppUpdate(release, jest.fn());
+        await new Promise<void>(resolve => setImmediate(resolve));
+        fs.unlink.mockClear();
+        await cleanupAppUpdateCache();
+        expect(fs.unlink).not.toHaveBeenCalled();
+        finish(result);
+        await expect(task.promise).resolves.toContain(".apk");
+    });
+
+    it("replaces the same cached APK across downloads instead of accumulating packages", async () => {
+        await downloadAppUpdate(release, jest.fn()).promise;
+        const firstWrite = fs.downloadFile.mock.calls[0][0].toFile;
+        fs.unlink.mockClear();
+        await downloadAppUpdate({ ...release, version: "0.5.0" }, jest.fn()).promise;
+        expect(fs.downloadFile.mock.calls[1][0].toFile).toBe(firstWrite);
+        expect(fs.unlink).toHaveBeenCalledWith("/cache/app-updates/audiora-update.apk");
     });
 
     it("selects an HTTPS APK instead of a release page or an insecure link", () => {

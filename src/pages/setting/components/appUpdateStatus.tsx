@@ -68,7 +68,7 @@ export default function AppUpdateStatus() {
                             accessibilityRole="button"
                             disabled={busy}
                             onPress={appUpdate.cancel}
-                            style={styles.cancel}>
+                            style={styles.action}>
                             <ThemeText fontSize="subTitle" fontColor="textSecondary">
                                 {t(busy ? "checkUpdate.cancelling" : "checkUpdate.cancelDownload")}
                             </ThemeText>
@@ -93,9 +93,9 @@ export default function AppUpdateStatus() {
                             accessibilityState={{ busy, disabled: busy }}
                             disabled={busy}
                             onPress={state.apkPath ? appUpdate.install : () => appUpdate.start(release)}
-                            style={[styles.install, { backgroundColor: colors.tonalSurface }]}>
+                            style={[styles.action, styles.install, { backgroundColor: colors.tonalSurface }]}>
                             {busy ? <ActivityIndicator color={colors.onTonal} /> : (
-                                <ThemeText color={colors.onTonal}>
+                                <ThemeText fontSize="subTitle" color={colors.onTonal}>
                                     {t(state.apkPath ? "checkUpdate.installNow" : "common.clickToRetry")}
                                 </ThemeText>
                             )}
@@ -145,22 +145,20 @@ const styles = StyleSheet.create({
         height: "100%",
         borderRadius: radius.pill,
     },
-    cancel: {
+    action: {
+        width: rpx(160),
+        flexShrink: 0,
         minHeight: Math.max(44, rpx(88)),
+        alignItems: "center",
         justifyContent: "center",
-        paddingLeft: spacing.md,
     },
     metadata: {
         marginTop: spacing.xs,
     },
     install: {
-        minHeight: Math.max(44, rpx(80)),
-        minWidth: rpx(176),
-        paddingHorizontal: spacing.xxl,
+        paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderRadius: radius.pill,
-        alignItems: "center",
-        justifyContent: "center",
     },
     message: {
         marginTop: spacing.md,
