@@ -156,9 +156,9 @@ const styles = StyleSheet.create({
         marginTop: spacing.xs,
     },
     install: {
-        width: rpx(136),
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.sm,
+        minHeight: Math.max(44, rpx(72)),
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
         borderRadius: radius.pill,
     },
     message: {
