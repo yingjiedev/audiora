@@ -36,6 +36,7 @@ interface IDialogProps {
     onDismiss?: () => void;
     children?: ReactNode;
     containerStyle?: StyleProp<ViewStyle>;
+    placement?: "center" | "bottom";
 }
 
 function Dialog(props: IDialogProps) {
@@ -43,10 +44,12 @@ function Dialog(props: IDialogProps) {
         children,
         containerStyle: customContainerStyle,
         onDismiss,
+        placement = "center",
     } = props;
 
     const sharedShowValue = useSharedValue(0);
     const keyboardHeight = useSharedValue(0);
+    const bottomEnterOffset = rpx(64);
     const colors = useColors();
     const motion = useMotion();
     const hasCustomBackground = useHasCustomBackground();
@@ -156,17 +159,18 @@ function Dialog(props: IDialogProps) {
         };
     });
 
-    const scaleAnimationStyle = useAnimatedStyle(() => {
+    const scaleAnimationStyle = useAnimatedStyle((): ViewStyle => {
         return {
             transform: [
                 {
-                    scale: withTiming(
-                        0.9 + sharedShowValue.value * 0.1,
-                        dialogTiming,
+                    scale: placement === "bottom" ? 1 : withTiming(
+                        0.9 + sharedShowValue.value * 0.1, dialogTiming,
                     ),
                 },
                 {
-                    translateY: -keyboardHeight.value,
+                    translateY: placement === "bottom"
+                        ? withTiming((1 - sharedShowValue.value) * bottomEnterOffset, dialogTiming)
+                        : -keyboardHeight.value,
                 },
             ],
         };

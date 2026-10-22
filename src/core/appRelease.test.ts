@@ -49,12 +49,21 @@ describe("appRelease", () => {
         }
     });
 
+    it("retains an optional package size from the release manifest", async () => {
+        mockedAxios.get.mockResolvedValue({ data: { ...release, downloadSize: 81788928 } });
+        await expect(checkAppRelease()).resolves.toMatchObject({ release: { downloadSize: 81788928 } });
+    });
+
     it.each([
         "<html>Error</html>",
         { ...release, version: "not-a-version" },
         { ...release, changeLog: [null] },
         { ...release, download: ["file:///app.apk"] },
         { ...release, download: undefined },
+        { ...release, downloadSize: 0 },
+        { ...release, downloadSize: -1 },
+        { ...release, downloadSize: "78 MB" },
+        { ...release, downloadSize: Infinity },
     ])("ignores malformed metadata and waits for a valid route: %p", async invalid => {
         mockedAxios.get.mockImplementation(async url => ({
             data: url.startsWith("https://ghfast.top/") ? release : invalid,

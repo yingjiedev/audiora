@@ -3,6 +3,7 @@ import "react-native-get-random-values";
 import { getCurrentDialog, showDialog } from "@/components/dialogs/useDialog.ts";
 import { emptyFunction, localPluginHash, supportLocalMediaType } from "@/constants/commonConst";
 import Config from "@/core/appConfig";
+import { cleanupAppUpdateCache } from "@/core/appUpdate";
 import downloader, { DownloadFailReason, DownloaderEvent } from "@/core/downloader";
 import downloadNotificationManager from "@/core/downloadNotificationManager";
 import LocalMusicSheet from "@/core/localMusicSheet";
@@ -68,6 +69,13 @@ async function bootstrapImpl() {
     void appendStartupBreadcrumb("bootstrap-start");
     registerEarlyGlobalErrorHandlers();
     void appendStartupBreadcrumb("global-handler-registered");
+
+    // Begin before any update UI can start a download; cleanup never blocks launch.
+    if (Platform.OS === "android") {
+        cleanupAppUpdateCache().catch(error => {
+            errorLog("App update cache cleanup failed", error);
+        });
+    }
 
     await splashScreenPreventPromise;
     void appendStartupBreadcrumb("splashscreen-prevented");

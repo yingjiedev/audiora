@@ -5,8 +5,10 @@ import RadioDialog from "./radioDialog";
 import SimpleDialog from "./simpleDialog";
 import SubscribePluginDialog from "./subscribePluginDialog";
 import SetScheduleCloseTimeDialog from "./setScheduleCloseTimeDialog";
+import AppUpdateDialog from "./appUpdateDialog";
 
 const dialogs = {
+    AppUpdateDialog,
     SimpleDialog,
     RadioDialog,
     SubscribePluginDialog,

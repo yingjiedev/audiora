@@ -1,14 +1,21 @@
 package `fun`.xwj.musicfree.utils; // replace your-apps-package-name with your app's package name
+import android.app.Activity
+import android.content.ClipData
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.Settings
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.WindowInsets
 import android.view.WindowManager
+import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -25,6 +32,21 @@ import javax.crypto.spec.SecretKeySpec
 class UtilsModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
 
     private val reactContext: ReactApplicationContext = context;
+    private val updateInstallRequestCode = 4912
+    private var pendingUpdateInstall: Pair<File, Promise>? = null
+    private val updateInstallListener = object : BaseActivityEventListener() {
+        override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
+            if (requestCode != updateInstallRequestCode) return
+            val (file, promise) = pendingUpdateInstall ?: return
+            pendingUpdateInstall = null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                !reactContext.packageManager.canRequestPackageInstalls()) {
+                promise.reject("AppUpdatePermissionDenied", "App update install permission was denied")
+                return
+            }
+            openAppUpdateInstaller(file, promise)
+        }
+    }
     private val fileExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "Audiora-SAF").apply { isDaemon = true }
     }
@@ -34,11 +56,87 @@ class UtilsModule(context: ReactApplicationContext) : ReactContextBaseJavaModule
     private val supportedLyricExtensions = setOf("lrc", "txt")
     private val supportedCoverExtensions = setOf("jpg", "jpeg", "png", "webp")
 
+    init {
+        reactContext.addActivityEventListener(updateInstallListener)
+    }
+
     override fun getName() = "NativeUtils"
 
     override fun invalidate() {
+        reactContext.removeActivityEventListener(updateInstallListener)
+        pendingUpdateInstall?.second?.reject("AppUpdateCancelled", "App update installation cancelled")
+        pendingUpdateInstall = null
         fileExecutor.shutdownNow()
         super.invalidate()
+    }
+
+    @ReactMethod
+    fun installAppUpdate(apkPath: String, promise: Promise) {
+        fileExecutor.execute {
+            val file = try {
+                val updateDirectory = File(reactContext.cacheDir, "app-updates").canonicalFile
+                val apk = File(apkPath).canonicalFile
+                require(apk.parentFile == updateDirectory && apk.isFile && apk.extension == "apk") {
+                    "Update APK must be in the app update cache"
+                }
+                val archive = reactContext.packageManager.getPackageArchiveInfo(apk.path, 0)
+                require(archive != null && archive.packageName == reactContext.packageName) {
+                    "Update APK is invalid or belongs to another app"
+                }
+                apk
+            } catch (error: Exception) {
+                promise.reject("InvalidAppUpdate", error.message, error)
+                return@execute
+            }
+
+            reactContext.runOnUiQueueThread {
+                try {
+                    if (pendingUpdateInstall != null) {
+                        promise.reject("AppUpdateInstallInProgress", "An app update installation is already pending")
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                        !reactContext.packageManager.canRequestPackageInstalls()) {
+                        val activity = reactContext.currentActivity
+                            ?: error("No activity available to request app update install permission")
+                        pendingUpdateInstall = Pair(file, promise)
+                        activity.startActivityForResult(
+                            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                data = Uri.parse("package:${reactContext.packageName}")
+                            },
+                            updateInstallRequestCode,
+                        )
+                    } else {
+                        openAppUpdateInstaller(file, promise)
+                    }
+                } catch (error: Exception) {
+                    pendingUpdateInstall = null
+                    promise.reject("AppUpdateInstallFailed", error.message, error)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun logAppUpdateDiagnostic(details: String) {
+        Log.e("AudioraAppUpdate", details.take(4000))
+    }
+
+    private fun openAppUpdateInstaller(file: File, promise: Promise) {
+        try {
+            val uri = FileProvider.getUriForFile(
+                reactContext,
+                "${reactContext.packageName}.fileprovider",
+                file,
+            )
+            reactContext.startActivity(Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                clipData = ClipData.newRawUri("Audiora update", uri)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            })
+            // This confirms that the system installer opened, not that the user installed the APK.
+            promise.resolve(null)
+        } catch (error: Exception) {
+            promise.reject("AppUpdateInstallFailed", error.message, error)
+        }
     }
 
     @ReactMethod
