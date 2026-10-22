@@ -1,7 +1,7 @@
 import React from "react";
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
 import ThemeText from "@/components/base/themeText";
-import { radius, spacing } from "@/constants/designSystem";
+import { buttonHeight, radius, spacing } from "@/constants/designSystem";
 import { appUpdate } from "@/core/appUpdateState";
 import { useI18N } from "@/core/i18n";
 import useColors from "@/hooks/useColors";
@@ -93,12 +93,16 @@ export default function AppUpdateStatus() {
                             accessibilityState={{ busy, disabled: busy }}
                             disabled={busy}
                             onPress={state.apkPath ? appUpdate.install : () => appUpdate.start(release)}
-                            style={[styles.action, styles.install, { backgroundColor: colors.tonalSurface }]}>
-                            {busy ? <ActivityIndicator color={colors.onTonal} /> : (
-                                <ThemeText fontSize="subTitle" color={colors.onTonal}>
-                                    {t(state.apkPath ? "checkUpdate.installNow" : "common.clickToRetry")}
-                                </ThemeText>
-                            )}
+                            style={[styles.action, styles.install]}>
+                            <View
+                                testID="app-update-install-background"
+                                style={[styles.installBackground, { backgroundColor: colors.tonalSurface }]}>
+                                {busy ? <ActivityIndicator color={colors.onTonal} /> : (
+                                    <ThemeText fontSize="subTitle" color={colors.onTonal}>
+                                        {t(state.apkPath ? "checkUpdate.installNow" : "common.clickToRetry")}
+                                    </ThemeText>
+                                )}
+                            </View>
                         </TouchableOpacity>
                     </View>
                     {errorKey || busy ? (
@@ -156,10 +160,17 @@ const styles = StyleSheet.create({
         marginTop: spacing.xs,
     },
     install: {
-        minHeight: Math.max(44, rpx(72)),
+        minHeight: 44,
+        alignItems: "stretch",
+        justifyContent: "center",
+    },
+    installBackground: {
+        height: buttonHeight.standard,
+        width: "100%",
         paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
         borderRadius: radius.pill,
+        alignItems: "center",
+        justifyContent: "center",
     },
     message: {
         marginTop: spacing.md,

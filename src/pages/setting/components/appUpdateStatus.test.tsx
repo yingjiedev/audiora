@@ -7,6 +7,7 @@ import { darkColors, lightColors } from "@/constants/colorPalette";
 import useColors from "@/hooks/useColors";
 import { resolveThemeColors } from "@/utils/themeColors";
 import { contrastRatio } from "@/utils/colorContrast";
+import rpx from "@/utils/rpx";
 import AppUpdateStatus from "./appUpdateStatus";
 
 jest.mock("@/components/base/themeText", () => "ThemeText");
@@ -77,8 +78,17 @@ describe("AppUpdateStatus", () => {
         expect(messages()).toEqual(expect.arrayContaining(["checkUpdate.packageDownloaded", "0.3.3 · 100B", "checkUpdate.installNow"]));
         expect(renderer.root.findAllByProps({ testID: "app-update-progress" })).toHaveLength(0);
         expect(install).not.toHaveBeenCalled();
+        const button = renderer.root.findByType(TouchableOpacity);
+        const buttonStyle = StyleSheet.flatten(button.props.style);
+        const backgroundStyle = StyleSheet.flatten(
+            renderer.root.findByProps({ testID: "app-update-install-background" }).props.style,
+        );
+        expect(buttonStyle.minHeight).toBeGreaterThanOrEqual(44);
+        expect(buttonStyle.width).toBe(rpx(160));
+        expect(backgroundStyle.width).toBe("100%");
+        expect(backgroundStyle.height).toBeLessThan(buttonStyle.minHeight);
         act(() => {
-            renderer.root.findByType(TouchableOpacity).props.onPress();
+            button.props.onPress();
         });
         expect(install).toHaveBeenCalledTimes(1);
     });
@@ -112,7 +122,8 @@ describe("AppUpdateStatus", () => {
         expect(contrastRatio(fill, colors.tonalSurface)).toBeGreaterThanOrEqual(3);
         setState({ ...baseState, phase: "ready", apkPath: "/cache/update.apk" });
         const button = renderer.root.findByType(TouchableOpacity);
-        expect(contrastRatio(button.findByType(ThemeText).props.color, StyleSheet.flatten(button.props.style).backgroundColor))
+        const background = renderer.root.findByProps({ testID: "app-update-install-background" });
+        expect(contrastRatio(button.findByType(ThemeText).props.color, StyleSheet.flatten(background.props.style).backgroundColor))
             .toBeGreaterThanOrEqual(4.5);
     });
 });
