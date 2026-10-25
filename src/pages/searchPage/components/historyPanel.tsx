@@ -1,6 +1,7 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import { controlSize, radius, spacing } from "@/constants/designSystem";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import rpx, { fontRpx } from "@/utils/rpx";
 import Loading from "@/components/base/loading";
 import Icon, { IIconName } from "@/components/base/icon";
@@ -37,7 +38,7 @@ export default function HistoryPanel() {
     const favoriteSheet = useSheetItem(MusicSheet.defaultSheet.id);
     const chartMusic = useDiscoveryCharts();
     const colors = useColors();
-    const { width, fontScale } = useWindowDimensions();
+    const { width, fontScale } = useContentDimensions();
     const oneColumn = width < 360 || fontScale > 1.3;
     const search = useSearch();
     const setQuery = useSetAtom(queryAtom);

@@ -87,10 +87,10 @@ export default function SetUserVariables(props: IUserVariablesProps) {
 
 const styles = StyleSheet.create({
     wrapper: {
-        width: rpx(750),
+        width: "100%",
     },
     opeartions: {
-        width: rpx(750),
+        width: "100%",
         paddingHorizontal: rpx(24),
         flexDirection: "row",
         height: rpx(100),

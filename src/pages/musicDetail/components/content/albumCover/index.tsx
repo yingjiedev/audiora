@@ -1,9 +1,10 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import useColors from "@/hooks/useColors";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import rpx from "@/utils/rpx";
 import { ImgAsset } from "@/constants/assetsConst";
 import FastImage from "@/components/base/fastImage";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useCurrentMusic, useMusicState, MusicState } from "@/core/trackPlayer";
 import Animated, {
@@ -14,7 +15,7 @@ import Animated, {
     withRepeat,
     withTiming,
 } from "react-native-reanimated";
-import { useWindowDimensions, View } from "react-native";
+import { View } from "react-native";
 import Operations from "./operations";
 import { showPanel } from "@/components/panels/usePanel.ts";
 import { useAppConfig } from "@/core/appConfig";
@@ -35,9 +36,9 @@ export const COVER_SIZE = rpx(600); // 大封面尺寸
 export const COVER_MARGIN = (rpx(750) - COVER_SIZE) / 2; // 封面左右边距
 
 // 根据封面样式计算实际左边距
-export function getCoverLeftMargin(coverStyle: string) {
-    const size = coverStyle === "circle" ? COVER_SIZE : COVER_SIZE - rpx(30);
-    return (rpx(750) - size) / 2;
+export function getCoverLeftMargin(coverStyle: string, width = rpx(750)) {
+    const size = Math.min(width - 32, coverStyle === "circle" ? COVER_SIZE : COVER_SIZE - rpx(30));
+    return Math.max(16, (width - size) / 2);
 }
 
 interface IProps {
@@ -55,7 +56,7 @@ export default function AlbumCover(props: IProps) {
     useMediaExtraProperty(musicItem, "associatedArtwork");
     const displayArtwork = resolveArtwork(musicItem);
     const orientation = useOrientation();
-    const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+    const { height: windowHeight, width: windowWidth } = useContentDimensions();
     const safeAreaInsets = useSafeAreaInsets();
     const coverStyle = useAppConfig("theme.coverStyle") ?? "square";
     const musicDetailCoverStyle =
@@ -65,6 +66,7 @@ export default function AlbumCover(props: IProps) {
     const isCircle = coverStyle === "circle";
     const useImmersiveCover =
         orientation === "vertical" &&
+        windowWidth < 600 &&
         coverStyle === "square" &&
         musicDetailCoverStyle === "immersive";
 
@@ -229,21 +231,21 @@ export default function AlbumCover(props: IProps) {
 
     const artworkStyle = useMemo(() => {
         if (orientation === "vertical") {
-            const size = isCircle ? COVER_SIZE : COVER_SIZE - rpx(30);
+            const size = Math.min(windowWidth - 32, isCircle ? COVER_SIZE : COVER_SIZE - rpx(30));
             return {
                 width: size,
                 height: size,
                 borderRadius: isCircle ? size / 2 : rpx(24),
             };
         } else {
-            const size = isCircle ? rpx(285) : rpx(260);
+            const size = Math.max(80, Math.min(isCircle ? 320 : 300, windowWidth - 48, windowHeight * 0.36));
             return {
                 width: size,
                 height: size,
                 borderRadius: isCircle ? size / 2 : rpx(20),
             };
         }
-    }, [orientation, isCircle]);
+    }, [orientation, isCircle, windowWidth, windowHeight]);
 
     const containerStyle = useMemo(() => {
         return {

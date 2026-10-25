@@ -1,3 +1,4 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import FastImage from "@/components/base/fastImage";
 import Icon, { IIconName } from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
@@ -13,7 +14,7 @@ import TrackPlayer from "@/core/trackPlayer";
 import useColors from "@/hooks/useColors";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import DeviceInfo from "react-native-device-info";
 import { getRecentPageLayout } from "./myMusicLayout";
 import MyListeningCard from "./MyListeningCard";
@@ -274,7 +275,7 @@ function RecentMusic({ musics }: { musics: IMusic.IMusicItem[] }) {
     const { t } = useI18N();
     const navigate = useNavigate();
     const getDisplayName = usePluginDisplayNameResolver();
-    const { width: windowWidth } = useWindowDimensions();
+    const { width: windowWidth } = useContentDimensions();
     const [viewportWidth, setViewportWidth] = useState(Math.max(0, windowWidth - spacing.xxxl * 2));
     const layout = getRecentPageLayout(viewportWidth, spacing.xl, Math.max(96, rpx(160)));
     const pages = Array.from({ length: Math.ceil(musics.length / layout.columns) }, (_, index) => musics.slice(index * layout.columns, (index + 1) * layout.columns));

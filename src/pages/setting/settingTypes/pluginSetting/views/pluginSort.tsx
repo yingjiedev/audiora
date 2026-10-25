@@ -1,5 +1,6 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import React, { useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import AppBar from "@/components/base/appBar";
 import HorizontalSafeAreaView from "@/components/base/horizontalSafeAreaView";
 import SortableFlatList from "@/components/base/SortableFlatList";
@@ -18,7 +19,7 @@ export default function PluginSort() {
     const getDisplayName = usePluginDisplayNameResolver();
     const colors = useColors();
     const { t } = useI18N();
-    const { fontScale } = useWindowDimensions();
+    const { fontScale } = useContentDimensions();
     const itemHeight = Math.max(52, rpx(128) * fontScale);
     return <>
         <AppBar actionComponent={<PageAction title={t("common.done")} variant="primary" disabled={!sortingPlugins.length} onPress={() => {

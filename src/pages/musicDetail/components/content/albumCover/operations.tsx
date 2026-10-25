@@ -7,7 +7,7 @@ import { ROUTE_PATH } from "@/core/router";
 import { ImgAsset } from "@/constants/assetsConst";
 import Toast from "@/utils/toast";
 import toast from "@/utils/toast";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 import useColors from "@/hooks/useColors";
 import { showPanel } from "@/components/panels/usePanel";
 import { showDialog, hideDialog } from "@/components/dialogs/useDialog";

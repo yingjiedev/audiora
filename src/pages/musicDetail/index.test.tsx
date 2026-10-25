@@ -22,6 +22,8 @@ let mockGesture: Record<string, jest.Mock>;
 let mockBackPress: () => boolean | null | undefined;
 let mockRemoval: (() => void) | undefined;
 let mockOrientation = "vertical";
+let mockWindow = { width: 390, height: 1334, scale: 1, fontScale: 1 };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({ __esModule: true, default: () => mockWindow }));
 let mockTab = "album";
 let mockReaction: {
     prepare: () => number;
@@ -110,6 +112,7 @@ jest.mock("./components/background", () => "Background");
 jest.mock("./components/bottom", () => "Bottom");
 jest.mock("./components/content", () => "Content");
 jest.mock("./components/content/lyric", () => "Lyric");
+jest.mock("@/components/appShell/playbackPane", () => "PlaybackPane");
 jest.mock("./components/navBar", () => "NavBar");
 
 function gestureCallback(name: string) {
@@ -147,6 +150,7 @@ describe("full player input lifecycle", () => {
         mockReduceMotion = false;
         mockRemoval = undefined;
         mockOrientation = "vertical";
+        mockWindow = { width: 390, height: 1334, scale: 1, fontScale: 1 };
         mockTab = "album";
         mockReaction = undefined;
         renderers = [];
@@ -468,6 +472,14 @@ describe("full player input lifecycle", () => {
         });
         expect(onClose).not.toHaveBeenCalled();
         expect(next.onClose).not.toHaveBeenCalled();
+    });
+
+    it("uses the wide player in a portrait tablet window without changing device orientation", () => {
+        mockWindow = { ...mockWindow, width: 900, height: 1200 };
+        const { renderer } = render();
+        expect(renderer.root.findAllByType("PlaybackPane" as React.ElementType)).toHaveLength(1);
+        expect(renderer.root.findByType("Background" as React.ElementType).props.immersiveCoverEnabled).toBe(false);
+        expect(mockGesture.enabled).toHaveBeenCalledWith(false);
     });
 
     it.each([

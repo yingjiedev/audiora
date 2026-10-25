@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import rpx from "@/utils/rpx";
 import { useCurrentMusic } from "@/core/trackPlayer";
 import { fontSizeConst, fontWeightConst, iconSizeConst } from "@/constants/uiConst";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 import { useAppConfig } from "@/core/appConfig";
 import Tag from "@/components/base/tag";
 import { getCoverLeftMargin } from "./index";
@@ -16,6 +16,7 @@ import pluginManager, {
     usePluginDisplayNameResolver,
 } from "@/core/pluginManager";
 import { IMMERSIVE_CONTENT_HORIZONTAL_PADDING } from "../../immersiveCover";
+import useContentDimensions from "@/hooks/useContentDimensions";
 
 interface ISongInfoProps {
     showHeart?: boolean;
@@ -29,6 +30,7 @@ export default function SongInfo(props: ISongInfoProps) {
     const musicItem = useCurrentMusic();
     const getPluginDisplayName = usePluginDisplayNameResolver();
     const orientation = useOrientation();
+    const { width } = useContentDimensions();
     const isHorizontal = orientation === "horizontal";
     const isImmersive = immersive && !isHorizontal;
     const coverStyle = useAppConfig("theme.coverStyle") ?? "square";
@@ -47,9 +49,9 @@ export default function SongInfo(props: ISongInfoProps) {
             };
         }
         return {
-            paddingHorizontal: getCoverLeftMargin(coverStyle),
+            paddingHorizontal: getCoverLeftMargin(coverStyle, width),
         };
-    }, [coverStyle, isHorizontal, isImmersive]);
+    }, [coverStyle, isHorizontal, isImmersive, width]);
 
     // 处理歌手点击
     // 使用 musicItem.singerList 获取完整的歌手信息（包含 id/mid）

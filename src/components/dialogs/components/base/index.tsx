@@ -12,8 +12,9 @@ import {
     TouchableWithoutFeedback,
     View,
     ViewStyle,
+    useWindowDimensions,
 } from "react-native";
-import rpx, { vh, vw } from "@/utils/rpx";
+import rpx, { vh } from "@/utils/rpx";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -27,7 +28,6 @@ import ThemeText from "@/components/base/themeText";
 import Divider from "@/components/base/divider";
 import { fontSizeConst } from "@/constants/uiConst";
 import { ScrollView } from "react-native-gesture-handler";
-import useOrientation from "@/hooks/useOrientation.ts";
 import Config from "@/core/appConfig";
 import Theme from "@/core/theme";
 import Color from "color";
@@ -40,6 +40,7 @@ interface IDialogProps {
 }
 
 function Dialog(props: IDialogProps) {
+    const { width: windowWidth } = useWindowDimensions();
     const {
         children,
         containerStyle: customContainerStyle,
@@ -54,7 +55,6 @@ function Dialog(props: IDialogProps) {
     const motion = useMotion();
     const hasCustomBackground = useHasCustomBackground();
     const backHandlerRef = useRef<NativeEventSubscription | null>(null);
-    const orientation = useOrientation();
     const keyboardAvoidMode =
         Config.getConfig("basic.keyboardAvoidMode") ?? "auto";
 
@@ -69,14 +69,10 @@ function Dialog(props: IDialogProps) {
     );
 
     // 对话框宽度
-    const dialogContainerStyle: ViewStyle =
-        orientation === "vertical"
-            ? {
-                width: vw(100) - rpx(72),
-            }
-            : {
-                width: "80%",
-            };
+    const dialogContainerStyle: ViewStyle = {
+        width: Math.max(0, Math.min(560, windowWidth - rpx(72))),
+        maxWidth: "92%",
+    };
 
     useEffect(() => {
         sharedShowValue.value = 1;

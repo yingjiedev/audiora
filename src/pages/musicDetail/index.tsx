@@ -35,6 +35,10 @@ import {
     playerDismissProgress,
     playerDismissTransform,
 } from "@/utils/motionMath";
+import { adaptiveLayout } from "@/utils/adaptiveLayout";
+import { PlayerOrientationContext } from "@/hooks/usePlayerOrientation";
+import { ContentDimensionsContext } from "@/hooks/useContentDimensions";
+import PlaybackPane from "@/components/appShell/playbackPane";
 
 /** Never let a stuck animation trap the user on this screen. */
 const CLOSE_WATCHDOG_MS = 900;
@@ -51,24 +55,26 @@ export default function MusicDetail(props: IMusicDetailProps) {
     const colors = useColors();
     const { onClose } = props;
     const orientation = useOrientation();
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const splitPlayer = adaptiveLayout(windowWidth, windowHeight).splitPlayer;
     const [isExiting, setIsExiting] = useState(false);
     const [tab, selectTab] = useState<MusicDetailContentTab>(
         Config.getConfig("basic.musicDetailDefault") || "album",
     );
-    const isHorizontal = orientation === "horizontal";
+    const isHorizontal = orientation === "horizontal" || splitPlayer;
     const showAlbumCover = tab === "album" || isHorizontal;
     const coverStyle = useAppConfig("theme.coverStyle") ?? "square";
     const musicDetailCoverStyle =
         useAppConfig("theme.musicDetailCoverStyle") ?? "immersive";
     const immersiveCoverEnabled =
         !isHorizontal &&
+        windowWidth < 600 &&
         coverStyle === "square" &&
         musicDetailCoverStyle === "immersive";
     const useImmersiveCover = showAlbumCover && immersiveCoverEnabled;
 
     const { progress, dismissProgress } = playerTransition();
     const motion = useMotion();
-    const { height: windowHeight } = useWindowDimensions();
     const isClosing = useSharedValue(false);
     const isDragging = useSharedValue(false);
     const closingRef = useRef(false);
@@ -250,67 +256,71 @@ export default function MusicDetail(props: IMusicDetailProps) {
     }));
 
     return (
-        <Animated.View
-            style={[globalStyle.fwflex1, transitionStyle]}
-            pointerEvents="box-none"
-            needsOffscreenAlphaCompositing
-            renderToHardwareTextureAndroid={isExiting}
-            collapsable={false}>
-            <View
-                pointerEvents="none"
-                style={style.backgroundLayer}>
-                <Background
-                    immersiveCoverEnabled={immersiveCoverEnabled}
-                    renderImmersiveCover={useImmersiveCover}
-                    showImmersiveCover={useImmersiveCover}
-                />
-            </View>
-            <GestureDetector gesture={dismissGesture}>
-                <Animated.View
-                    style={[globalStyle.fwflex1, contentStyle]}
-                    importantForAccessibility={
-                        acceptsInput ? "auto" : "no-hide-descendants"
-                    }
-                    accessibilityElementsHidden={!acceptsInput}
-                    collapsable={false}>
-                    <SafeAreaView style={globalStyle.fwflex1}>
-                        <StatusBar
-                            backgroundColor={"transparent"}
-                            translucent
-                        />
-                        <View style={style.bodyWrapper}>
-                            <View
-                                style={[
-                                    globalStyle.flex1,
-                                    isHorizontal ? style.leftPane : null,
-                                ]}>
-                                <NavBar onBack={() => requestClose(onClose)} />
-                                <Content
-                                    // Always keep cover tree mounted across album/lyric tabs
-                                    // so mini lyrics are not torn down (only unmount on page exit).
-                                    keepAlbumCoverMounted
-                                    tab={tab}
-                                    selectTab={selectTab}
-                                />
-                                <Bottom />
-                            </View>
-                            {isHorizontal ? (
-                                <View style={[style.divider, { backgroundColor: colors.onMediaTrack }]} />
-                            ) : null}
-                            {isHorizontal ? (
+        <PlayerOrientationContext.Provider value={isHorizontal ? "horizontal" : "vertical"}>
+            <Animated.View
+                style={[globalStyle.fwflex1, transitionStyle]}
+                pointerEvents="box-none"
+                needsOffscreenAlphaCompositing
+                renderToHardwareTextureAndroid={isExiting}
+                collapsable={false}>
+                <View
+                    pointerEvents="none"
+                    style={style.backgroundLayer}>
+                    <Background
+                        immersiveCoverEnabled={immersiveCoverEnabled}
+                        renderImmersiveCover={useImmersiveCover}
+                        showImmersiveCover={useImmersiveCover}
+                    />
+                </View>
+                <GestureDetector gesture={dismissGesture}>
+                    <Animated.View
+                        style={[globalStyle.fwflex1, contentStyle]}
+                        importantForAccessibility={
+                            acceptsInput ? "auto" : "no-hide-descendants"
+                        }
+                        accessibilityElementsHidden={!acceptsInput}
+                        collapsable={false}>
+                        <SafeAreaView style={globalStyle.fwflex1}>
+                            <StatusBar
+                                backgroundColor={"transparent"}
+                                translucent
+                            />
+                            <View style={style.bodyWrapper}>
                                 <View
                                     style={[
                                         globalStyle.flex1,
-                                        style.rightPane,
+                                        isHorizontal ? style.leftPane : null,
                                     ]}>
-                                    <Lyric />
+                                    <ContentDimensionsContext.Provider value={{ width: windowWidth * (isHorizontal ? 0.44 : 1), height: windowHeight }}>
+                                        <NavBar onBack={() => requestClose(onClose)} />
+                                        <Content
+                                            // Always keep cover tree mounted across album/lyric tabs
+                                            // so mini lyrics are not torn down (only unmount on page exit).
+                                            keepAlbumCoverMounted
+                                            tab={tab}
+                                            selectTab={selectTab}
+                                        />
+                                        <Bottom />
+                                    </ContentDimensionsContext.Provider>
                                 </View>
-                            ) : null}
-                        </View>
-                    </SafeAreaView>
-                </Animated.View>
-            </GestureDetector>
-        </Animated.View>
+                                {isHorizontal ? (
+                                    <View style={[style.divider, { backgroundColor: colors.onMediaTrack }]} />
+                                ) : null}
+                                {isHorizontal ? (
+                                    <View
+                                        style={[
+                                            globalStyle.flex1,
+                                            style.rightPane,
+                                        ]}>
+                                        {splitPlayer ? <PlaybackPane active={!isExiting} /> : <Lyric />}
+                                    </View>
+                                ) : null}
+                            </View>
+                        </SafeAreaView>
+                    </Animated.View>
+                </GestureDetector>
+            </Animated.View>
+        </PlayerOrientationContext.Provider>
     );
 }
 

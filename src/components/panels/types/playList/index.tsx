@@ -17,7 +17,7 @@ import downloader from "@/core/downloader";
 import { showDialog } from "@/components/dialogs/useDialog";
 import { hidePanel, showPanel } from "../../usePanel";
 
-export default function PlayList(props: { initialTab?: PlaybackTab } = {}) {
+export default function PlayList(props: { initialTab?: PlaybackTab; embedded?: boolean } = {}) {
     const [tab, setTab] = useState<PlaybackTab>(props.initialTab ?? "queue");
     const queue = usePlayList();
     const history = useMusicHistory();
@@ -53,7 +53,7 @@ export default function PlayList(props: { initialTab?: PlaybackTab } = {}) {
         },
     });
     const openSheet = (entry: ISheetPlaybackEntry) => {
-        hidePanel();
+        if (!props.embedded) hidePanel();
         closePlayer();
         const { sheet, routeName } = entry;
         if (routeName === "local-sheet-detail") {
@@ -67,39 +67,35 @@ export default function PlayList(props: { initialTab?: PlaybackTab } = {}) {
         }
     };
 
-    return (
-        <PanelBase
-            height={height * 0.62}
-            borderTopRadius={radius.xl}
-            keyboardAvoidBehavior="none"
-            renderBody={loading => (
-                <View style={styles.bodyRoot}>
-                    <Header
-                        tab={tab}
-                        counts={{ queue: queue.length, history: history.length, sheets: sheets.length }}
-                        onSelectTab={setTab}
-                        onDownload={() => downloader.download(musics)}
-                        onAdd={() => showPanel("AddToMusicSheet", { musicItem: musics })}
-                        onClear={clear}
+    const renderBody = (loading: boolean) => (
+        <View style={styles.bodyRoot}>
+            <Header
+                tab={tab}
+                counts={{ queue: queue.length, history: history.length, sheets: sheets.length }}
+                onSelectTab={setTab}
+                onDownload={() => downloader.download(musics)}
+                onAdd={() => showPanel("AddToMusicSheet", { musicItem: musics })}
+                onClear={clear}
+            />
+            <View style={styles.list}>
+                {loading ? <Loading /> : tab === "sheets" ? (
+                    <SheetBody entries={sheets} onOpen={openSheet} onRemove={removeSheetPlayback} />
+                ) : (
+                    <Body
+                        key={tab}
+                        loading={loading}
+                        queue={tab === "queue"}
+                        musics={musics}
+                        onPlay={play}
+                        onRemove={remove}
+                        onMove={move}
                     />
-                    <View style={styles.list}>
-                        {loading ? <Loading /> : tab === "sheets" ? (
-                            <SheetBody entries={sheets} onOpen={openSheet} onRemove={removeSheetPlayback} />
-                        ) : (
-                            <Body
-                                key={tab}
-                                loading={loading}
-                                queue={tab === "queue"}
-                                musics={musics}
-                                onPlay={play}
-                                onRemove={remove}
-                                onMove={move}
-                            />
-                        )}
-                    </View>
-                </View>
-            )}
-        />
+                )}
+            </View>
+        </View>
+    );
+    return props.embedded ? renderBody(false) : (
+        <PanelBase height={height * 0.62} borderTopRadius={radius.xl} keyboardAvoidBehavior="none" renderBody={renderBody} />
     );
 }
 

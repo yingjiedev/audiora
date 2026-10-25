@@ -1208,5 +1208,8 @@
     "subscription.details": "失敗詳情",
     "subscription.retryFailed": "重試失敗項",
     "subscription.updating": "更新中…",
-    "subscription.viewProgress": "查看進度"
+    "subscription.viewProgress": "查看進度",
+    "adaptive.lyric": "歌詞",
+    "adaptive.queue": "佇列",
+    "adaptive.closePane": "收起播放側欄"
 }

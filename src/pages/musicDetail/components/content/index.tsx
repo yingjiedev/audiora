@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import AlbumCover from "./albumCover";
 import Lyric from "./lyric";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 import globalStyle from "@/constants/globalStyle";
 
 export type MusicDetailContentTab = "album" | "lyric";
@@ -50,7 +50,7 @@ export default function Content(props: IContentProps) {
                 </View>
             ) : null}
             {/* Keep Lyric mounted to preserve state; re-center when tab becomes active. */}
-            <View style={[
+            {orientation !== "horizontal" ? <View style={[
                 globalStyle.fwflex1,
                 !showLyric && styles.hidden,
             ]}>
@@ -58,7 +58,7 @@ export default function Content(props: IContentProps) {
                     onTurnPageClick={onTurnPageClick}
                     isActive={showLyric}
                 />
-            </View>
+            </View> : null}
         </View>
     );
 }

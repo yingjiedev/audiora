@@ -488,11 +488,11 @@ export default function MusicItemLyricOptions(
 
 const style = StyleSheet.create({
     wrapper: {
-        width: rpx(750),
+        width: "100%",
         flex: 1,
     },
     header: {
-        width: rpx(750),
+        width: "100%",
         height: rpx(200),
         flexDirection: "row",
         padding: rpx(24),
@@ -515,7 +515,7 @@ const style = StyleSheet.create({
         paddingRight: rpx(24),
     },
     footer: {
-        width: rpx(750),
+        width: "100%",
         height: rpx(30),
     },
 });

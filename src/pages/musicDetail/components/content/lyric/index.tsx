@@ -24,7 +24,7 @@ import { useI18N } from "@/core/i18n";
 import { useAppConfig } from "@/core/appConfig";
 import { devLog } from "@/utils/log";
 import SongInfo from "../albumCover/songInfo";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 
 const ITEM_HEIGHT = rpx(92);
 const DEFAULT_LYRIC_ORDER = ["romanization", "original", "translation"] as const;

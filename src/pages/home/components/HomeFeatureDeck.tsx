@@ -1,3 +1,4 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import Icon from "@/components/base/icon";
 import FastImage from "@/components/base/fastImage";
 import ThemeText from "@/components/base/themeText";
@@ -10,7 +11,7 @@ import useColors from "@/hooks/useColors";
 import useMotion from "@/hooks/useMotion";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from "react-native";
 import Animated, { Extrapolation, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import LinearGradient from "react-native-linear-gradient";
 import HomeHero from "./HomeHero";
@@ -31,7 +32,7 @@ interface HomeFeatureDeckProps {
 
 /** A real collection entry forms the hinged left leaf of the listening card. */
 export default function HomeFeatureDeck(props: HomeFeatureDeckProps) {
-    const { width } = useWindowDimensions();
+    const { width } = useContentDimensions();
     const colors = useColors();
     const { t } = useI18N();
     const navigate = useNavigate();

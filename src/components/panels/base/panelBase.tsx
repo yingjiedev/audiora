@@ -1,6 +1,5 @@
 import useColors from "@/hooks/useColors";
 import { useTheme } from "@react-navigation/native";
-import useOrientation from "@/hooks/useOrientation";
 import rpx, { vh } from "@/utils/rpx";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Config from "@/core/appConfig";
@@ -15,6 +14,7 @@ import {
     StyleSheet,
     TouchableWithoutFeedback,
     View,
+    useWindowDimensions,
 } from "react-native";
 import Animated, {
     runOnJS,
@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { panelInfoStore } from "../usePanel";
 import useMotion from "@/hooks/useMotion";
 import { KEYBOARD_TIMING } from "@/utils/motion";
+import { panelLayout } from "@/utils/adaptiveLayout";
 
 interface IPanelBaseProps {
     borderTopRadius?: number;
@@ -70,10 +71,13 @@ export default function (props: IPanelBaseProps) {
     const mountedRef = useRef(true);
     const openingRef = useRef(false);
     const safeAreaInsets = useSafeAreaInsets();
-    const orientation = useOrientation();
+    const window = useWindowDimensions();
+    const frame = panelLayout(window.width, window.height, safeAreaInsets.top, safeAreaInsets.bottom);
+    const orientation = frame.side ? "horizontal" : "vertical";
+    const panelHeight = Math.min(height, frame.maxHeight);
     const useAnimatedBase = useMemo(
-        () => (orientation === "horizontal" ? rpx(750) : height),
-        [orientation, height],
+        () => (frame.side ? frame.width : panelHeight),
+        [frame.side, frame.width, panelHeight],
     );
 
     const backHandlerRef = useRef<NativeEventSubscription | null>(null);
@@ -253,13 +257,13 @@ export default function (props: IPanelBaseProps) {
             ? {
                 top: Math.max(
                     safeAreaInsets.top,
-                    windowHeight - height - safeAreaInsets.bottom,
+                    windowHeight - panelHeight - safeAreaInsets.bottom,
                 ),
-                height,
+                height: panelHeight,
             }
             : {
                 bottom: 0,
-                height,
+                height: panelHeight,
             };
 
     return (
@@ -288,9 +292,10 @@ export default function (props: IPanelBaseProps) {
                     collapsable={false}
                     style={[
                         style.wrapper,
+                        { width: frame.width },
                         orientation === "horizontal"
                             ? {
-                                height: vh(100) - safeAreaInsets.top,
+                                height: frame.maxHeight,
                                 ...style.bottomPosition,
                             }
                             : verticalPositionStyle,
@@ -333,7 +338,6 @@ const style = StyleSheet.create({
     },
     wrapper: {
         position: "absolute",
-        width: rpx(750),
         right: 0,
         borderTopLeftRadius: rpx(28),
         borderTopRightRadius: rpx(28),

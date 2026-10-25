@@ -1,5 +1,8 @@
 // 国际化语言数据接口定义
 export interface ILanguageData {
+    "adaptive.lyric": string;
+    "adaptive.queue": string;
+    "adaptive.closePane": string;
     "subscription.neverUpdated": string;
     "subscription.queued": string;
     "subscription.fetching": string;
