@@ -1,5 +1,6 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import React, { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppBar from "@/components/base/appBar";
 import Icon from "@/components/base/icon";
@@ -36,7 +37,7 @@ export default function AudioEffectsSetting() {
     const [switchBarHeight, setSwitchBarHeight] = useState(Math.max(44, rpx(88)) + rpx(24));
     const colors = useColors();
     const { t } = useI18N();
-    const { width } = useWindowDimensions();
+    const { width } = useContentDimensions();
     const unavailable = status === "unsupported";
     const canConfigure = state.loaded && !unavailable;
     const presetName = (preset: AudioEffectsUserPreset) => preset.id === LEGACY_CUSTOM_PRESET_ID && preset.name === "My preset" ? t("audioEffects.savedPreset") : preset.name;

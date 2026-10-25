@@ -3,7 +3,7 @@ import { elevation, radius } from "@/constants/designSystem";
 import repeatModeConst from "@/constants/repeatModeConst";
 import { showPanel } from "@/components/panels/usePanel";
 import TrackPlayer, { useMusicState, useRepeatMode } from "@/core/trackPlayer";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 import delay from "@/utils/delay";
 import { musicIsPaused } from "@/utils/trackUtils";
 import rpx from "@/utils/rpx";

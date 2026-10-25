@@ -119,11 +119,11 @@ export default function ArtistSelectPanel(props: IArtistSelectPanelProps) {
 
 const styles = StyleSheet.create({
     wrapper: {
-        width: rpx(750),
+        width: "100%",
         flex: 1,
     },
     header: {
-        width: rpx(750),
+        width: "100%",
         paddingHorizontal: rpx(24),
         paddingVertical: rpx(24),
     },
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
         paddingTop: rpx(12),
     },
     footer: {
-        width: rpx(750),
+        width: "100%",
         height: rpx(30),
     },
 });

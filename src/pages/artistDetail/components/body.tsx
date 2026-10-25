@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
-import rpx from "@/utils/rpx";
+import useContentDimensions from "@/hooks/useContentDimensions";
 import { SceneMap, TabView } from "react-native-tab-view";
 import ResultList from "./resultList";
 import { useAtomValue } from "jotai";
@@ -31,6 +31,7 @@ const routes = [
 ];
 
 export default function Body() {
+    const { width } = useContentDimensions();
     const [index, setIndex] = useState(0);
     const { t } = useI18N();
     const editor = useActiveMusicSelection();
@@ -67,7 +68,7 @@ export default function Body() {
             renderScene={SceneMap(sceneMap)}
             onIndexChange={changeTab}
             swipeEnabled={!editing}
-            initialLayout={{ width: rpx(750) }}
+            initialLayout={{ width }}
         />
     );
 }

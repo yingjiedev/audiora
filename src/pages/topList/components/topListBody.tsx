@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import rpx from "@/utils/rpx";
+import useContentDimensions from "@/hooks/useContentDimensions";
 import PluginManager, { usePluginDisplayNameResolver } from "@/core/pluginManager";
 import { TabView } from "react-native-tab-view";
 import BoardPanelWrapper from "./boardPanelWrapper";
@@ -8,6 +8,7 @@ import i18n from "@/core/i18n";
 import PillTabBar from "@/components/base/pillTabBar";
 
 export default function TopListBody() {
+    const { width } = useContentDimensions();
     const getPluginDisplayName = usePluginDisplayNameResolver();
     const routes = PluginManager.getSortedPluginsWithAbility("getTopLists").map(
         _ => ({
@@ -47,7 +48,7 @@ export default function TopListBody() {
             )}
             renderScene={renderScene}
             onIndexChange={setIndex}
-            initialLayout={{ width: rpx(750) }}
+            initialLayout={{ width }}
         />
     );
 }

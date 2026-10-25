@@ -29,7 +29,7 @@ export default function Setting() {
             {type === "plugin" ? (
                 <settingItem.component />
             ) : (
-                <HorizontalSafeAreaView style={style.wrapper}>
+                <HorizontalSafeAreaView style={[style.wrapper, type !== "audioEffects" && style.form]}>
                     <settingItem.component />
                 </HorizontalSafeAreaView>
             )}
@@ -46,4 +46,5 @@ const style = StyleSheet.create({
         backgroundColor: "transparent",
         shadowColor: "transparent",
     },
+    form: { maxWidth: 720, alignSelf: "center" },
 });

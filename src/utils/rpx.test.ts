@@ -1,5 +1,5 @@
 import { Dimensions } from "react-native";
-import rpx, { fontRpx, fontRpxRound, rpxRound, vmin, vmax } from "./rpx";
+import rpx, { fontRpx, fontRpxRound, rpxRound, vmin, vmax, vw, vh } from "./rpx";
 
 const originalWindow = Dimensions.get("window");
 const originalScreen = Dimensions.get("screen");
@@ -26,7 +26,7 @@ describe("rpx", () => {
         });
     });
 
-    it("keeps layout scaling based on the current short edge", () => {
+    it("caps visual geometry while retaining phone proportions", () => {
         setDimensions(390, 844);
 
         expect(rpx(750)).toBe(390);
@@ -34,8 +34,11 @@ describe("rpx", () => {
 
         setDimensions(1024, 768);
 
-        expect(rpx(750)).toBe(768);
-        expect(rpxRound(750)).toBe(768);
+        expect(rpx(750)).toBe(430);
+        expect(rpxRound(750)).toBe(430);
+        expect(rpx(120)).toBeCloseTo(68.8);
+        expect(vw(100)).toBe(1024);
+        expect(vh(100)).toBe(768);
     });
 
     it("caps font scaling on large screens", () => {

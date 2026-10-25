@@ -13,8 +13,9 @@ interface IHeaderProps {
     musicList: IMusic.IMusicItem[] | null;
     canStar?: boolean;
     typeLabel?: string;
+    variant?: "all" | "details" | "actions";
 }
-export default function Header({ musicSheet, musicList, canStar, typeLabel, onEdit, editingControls }: IHeaderProps) {
+export default function Header({ musicSheet, musicList, canStar, typeLabel, onEdit, editingControls, variant = "all" }: IHeaderProps) {
     const { t } = useI18N();
     const getDisplayName = usePluginDisplayNameResolver();
     const platform = musicSheet?.platform;
@@ -22,10 +23,10 @@ export default function Header({ musicSheet, musicList, canStar, typeLabel, onEd
     const subtitle = [musicSheet?.artist, t("sheetDetail.totalMusicCount", { count })].filter(Boolean).join(" · ");
     return (
         <>
-            <MediaDetailHeader title={musicSheet?.title ?? t("common.unknownName")} artwork={musicSheet?.artwork ?? musicSheet?.coverImg}
+            {variant !== "actions" ? <MediaDetailHeader title={musicSheet?.title ?? t("common.unknownName")} artwork={musicSheet?.artwork ?? musicSheet?.coverImg}
                 typeLabel={typeLabel ?? t("common.sheet")} source={platform ? getDisplayName(platform) : null}
-                subtitle={subtitle} description={musicSheet?.description} />
-            <View style={styles.actions}>{editingControls ?? <PlayAllBar onEdit={onEdit} canStar={canStar} musicList={musicList} musicSheet={musicSheet} />}</View>
+                subtitle={subtitle} description={musicSheet?.description} prominent={variant === "details"} /> : null}
+            {variant !== "details" ? <View style={styles.actions}>{editingControls ?? <PlayAllBar onEdit={onEdit} canStar={canStar} musicList={musicList} musicSheet={musicSheet} />}</View> : null}
         </>
     );
 }

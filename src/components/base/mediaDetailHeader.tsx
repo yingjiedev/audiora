@@ -1,5 +1,6 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import FastImage from "./fastImage";
 import ThemeText from "./themeText";
 import { ImgAsset } from "@/constants/assetsConst";
@@ -8,25 +9,26 @@ import useColors from "@/hooks/useColors";
 import { useI18N } from "@/core/i18n";
 import rpx from "@/utils/rpx";
 
-export default function MediaDetailHeader({ title, artwork, typeLabel, source, subtitle, description }: {
+export default function MediaDetailHeader({ title, artwork, typeLabel, source, subtitle, description, prominent = false }: {
     title: string;
     artwork?: string;
     typeLabel: string;
     source?: string | null;
     subtitle?: string;
     description?: string;
+    prominent?: boolean;
 }) {
     const colors = useColors();
     const { t } = useI18N();
-    const { width, fontScale } = useWindowDimensions();
+    const { width, fontScale } = useContentDimensions();
     const [availableWidth, setAvailableWidth] = useState(width);
-    const stacked = availableWidth < 300 || fontScale > 1.3;
+    const stacked = prominent || availableWidth < 300 || fontScale > 1.3;
     const [expanded, setExpanded] = useState(false);
     return (
         <View style={styles.wrapper}>
             <View onLayout={event => setAvailableWidth(event.nativeEvent.layout.width)} style={[styles.card, { backgroundColor: colors.card }]}>
                 <View style={[styles.top, stacked && styles.stacked]}>
-                    <FastImage source={artwork} placeholderSource={ImgAsset.albumDefault} style={[styles.cover, stacked && styles.stackedCover]} />
+                    <FastImage source={artwork} placeholderSource={ImgAsset.albumDefault} style={[styles.cover, stacked && styles.stackedCover, prominent && styles.prominentCover]} />
                     <View style={[styles.details, stacked && styles.stackedDetails]}>
                         <View style={styles.tags}>
                             {[typeLabel, source].filter(Boolean).map((label, index) => (
@@ -58,6 +60,7 @@ const styles = StyleSheet.create({
     stacked: { flexDirection: "column" },
     cover: { width: rpx(176), maxWidth: "36%", aspectRatio: 1, borderRadius: radius.lg },
     stackedCover: { maxWidth: "100%" },
+    prominentCover: { width: "100%", maxWidth: 240, alignSelf: "center" },
     details: { flex: 1, minWidth: 0, gap: spacing.sm },
     stackedDetails: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", width: "100%" },
     tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },

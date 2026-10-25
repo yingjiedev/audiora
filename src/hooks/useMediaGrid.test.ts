@@ -8,7 +8,7 @@ describe("media grid layout", () => {
     });
     it("bounds the column count during initial layout and on wide screens", () => {
         expect(mediaGridColumns(0, 1, 20)).toBe(1);
-        expect(mediaGridColumns(1200, 1, 20)).toBe(5);
+        expect(mediaGridColumns(1200, 1, 20)).toBe(6);
         expect(mediaGridColumns(390, 0.8, 20)).toBe(3);
     });
 });

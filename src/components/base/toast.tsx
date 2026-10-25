@@ -204,7 +204,8 @@ const styles = StyleSheet.create({
         zIndex: 20000,
     },
     contentContainer: {
-        width: rpx(688),
+        width: "92%",
+        maxWidth: 480,
         height: "100%",
         borderRadius: rpx(12),
         flexDirection: "row",

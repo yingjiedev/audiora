@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
 
 import NavBar from "./components/navBar";
 import PlayerDock from "@/components/musicBar/playerDock";
@@ -14,10 +14,16 @@ import HomeBottomNavigation from "./components/HomeBottomNavigation";
 import MyMusicOverview from "./components/MyMusicOverview";
 import MusicLibraryOverview from "./components/MusicLibraryOverview";
 import { openPlayer } from "@/core/playerOverlay";
+import { HomeTab, homeTabStore } from "@/core/homeNavigation";
+import useContentDimensions from "@/hooks/useContentDimensions";
 
 function Home() {
-    const [activeTab, setActiveTab] = useState<"home" | "library" | "mine">("home");
+    const activeTab = homeTabStore.useValue();
+    const setActiveTab = homeTabStore.setValue;
+    const { wide } = useContentDimensions();
     const [dockHeight, setDockHeight] = useState(0);
+    const visited = useRef(new Set<HomeTab>());
+    visited.current.add(activeTab);
     
     useEffect(() => {
         // 检查是否需要在启动后打开播放详情页
@@ -32,19 +38,15 @@ function Home() {
     return (
         <SafeAreaView edges={["top"]} style={styles.appWrapper}>
             <HomeStatusBar />
-            <HorizontalSafeAreaView style={[globalStyle.flex1, { marginBottom: dockHeight }]}>
-                {activeTab === "mine" ? (
-                    <MyMusicOverview />
-                ) : activeTab === "library" ? (
-                    <MusicLibraryOverview />
-                ) : (
-                    <>
-                        <NavBar />
-                        <HomeBody />
-                    </>
-                )}
+            <HorizontalSafeAreaView style={[globalStyle.flex1, { marginBottom: wide ? 0 : dockHeight }]}>
+                {(["home", "library", "mine"] as HomeTab[]).filter(tab => visited.current.has(tab)).map(tab => (
+                    <View key={tab} style={[globalStyle.flex1, tab !== activeTab && styles.hidden]}
+                        importantForAccessibility={tab === activeTab ? "auto" : "no-hide-descendants"} accessibilityElementsHidden={tab !== activeTab}>
+                        {tab === "mine" ? <MyMusicOverview /> : tab === "library" ? <MusicLibraryOverview /> : <><NavBar /><HomeBody /></>}
+                    </View>
+                ))}
             </HorizontalSafeAreaView>
-            <PlayerDock
+            {!wide ? <PlayerDock
                 collapseKey={activeTab}
                 onDockHeightChange={setDockHeight}
                 bottomNavigation={(
@@ -56,7 +58,7 @@ function Home() {
                         onSelectMine={() => setActiveTab("mine")}
                     />
                 )}
-            />
+            /> : null}
         </SafeAreaView>
     );
 }
@@ -72,19 +74,6 @@ function HomeStatusBar() {
     );
 }
 
-// function Body() {
-//     const orientation = useOrientation();
-//     return (
-//         <ScrollView
-//             style={[
-//                 styles.appWrapper,
-//                 orientation === 'horizontal' ? styles.flexRow : null,
-//             ]}>
-//             <Operations orientation={orientation} />
-//         </ScrollView>
-//     );
-// }
-
 export default function App() {
     return <Home />;
 }
@@ -94,7 +83,5 @@ const styles = StyleSheet.create({
         flexDirection: "column",
         flex: 1,
     },
-    flexRow: {
-        flexDirection: "row",
-    },
+    hidden: { display: "none" },
 });

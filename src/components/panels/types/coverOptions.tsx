@@ -226,11 +226,11 @@ export default function CoverOptions(props: ICoverOptionsProps) {
 
 const styles = StyleSheet.create({
     body: {
-        width: rpx(750),
+        width: "100%",
         flex: 1,
     },
     header: {
-        width: rpx(750),
+        width: "100%",
         height: rpx(200),
         flexDirection: "row",
         padding: rpx(24),
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
         marginTop: rpx(4),
     },
     wrapper: {
-        width: rpx(750),
+        width: "100%",
         flex: 1,
     },
 });

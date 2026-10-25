@@ -20,7 +20,7 @@ import useMotion from "@/hooks/useMotion";
 import rpx from "@/utils/rpx";
 import { useCurrentLyricItem, useLyricState } from "@/core/lyricManager";
 import { fontSizeConst } from "@/constants/uiConst";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 import PersistStatus from "@/utils/persistStatus";
 import { useAppConfig } from "@/core/appConfig";
 import { getCoverLeftMargin } from "./index";

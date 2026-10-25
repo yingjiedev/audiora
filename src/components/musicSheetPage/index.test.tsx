@@ -6,9 +6,11 @@ import MusicItem from "@/components/mediaItem/musicItem";
 import { PageAction } from "@/components/base/pageSection";
 import { RequestStateCode } from "@/constants/commonConst";
 import TrackPlayer from "@/core/trackPlayer";
+import { ContentDimensionsContext } from "@/hooks/useContentDimensions";
 
 const mockNavigate = jest.fn();
 let mockPlayerOpen = false;
+let mockWidth = 390;
 jest.mock("@/utils/motion", () => ({ motionDuration: jest.fn(), motionEasing: {} }));
 jest.mock("@react-navigation/native", () => ({
     useRoute: () => ({ name: "album-detail" }),
@@ -51,9 +53,9 @@ describe("inline selection on a remote music sheet", () => {
     let renderer: TestRenderer.ReactTestRenderer;
     let back: () => boolean;
     const loadMore = jest.fn();
-    const renderPage = (tracks = [first], state = RequestStateCode.PARTLY_DONE) => <MusicSheetPage navTitle="Album" sheetInfo={sheet} musicList={tracks} state={state} onLoadMore={loadMore} />;
+    const renderPage = (tracks = [first], state = RequestStateCode.PARTLY_DONE) => <ContentDimensionsContext.Provider value={{ width: mockWidth, height: 800 }}><MusicSheetPage navTitle="Album" sheetInfo={sheet} musicList={tracks} state={state} onLoadMore={loadMore} /></ContentDimensionsContext.Provider>;
     beforeEach(() => {
-        jest.clearAllMocks(); mockPlayerOpen = false;
+        jest.clearAllMocks(); mockPlayerOpen = false; mockWidth = 390;
         jest.spyOn(BackHandler, "addEventListener").mockImplementation((_event, handler) => {
             back = handler as () => boolean;
             return { remove: jest.fn() };
@@ -65,6 +67,20 @@ describe("inline selection on a remote music sheet", () => {
     afterEach(() => {
         act(() => renderer.unmount());
         jest.restoreAllMocks();
+    });
+
+    it("reflows metadata beside the list without replacing the list or its selection", () => {
+        const list = renderer.root.findByType("FlashList" as any);
+        act(() => renderer.root.findByType("Edit" as any).props.onPress());
+        act(() => renderer.root.findByType(MusicItem).props.onItemPress());
+        mockWidth = 1000;
+        act(() => renderer.update(renderPage()));
+        expect(renderer.root.findAllByProps({ testID: "sheet-details-pane" }).length).toBeGreaterThan(0);
+        expect(renderer.root.findByType("FlashList" as any)).toBe(list);
+        expect(renderer.root.findByType(MusicItem).props.checked).toBe(true);
+        mockWidth = 500;
+        act(() => renderer.update(renderPage()));
+        expect(renderer.root.findByType("FlashList" as any)).toBe(list);
     });
 
     it("keeps the original list mounted through selection, pagination and Done without navigating", () => {

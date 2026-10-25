@@ -1,8 +1,7 @@
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
     LayoutRectangle,
     Pressable,
-    StatusBar as OriginalStatusBar,
     StyleProp,
     StyleSheet,
     TouchableWithoutFeedback,
@@ -46,7 +45,6 @@ interface IAppBarProps {
         show?: boolean;
         onPress?: () => void;
     }>;
-    menuWithStatusBar?: boolean;
     children?: string | ReactNode;
     containerStyle?: StyleProp<ViewStyle>;
     contentStyle?: StyleProp<ViewStyle>;
@@ -61,7 +59,6 @@ export default function AppBar(props: IAppBarProps) {
         color: _color,
         actions = [],
         menu = [],
-        menuWithStatusBar = true,
         containerStyle,
         contentStyle,
         children,
@@ -79,9 +76,35 @@ export default function AppBar(props: IAppBarProps) {
 
     const [showMenu, setShowMenu] = useState(false);
     const [menuIconLayout, setMenuIconLayout] =
-        useState<LayoutRectangle | null>(null);
+        useState<(LayoutRectangle & { hostWidth: number }) | null>(null);
+    const menuButtonRef = useRef<View>(null);
+    const portalRootRef = useRef<View>(null);
+    const measurementRef = useRef(0);
     const scaleRate = useSharedValue(0);
     const motion = useMotion();
+
+    const closeMenu = useCallback(() => {
+        measurementRef.current += 1;
+        setShowMenu(false);
+    }, []);
+
+    const openMenu = () => {
+        const request = ++measurementRef.current;
+        menuButtonRef.current?.measureInWindow((x, y, width, height) => {
+            if (request !== measurementRef.current || width <= 0 || height <= 0) return;
+            portalRootRef.current?.measureInWindow((hostX, hostY, hostWidth, hostHeight) => {
+                if (request !== measurementRef.current || hostWidth <= 0 || hostHeight <= 0) return;
+                // The button lives inside a pane; the Portal lives at the app root.
+                // Measure both in the window so navigation and safe-area offsets cancel correctly.
+                setMenuIconLayout({ x: x - hostX, y: y - hostY, width, height, hostWidth });
+                setShowMenu(true);
+            });
+        });
+    };
+
+    useEffect(() => () => {
+        measurementRef.current += 1;
+    }, []);
 
     useEffect(() => {
         if (showMenu) {
@@ -107,6 +130,7 @@ export default function AppBar(props: IAppBarProps) {
         <>
             {withStatusBar ? <StatusBar backgroundColor={bgColor} /> : null}
             <View
+                onLayout={closeMenu}
                 style={[
                     styles.container,
                     containerStyle,
@@ -147,22 +171,23 @@ export default function AppBar(props: IAppBarProps) {
                 {actionComponent ?? null}
                 {menu?.length ? (
                     <Pressable accessibilityRole="button" accessibilityLabel={t("subpage.more")} style={[styles.navButton, styles.rightButton]}
-                        onLayout={event => setMenuIconLayout(event.nativeEvent.layout)} onPress={() => setShowMenu(true)}>
+                        ref={menuButtonRef} testID="app-bar-menu-anchor" collapsable={false}
+                        accessibilityState={{ expanded: showMenu }} onLayout={closeMenu} onPress={openMenu}>
                         <IconButton name="ellipsis-vertical" sizeType="normal" color={contentColor} style={styles.navIcon} />
                     </Pressable>
                 ) : null}
             </View>
             <Portal>
-                {showMenu ? (
-                    <TouchableWithoutFeedback
-                        onPress={() => {
-                            setShowMenu(false);
-                        }}>
-                        <View style={styles.blocker} />
-                    </TouchableWithoutFeedback>
-                ) : null}
-                <>
+                <View ref={portalRootRef} testID="app-bar-menu-overlay" collapsable={false}
+                    pointerEvents="box-none" style={StyleSheet.absoluteFill} onLayout={closeMenu}>
+                    {showMenu ? (
+                        <TouchableWithoutFeedback
+                            onPress={closeMenu}>
+                            <View style={styles.blocker} />
+                        </TouchableWithoutFeedback>
+                    ) : null}
                     <Animated.View
+                        testID="app-bar-menu-corner"
                         pointerEvents={showMenu ? "auto" : "none"}
                         style={[
                             {
@@ -173,16 +198,14 @@ export default function AppBar(props: IAppBarProps) {
                                     rpx(10),
                                 top:
                                     (menuIconLayout?.y ?? 0) +
-                                    (menuIconLayout?.height ?? 0) +
-                                    (menuWithStatusBar
-                                        ? OriginalStatusBar.currentHeight ?? 0
-                                        : 0),
+                                    (menuIconLayout?.height ?? 0),
                             },
                             transformStyle,
                             styles.bubbleCorner,
                         ]}
                     />
                     <Animated.View
+                        testID="app-bar-menu"
                         pointerEvents={showMenu ? "auto" : "none"}
                         style={[
                             {
@@ -196,14 +219,12 @@ export default function AppBar(props: IAppBarProps) {
                                 borderWidth: hasCustomBackground
                                     ? 0
                                     : StyleSheet.hairlineWidth,
-                                right: rpx(24),
+                                right: Math.max(rpx(24), (menuIconLayout?.hostWidth ?? 0) -
+                                    (menuIconLayout?.x ?? 0) - (menuIconLayout?.width ?? 0)),
                                 top:
                                     (menuIconLayout?.y ?? 0) +
                                     (menuIconLayout?.height ?? 0) +
-                                    rpx(20) +
-                                    (menuWithStatusBar
-                                        ? OriginalStatusBar.currentHeight ?? 0
-                                        : 0),
+                                    rpx(20),
                                 shadowColor: hasCustomBackground
                                     ? "transparent"
                                     : colors.shadow,
@@ -220,7 +241,7 @@ export default function AppBar(props: IAppBarProps) {
                                     withHorizontalPadding
                                     heightType="small"
                                     onPress={() => {
-                                        setShowMenu(false);
+                                        closeMenu();
                                         // async
                                         setTimeout(() => {
                                             it.onPress?.();
@@ -232,7 +253,7 @@ export default function AppBar(props: IAppBarProps) {
                             ) : null,
                         )}
                     </Animated.View>
-                </>
+                </View>
             </Portal>
         </>
     );

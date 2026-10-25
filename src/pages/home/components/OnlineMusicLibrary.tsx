@@ -1,3 +1,4 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import Icon from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
 import MusicItem from "@/components/mediaItem/musicItem";
@@ -10,7 +11,7 @@ import useColors from "@/hooks/useColors";
 import { isSameMediaItem } from "@/utils/mediaUtils";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import useLibraryCharts, { libraryChartKey } from "./useLibraryCharts";
 
 const minimumTouch = Math.max(44, controlSize.minimumTouch);
@@ -28,7 +29,7 @@ export default function OnlineMusicLibrary() {
     // A disabled or removed source must never keep showing its previous charts.
     const effectiveIndex = plugin?.hash === visibleCard.hash ? visibleCard.index : 0;
     const charts = useLibraryCharts(plugin, effectiveIndex);
-    const { width } = useWindowDimensions();
+    const { width } = useContentDimensions();
     const contentWidth = width - spacing.xxxl * 2;
     const cardWidth = Math.min(480, charts.charts.length > 1 ? width * 0.62 : contentWidth);
     const cardStride = cardWidth + spacing.sm;

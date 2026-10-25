@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import rpx from "@/utils/rpx";
 import SeekBar from "./seekBar";
 import PlayControl from "./playControl";
-import useOrientation from "@/hooks/useOrientation";
+import useOrientation from "@/hooks/usePlayerOrientation";
 
 export default function Bottom() {
     const orientation = useOrientation();

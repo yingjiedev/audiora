@@ -17,7 +17,9 @@ function scale(rpx: number, baseSize: number) {
 }
 
 function getRpxBaseSize() {
-    return getWindowEdge().min;
+    // Visual geometry stays at a phone-like scale. Full-width containers use
+    // flex/percentages or their measured pane instead of rpx(750).
+    return Math.min(getWindowEdge().min, MAX_FONT_BASE_SIZE);
 }
 
 function getFontBaseSize() {

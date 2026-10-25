@@ -1,5 +1,5 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { createNavigationContainerRef, NavigationContainer, StackActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import bootstrap from "./bootstrap/bootstrap";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -25,6 +25,8 @@ import ErrorBoundary from "@/components/errorBoundary";
 import { NotificationLifecycleManager } from "@/core/notificationLifecycleManager";
 import MusicWidgetThemeSync from "@/components/musicWidgetThemeSync";
 import { appendStartupBreadcrumb } from "@/utils/log";
+import AppShell from "@/components/appShell";
+import { homeTabStore } from "@/core/homeNavigation";
 import { useAtomValue } from "jotai";
 import bootstrapAtom from "./bootstrap/bootstrap.atom";
 import { startWebdavAutoBackup } from "@/core/webdavAutoBackup";
@@ -46,8 +48,11 @@ try {
 bootstrap();
 
 const Stack = createNativeStackNavigator<any>();
+const navigationRef = createNavigationContainerRef<any>();
 
 export default function Pages() {
+    const [routeName, setRouteName] = React.useState("home");
+    const syncRoute = () => setRouteName(navigationRef.getCurrentRoute()?.name ?? "home");
     const bootstrapState = useAtomValue(bootstrapAtom).state;
     React.useEffect(() => {
         if (bootstrapState === "Done") {
@@ -93,7 +98,7 @@ export default function Pages() {
             */}
             <View style={styles.root}>
                 <SafeAreaProvider style={globalStyle.flex1}>
-                    <NavigationContainer theme={navigationTheme as any}>
+                    <NavigationContainer ref={navigationRef} onReady={syncRoute} onStateChange={syncRoute} theme={navigationTheme as any}>
                         <ErrorBoundary>
                             <BootstrapComponent />
                             <NotificationLifecycleManager />
@@ -119,25 +124,35 @@ export default function Pages() {
                                 }
                                 accessibilityElementsHidden={blockBackground}
                                 collapsable={false}>
-                                <Stack.Navigator
-                                    initialRouteName={routes[0].path}
-                                    screenOptions={{
-                                        headerShown: false,
-                                        animation: "slide_from_right",
-                                        // 不自定义 animationDuration：100ms 短于
-                                        // 首帧调度，概率性被原生动画器直接跳过，
-                                        // 表现为转场卡一下+旧界面残影
-                                        // 转场期间冻结后台屏，避免旧屏抢渲染帧
-                                        freezeOnBlur: true,
-                                    }}>
-                                    {routes.map(route => (
-                                        <Stack.Screen
-                                            key={route.path}
-                                            name={route.path}
-                                            component={route.component}
-                                        />
-                                    ))}
-                                </Stack.Navigator>
+                                <AppShell
+                                    routeName={routeName}
+                                    playerOpen={playerOpen}
+                                    onSelectHome={tab => {
+                                        homeTabStore.setValue(tab);
+                                        if (navigationRef.isReady()) navigationRef.dispatch(StackActions.popTo("home"));
+                                    }}
+                                    onSearch={() => navigationRef.isReady() && navigationRef.navigate("search-page")}
+                                    onSettings={() => navigationRef.isReady() && navigationRef.navigate("setting", { type: "overview" })}>
+                                    <Stack.Navigator
+                                        initialRouteName={routes[0].path}
+                                        screenOptions={{
+                                            headerShown: false,
+                                            animation: "slide_from_right",
+                                            // 不自定义 animationDuration：100ms 短于
+                                            // 首帧调度，概率性被原生动画器直接跳过，
+                                            // 表现为转场卡一下+旧界面残影
+                                            // 转场期间冻结后台屏，避免旧屏抢渲染帧
+                                            freezeOnBlur: true,
+                                        }}>
+                                        {routes.map(route => (
+                                            <Stack.Screen
+                                                key={route.path}
+                                                name={route.path}
+                                                component={route.component}
+                                            />
+                                        ))}
+                                    </Stack.Navigator>
+                                </AppShell>
                             </View>
                             <PlayerOverlay />
                             <Panels />

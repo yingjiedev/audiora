@@ -1,3 +1,4 @@
+import useContentDimensions from "@/hooks/useContentDimensions";
 import FastImage from "@/components/base/fastImage";
 import Icon, { IIconName } from "@/components/base/icon";
 import ThemeText from "@/components/base/themeText";
@@ -17,7 +18,7 @@ import useColors from "@/hooks/useColors";
 import useMotion from "@/hooks/useMotion";
 import rpx, { fontRpx } from "@/utils/rpx";
 import React, { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type NativeScrollEvent } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, type NativeScrollEvent } from "react-native";
 import HomeFeatureDeck from "../HomeFeatureDeck";
 import HomeSectionNavigation from "../HomeSectionNavigation";
 import useHomeDiscovery, { IHomeDiscoveryPreview } from "./useHomeDiscovery";
@@ -207,7 +208,7 @@ function FavoriteListening({ musics = [], sheet }: { musics?: IMusic.IMusicItem[
     const stats = useListeningStats();
     const playCounts = useMemo(() => countSongPlays(stats.days), [stats.days]);
     const getDisplayName = usePluginDisplayNameResolver();
-    const { width } = useWindowDimensions();
+    const { width } = useContentDimensions();
     const groupWidth = Math.min(520, width * 0.86, width - spacing.xxxl * 2);
     const groups = Array.from({ length: Math.ceil(Math.min(9, musics.length) / 3) }, (_, index) => musics.slice(index * 3, index * 3 + 3));
     const fullSheet = { ...sheet, musicList: musics };
@@ -267,7 +268,7 @@ function Discovery({ preview, hasSource }: { preview: IHomeDiscoveryPreview; has
     const { t } = useI18N();
     const navigate = useNavigate();
     const getDisplayName = usePluginDisplayNameResolver();
-    const { width } = useWindowDimensions();
+    const { width } = useContentDimensions();
     const coverWidth = Math.min(180, (width - spacing.xxxl * 2 - spacing.xl * 2) / 3);
     const openAll = () => navigate(ROUTE_PATH.TOP_LIST, { initialPluginHash: preview.topListPluginHash });
     if (!hasSource && !preview.topLists.length && !preview.loading) return null;
@@ -306,7 +307,7 @@ function RecentListening({ musics }: { musics: IMusic.IMusicItem[] }) {
     const { t } = useI18N();
     const colors = useColors();
     const getDisplayName = usePluginDisplayNameResolver();
-    const { width } = useWindowDimensions();
+    const { width } = useContentDimensions();
     const coverWidth = Math.min(180, (width - spacing.xxxl * 2 - spacing.xl * 2) / 3);
     if (!musics.length) return null;
     return (

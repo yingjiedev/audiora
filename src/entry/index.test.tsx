@@ -16,7 +16,10 @@ jest.mock("@/core/webdavAutoBackup", () => ({
 
 jest.mock("@react-navigation/native", () => ({
     NavigationContainer: "NavigationContainer",
+    createNavigationContainerRef: () => ({ current: null, getCurrentRoute: () => ({ name: "home" }), isReady: () => false }),
+    StackActions: { popTo: jest.fn() },
 }));
+jest.mock("@/components/appShell", () => ({ children }: { children: React.ReactNode }) => children);
 jest.mock("react-native/Libraries/Components/StatusBar/StatusBar", () => ({
     __esModule: true,
     default: { setBackgroundColor: jest.fn(), setTranslucent: jest.fn() },

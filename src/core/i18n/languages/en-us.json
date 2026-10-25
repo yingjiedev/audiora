@@ -1208,5 +1208,8 @@
     "subscription.details": "Failure details",
     "subscription.retryFailed": "Retry failed",
     "subscription.updating": "Updating…",
-    "subscription.viewProgress": "View progress"
+    "subscription.viewProgress": "View progress",
+    "adaptive.lyric": "Lyrics",
+    "adaptive.queue": "Queue",
+    "adaptive.closePane": "Close playback sidebar"
 }
